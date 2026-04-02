@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS build_logs;
+DROP TABLE IF EXISTS build_artifacts;
+DROP TABLE IF EXISTS build_jobs;
+DROP TABLE IF EXISTS packages;

@@ -1,0 +1,42 @@
+services:
+  daemon:
+    build:
+      context: .
+      dockerfile: docker/services.Dockerfile
+      target: daemon-runtime
+    image: synforge-daemon:latest
+    security_opt:
+      - label=disable
+    environment:
+      SYNFORGE_BEARER_TOKEN: changeme
+      SYNFORGE_WORKER_IMAGE: synforge-worker-fedora:latest
+      SYNFORGE_PUBLIC_BASE_URL: http://localhost:8080
+    expose:
+      - "8080"
+    ports:
+      - "8090:8090"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:z
+      - synforge-runtime:/var/lib/synforge
+
+  webui:
+    build:
+      context: .
+      dockerfile: docker/services.Dockerfile
+      target: webui-runtime
+    image: synforge-webui:latest
+    ports:
+      - "8080:80"
+    depends_on:
+      - daemon
+
+  worker-fedora:
+    build:
+      context: .
+      dockerfile: docker/services.Dockerfile
+      target: worker-runtime
+    image: synforge-worker-fedora:latest
+    profiles: ["build-images-only"]
+
+volumes:
+  synforge-runtime:

@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --theme-body: #0a0a0a;
+  --theme-text: #e4e4e7;
+  --theme-surface: #000000;
+  --theme-surface-alt: #09090b;
+  --theme-surface-hover: #18181b;
+  --theme-border: #27272a;
+  --theme-border-strong: #3f3f46;
+  --theme-text-strong: #ffffff;
+  --theme-text-muted: #a1a1aa;
+  --theme-text-soft: #71717a;
+  --theme-primary-bg: #f4f4f5;
+  --theme-primary-text: #09090b;
+  --theme-primary-hover: #ffffff;
+  --theme-selection: rgba(255, 255, 255, 0.2);
+  --theme-grid-line: rgba(255, 255, 255, 0.035);
+  --theme-header-divider: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="black"] {
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --theme-body: #101114;
+  --theme-text: #dde1e7;
+  --theme-surface: #16181d;
+  --theme-surface-alt: #1b1e24;
+  --theme-surface-hover: #22262d;
+  --theme-border: #31353d;
+  --theme-border-strong: #4b5260;
+  --theme-text-strong: #f5f7fa;
+  --theme-text-muted: #b4bbc7;
+  --theme-text-soft: #8b93a1;
+  --theme-primary-bg: #e8edf5;
+  --theme-primary-text: #11141a;
+  --theme-primary-hover: #ffffff;
+  --theme-selection: rgba(187, 199, 217, 0.28);
+  --theme-grid-line: rgba(255, 255, 255, 0.028);
+  --theme-header-divider: rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --theme-body: #f3f4f6;
+  --theme-text: #18181b;
+  --theme-surface: #ffffff;
+  --theme-surface-alt: #f4f4f5;
+  --theme-surface-hover: #e4e4e7;
+  --theme-border: #d4d4d8;
+  --theme-border-strong: #a1a1aa;
+  --theme-text-strong: #09090b;
+  --theme-text-muted: #3f3f46;
+  --theme-text-soft: #71717a;
+  --theme-primary-bg: #18181b;
+  --theme-primary-text: #fafafa;
+  --theme-primary-hover: #000000;
+  --theme-selection: rgba(24, 24, 27, 0.16);
+  --theme-grid-line: rgba(24, 24, 27, 0.05);
+  --theme-header-divider: rgba(24, 24, 27, 0.12);
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    "IBM Plex Sans",
+    "Avenir Next",
+    "Segoe UI",
+    sans-serif;
+  min-width: 320px;
+  background: var(--theme-body);
+  color: var(--theme-text);
+}
+
+code,
+pre,
+.font-mono {
+  font-family:
+    "IBM Plex Mono",
+    "SFMono-Regular",
+    "Cascadia Code",
+    monospace;
+}
+
+::selection {
+  background: var(--theme-selection);
+  color: var(--theme-text-strong);
+}
+
+@layer utilities {
+  .bg-black { background-color: var(--theme-surface) !important; }
+  .bg-zinc-950 { background-color: var(--theme-surface-alt) !important; }
+  .bg-zinc-100 { background-color: var(--theme-primary-bg) !important; }
+  .bg-white { background-color: var(--theme-primary-hover) !important; }
+  .border-zinc-800 { border-color: var(--theme-border) !important; }
+  .border-zinc-700, .border-zinc-600, .border-zinc-200 { border-color: var(--theme-border-strong) !important; }
+  .text-white, .text-zinc-50, .text-zinc-100, .text-zinc-200 { color: var(--theme-text-strong) !important; }
+  .text-zinc-300, .text-zinc-400 { color: var(--theme-text-muted) !important; }
+  .text-zinc-500 { color: var(--theme-text-soft) !important; }
+  .text-black { color: var(--theme-primary-text) !important; }
+  .hover\:bg-zinc-950:hover { background-color: var(--theme-surface-hover) !important; }
+  .hover\:border-zinc-600:hover, .hover\:border-zinc-800:hover { border-color: var(--theme-border-strong) !important; }
+  .hover\:text-white:hover, .hover\:text-zinc-100:hover, .hover\:text-zinc-300:hover { color: var(--theme-text-strong) !important; }
+  .divide-white\/8 > :not([hidden]) ~ :not([hidden]),
+  .divide-white\/10 > :not([hidden]) ~ :not([hidden]),
+  .divide-white\/5 > :not([hidden]) ~ :not([hidden]) { border-color: color-mix(in srgb, var(--theme-border) 70%, transparent) !important; }
+  .border-white\/8 { border-color: var(--theme-header-divider) !important; }
+}
+
+html[data-theme="black"] .app-chrome {
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.045), transparent 24%),
+    linear-gradient(180deg, #111111 0%, #0a0a0a 48%, #050505 100%);
+}
+
+html[data-theme="dark"] .app-chrome {
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.035), transparent 24%),
+    linear-gradient(180deg, #1a1d23 0%, #101114 48%, #0c0d10 100%);
+}
+
+html[data-theme="light"] .app-chrome {
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.7), transparent 26%),
+    linear-gradient(180deg, #ffffff 0%, #f3f4f6 46%, #eceef2 100%);
+}
+
+.app-grid {
+  background-image:
+    linear-gradient(var(--theme-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--theme-grid-line) 1px, transparent 1px);
+  background-size: 24px 24px;
+}

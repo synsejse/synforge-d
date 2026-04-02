@@ -1,0 +1,89 @@
+diesel::table! {
+    packages (name) {
+        name -> Text,
+        description -> Text,
+        enabled -> Bool,
+        repo_subdir -> Text,
+        publish_srpm -> Bool,
+        mock_chroots_json -> Text,
+        source_repo_url -> Text,
+        source_spec_path -> Text,
+        source_poll -> Bool,
+        poll_interval_seconds -> BigInt,
+        build_timeout_seconds -> BigInt,
+        package_history_count -> BigInt,
+        build_env_json -> Text,
+        spec_path -> Text,
+        version -> Text,
+        release -> Text,
+    }
+}
+
+diesel::table! {
+    build_jobs (id) {
+        id -> Text,
+        package_name -> Text,
+        mock_chroot -> Text,
+        revision -> Text,
+        trigger -> Text,
+        status -> Text,
+        spec_path -> Text,
+        worker_container_id -> Nullable<Text>,
+        created_at -> Text,
+        updated_at -> Text,
+        finished_at -> Nullable<Text>,
+        error_message -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    build_artifacts (job_id, path) {
+        job_id -> Text,
+        package_name -> Text,
+        mock_chroot -> Text,
+        arch -> Text,
+        path -> Text,
+        relative_repo_path -> Text,
+        sha256 -> Text,
+        size_bytes -> BigInt,
+        kind -> Text,
+    }
+}
+
+diesel::table! {
+    build_logs (job_id) {
+        job_id -> Text,
+        log_path -> Text,
+        updated_at -> Text,
+    }
+}
+
+diesel::table! {
+    daemon_runtime_settings (id) {
+        id -> Integer,
+        public_base_url -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    published_repo_files (job_id, repo_path) {
+        job_id -> Text,
+        package_name -> Text,
+        mock_chroot -> Text,
+        arch -> Text,
+        repo_path -> Text,
+        sha256 -> Text,
+        size_bytes -> BigInt,
+        kind -> Text,
+        published_at -> Text,
+    }
+}
+
+diesel::allow_tables_to_appear_in_same_query!(
+    packages,
+    build_jobs,
+    build_artifacts,
+    build_logs,
+    daemon_runtime_settings,
+    published_repo_files,
+);

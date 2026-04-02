@@ -1,0 +1,13 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import JobDetailLoader from "../../components/JobDetailLoader";
+
+export function getStaticPaths() {
+  // Return empty array - pages will be generated client-side
+  return [];
+}
+---
+
+<Layout title="Job Details">
+  <JobDetailLoader client:load />
+</Layout>

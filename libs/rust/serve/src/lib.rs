@@ -1,4 +1,5 @@
 mod api;
+mod openapi;
 
 use std::sync::Arc;
 use std::path::PathBuf;
@@ -25,6 +26,8 @@ use synforge_orchestrator::SynforgeService;
 use time::{Duration, OffsetDateTime};
 use tower_http::trace::TraceLayer;
 use tokio_util::io::ReaderStream;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 use uuid::Uuid;
 
 type HmacSha256 = Hmac<Sha256>;
@@ -49,6 +52,13 @@ pub fn router(service: Arc<SynforgeService>) -> Router {
             state.clone(),
             authenticate_api_request,
         ));
+    let docs = Router::new()
+        .merge(SwaggerUi::new("/docs").url("/openapi.json", openapi::ApiDoc::openapi()))
+        .with_state(state.clone())
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            authenticate_docs_request,
+        ));
     let repo = Router::new()
         .route("/", get(repo_root))
         .route("/{*path}", get(download_repo_file))
@@ -61,6 +71,7 @@ pub fn router(service: Arc<SynforgeService>) -> Router {
     Router::new()
         .route("/healthz", get(healthz))
         .route("/readyz", get(readyz))
+        .merge(docs)
         .nest("/api/v1", api)
         .nest("/repo", repo)
         .layer(middleware::map_response(add_security_headers))
@@ -130,6 +141,19 @@ async fn authenticate_repo_request(
         .await
         .map_err(AppError::with_basic_challenge)?;
     request.extensions_mut().insert(user);
+    Ok(next.run(request).await)
+}
+
+async fn authenticate_docs_request(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    request: axum::extract::Request,
+    next: Next,
+) -> Result<Response, AppError> {
+    if !is_setup_complete(&state)? {
+        return Err(AppError::unavailable("daemon setup is not complete"));
+    }
+    let _user = authenticate_session_headers(&state, &headers, UserPermission::Read).await?;
     Ok(next.run(request).await)
 }
 

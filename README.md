@@ -79,6 +79,7 @@ The daemon is the source of truth for managed repo contents.
 - `worker_image` in the config selects the generic Fedora worker image, for example `synforge-worker-fedora:latest`.
 - If `session_secret` is missing or still set to the example placeholder, the daemon generates and persists a random one on first run.
 - `/api/v1` uses a signed session cookie for the WebUI. `/repo` uses HTTP Basic Auth so Fedora clients can consume packages with handle/password credentials.
+- OpenAPI docs are available at `/docs`, with the raw spec at `/openapi.json`.
 - First boot now goes through the setup screen, which writes the initial config and creates the first admin account.
 - Schema changes should now be treated as forward-migration changes. The earlier reset-style schema churn was only for the pre-stabilization cleanup phase.
 - The default compose setup stores daemon data in the named Docker volume `synforge-runtime`. To reset local state, use `docker compose down -v` or remove that volume explicitly.

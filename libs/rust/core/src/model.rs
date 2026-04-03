@@ -8,9 +8,10 @@ use diesel::sql_types::Text;
 use diesel::sqlite::{Sqlite, SqliteValue};
 use serde::{Deserialize, Serialize};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow, ToSchema)]
 #[serde(rename_all = "snake_case")]
 #[diesel(sql_type = Text)]
 pub enum BuildTrigger {
@@ -20,7 +21,7 @@ pub enum BuildTrigger {
     Api,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow, ToSchema)]
 #[serde(rename_all = "snake_case")]
 #[diesel(sql_type = Text)]
 pub enum BuildStatus {
@@ -31,24 +32,27 @@ pub enum BuildStatus {
     TimedOut,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct BuildArtifact {
     pub package_name: String,
     pub mock_chroot: String,
     pub arch: String,
+    #[schema(value_type = String)]
     pub path: PathBuf,
+    #[schema(value_type = String)]
     pub relative_repo_path: PathBuf,
     pub sha256: String,
     pub size_bytes: u64,
     pub kind: ArtifactKind,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct PublishedRepoFile {
     pub job_id: Uuid,
     pub package_name: String,
     pub mock_chroot: String,
     pub arch: String,
+    #[schema(value_type = String)]
     pub repo_path: PathBuf,
     pub sha256: String,
     pub size_bytes: u64,
@@ -56,7 +60,7 @@ pub struct PublishedRepoFile {
     pub published_at: OffsetDateTime,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow, ToSchema)]
 #[serde(rename_all = "snake_case")]
 #[diesel(sql_type = Text)]
 pub enum ArtifactKind {
@@ -66,7 +70,7 @@ pub enum ArtifactKind {
     Other,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, AsExpression, FromSqlRow)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, AsExpression, FromSqlRow, ToSchema)]
 #[serde(rename_all = "snake_case")]
 #[diesel(sql_type = Text)]
 pub enum UserPermission {
@@ -137,7 +141,7 @@ impl_sqlite_text_enum!(UserPermission {
     Repo => ["repo"],
 });
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct BuildJob {
     pub id: Uuid,
     pub package_name: String,
@@ -145,6 +149,7 @@ pub struct BuildJob {
     pub revision: String,
     pub trigger: BuildTrigger,
     pub status: BuildStatus,
+    #[schema(value_type = String)]
     pub spec_path: PathBuf,
     pub worker_container_id: Option<String>,
     pub created_at: OffsetDateTime,
@@ -153,7 +158,7 @@ pub struct BuildJob {
     pub error_message: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct UserAccount {
     pub id: Uuid,
     pub handle: String,
@@ -170,7 +175,7 @@ impl UserAccount {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct UserRepoMetrics {
     pub user_id: Uuid,
     pub downloaded_bytes: u64,
@@ -183,7 +188,7 @@ pub struct UserSummary {
     pub metrics: UserRepoMetrics,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct PackageRuntimeState {
     pub last_revision: Option<String>,
     pub last_successful_build_id: Option<Uuid>,

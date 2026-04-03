@@ -2,11 +2,12 @@ use std::fmt;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::error::SynforgeError;
 use crate::validation::{BuildEnvVarValidator, PackageDefinitionValidator, SpecSourceValidator, Validator};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct PackageDefinition {
     pub name: String,
     #[serde(default)]
@@ -29,12 +30,13 @@ pub struct PackageDefinition {
     pub package_history_count: u64,
     #[serde(default)]
     pub build_env: Vec<BuildEnvVar>,
+    #[schema(value_type = String)]
     pub spec_path: PathBuf,
     pub version: String,
     pub release: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct BuildEnvVar {
     pub key: String,
     pub value: String,
@@ -60,14 +62,14 @@ fn default_package_history_count() -> u64 {
     3
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct BuildTarget {
     pub distribution: String,
     pub release: String,
     pub arch: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct SpecSource {
     pub repo_url: String,
     pub spec_path: String,
@@ -75,7 +77,7 @@ pub struct SpecSource {
     pub poll: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct ParsedSpec {
     pub name: String,
     pub version: String,
@@ -83,7 +85,7 @@ pub struct ParsedSpec {
     pub summary: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct SpecRevision {
     pub version: String,
     pub release: String,

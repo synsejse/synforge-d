@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import api from "../lib/api";
 import type { ConfigFieldDescriptor, DaemonConfig } from "../lib/types";
+import LoadingBlock from "./LoadingBlock";
 import PageHeader from "./PageHeader";
 import { faSave, faServer } from "@fortawesome/free-solid-svg-icons";
 import FaIcon from "./FaIcon";
@@ -52,7 +53,7 @@ export default function Settings() {
   }
 
   if (loading) {
-    return <div className="text-zinc-400">Loading config…</div>;
+    return <LoadingBlock label="Loading config…" lines={4} />;
   }
 
   if (error || !config) {

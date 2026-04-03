@@ -2,11 +2,18 @@ import { useEffect, useState } from "react";
 import api from "../lib/api";
 import ActionButton from "./ActionButton";
 import EmptyState from "./EmptyState";
+import FaIcon from "./FaIcon";
+import LoadingBlock from "./LoadingBlock";
 import PageHeader from "./PageHeader";
 import StatusPill from "./StatusPill";
 import { formatDateTime, formatDurationBetween } from "../lib/datetime";
 import type { BuildJobResponse, BuildStatus } from "../lib/types";
-import { faChartLine, faFolderOpen, faTrash } from "@fortawesome/free-solid-svg-icons";
+import {
+  faChartLine,
+  faFolderOpen,
+  faMagnifyingGlass,
+  faTrash,
+} from "@fortawesome/free-solid-svg-icons";
 
 const FILTERS: Array<"all" | BuildStatus> = [
   "all",
@@ -19,17 +26,89 @@ const FILTERS: Array<"all" | BuildStatus> = [
 
 export default function JobList() {
   const [jobs, setJobs] = useState<BuildJobResponse[]>([]);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<string>("all");
+  const [filter, setFilter] = useState<string>(() => {
+    if (typeof window === "undefined") {
+      return "all";
+    }
+    return new URLSearchParams(window.location.search).get("status") || "all";
+  });
+  const [offset, setOffset] = useState<number>(() => {
+    if (typeof window === "undefined") {
+      return 0;
+    }
+    return Number(
+      new URLSearchParams(window.location.search).get("offset") || "0",
+    );
+  });
+  const [packageFilter, setPackageFilter] = useState(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    return new URLSearchParams(window.location.search).get("package") || "";
+  });
+  const [targetFilter, setTargetFilter] = useState(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    return new URLSearchParams(window.location.search).get("target") || "";
+  });
   const [pruning, setPruning] = useState(false);
+  const pageSize = 50;
 
-  async function load() {
+  async function load(
+    nextFilter = filter,
+    nextOffset = offset,
+    nextPackageFilter = packageFilter,
+    nextTargetFilter = targetFilter,
+  ) {
     try {
       setLoading(true);
-      const res = await api.listJobs();
+      const res = await api.listJobs({
+        limit: pageSize,
+        offset: nextOffset,
+        status: nextFilter,
+        packageName: nextPackageFilter,
+        mockChroot: nextTargetFilter,
+      });
       setJobs(res.jobs);
+      setHasMore(res.page.has_more);
+      setOffset(nextOffset);
+      setFilter(nextFilter);
+      setPackageFilter(nextPackageFilter);
+      setTargetFilter(nextTargetFilter);
       setError(null);
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        if (nextFilter === "all") {
+          params.delete("status");
+        } else {
+          params.set("status", nextFilter);
+        }
+        if (nextOffset === 0) {
+          params.delete("offset");
+        } else {
+          params.set("offset", String(nextOffset));
+        }
+        if (nextPackageFilter.trim()) {
+          params.set("package", nextPackageFilter.trim());
+        } else {
+          params.delete("package");
+        }
+        if (nextTargetFilter.trim()) {
+          params.set("target", nextTargetFilter.trim());
+        } else {
+          params.delete("target");
+        }
+        const query = params.toString();
+        window.history.replaceState(
+          {},
+          "",
+          `/jobs/${query ? `?${query}` : ""}`,
+        );
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load jobs");
     } finally {
@@ -55,7 +134,8 @@ export default function JobList() {
 
   async function handlePruneFailed() {
     const failedCount = jobs.filter(
-      (entry) => entry.job.status === "failed" || entry.job.status === "timed_out"
+      (entry) =>
+        entry.job.status === "failed" || entry.job.status === "timed_out",
     ).length;
     if (failedCount === 0) {
       return;
@@ -75,23 +155,16 @@ export default function JobList() {
   }
 
   if (loading) {
-    return <div className="text-zinc-400">Loading jobs…</div>;
+    return <LoadingBlock label="Loading jobs…" lines={4} />;
   }
 
   if (error) {
-    return <div className="border border-zinc-800 bg-black p-4 text-zinc-200">Error: {error}</div>;
+    return (
+      <div className="border border-zinc-800 bg-black p-4 text-zinc-200">
+        Error: {error}
+      </div>
+    );
   }
-
-  const filteredJobs =
-    filter === "all" ? jobs : jobs.filter((entry) => entry.job.status === filter);
-
-  const statusCounts = jobs.reduce(
-    (acc, entry) => {
-      acc[entry.job.status] = (acc[entry.job.status] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
 
   return (
     <div className="space-y-8">
@@ -105,7 +178,14 @@ export default function JobList() {
       <section className="flex flex-wrap gap-2 border border-zinc-800 bg-black p-4">
         <ActionButton
           onClick={handlePruneFailed}
-          disabled={pruning || !jobs.some((entry) => entry.job.status === "failed" || entry.job.status === "timed_out")}
+          disabled={
+            pruning ||
+            !jobs.some(
+              (entry) =>
+                entry.job.status === "failed" ||
+                entry.job.status === "timed_out",
+            )
+          }
           icon={faTrash}
           className="text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -114,38 +194,91 @@ export default function JobList() {
         {FILTERS.map((value) => (
           <button
             key={value}
-            onClick={() => setFilter(value)}
+            onClick={() => load(value, 0)}
+            aria-pressed={filter === value}
             className={`border px-4 py-2 text-sm transition ${
               filter === value
                 ? "border-zinc-200 bg-zinc-100 text-black"
                 : "border-zinc-800 bg-black text-zinc-300 hover:border-zinc-600 hover:bg-zinc-950"
             }`}
           >
-            {value} {value !== "all" && statusCounts[value] ? `(${statusCounts[value]})` : ""}
+            {value}
           </button>
         ))}
       </section>
 
-      {filteredJobs.length === 0 ? (
+      <section className="grid gap-3 border border-zinc-800 bg-black p-4 md:grid-cols-[minmax(0,1fr)_240px_auto]">
+        <label className="block">
+          <span className="sr-only">Filter jobs by package</span>
+          <input
+            type="search"
+            value={packageFilter}
+            onChange={(event) => setPackageFilter(event.target.value)}
+            placeholder="Filter by package"
+            className="w-full border border-zinc-800 bg-black px-4 py-2.5 text-sm text-white outline-none transition focus:border-zinc-600"
+          />
+        </label>
+        <label className="block">
+          <span className="sr-only">Filter jobs by target</span>
+          <input
+            type="search"
+            value={targetFilter}
+            onChange={(event) => setTargetFilter(event.target.value)}
+            placeholder="Filter by target"
+            className="w-full border border-zinc-800 bg-black px-4 py-2.5 text-sm text-white outline-none transition focus:border-zinc-600"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={() => load(filter, 0, packageFilter, targetFilter)}
+          className="border border-zinc-800 bg-black px-4 py-2.5 text-sm text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
+        >
+          <FaIcon icon={faMagnifyingGlass} className="mr-2" />
+          Apply
+        </button>
+      </section>
+
+      {jobs.length === 0 ? (
         <EmptyState>No jobs match the current filter.</EmptyState>
       ) : (
         <div className="overflow-x-auto border border-zinc-800 bg-black">
           <table className="min-w-[980px] w-full">
+            <caption className="sr-only">
+              Build jobs with status, target, revision, and row actions.
+            </caption>
             <thead className="bg-zinc-950 text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
               <tr>
-                <th className="px-4 py-3">Package</th>
-                <th className="px-4 py-3">Target</th>
-                <th className="px-4 py-3">Revision</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Trigger</th>
-                <th className="px-4 py-3">Duration</th>
-                <th className="px-4 py-3">Created</th>
-                <th className="px-4 py-3">Actions</th>
+                <th scope="col" className="px-4 py-3">
+                  Package
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Target
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Revision
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Status
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Trigger
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Duration
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Created
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/8">
-              {filteredJobs.map((entry) => {
-                const isLive = entry.job.status === "pending" || entry.job.status === "running";
+              {jobs.map((entry) => {
+                const isLive =
+                  entry.job.status === "pending" ||
+                  entry.job.status === "running";
                 return (
                   <tr key={entry.job.id} className="hover:bg-zinc-950">
                     <td className="px-4 py-3">
@@ -156,19 +289,30 @@ export default function JobList() {
                         >
                           {entry.job.package_name}
                         </a>
-                        <div className="max-w-[180px] break-all text-xs text-zinc-500">{entry.job.id}</div>
+                        <div className="max-w-[180px] break-all text-xs text-zinc-500">
+                          {entry.job.id}
+                        </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm font-mono text-zinc-300">{entry.job.mock_chroot}</td>
+                    <td className="px-4 py-3 text-sm font-mono text-zinc-300">
+                      {entry.job.mock_chroot}
+                    </td>
                     <td className="px-4 py-3">
-                      <div className="max-w-[420px] break-all font-mono text-sm text-zinc-300">{entry.job.revision}</div>
+                      <div className="max-w-[420px] break-all font-mono text-sm text-zinc-300">
+                        {entry.job.revision}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <StatusPill status={entry.job.status} />
                     </td>
-                    <td className="px-4 py-3 text-sm text-zinc-400">{entry.job.trigger}</td>
                     <td className="px-4 py-3 text-sm text-zinc-400">
-                      {formatDurationBetween(entry.job.created_at, entry.job.finished_at)}
+                      {entry.job.trigger}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-zinc-400">
+                      {formatDurationBetween(
+                        entry.job.created_at,
+                        entry.job.finished_at,
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-zinc-400">
                       {formatDateTime(entry.job.created_at)}
@@ -178,6 +322,7 @@ export default function JobList() {
                         <ActionButton
                           href={`/jobs/view/?id=${encodeURIComponent(entry.job.id)}`}
                           icon={faFolderOpen}
+                          aria-label={`Open job ${entry.job.id}`}
                         >
                           Open
                         </ActionButton>
@@ -185,6 +330,7 @@ export default function JobList() {
                           onClick={() => handleDelete(entry)}
                           disabled={isLive}
                           icon={faTrash}
+                          aria-label={`Delete job ${entry.job.id}`}
                           className="text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Delete
@@ -198,6 +344,34 @@ export default function JobList() {
           </table>
         </div>
       )}
+
+      {jobs.length > 0 ? (
+        <div className="flex items-center justify-between gap-3">
+          <button
+            onClick={() =>
+              load(
+                filter,
+                Math.max(0, offset - pageSize),
+                packageFilter,
+                targetFilter,
+              )
+            }
+            disabled={loading || offset === 0}
+            className="border border-zinc-800 px-4 py-2 text-sm text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <button
+            onClick={() =>
+              load(filter, offset + pageSize, packageFilter, targetFilter)
+            }
+            disabled={loading || !hasMore}
+            className="border border-zinc-800 px-4 py-2 text-sm text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

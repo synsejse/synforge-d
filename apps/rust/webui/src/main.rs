@@ -6,6 +6,7 @@ use axum::extract::{DefaultBodyLimit, Request, State};
 use axum::http::header::{self, HeaderName};
 use axum::http::{HeaderMap, HeaderValue, Response, StatusCode};
 use axum::middleware;
+use axum::response::Redirect;
 use axum::routing::any;
 use axum::{Router, routing::get};
 use reqwest::Client;
@@ -48,6 +49,16 @@ async fn main() -> anyhow::Result<()> {
         .route("/healthz", get(proxy_to_daemon))
         .route("/readyz", get(proxy_to_daemon))
         .route("/api/{*path}", any(proxy_to_daemon))
+        .route("/docs", get(swagger_docs_redirect))
+        .route("/docs/", any(proxy_to_daemon))
+        .route("/docs/{*path}", any(proxy_to_daemon))
+        .route("/openapi.json", any(proxy_to_daemon))
+        .route("/swagger-ui.css", any(proxy_to_daemon))
+        .route("/swagger-ui-bundle.js", any(proxy_to_daemon))
+        .route("/swagger-ui-standalone-preset.js", any(proxy_to_daemon))
+        .route("/swagger-initializer.js", any(proxy_to_daemon))
+        .route("/index.css", any(proxy_to_daemon))
+        .route("/oauth2-redirect.html", any(proxy_to_daemon))
         .route("/repo", any(proxy_to_daemon))
         .route("/repo/{*path}", any(proxy_to_daemon))
         .fallback_service(
@@ -94,6 +105,10 @@ async fn shutdown_signal() {
     }
 
     tracing::info!("webui shutdown signal received");
+}
+
+async fn swagger_docs_redirect() -> Redirect {
+    Redirect::permanent("/docs/")
 }
 
 fn env_string(name: &str) -> Option<String> {

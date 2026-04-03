@@ -7,6 +7,7 @@ import api from "../lib/api";
 import type { LogManifestResponse } from "../lib/types";
 import EmptyState from "./EmptyState";
 import FaIcon from "./FaIcon";
+import LoadingBlock from "./LoadingBlock";
 
 interface Props {
   jobId: string;
@@ -34,13 +35,33 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
   const [logStates, setLogStates] = useState<Record<string, LogState>>({});
   const [followLogs, setFollowLogs] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [pageVisible, setPageVisible] = useState(() => {
+    if (typeof document === "undefined") {
+      return true;
+    }
+    return document.visibilityState === "visible";
+  });
   const pollingRef = useRef(false);
   const rawViewportRef = useRef<HTMLDivElement | null>(null);
   const logStatesRef = useRef<Record<string, LogState>>({});
+  const scrollOffsetsRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     logStatesRef.current = logStates;
   }, [logStates]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+    const updateVisibility = () => {
+      setPageVisible(document.visibilityState === "visible");
+    };
+    document.addEventListener("visibilitychange", updateVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", updateVisibility);
+    };
+  }, []);
 
   const currentLog = activeSourcePath ? logStates[activeSourcePath] : null;
   const logLines = useMemo(() => {
@@ -98,8 +119,12 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
       setLogStates((current) => ({
         ...current,
         [sourcePath]: {
-          text: reset ? response.contents : (current[sourcePath]?.text ?? "") + response.contents,
-          startLine: reset ? response.start_line : (current[sourcePath]?.startLine ?? response.start_line),
+          text: reset
+            ? response.contents
+            : (current[sourcePath]?.text ?? "") + response.contents,
+          startLine: reset
+            ? response.start_line
+            : (current[sourcePath]?.startLine ?? response.start_line),
           cursor: response.cursor,
           loading: false,
           complete: response.complete,
@@ -136,14 +161,27 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
       return;
     }
     if (!currentLog || currentLog.text.length === 0) {
-      loadLogChunk(activeSourcePath, true);
+      void loadLogChunk(activeSourcePath, true);
     }
   }, [activeSourcePath, jobId, currentLog?.text]);
 
   useEffect(() => {
-    if (!isLive || !followLogs || !activeSourcePath) {
+    if (!isLive || !followLogs || !activeSourcePath || !pageVisible) {
       return;
     }
+
+    void (async () => {
+      if (pollingRef.current) {
+        return;
+      }
+      pollingRef.current = true;
+      try {
+        await loadManifest();
+        await loadLogChunk(activeSourcePath);
+      } finally {
+        pollingRef.current = false;
+      }
+    })();
 
     const timer = window.setInterval(async () => {
       if (pollingRef.current) {
@@ -159,7 +197,7 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
     }, POLL_INTERVAL_MS);
 
     return () => window.clearInterval(timer);
-  }, [activeSourcePath, followLogs, isLive]);
+  }, [activeSourcePath, followLogs, isLive, pageVisible]);
 
   useEffect(() => {
     if (!followLogs) {
@@ -173,7 +211,7 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
   }, [currentLog?.text, followLogs]);
 
   if (manifestLoading) {
-    return <div className="text-zinc-400">Loading log sources…</div>;
+    return <LoadingBlock label="Loading log sources…" lines={3} />;
   }
 
   return (
@@ -182,7 +220,8 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
         <div>
           <h2 className="text-2xl font-semibold text-white">Build Logs</h2>
           <p className="mt-2 text-sm text-zinc-400">
-            Multiple log files are streamed independently. Long lines scroll horizontally.
+            Multiple log files are streamed independently. Long lines scroll
+            horizontally.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -219,7 +258,9 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
           >
             {source.name}
             {source.size > 0 && (
-              <span className="ml-2 text-xs text-zinc-500">({formatBytes(source.size)})</span>
+              <span className="ml-2 text-xs text-zinc-500">
+                ({formatBytes(source.size)})
+              </span>
             )}
           </button>
         ))}
@@ -233,6 +274,16 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
             sourcePath={activeSourcePath ?? "unknown"}
             lines={logLines.length > 0 ? logLines : ["Waiting for output…"]}
             viewportRef={rawViewportRef}
+            initialScrollTop={
+              activeSourcePath
+                ? (scrollOffsetsRef.current[activeSourcePath] ?? 0)
+                : 0
+            }
+            onScrollTopChange={(nextScrollTop) => {
+              if (activeSourcePath) {
+                scrollOffsetsRef.current[activeSourcePath] = nextScrollTop;
+              }
+            }}
           />
         )}
       </div>
@@ -244,21 +295,32 @@ function VirtualizedAnsiLines({
   sourcePath,
   lines,
   viewportRef,
+  initialScrollTop,
+  onScrollTopChange,
 }: {
   sourcePath: string;
   lines: string[];
   viewportRef: React.RefObject<HTMLDivElement | null>;
+  initialScrollTop: number;
+  onScrollTopChange: (scrollTop: number) => void;
 }) {
   const [scrollTop, setScrollTop] = useState(0);
 
   useEffect(() => {
-    setScrollTop(0);
-  }, [sourcePath]);
+    setScrollTop(initialScrollTop);
+    if (viewportRef.current) {
+      viewportRef.current.scrollTop = initialScrollTop;
+    }
+  }, [initialScrollTop, sourcePath, viewportRef]);
 
   const totalHeight = lines.length * ROW_HEIGHT;
   const overscan = 12;
-  const visibleStart = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - overscan);
-  const visibleCount = Math.ceil(LOG_VIEWPORT_HEIGHT / ROW_HEIGHT) + overscan * 2;
+  const visibleStart = Math.max(
+    0,
+    Math.floor(scrollTop / ROW_HEIGHT) - overscan,
+  );
+  const visibleCount =
+    Math.ceil(LOG_VIEWPORT_HEIGHT / ROW_HEIGHT) + overscan * 2;
   const visibleEnd = Math.min(lines.length, visibleStart + visibleCount);
 
   const visibleRows = useMemo(
@@ -267,11 +329,13 @@ function VirtualizedAnsiLines({
         index: visibleStart + offset,
         line,
       })),
-    [lines, visibleEnd, visibleStart]
+    [lines, visibleEnd, visibleStart],
   );
 
   function handleScroll(event: UIEvent<HTMLDivElement>) {
-    setScrollTop(event.currentTarget.scrollTop);
+    const nextScrollTop = event.currentTarget.scrollTop;
+    setScrollTop(nextScrollTop);
+    onScrollTopChange(nextScrollTop);
   }
 
   return (
@@ -281,7 +345,13 @@ function VirtualizedAnsiLines({
       className="max-h-[78vh] overflow-auto font-mono text-[14px] leading-6"
       style={{ height: LOG_VIEWPORT_HEIGHT }}
     >
-      <div style={{ height: totalHeight || ROW_HEIGHT, position: "relative", minWidth: "max-content" }}>
+      <div
+        style={{
+          height: totalHeight || ROW_HEIGHT,
+          position: "relative",
+          minWidth: "max-content",
+        }}
+      >
         {visibleRows.map(({ index, line }) => {
           const style: CSSProperties = {
             position: "absolute",

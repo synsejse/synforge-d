@@ -10,6 +10,7 @@ import type {
   PackageBuildHistoryResponse,
   PackageRepoFilesResponse,
   RepoInventoryResponse,
+  RepoSummaryResponse,
   BuildJobListResponse,
   BuildJobResponse,
   LogChunkResponse,
@@ -101,7 +102,25 @@ class ApiClient {
 
   // Packages
   async listPackages(): Promise<PackageListResponse> {
-    return this.request("GET", "/api/v1/packages");
+    return this.listPackagesPage(50, 0);
+  }
+
+  async listPackagesPage(
+    limit = 50,
+    offset = 0,
+    options: { search?: string; enabled?: boolean | "all" } = {},
+  ): Promise<PackageListResponse> {
+    const params = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    if (options.search?.trim()) {
+      params.set("search", options.search.trim());
+    }
+    if (options.enabled !== undefined && options.enabled !== "all") {
+      params.set("enabled", String(options.enabled));
+    }
+    return this.request("GET", `/api/v1/packages?${params.toString()}`);
   }
 
   async getPackage(name: string): Promise<PackageResponse> {
@@ -154,24 +173,33 @@ class ApiClient {
     );
   }
 
-  async getRepoInventory(): Promise<RepoInventoryResponse> {
-    const pageSize = 200;
-    let offset = 0;
-    const repoFiles: RepoInventoryResponse["repo_files"] = [];
-
-    while (true) {
-      const page = await this.request<RepoInventoryResponse>(
-        "GET",
-        `/api/v1/repo/files?limit=${pageSize}&offset=${offset}`,
-      );
-      repoFiles.push(...page.repo_files);
-      if (page.repo_files.length < pageSize) {
-        break;
-      }
-      offset += pageSize;
+  async getRepoInventory(
+    limit = 50,
+    offset = 0,
+    options: {
+      packageName?: string;
+      mockChroot?: string;
+      kind?: "rpm" | "srpm" | "log" | "other" | "all";
+    } = {},
+  ): Promise<RepoInventoryResponse> {
+    const params = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    if (options.packageName?.trim()) {
+      params.set("package_name", options.packageName.trim());
     }
+    if (options.mockChroot?.trim()) {
+      params.set("mock_chroot", options.mockChroot.trim());
+    }
+    if (options.kind && options.kind !== "all") {
+      params.set("kind", options.kind);
+    }
+    return this.request("GET", `/api/v1/repo/files?${params.toString()}`);
+  }
 
-    return { repo_files: repoFiles };
+  async getRepoSummary(): Promise<RepoSummaryResponse> {
+    return this.request("GET", "/api/v1/repo/summary");
   }
 
   async rebuildPackage(name: string): Promise<BuildJobResponse> {
@@ -191,8 +219,35 @@ class ApiClient {
   }
 
   // Jobs
-  async listJobs(): Promise<BuildJobListResponse> {
-    return this.request("GET", "/api/v1/jobs");
+  async listJobs(
+    options: {
+      limit?: number;
+      offset?: number;
+      status?: string;
+      packageName?: string;
+      mockChroot?: string;
+    } = {},
+  ): Promise<BuildJobListResponse> {
+    const params = new URLSearchParams();
+    if (options.limit !== undefined) {
+      params.set("limit", String(options.limit));
+    }
+    if (options.offset !== undefined) {
+      params.set("offset", String(options.offset));
+    }
+    if (options.status && options.status !== "all") {
+      params.set("status", options.status);
+    }
+    if (options.packageName?.trim()) {
+      params.set("package_name", options.packageName.trim());
+    }
+    if (options.mockChroot?.trim()) {
+      params.set("mock_chroot", options.mockChroot.trim());
+    }
+    return this.request(
+      "GET",
+      `/api/v1/jobs${params.toString() ? `?${params.toString()}` : ""}`,
+    );
   }
 
   async getJob(id: string): Promise<BuildJobResponse> {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../lib/api";
+import LoadingBlock from "./LoadingBlock";
 import PageHeader from "./PageHeader";
 import FaIcon from "./FaIcon";
 import {
@@ -64,7 +65,7 @@ export default function RepositorySetup() {
   }
 
   if (loading) {
-    return <div className="text-zinc-400">Loading repository setup…</div>;
+    return <LoadingBlock label="Loading repository setup…" lines={3} />;
   }
 
   if (error) {

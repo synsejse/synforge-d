@@ -1,8 +1,16 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import api from "../lib/api";
 import FaIcon from "./FaIcon";
 import ActionButton from "./ActionButton";
 import EmptyState from "./EmptyState";
+import LoadingBlock from "./LoadingBlock";
 import PageHeader from "./PageHeader";
 import StatusPill from "./StatusPill";
 import type {
@@ -22,16 +30,70 @@ import {
 
 export default function PackageList() {
   const [packages, setPackages] = useState<PackageResponse[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(() => {
+    if (typeof window === "undefined") {
+      return 0;
+    }
+    return Number(
+      new URLSearchParams(window.location.search).get("offset") || "0",
+    );
+  });
+  const [search, setSearch] = useState(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    return new URLSearchParams(window.location.search).get("search") || "";
+  });
+  const [enabledFilter, setEnabledFilter] = useState<"all" | "true" | "false">(
+    () => {
+      if (typeof window === "undefined") {
+        return "all";
+      }
+      const value = new URLSearchParams(window.location.search).get("enabled");
+      return value === "true" || value === "false" ? value : "all";
+    },
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const pageSize = 50;
 
-  async function load() {
+  async function load(
+    nextOffset = offset,
+    nextSearch = search,
+    nextEnabled = enabledFilter,
+  ) {
     try {
       setLoading(true);
-      const res = await api.listPackages();
+      const res = await api.listPackagesPage(pageSize, nextOffset, {
+        search: nextSearch,
+        enabled: nextEnabled === "all" ? "all" : nextEnabled === "true",
+      });
       setPackages(res.packages);
+      setHasMore(res.page.has_more);
+      setOffset(nextOffset);
+      setSearch(nextSearch);
+      setEnabledFilter(nextEnabled);
       setError(null);
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams();
+        if (nextOffset > 0) {
+          params.set("offset", String(nextOffset));
+        }
+        if (nextSearch.trim()) {
+          params.set("search", nextSearch.trim());
+        }
+        if (nextEnabled !== "all") {
+          params.set("enabled", nextEnabled);
+        }
+        const query = params.toString();
+        window.history.replaceState(
+          {},
+          "",
+          `/packages/${query ? `?${query}` : ""}`,
+        );
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load packages");
     } finally {
@@ -69,7 +131,7 @@ export default function PackageList() {
   }
 
   if (loading) {
-    return <div className="text-zinc-400">Loading packages…</div>;
+    return <LoadingBlock label="Loading packages…" lines={4} />;
   }
 
   if (error) {
@@ -96,6 +158,41 @@ export default function PackageList() {
         ]}
       />
 
+      <section className="grid gap-3 border border-zinc-800 bg-black p-4 md:grid-cols-[minmax(0,1fr)_220px_auto]">
+        <label className="block">
+          <span className="sr-only">Search packages</span>
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search name or description"
+            className="w-full border border-zinc-800 bg-black px-4 py-2.5 text-sm text-white outline-none transition focus:border-zinc-600"
+          />
+        </label>
+        <label className="block">
+          <span className="sr-only">Filter by enabled state</span>
+          <select
+            value={enabledFilter}
+            onChange={(event) =>
+              setEnabledFilter(event.target.value as "all" | "true" | "false")
+            }
+            className="w-full border border-zinc-800 bg-black px-4 py-2.5 text-sm text-white outline-none transition focus:border-zinc-600"
+          >
+            <option value="all">All states</option>
+            <option value="true">Enabled only</option>
+            <option value="false">Disabled only</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={() => load(0, search, enabledFilter)}
+          className="border border-zinc-800 bg-black px-4 py-2.5 text-sm text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
+        >
+          <FaIcon icon={faMagnifyingGlass} className="mr-2" />
+          Apply
+        </button>
+      </section>
+
       {packages.length === 0 ? (
         <EmptyState>
           No packages configured yet. Add a spec source to start building.
@@ -103,16 +200,36 @@ export default function PackageList() {
       ) : (
         <div className="overflow-x-auto border border-zinc-800 bg-black">
           <table className="min-w-[1220px] w-full">
+            <caption className="sr-only">
+              Configured packages with version, target, repository source,
+              current state, and available actions.
+            </caption>
             <thead className="bg-zinc-950 text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
               <tr>
-                <th className="px-4 py-3">Package</th>
-                <th className="px-4 py-3">Version</th>
-                <th className="px-4 py-3">Target</th>
-                <th className="px-4 py-3">Repository</th>
-                <th className="px-4 py-3">Spec file</th>
-                <th className="px-4 py-3">Last revision</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Actions</th>
+                <th scope="col" className="px-4 py-3">
+                  Package
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Version
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Target
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Repository
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Spec file
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Last revision
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Status
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/8">
@@ -167,24 +284,28 @@ export default function PackageList() {
                         <ActionButton
                           href={`/packages/view/?name=${encodeURIComponent(entry.package.name)}`}
                           icon={faFolderOpen}
+                          aria-label={`Open package ${entry.package.name}`}
                         >
                           Open
                         </ActionButton>
                         <ActionButton
                           onClick={() => trigger(entry.package.name, "refresh")}
                           icon={faRotate}
+                          aria-label={`Refresh package ${entry.package.name}`}
                         >
                           Refresh
                         </ActionButton>
                         <ActionButton
                           onClick={() => trigger(entry.package.name, "rebuild")}
                           icon={faHammer}
+                          aria-label={`Rebuild package ${entry.package.name}`}
                         >
                           Rebuild
                         </ActionButton>
                         <ActionButton
                           onClick={() => handleDelete(entry.package.name)}
                           icon={faTrash}
+                          aria-label={`Delete package ${entry.package.name}`}
                           className="text-zinc-300"
                         >
                           Delete
@@ -198,6 +319,27 @@ export default function PackageList() {
           </table>
         </div>
       )}
+
+      {packages.length > 0 ? (
+        <div className="flex items-center justify-between gap-3">
+          <button
+            onClick={() =>
+              load(Math.max(0, offset - pageSize), search, enabledFilter)
+            }
+            disabled={loading || offset === 0}
+            className="border border-zinc-800 px-4 py-2 text-sm text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <button
+            onClick={() => load(offset + pageSize, search, enabledFilter)}
+            disabled={loading || !hasMore}
+            className="border border-zinc-800 px-4 py-2 text-sm text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      ) : null}
 
       {showAddModal && (
         <AddPackageModal
@@ -265,6 +407,8 @@ function AddPackageModal({
   const [showChrootPicker, setShowChrootPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement | null>(null);
 
   const selectableFiles = useMemo(
     () => browseFiles.filter((file) => file.endsWith(".spec")),
@@ -295,6 +439,13 @@ function AddPackageModal({
     }
 
     loadChroots();
+  }, []);
+
+  useEffect(() => {
+    const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
+      'input, select, textarea, button, [href], [tabindex]:not([tabindex="-1"])',
+    );
+    firstFocusable?.focus();
   }, []);
 
   async function handleBrowse() {
@@ -361,13 +512,26 @@ function AddPackageModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 px-4 py-6">
-      <div className="mx-auto w-full max-w-3xl border border-zinc-800 bg-black">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/70 px-4 py-6"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="mx-auto w-full max-w-3xl border border-zinc-800 bg-black"
+      >
         <div className="border-b border-zinc-800 px-6 py-5">
           <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">
             Package
           </p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">
+          <h2 id={titleId} className="mt-2 text-2xl font-semibold text-white">
             Add package
           </h2>
         </div>

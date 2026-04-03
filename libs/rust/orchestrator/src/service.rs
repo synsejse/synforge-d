@@ -10,12 +10,13 @@ use futures_util::StreamExt;
 use serde_json::Value;
 use synforge_core::{
     api::{
-        BrowseRepositoryRequest, BrowseRepositoryResponse, BuildJobResponse, CreatePackageRequest,
+        BrowseRepositoryRequest, BrowseRepositoryResponse, BuildJobListResponse, BuildJobResponse,
         ChangePasswordRequest, ConfigFieldDescriptor, ConfigFieldType, ConfigSchemaResponse,
-        CreateUserRequest, EffectiveConfigDto, EffectiveConfigView, LogChunkResponse,
-        LogManifestResponse, LogMetaResponse, LogSource, LogSourceType, MockChrootListResponse,
-        PackageBuildHistoryResponse, PackageBuildInventoryEntry, PackageRepoFilesResponse,
-        PackageResponse, PruneJobsResponse, RefreshRequest, RebuildRequest, RepoInventoryResponse,
+        CreatePackageRequest, CreateUserRequest, EffectiveConfigDto, EffectiveConfigView,
+        LogChunkResponse, LogManifestResponse, LogMetaResponse, LogSource, LogSourceType,
+        MockChrootListResponse, PackageBuildHistoryResponse, PackageBuildInventoryEntry,
+        PackageListResponse, PackageRepoFilesResponse, PackageResponse, PageInfo,
+        PruneJobsResponse, RefreshRequest, RebuildRequest, RepoInventoryResponse, RepoSummaryResponse,
         SessionResponse, SetupInitializeRequest, UpdatePackageRequest, UpdateRuntimeSettingsRequest,
         UpdateUserRequest, UserListResponse, UserMetricsResponse, UserResponse,
     },
@@ -282,9 +283,20 @@ impl SynforgeService {
         Ok(self.effective_config().await)
     }
 
-    pub async fn list_packages(&self, limit: Option<usize>, offset: Option<usize>) -> anyhow::Result<Vec<PackageResponse>> {
+    pub async fn list_packages(
+        &self,
+        limit: Option<usize>,
+        offset: Option<usize>,
+        search: Option<String>,
+        enabled: Option<bool>,
+    ) -> anyhow::Result<PackageListResponse> {
         let (limit, offset) = normalize_pagination(limit, offset);
-        self.registry.list_packages(limit, offset).await
+        let total = self.store.count_packages(search.clone(), enabled).await?;
+        let packages = self.store.list_packages(limit, offset, search, enabled).await?;
+        Ok(PackageListResponse {
+            page: build_page_info(limit, offset, total, packages.len()),
+            packages,
+        })
     }
 
     pub async fn get_package(&self, package_name: &str) -> anyhow::Result<PackageResponse> {
@@ -339,10 +351,35 @@ impl SynforgeService {
         &self,
         limit: Option<usize>,
         offset: Option<usize>,
+        package_name: Option<String>,
+        mock_chroot: Option<String>,
+        kind: Option<synforge_core::model::ArtifactKind>,
     ) -> anyhow::Result<RepoInventoryResponse> {
         let (limit, offset) = normalize_pagination(limit, offset);
+        let total = self
+            .store
+            .count_published_repo_files(package_name.clone(), mock_chroot.clone(), kind)
+            .await?;
+        let repo_files = self
+            .store
+            .list_published_repo_files(limit, offset, package_name, mock_chroot, kind)
+            .await?;
         Ok(RepoInventoryResponse {
-            repo_files: self.store.list_published_repo_files(limit, offset).await?,
+            page: build_page_info(limit, offset, total, repo_files.len()),
+            repo_files,
+        })
+    }
+
+    pub async fn get_repo_summary(&self) -> anyhow::Result<RepoSummaryResponse> {
+        let (package_count, target_count, build_count) = self.store.get_repo_distinct_counts().await?;
+        Ok(RepoSummaryResponse {
+            package_count,
+            target_count,
+            build_count,
+            stored_bytes: self.store.sum_published_repo_file_bytes().await?,
+            published_file_count: self.store.count_published_repo_files(None, None, None).await?,
+            targets: self.store.list_repo_target_summaries().await?,
+            recent_files: self.store.list_recent_published_repo_files(10).await?,
         })
     }
 
@@ -678,9 +715,27 @@ impl SynforgeService {
             .await
     }
 
-    pub async fn list_jobs(&self, limit: Option<usize>, offset: Option<usize>) -> anyhow::Result<Vec<BuildJobResponse>> {
+    pub async fn list_jobs(
+        &self,
+        limit: Option<usize>,
+        offset: Option<usize>,
+        status: Option<BuildStatus>,
+        package_name: Option<String>,
+        mock_chroot: Option<String>,
+    ) -> anyhow::Result<BuildJobListResponse> {
         let (limit, offset) = normalize_pagination(limit, offset);
-        self.store.list_jobs(limit, offset).await
+        let total = self
+            .store
+            .count_jobs(status, package_name.clone(), mock_chroot.clone())
+            .await?;
+        let jobs = self
+            .store
+            .list_jobs(limit, offset, status, package_name, mock_chroot)
+            .await?;
+        Ok(BuildJobListResponse {
+            page: build_page_info(limit, offset, total, jobs.len()),
+            jobs,
+        })
     }
 
     pub async fn get_job(&self, job_id: Uuid) -> anyhow::Result<BuildJobResponse> {
@@ -819,7 +874,10 @@ impl SynforgeService {
     }
 
     pub async fn prune_failed_jobs(&self) -> anyhow::Result<PruneJobsResponse> {
-        let jobs = self.store.list_jobs(10_000, 0).await?;
+        let jobs = self
+            .store
+            .list_jobs(10_000, 0, None, None, None)
+            .await?;
         let mut deleted_jobs = Vec::new();
         for job in jobs {
             if matches!(job.job.status, BuildStatus::Failed | BuildStatus::TimedOut) {
@@ -1136,6 +1194,16 @@ fn normalize_pagination(limit: Option<usize>, offset: Option<usize>) -> (usize, 
         limit.unwrap_or(DEFAULT_PAGE_SIZE).clamp(1, MAX_PAGE_SIZE),
         offset.unwrap_or(0),
     )
+}
+
+fn build_page_info(limit: usize, offset: usize, total: u64, returned: usize) -> PageInfo {
+    PageInfo {
+        limit,
+        offset,
+        returned,
+        total: Some(total),
+        has_more: (offset as u64) + (returned as u64) < total,
+    }
 }
 
 fn validate_user_handle(handle: &str) -> anyhow::Result<()> {

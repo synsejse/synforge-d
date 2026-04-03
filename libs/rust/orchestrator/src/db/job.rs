@@ -205,16 +205,63 @@ pub(super) async fn list_jobs(
     store: &DieselStore,
     limit: usize,
     offset: usize,
+    status: Option<BuildStatus>,
+    package_name: Option<String>,
+    mock_chroot: Option<String>,
 ) -> anyhow::Result<Vec<BuildJobResponse>> {
+    let status = status;
+    let package_name = package_name;
+    let mock_chroot = mock_chroot;
     store
         .with_connection(move |conn| {
-            let rows = build_jobs::table
+            let mut query = build_jobs::table.into_boxed();
+            if let Some(status) = status {
+                query = query.filter(build_jobs::status.eq(status));
+            }
+            if let Some(package_name) = package_name.as_deref() {
+                let search = format!("%{}%", package_name);
+                query = query.filter(build_jobs::package_name.like(search));
+            }
+            if let Some(mock_chroot) = mock_chroot.as_deref() {
+                let search = format!("%{}%", mock_chroot);
+                query = query.filter(build_jobs::mock_chroot.like(search));
+            }
+            let rows = query
                 .order(build_jobs::created_at.desc())
                 .limit(limit as i64)
                 .offset(offset as i64)
                 .select(JobRecord::as_select())
                 .load(conn)?;
             load_job_responses(conn, rows)
+        })
+        .await
+}
+
+pub(super) async fn count_jobs(
+    store: &DieselStore,
+    status: Option<BuildStatus>,
+    package_name: Option<String>,
+    mock_chroot: Option<String>,
+) -> anyhow::Result<u64> {
+    let status = status;
+    let package_name = package_name;
+    let mock_chroot = mock_chroot;
+    store
+        .with_connection(move |conn| {
+            let mut query = build_jobs::table.into_boxed();
+            if let Some(status) = status {
+                query = query.filter(build_jobs::status.eq(status));
+            }
+            if let Some(package_name) = package_name.as_deref() {
+                let search = format!("%{}%", package_name);
+                query = query.filter(build_jobs::package_name.like(search));
+            }
+            if let Some(mock_chroot) = mock_chroot.as_deref() {
+                let search = format!("%{}%", mock_chroot);
+                query = query.filter(build_jobs::mock_chroot.like(search));
+            }
+            let count = query.count().get_result::<i64>(conn)?;
+            Ok(count as u64)
         })
         .await
 }

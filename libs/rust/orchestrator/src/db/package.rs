@@ -4,10 +4,24 @@ pub(super) async fn list_packages(
     store: &DieselStore,
     limit: usize,
     offset: usize,
+    search: Option<String>,
+    enabled: Option<bool>,
 ) -> anyhow::Result<Vec<PackageResponse>> {
+    let search = search.map(|value| format!("%{}%", value));
     store
         .with_connection(move |conn| {
-            let rows = packages::table
+            let mut query = packages::table.into_boxed();
+            if let Some(search) = search.as_deref() {
+                query = query.filter(
+                    packages::name
+                        .like(search)
+                        .or(packages::description.like(search)),
+                );
+            }
+            if let Some(enabled) = enabled {
+                query = query.filter(packages::enabled.eq(enabled));
+            }
+            let rows = query
                 .order(packages::name.asc())
                 .limit(limit as i64)
                 .offset(offset as i64)
@@ -16,6 +30,31 @@ pub(super) async fn list_packages(
             rows.into_iter()
                 .map(|record| package_response_from_record(conn, record))
                 .collect()
+        })
+        .await
+}
+
+pub(super) async fn count_packages(
+    store: &DieselStore,
+    search: Option<String>,
+    enabled: Option<bool>,
+) -> anyhow::Result<u64> {
+    let search = search.map(|value| format!("%{}%", value));
+    store
+        .with_connection(move |conn| {
+            let mut query = packages::table.into_boxed();
+            if let Some(search) = search.as_deref() {
+                query = query.filter(
+                    packages::name
+                        .like(search)
+                        .or(packages::description.like(search)),
+                );
+            }
+            if let Some(enabled) = enabled {
+                query = query.filter(packages::enabled.eq(enabled));
+            }
+            let count = query.count().get_result::<i64>(conn)?;
+            Ok(count as u64)
         })
         .await
 }

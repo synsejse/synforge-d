@@ -42,6 +42,15 @@ export interface PackageResponse {
 
 export interface PackageListResponse {
   packages: PackageResponse[];
+  page: PageInfo;
+}
+
+export interface PageInfo {
+  limit: number;
+  offset: number;
+  returned: number;
+  total?: number;
+  has_more: boolean;
 }
 
 export interface CreatePackageRequest {
@@ -103,6 +112,8 @@ export interface BuildArtifact {
 export interface PublishedRepoFile {
   job_id: string;
   package_name: string;
+  mock_chroot: string;
+  arch: string;
   repo_path: string;
   sha256: string;
   size_bytes: number;
@@ -132,6 +143,7 @@ export interface BuildJobResponse {
 
 export interface BuildJobListResponse {
   jobs: BuildJobResponse[];
+  page: PageInfo;
 }
 
 export interface PackageBuildInventoryEntry {
@@ -151,6 +163,24 @@ export interface PackageRepoFilesResponse {
 
 export interface RepoInventoryResponse {
   repo_files: PublishedRepoFile[];
+  page: PageInfo;
+}
+
+export interface RepoTargetSummary {
+  mock_chroot: string;
+  package_count: number;
+  build_count: number;
+  size_bytes: number;
+}
+
+export interface RepoSummaryResponse {
+  package_count: number;
+  target_count: number;
+  build_count: number;
+  stored_bytes: number;
+  published_file_count: number;
+  targets: RepoTargetSummary[];
+  recent_files: PublishedRepoFile[];
 }
 
 export interface LogChunkResponse {

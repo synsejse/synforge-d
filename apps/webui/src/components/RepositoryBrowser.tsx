@@ -1,75 +1,136 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   faBoxesStacked,
-  faCube,
+  faMagnifyingGlass,
   faDownload,
   faFolderTree,
-  faHardDrive,
-  faLayerGroup,
-  faUpRightFromSquare,
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../lib/api";
-import { compareTimestampsDesc, formatDateTime } from "../lib/datetime";
-import type { PublishedRepoFile } from "../lib/types";
+import { formatDateTime } from "../lib/datetime";
+import type { PublishedRepoFile, RepoSummaryResponse } from "../lib/types";
 import EmptyState from "./EmptyState";
 import FaIcon from "./FaIcon";
+import LoadingBlock from "./LoadingBlock";
+import MetricCard from "./MetricCard";
 import PageHeader from "./PageHeader";
 
-type RepoBuildGroup = {
-  jobId: string;
-  files: PublishedRepoFile[];
-};
-
-type RepoTargetGroup = {
-  mockChroot: string;
-  builds: RepoBuildGroup[];
-};
-
-type RepoPackageGroup = {
-  packageName: string;
-  targets: RepoTargetGroup[];
-};
+const PAGE_SIZE = 50;
 
 export default function RepositoryBrowser() {
+  const [summary, setSummary] = useState<RepoSummaryResponse | null>(null);
   const [files, setFiles] = useState<PublishedRepoFile[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(() => {
+    if (typeof window === "undefined") {
+      return 0;
+    }
+    return Number(
+      new URLSearchParams(window.location.search).get("offset") || "0",
+    );
+  });
+  const [packageFilter, setPackageFilter] = useState(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    return new URLSearchParams(window.location.search).get("package") || "";
+  });
+  const [targetFilter, setTargetFilter] = useState(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    return new URLSearchParams(window.location.search).get("target") || "";
+  });
+  const [kindFilter, setKindFilter] = useState<"all" | "rpm" | "srpm" | "log">(
+    () => {
+      if (typeof window === "undefined") {
+        return "all";
+      }
+      const value = new URLSearchParams(window.location.search).get("kind");
+      return value === "rpm" || value === "srpm" || value === "log"
+        ? value
+        : "all";
+    },
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true);
-        const res = await api.getRepoInventory();
-        setFiles(res.repo_files);
-        setError(null);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load repository inventory");
-      } finally {
-        setLoading(false);
+  async function load(
+    nextOffset = offset,
+    nextPackageFilter = packageFilter,
+    nextTargetFilter = targetFilter,
+    nextKindFilter = kindFilter,
+  ) {
+    try {
+      setLoading(true);
+      const [summaryRes, inventoryRes] = await Promise.all([
+        api.getRepoSummary(),
+        api.getRepoInventory(PAGE_SIZE, nextOffset, {
+          packageName: nextPackageFilter,
+          mockChroot: nextTargetFilter,
+          kind: nextKindFilter,
+        }),
+      ]);
+      setSummary(summaryRes);
+      setFiles(inventoryRes.repo_files);
+      setHasMore(inventoryRes.page.has_more);
+      setOffset(nextOffset);
+      setPackageFilter(nextPackageFilter);
+      setTargetFilter(nextTargetFilter);
+      setKindFilter(nextKindFilter);
+      setError(null);
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams();
+        if (nextOffset > 0) {
+          params.set("offset", String(nextOffset));
+        }
+        if (nextPackageFilter.trim()) {
+          params.set("package", nextPackageFilter.trim());
+        }
+        if (nextTargetFilter.trim()) {
+          params.set("target", nextTargetFilter.trim());
+        }
+        if (nextKindFilter !== "all") {
+          params.set("kind", nextKindFilter);
+        }
+        const query = params.toString();
+        window.history.replaceState(
+          {},
+          "",
+          `/repository/${query ? `?${query}` : ""}`,
+        );
       }
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Failed to load repository inventory",
+      );
+    } finally {
+      setLoading(false);
     }
+  }
 
+  useEffect(() => {
     load();
   }, []);
 
-  const grouped = useMemo(() => groupRepoFiles(files), [files]);
-  const summary = useMemo(() => summarizeInventory(grouped), [grouped]);
-  const totalBytes = files.reduce((sum, file) => sum + file.size_bytes, 0);
-  const recentFiles = useMemo(
-    () =>
-      [...files]
-        .sort((left, right) => compareTimestampsDesc(left.published_at, right.published_at))
-        .slice(0, 10),
-    [files]
-  );
+  function handleApply(event: FormEvent) {
+    event.preventDefault();
+    load(0, packageFilter, targetFilter, kindFilter);
+  }
 
-  if (loading) {
-    return <div className="text-zinc-400">Loading repository inventory…</div>;
+  if (loading && !summary) {
+    return <LoadingBlock label="Loading repository inventory…" lines={4} />;
   }
 
   if (error) {
-    return <div className="border border-zinc-800 bg-black p-4 text-zinc-200">Error: {error}</div>;
+    return (
+      <div className="border border-zinc-800 bg-black p-4 text-zinc-200">
+        Error: {error}
+      </div>
+    );
   }
+
+  const targets = summary?.targets ?? [];
+  const recentFiles = summary?.recent_files ?? [];
 
   return (
     <div className="space-y-8">
@@ -77,372 +138,313 @@ export default function RepositoryBrowser() {
         eyebrow="Managed Repository"
         title="Repository Control"
         description="Published packages, builds, and files."
-        actions={[{ href: "/packages/", label: "Packages", icon: faBoxesStacked }]}
+        actions={[
+          { href: "/packages/", label: "Packages", icon: faBoxesStacked },
+        ]}
       />
 
-      <section className="grid gap-4 xl:grid-cols-4">
-        <MetricCard label="Packages" value={grouped.length} icon={faBoxesStacked} />
-        <MetricCard label="Targets" value={summary.targetCount} icon={faLayerGroup} />
-        <MetricCard label="Builds" value={summary.buildCount} icon={faCube} />
-        <MetricCard label="Stored Size" value={formatBytes(totalBytes)} icon={faHardDrive} />
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="Packages"
+          value={summary?.package_count ?? 0}
+          detail="Published package names"
+        />
+        <MetricCard
+          label="Targets"
+          value={summary?.target_count ?? 0}
+          detail="Active build targets"
+        />
+        <MetricCard
+          label="Builds"
+          value={summary?.build_count ?? 0}
+          detail="Recorded publish jobs"
+        />
+        <MetricCard
+          label="Stored Size"
+          value={formatBytes(summary?.stored_bytes ?? 0)}
+          detail={`${summary?.published_file_count ?? 0} published files`}
+        />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.25fr_0.85fr]">
-        <article className="border border-zinc-800 bg-black p-6">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">Coverage</div>
-              <h2 className="mt-2 text-2xl font-semibold text-white">Repository footprint</h2>
+      <section className="border border-zinc-800 bg-black p-6">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <div className="text-xs uppercase tracking-[0.22em] text-zinc-500">
+              Build Targets
             </div>
-            <div className="border border-zinc-800 px-3 py-2 text-xs uppercase tracking-[0.2em] text-zinc-400">
-              {files.length} published files
-            </div>
+            <h2 className="mt-2 text-2xl font-semibold text-white">
+              Published target coverage
+            </h2>
           </div>
+          <div className="text-sm text-zinc-500">
+            Per-target package, build, and size totals
+          </div>
+        </div>
 
-          <div className="mt-6">
-            <div>
-              <div className="mb-3 text-xs uppercase tracking-[0.22em] text-zinc-500">Build targets</div>
-              <div className="grid gap-3">
-                {summary.targets.map((target) => (
-                  <div key={target.mockChroot} className="border border-zinc-800 bg-zinc-950/40 p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="text-lg font-semibold font-mono text-white">{target.mockChroot}</div>
-                      <span className="inline-flex items-center gap-2 border border-emerald-700/60 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
-                        <span className="h-2 w-2 bg-emerald-400"></span>
-                        Active
-                      </span>
-                    </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                      <MiniStat label="Packages" value={target.packageCount} />
-                      <MiniStat label="Builds" value={target.buildCount} />
-                      <MiniStat label="Size" value={formatBytes(target.sizeBytes)} />
-                    </div>
+        {targets.length === 0 ? (
+          <div className="mt-5">
+            <EmptyState>No published repository targets yet.</EmptyState>
+          </div>
+        ) : (
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {targets.map((target) => (
+              <article
+                key={target.mock_chroot}
+                className="border border-zinc-800 bg-zinc-950/40 p-5"
+              >
+                <div className="font-mono text-lg font-semibold text-white">
+                  {target.mock_chroot}
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <TargetStat label="Packages" value={target.package_count} />
+                  <TargetStat label="Builds" value={target.build_count} />
+                  <TargetStat
+                    label="Size"
+                    value={formatBytes(target.size_bytes)}
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="border border-zinc-800 bg-black p-6">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <div className="text-xs uppercase tracking-[0.22em] text-zinc-500">
+              Recent Output
+            </div>
+            <h2 className="mt-2 text-2xl font-semibold text-white">
+              Latest published files
+            </h2>
+          </div>
+          <FaIcon icon={faFolderTree} className="text-zinc-500" />
+        </div>
+
+        {recentFiles.length === 0 ? (
+          <div className="mt-5">
+            <EmptyState>No published files have been recorded yet.</EmptyState>
+          </div>
+        ) : (
+          <div className="mt-5 grid gap-3">
+            {recentFiles.slice(0, 6).map((file) => (
+              <div
+                key={`${file.job_id}:${file.repo_path}`}
+                className="grid gap-3 border border-zinc-800 bg-zinc-950/40 p-4 md:grid-cols-[minmax(0,1fr)_auto]"
+              >
+                <div className="min-w-0">
+                  <div className="truncate font-mono text-sm text-white">
+                    {file.repo_path}
                   </div>
-                ))}
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs uppercase tracking-[0.18em] text-zinc-500">
+                    <span>{file.package_name}</span>
+                    <span>{file.kind}</span>
+                    <span>{formatBytes(file.size_bytes)}</span>
+                  </div>
+                  <div className="mt-2 text-xs text-zinc-500">
+                    {formatDateTime(file.published_at)}
+                  </div>
+                </div>
+                <div className="flex items-start md:justify-end">
+                  <a
+                    href={`/repo/${file.repo_path}`}
+                    className="inline-flex items-center border border-zinc-800 px-3 py-2 text-sm text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
+                  >
+                    <FaIcon icon={faDownload} className="mr-2" />
+                    Download
+                  </a>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
-        </article>
-
-        <article className="border border-zinc-800 bg-black p-6">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">Recent output</div>
-              <h2 className="mt-2 text-2xl font-semibold text-white">Latest published files</h2>
-            </div>
-            <FaIcon icon={faFolderTree} className="text-zinc-500" />
-          </div>
-
-          {recentFiles.length === 0 ? (
-            <div className="mt-6">
-              <EmptyState>No published files have been recorded yet.</EmptyState>
-            </div>
-          ) : (
-            <div className="mt-6 space-y-3">
-              {recentFiles.map((file) => (
-                <div key={`${file.job_id}:${file.repo_path}`} className="border border-zinc-800 bg-zinc-950/40 p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="truncate font-mono text-sm text-white">{file.repo_path}</div>
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs uppercase tracking-[0.18em] text-zinc-500">
-                        <span>{file.package_name}</span>
-                        <span>{file.kind}</span>
-                        <span>{formatBytes(file.size_bytes)}</span>
-                      </div>
-                    </div>
-                    <a
-                      href={`/repo/${file.repo_path}`}
-                      className="inline-flex items-center border border-zinc-800 px-3 py-2 text-sm text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
-                    >
-                      <FaIcon icon={faDownload} className="mr-2" />
-                      Download
-                    </a>
-                  </div>
-                  <div className="mt-3 text-xs text-zinc-500">{formatDateTime(file.published_at)}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </article>
+        )}
       </section>
 
-      {grouped.length === 0 ? (
-        <EmptyState>No managed repository files are published yet.</EmptyState>
-      ) : (
-        <section className="space-y-4">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">Ownership</div>
-              <h2 className="mt-2 text-2xl font-semibold text-white">Package publication map</h2>
+      <section className="space-y-4">
+        <form
+          onSubmit={handleApply}
+          className="grid gap-3 border border-zinc-800 bg-black p-4 md:grid-cols-[minmax(0,1fr)_240px_180px_auto]"
+        >
+          <label className="block">
+            <span className="sr-only">Filter by package name</span>
+            <input
+              type="search"
+              value={packageFilter}
+              onChange={(event) => setPackageFilter(event.target.value)}
+              placeholder="Filter by package"
+              className="w-full border border-zinc-800 bg-black px-4 py-2.5 text-sm text-white outline-none transition focus:border-zinc-600"
+            />
+          </label>
+          <label className="block">
+            <span className="sr-only">Filter by target</span>
+            <input
+              type="search"
+              value={targetFilter}
+              onChange={(event) => setTargetFilter(event.target.value)}
+              placeholder="Filter by target"
+              className="w-full border border-zinc-800 bg-black px-4 py-2.5 text-sm text-white outline-none transition focus:border-zinc-600"
+            />
+          </label>
+          <label className="block">
+            <span className="sr-only">Filter by artifact kind</span>
+            <select
+              value={kindFilter}
+              onChange={(event) =>
+                setKindFilter(
+                  event.target.value as "all" | "rpm" | "srpm" | "log",
+                )
+              }
+              className="w-full border border-zinc-800 bg-black px-4 py-2.5 text-sm text-white outline-none transition focus:border-zinc-600"
+            >
+              <option value="all">All kinds</option>
+              <option value="rpm">RPM</option>
+              <option value="srpm">SRPM</option>
+              <option value="log">Log</option>
+            </select>
+          </label>
+          <button
+            type="submit"
+            className="border border-zinc-800 bg-black px-4 py-2.5 text-sm text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
+          >
+            <FaIcon icon={faMagnifyingGlass} className="mr-2" />
+            Apply
+          </button>
+        </form>
+
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
+              Inventory
             </div>
-            <div className="text-sm text-zinc-500">Collapsed by default for faster navigation</div>
+            <h2 className="mt-2 text-2xl font-semibold text-white">
+              Published files
+            </h2>
           </div>
+          <div className="text-sm text-zinc-500">
+            Server-paginated inventory view
+          </div>
+        </div>
 
-          {grouped.map((pkg) => {
-            const packageFiles = flattenPackageFiles(pkg);
-            const packageBuildCount = pkg.targets.reduce((sum, target) => sum + target.builds.length, 0);
-            const packageSize = packageFiles.reduce((sum, file) => sum + file.size_bytes, 0);
-
-            return (
-              <details key={pkg.packageName} className="border border-zinc-800 bg-black">
-                <summary className="cursor-pointer list-none px-5 py-5">
-                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                    <div className="min-w-0">
-                      <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">Package</div>
-                      <div className="mt-2 text-2xl font-semibold text-white">{pkg.packageName}</div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {pkg.targets.map((target) => (
-                          <span
-                            key={`${pkg.packageName}:${target.mockChroot}`}
-                            className="inline-flex items-center gap-2 border border-zinc-800 px-3 py-1 text-xs uppercase tracking-[0.18em] text-zinc-400"
-                          >
-                            <span className="h-2 w-2 bg-emerald-400"></span>
-                            {target.mockChroot}
-                          </span>
-                        ))}
+        {files.length === 0 ? (
+          <EmptyState>
+            No managed repository files are published yet.
+          </EmptyState>
+        ) : (
+          <div className="overflow-x-auto border border-zinc-800 bg-black">
+            <table className="min-w-[980px] w-full">
+              <caption className="sr-only">
+                Published repository files with package, target, type, size,
+                publication date, and actions.
+              </caption>
+              <thead className="bg-zinc-950 text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
+                <tr>
+                  <th scope="col" className="px-4 py-3">Package</th>
+                  <th scope="col" className="px-4 py-3">Repo Path</th>
+                  <th scope="col" className="px-4 py-3">Target</th>
+                  <th scope="col" className="px-4 py-3">Kind</th>
+                  <th scope="col" className="px-4 py-3">Size</th>
+                  <th scope="col" className="px-4 py-3">Published</th>
+                  <th scope="col" className="px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/8">
+                {files.map((file) => (
+                  <tr
+                    key={`${file.job_id}:${file.repo_path}`}
+                    className="hover:bg-zinc-950"
+                  >
+                    <td className="px-4 py-3">
+                      <a
+                        href={`/packages/view/?name=${encodeURIComponent(file.package_name)}`}
+                        className="text-white transition hover:text-zinc-300"
+                      >
+                        {file.package_name}
+                      </a>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-sm text-zinc-200">
+                      {file.repo_path}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-sm text-zinc-400">
+                      {file.mock_chroot || "unknown"}
+                    </td>
+                    <td className="px-4 py-3 text-sm uppercase tracking-[0.18em] text-zinc-500">
+                      {file.kind}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-zinc-400">
+                      {formatBytes(file.size_bytes)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-zinc-400">
+                      {formatDateTime(file.published_at)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-2">
+                        <a
+                          href={`/repo/${file.repo_path}`}
+                          className="inline-flex items-center border border-zinc-800 px-3 py-2 text-sm text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
+                        >
+                          <FaIcon icon={faDownload} className="mr-2" />
+                          Download
+                        </a>
+                        <a
+                          href={`/jobs/view/?id=${encodeURIComponent(file.job_id)}`}
+                          className="inline-flex items-center border border-zinc-800 px-3 py-2 text-sm text-zinc-400 transition hover:border-zinc-600 hover:bg-zinc-950 hover:text-zinc-200"
+                        >
+                          Build
+                        </a>
                       </div>
-                    </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-                    <div className="grid gap-3 sm:grid-cols-4 xl:min-w-[520px]">
-                      <MiniStat label="Targets" value={pkg.targets.length} />
-                      <MiniStat label="Builds" value={packageBuildCount} />
-                      <MiniStat label="Files" value={packageFiles.length} />
-                      <MiniStat label="Size" value={formatBytes(packageSize)} />
-                    </div>
-                  </div>
-                </summary>
-
-                <div className="border-t border-zinc-800 p-5">
-                  <div className="mb-5 flex flex-wrap gap-2">
-                    <a
-                      href={`/packages/view/?name=${encodeURIComponent(pkg.packageName)}`}
-                      className="inline-flex items-center border border-zinc-800 px-4 py-2 text-sm text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
-                    >
-                      <FaIcon icon={faUpRightFromSquare} className="mr-2" />
-                      Open package
-                    </a>
-                  </div>
-
-                  <div className="space-y-3">
-                    {pkg.targets.map((target) => {
-                      const targetSize = target.builds
-                        .flatMap((build) => build.files)
-                        .reduce((sum, file) => sum + file.size_bytes, 0);
-                      return (
-                        <details key={`${pkg.packageName}:${target.mockChroot}`} className="border border-zinc-800 bg-zinc-950/40">
-                          <summary className="cursor-pointer list-none px-4 py-4">
-                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                              <div>
-                                <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Build target</div>
-                                <div className="mt-1 text-lg font-semibold font-mono text-white">{target.mockChroot}</div>
-                              </div>
-                              <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[360px]">
-                                <MiniStat label="Builds" value={target.builds.length} />
-                                <MiniStat
-                                  label="Files"
-                                  value={target.builds.reduce((sum, build) => sum + build.files.length, 0)}
-                                />
-                                <MiniStat label="Size" value={formatBytes(targetSize)} />
-                              </div>
-                            </div>
-                          </summary>
-
-                          <div className="border-t border-zinc-800 p-4 space-y-3">
-                            {target.builds.map((build) => {
-                              const latestPublishedAt = build.files[0]?.published_at ?? null;
-                              const buildSize = build.files.reduce((sum, file) => sum + file.size_bytes, 0);
-                              return (
-                                <details key={build.jobId} className="border border-zinc-800 bg-zinc-950/40">
-                                  <summary className="cursor-pointer list-none px-4 py-4">
-                                    <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                                      <div className="min-w-0">
-                                        <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Build</div>
-                                        <div className="mt-1 font-mono text-sm text-white">{build.jobId}</div>
-                                        <div className="mt-2 text-xs text-zinc-500">
-                                          {latestPublishedAt ? formatDateTime(latestPublishedAt) : "No publish timestamp"}
-                                        </div>
-                                      </div>
-                                      <div className="flex flex-wrap items-center gap-3">
-                                        <MiniStat label="Files" value={build.files.length} />
-                                        <MiniStat label="Size" value={formatBytes(buildSize)} />
-                                        <a
-                                          href={`/jobs/view/?id=${encodeURIComponent(build.jobId)}`}
-                                          className="inline-flex items-center border border-zinc-800 px-4 py-2 text-sm text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
-                                          onClick={(event) => event.stopPropagation()}
-                                        >
-                                          <FaIcon icon={faUpRightFromSquare} className="mr-2" />
-                                          Open build
-                                        </a>
-                                      </div>
-                                    </div>
-                                  </summary>
-
-                                  <div className="border-t border-zinc-800">
-                                    <div className="overflow-x-auto">
-                                      <table className="min-w-[920px] w-full">
-                                        <thead className="bg-zinc-950 text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
-                                          <tr>
-                                            <th className="px-4 py-3">Repo Path</th>
-                                            <th className="px-4 py-3">Kind</th>
-                                            <th className="px-4 py-3">Target</th>
-                                            <th className="px-4 py-3">Size</th>
-                                            <th className="px-4 py-3">Published</th>
-                                            <th className="px-4 py-3">Actions</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-white/8">
-                                          {build.files.map((file) => (
-                                            <tr key={`${file.job_id}:${file.repo_path}`} className="hover:bg-zinc-950">
-                                              <td className="px-4 py-3 font-mono text-sm text-zinc-200">{file.repo_path}</td>
-                                              <td className="px-4 py-3 text-sm uppercase tracking-[0.18em] text-zinc-500">{file.kind}</td>
-                                              <td className="px-4 py-3 font-mono text-sm text-zinc-400">{file.mock_chroot || "unknown"}</td>
-                                              <td className="px-4 py-3 text-sm text-zinc-400">{formatBytes(file.size_bytes)}</td>
-                                              <td className="px-4 py-3 text-sm text-zinc-400">{formatDateTime(file.published_at)}</td>
-                                              <td className="px-4 py-3">
-                                                <div className="flex flex-wrap gap-2">
-                                                  <a
-                                                    href={`/repo/${file.repo_path}`}
-                                                    className="inline-flex items-center border border-zinc-800 px-3 py-2 text-sm text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
-                                                  >
-                                                    <FaIcon icon={faDownload} className="mr-2" />
-                                                    Download
-                                                  </a>
-                                                  <a
-                                                    href={`/packages/view/?name=${encodeURIComponent(file.package_name)}`}
-                                                    className="inline-flex items-center border border-zinc-800 px-3 py-2 text-sm text-zinc-400 transition hover:border-zinc-600 hover:bg-zinc-950 hover:text-zinc-200"
-                                                  >
-                                                    <FaIcon icon={faBoxesStacked} className="mr-2" />
-                                                    Package
-                                                  </a>
-                                                </div>
-                                              </td>
-                                            </tr>
-                                          ))}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  </div>
-                                </details>
-                              );
-                            })}
-                          </div>
-                        </details>
-                      );
-                    })}
-                  </div>
-                </div>
-              </details>
-            );
-          })}
-        </section>
-      )}
+        {files.length > 0 ? (
+          <div className="flex items-center justify-between gap-3">
+            <button
+              onClick={() => load(Math.max(0, offset - PAGE_SIZE))}
+              disabled={loading || offset === 0}
+              className="border border-zinc-800 px-4 py-2 text-sm text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => load(offset + PAGE_SIZE)}
+              disabled={loading || !hasMore}
+              className="border border-zinc-800 px-4 py-2 text-sm text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        ) : null}
+      </section>
     </div>
   );
 }
 
-function MetricCard({
+function TargetStat({
   label,
   value,
-  icon,
 }: {
   label: string;
   value: string | number;
-  icon: typeof faBoxesStacked;
 }) {
   return (
-    <article className="border border-zinc-800 bg-black p-5">
-      <div className="flex items-center justify-between gap-4">
-        <div className="text-xs uppercase tracking-[0.24em] text-zinc-400">{label}</div>
-        <FaIcon icon={icon} className="text-zinc-500" />
-      </div>
-      <div className="mt-4 text-4xl font-semibold tracking-tight text-white">{value}</div>
-    </article>
-  );
-}
-
-function MiniStat({ label, value }: { label: string; value: string | number }) {
-  return (
     <div className="border border-zinc-800 bg-black px-3 py-3">
-      <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">{label}</div>
+      <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+        {label}
+      </div>
       <div className="mt-2 text-sm font-medium text-zinc-200">{value}</div>
     </div>
   );
 }
 
-function summarizeInventory(grouped: RepoPackageGroup[]) {
-  const targetMap = new Map<string, { packageNames: Set<string>; buildIds: Set<string>; sizeBytes: number }>();
-  let buildCount = 0;
-
-  for (const pkg of grouped) {
-    for (const target of pkg.targets) {
-      const targetEntry =
-        targetMap.get(target.mockChroot) ??
-        { packageNames: new Set<string>(), buildIds: new Set<string>(), sizeBytes: 0 };
-      targetEntry.packageNames.add(pkg.packageName);
-
-      for (const build of target.builds) {
-        buildCount += 1;
-        targetEntry.buildIds.add(build.jobId);
-        for (const file of build.files) {
-          targetEntry.sizeBytes += file.size_bytes;
-        }
-      }
-
-      targetMap.set(target.mockChroot, targetEntry);
-    }
-  }
-
-  return {
-    targetCount: targetMap.size,
-    buildCount,
-    targets: Array.from(targetMap.entries())
-      .sort(([left], [right]) => right.localeCompare(left))
-      .map(([mockChroot, entry]) => ({
-        mockChroot,
-        packageCount: entry.packageNames.size,
-        buildCount: entry.buildIds.size,
-        sizeBytes: entry.sizeBytes,
-      })),
-  };
-}
-
-function groupRepoFiles(files: PublishedRepoFile[]): RepoPackageGroup[] {
-  const packages = new Map<string, Map<string, Map<string, PublishedRepoFile[]>>>();
-
-  for (const file of files) {
-    const target = file.mock_chroot || "unknown";
-    const packageMap = packages.get(file.package_name) ?? new Map();
-    packages.set(file.package_name, packageMap);
-    const targetMap = packageMap.get(target) ?? new Map();
-    packageMap.set(target, targetMap);
-    const buildFiles = targetMap.get(file.job_id) ?? [];
-    buildFiles.push(file);
-    targetMap.set(file.job_id, buildFiles);
-  }
-
-  return Array.from(packages.entries()).map(([packageName, targetMap]) => ({
-    packageName,
-    targets: Array.from(targetMap.entries())
-      .sort(([left], [right]) => right.localeCompare(left))
-      .map(([mockChroot, buildMap]) => ({
-        mockChroot,
-        builds: Array.from(buildMap.entries())
-          .sort(([left], [right]) => left.localeCompare(right))
-          .map(([jobId, groupedFiles]) => ({
-            jobId,
-            files: groupedFiles.sort((a, b) => a.repo_path.localeCompare(b.repo_path)),
-          })),
-      })),
-  }));
-}
-
-function flattenPackageFiles(pkg: RepoPackageGroup) {
-  return pkg.targets.flatMap((target) => target.builds.flatMap((build) => build.files));
-}
-
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GiB`;
 }

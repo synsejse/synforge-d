@@ -20,13 +20,13 @@ impl PackageRegistry {
     }
 
     pub async fn list_packages(&self, limit: usize, offset: usize) -> anyhow::Result<Vec<PackageResponse>> {
-        self.store.list_packages(limit, offset).await
+        self.store.list_packages(limit, offset, None, None).await
     }
 
     pub async fn list_definitions(&self) -> anyhow::Result<Vec<PackageDefinition>> {
         Ok(self
             .store
-            .list_packages(10_000, 0)
+            .list_packages(10_000, 0, None, None)
             .await?
             .into_iter()
             .map(|response| response.package)

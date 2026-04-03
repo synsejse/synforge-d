@@ -3,6 +3,7 @@ import api from "../lib/api";
 import DetailStat from "./DetailStat";
 import EmptyState from "./EmptyState";
 import FaIcon from "./FaIcon";
+import LoadingBlock from "./LoadingBlock";
 import StatusPill from "./StatusPill";
 import { formatDateTime } from "../lib/datetime";
 import type {
@@ -57,6 +58,12 @@ export default function PackageDetail({ packageName }: Props) {
   const [pkg, setPkg] = useState<PackageResponse | null>(null);
   const [builds, setBuilds] = useState<PackageBuildInventoryEntry[]>([]);
   const [repoFiles, setRepoFiles] = useState<PublishedRepoFile[]>([]);
+  const [buildsOpen, setBuildsOpen] = useState(false);
+  const [repoFilesOpen, setRepoFilesOpen] = useState(false);
+  const [buildsLoaded, setBuildsLoaded] = useState(false);
+  const [repoFilesLoaded, setRepoFilesLoaded] = useState(false);
+  const [buildsLoading, setBuildsLoading] = useState(false);
+  const [repoFilesLoading, setRepoFilesLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -87,34 +94,32 @@ export default function PackageDetail({ packageName }: Props) {
     [browseFiles],
   );
 
-  async function load() {
+  function applyPackageState(packageRes: PackageResponse) {
+    setPkg(packageRes);
+    setForm({
+      repoUrl: packageRes.package.source.repo_url,
+      specPath: packageRes.package.source.spec_path,
+      poll: packageRes.package.source.poll,
+      mockChroots: packageRes.package.mock_chroots,
+      pollIntervalSeconds: String(packageRes.package.poll_interval_seconds),
+      buildTimeoutSeconds: String(packageRes.package.build_timeout_seconds),
+      packageHistoryCount: String(packageRes.package.package_history_count),
+      buildEnv: encodeBuildEnv(packageRes.package.build_env),
+      enabled: packageRes.package.enabled,
+      publish_srpm: packageRes.package.publish_srpm,
+      network_access: packageRes.package.network_access,
+    });
+  }
+
+  async function loadPrimary() {
     try {
       setLoading(true);
-      const [packageRes, buildsRes, repoFilesRes] = await Promise.all([
-        api.getPackage(packageName),
-        api.getPackageBuilds(packageName),
-        api.getPackageRepoFiles(packageName),
-      ]);
+      const packageRes = await api.getPackage(packageName);
       api
         .listMockChroots()
         .then((response) => setAvailableChroots(response.chroots))
         .catch(() => undefined);
-      setPkg(packageRes);
-      setBuilds(buildsRes.builds);
-      setRepoFiles(repoFilesRes.repo_files);
-      setForm({
-        repoUrl: packageRes.package.source.repo_url,
-        specPath: packageRes.package.source.spec_path,
-        poll: packageRes.package.source.poll,
-        mockChroots: packageRes.package.mock_chroots,
-        pollIntervalSeconds: String(packageRes.package.poll_interval_seconds),
-        buildTimeoutSeconds: String(packageRes.package.build_timeout_seconds),
-        packageHistoryCount: String(packageRes.package.package_history_count),
-        buildEnv: encodeBuildEnv(packageRes.package.build_env),
-        enabled: packageRes.package.enabled,
-        publish_srpm: packageRes.package.publish_srpm,
-        network_access: packageRes.package.network_access,
-      });
+      applyPackageState(packageRes);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load package");
@@ -123,9 +128,77 @@ export default function PackageDetail({ packageName }: Props) {
     }
   }
 
+  async function loadBuildHistory(force = false) {
+    if (buildsLoading || (buildsLoaded && !force)) {
+      return;
+    }
+    try {
+      setBuildsLoading(true);
+      const buildsRes = await api.getPackageBuilds(packageName);
+      setBuilds(buildsRes.builds);
+      setBuildsLoaded(true);
+      setError(null);
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Failed to load package build history",
+      );
+    } finally {
+      setBuildsLoading(false);
+    }
+  }
+
+  async function loadPackageRepoFiles(force = false) {
+    if (repoFilesLoading || (repoFilesLoaded && !force)) {
+      return;
+    }
+    try {
+      setRepoFilesLoading(true);
+      const repoFilesRes = await api.getPackageRepoFiles(packageName);
+      setRepoFiles(repoFilesRes.repo_files);
+      setRepoFilesLoaded(true);
+      setError(null);
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Failed to load package repository files",
+      );
+    } finally {
+      setRepoFilesLoading(false);
+    }
+  }
+
+  async function refreshVisibleData() {
+    await loadPrimary();
+    if (buildsOpen) {
+      await loadBuildHistory(true);
+    }
+    if (repoFilesOpen) {
+      await loadPackageRepoFiles(true);
+    }
+  }
+
   useEffect(() => {
-    load();
+    setBuilds([]);
+    setRepoFiles([]);
+    setBuildsOpen(false);
+    setRepoFilesOpen(false);
+    setBuildsLoaded(false);
+    setRepoFilesLoaded(false);
+    loadPrimary();
   }, [packageName]);
+
+  useEffect(() => {
+    if (buildsOpen && !buildsLoaded) {
+      void loadBuildHistory();
+    }
+  }, [buildsOpen, buildsLoaded, packageName]);
+
+  useEffect(() => {
+    if (repoFilesOpen && !repoFilesLoaded) {
+      void loadPackageRepoFiles();
+    }
+  }, [repoFilesOpen, repoFilesLoaded, packageName]);
 
   async function handleSave(event: FormEvent) {
     event.preventDefault();
@@ -148,7 +221,7 @@ export default function PackageDetail({ packageName }: Props) {
         build_env: parseBuildEnv(form.buildEnv),
       };
       await api.updatePackage(packageName, request);
-      await load();
+      await loadPrimary();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save package");
     } finally {
@@ -181,7 +254,7 @@ export default function PackageDetail({ packageName }: Props) {
       } else {
         await api.refreshPackage(packageName);
       }
-      await load();
+      await refreshVisibleData();
     } catch (e) {
       setError(e instanceof Error ? e.message : `Failed to ${action}`);
     }
@@ -198,7 +271,7 @@ export default function PackageDetail({ packageName }: Props) {
     setDeletingJobId(jobId);
     try {
       await api.deleteJob(jobId);
-      await load();
+      await refreshVisibleData();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete build");
     } finally {
@@ -243,7 +316,7 @@ export default function PackageDetail({ packageName }: Props) {
   }
 
   if (loading) {
-    return <div className="text-zinc-400">Loading package…</div>;
+    return <LoadingBlock label="Loading package…" lines={4} />;
   }
 
   if (error || !pkg) {
@@ -652,12 +725,29 @@ export default function PackageDetail({ packageName }: Props) {
               and managed repo ownership.
             </p>
           </div>
-          <div className="border border-zinc-800 bg-black px-4 py-2 text-xs uppercase tracking-[0.2em] text-zinc-400">
-            {builds.length} total builds
+          <div className="flex items-center gap-3">
+            {buildsLoaded ? (
+              <div className="border border-zinc-800 bg-black px-4 py-2 text-xs uppercase tracking-[0.2em] text-zinc-400">
+                {builds.length} total builds
+              </div>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setBuildsOpen((current) => !current)}
+              className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950"
+            >
+              {buildsOpen ? "Hide History" : "Open History"}
+            </button>
           </div>
         </div>
 
-        {latestBuilds.length === 0 ? (
+        {!buildsOpen ? (
+          <EmptyState>
+            Open build history to load recent package builds.
+          </EmptyState>
+        ) : buildsLoading && !buildsLoaded ? (
+          <LoadingBlock label="Loading build history…" lines={4} />
+        ) : latestBuilds.length === 0 ? (
           <EmptyState>No build history yet.</EmptyState>
         ) : (
           <div className="overflow-hidden border border-zinc-800">
@@ -747,12 +837,30 @@ export default function PackageDetail({ packageName }: Props) {
               package.
             </p>
           </div>
-          <div className="border border-zinc-800 bg-black px-4 py-2 text-xs uppercase tracking-[0.2em] text-zinc-400">
-            {repoFiles.length} tracked files
+          <div className="flex items-center gap-3">
+            {repoFilesLoaded ? (
+              <div className="border border-zinc-800 bg-black px-4 py-2 text-xs uppercase tracking-[0.2em] text-zinc-400">
+                {repoFiles.length} tracked files
+              </div>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setRepoFilesOpen((current) => !current)}
+              className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950"
+            >
+              {repoFilesOpen ? "Hide Files" : "Open Files"}
+            </button>
           </div>
         </div>
 
-        {repoFiles.length === 0 ? (
+        {!repoFilesOpen ? (
+          <EmptyState>
+            Open repository files to load the repo-owned outputs for this
+            package.
+          </EmptyState>
+        ) : repoFilesLoading && !repoFilesLoaded ? (
+          <LoadingBlock label="Loading repository files…" lines={4} />
+        ) : repoFiles.length === 0 ? (
           <EmptyState>
             No repo files are currently tracked for this package.
           </EmptyState>

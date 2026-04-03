@@ -4,6 +4,7 @@ import FaIcon from "../components/FaIcon";
 import {
     faArrowDownWideShort,
     faBoxesStacked,
+    faBookOpen,
     faChartLine,
     faCircleHalfStroke,
     faFolderTree,
@@ -59,6 +60,12 @@ const navItems = [
         description: "Accounts and permissions",
     },
     {
+        href: "/docs/",
+        label: "Docs",
+        icon: faBookOpen,
+        description: "API reference",
+    },
+    {
         href: "/settings/",
         label: "Settings",
         icon: faSliders,
@@ -80,6 +87,12 @@ const themes = [
         <title>{title} | Synforge</title>
     </head>
     <body class="h-full overflow-hidden antialiased">
+        <a
+            href="#main-content"
+            class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:border focus:border-zinc-200 focus:bg-zinc-100 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-black"
+        >
+            Skip to main content
+        </a>
         <div class="fixed inset-0 -z-10 overflow-hidden">
             <div class="app-chrome absolute inset-0"></div>
             <div class="app-grid absolute inset-0 opacity-40"></div>
@@ -249,11 +262,22 @@ const themes = [
                         </h1>
                     </div>
 
-                    <nav class="mt-4 flex-1 space-y-2 overflow-auto">
+                    <nav
+                        class="mt-4 flex-1 space-y-2 overflow-auto"
+                        aria-label="Primary navigation"
+                    >
                         {
                             navItems.map((item) => (
                                 <a
                                     href={item.href}
+                                    aria-current={
+                                        currentPath === item.href ||
+                                        (item.href !== "/" &&
+                                            currentPath ===
+                                                item.href.slice(0, -1))
+                                            ? "page"
+                                            : undefined
+                                    }
                                     class:list={[
                                         "group block border px-4 py-4 transition",
                                         currentPath === item.href ||
@@ -291,19 +315,21 @@ const themes = [
                                     <FaIcon icon={faCircleHalfStroke} />
                                     Theme
                                 </div>
-                                <div class="mt-3 grid gap-2">
-                                    {
-                                        themes.map((theme) => (
-                                            <button
-                                                type="button"
-                                                class="theme-button border border-zinc-800 bg-black px-4 py-2.5 text-left text-sm font-medium text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
-                                                data-theme-value={theme.value}
-                                            >
-                                                {theme.label}
-                                            </button>
-                                        ))
-                                    }
-                                </div>
+                                <label class="mt-3 block">
+                                    <span class="sr-only">Select theme</span>
+                                    <select
+                                        id="theme-select"
+                                        class="w-full border border-zinc-800 bg-black px-4 py-2.5 text-sm font-medium text-zinc-200 outline-none transition focus:border-zinc-600"
+                                    >
+                                        {
+                                            themes.map((theme) => (
+                                                <option value={theme.value}>
+                                                    {theme.label}
+                                                </option>
+                                            ))
+                                        }
+                                    </select>
+                                </label>
                             </div>
                             <div
                                 class="text-xs uppercase tracking-[0.2em] text-zinc-500"
@@ -322,6 +348,8 @@ const themes = [
                 </aside>
 
                 <main
+                    id="main-content"
+                    tabindex="-1"
                     class="min-h-0 overflow-auto border border-zinc-800 bg-black p-4 lg:p-6"
                 >
                     <header class="mb-6 border-b border-white/8 pb-5">
@@ -366,9 +394,7 @@ const themes = [
                 "setup-config-fields",
             );
             const logoutButton = document.getElementById("logout-button");
-            const themeButtons = Array.from(
-                document.querySelectorAll("[data-theme-value]"),
-            );
+            const themeSelect = document.getElementById("theme-select");
             let configSchema = [];
 
             function applyTheme(theme) {
@@ -377,12 +403,9 @@ const themes = [
                     : "dark";
                 document.documentElement.setAttribute("data-theme", normalized);
                 window.localStorage.setItem(themeStorageKey, normalized);
-                themeButtons.forEach((button) => {
-                    const active =
-                        button.getAttribute("data-theme-value") === normalized;
-                    button.classList.toggle("border-zinc-600", active);
-                    button.classList.toggle("bg-zinc-950", active);
-                });
+                if (themeSelect instanceof HTMLSelectElement) {
+                    themeSelect.value = normalized;
+                }
             }
 
             function apiPath(path) {
@@ -431,6 +454,9 @@ const themes = [
                 setupScreen?.classList.add("hidden");
                 setupScreen?.classList.remove("flex");
                 appShell?.classList.remove("hidden");
+                requestAnimationFrame(() => {
+                    document.getElementById("main-content")?.focus();
+                });
             }
 
             async function loadSetupStatus() {
@@ -516,10 +542,10 @@ const themes = [
                 }
             });
 
-            themeButtons.forEach((button) => {
-                button.addEventListener("click", () => {
-                    applyTheme(button.getAttribute("data-theme-value"));
-                });
+            themeSelect?.addEventListener("change", () => {
+                if (themeSelect instanceof HTMLSelectElement) {
+                    applyTheme(themeSelect.value);
+                }
             });
 
             window.addEventListener("synforge:auth-required", (event) => {

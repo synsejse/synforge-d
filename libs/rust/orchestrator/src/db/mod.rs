@@ -14,7 +14,7 @@ use diesel::sqlite::SqliteConnection;
 use diesel::upsert::excluded;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use synforge_core::{
-    api::{BuildJobResponse, PackageResponse},
+    api::{BuildJobResponse, PackageResponse, RepoTargetSummary},
     model::{
         format_timestamp, now_utc, ArtifactKind, BuildArtifact, BuildJob, BuildStatus, BuildTrigger,
         PackageRuntimeState, PublishedRepoFile, UserAccount, UserPermission, UserRepoMetrics,
@@ -34,7 +34,14 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
 #[async_trait]
 pub trait JobStore: Send + Sync {
-    async fn list_packages(&self, limit: usize, offset: usize) -> anyhow::Result<Vec<PackageResponse>>;
+    async fn list_packages(
+        &self,
+        limit: usize,
+        offset: usize,
+        search: Option<String>,
+        enabled: Option<bool>,
+    ) -> anyhow::Result<Vec<PackageResponse>>;
+    async fn count_packages(&self, search: Option<String>, enabled: Option<bool>) -> anyhow::Result<u64>;
     async fn get_package(&self, package_name: &str) -> anyhow::Result<Option<PackageResponse>>;
     async fn upsert_package(&self, package: &PackageDefinition) -> anyhow::Result<()>;
     async fn remove_package(&self, package_name: &str) -> anyhow::Result<()>;
@@ -59,12 +66,42 @@ pub trait JobStore: Send + Sync {
         published_files: &[PublishedRepoFile],
         logs_path: Option<&Path>,
     ) -> anyhow::Result<()>;
-    async fn list_jobs(&self, limit: usize, offset: usize) -> anyhow::Result<Vec<BuildJobResponse>>;
+    async fn list_jobs(
+        &self,
+        limit: usize,
+        offset: usize,
+        status: Option<BuildStatus>,
+        package_name: Option<String>,
+        mock_chroot: Option<String>,
+    ) -> anyhow::Result<Vec<BuildJobResponse>>;
+    async fn count_jobs(
+        &self,
+        status: Option<BuildStatus>,
+        package_name: Option<String>,
+        mock_chroot: Option<String>,
+    ) -> anyhow::Result<u64>;
     async fn list_jobs_for_package(&self, package_name: &str) -> anyhow::Result<Vec<BuildJobResponse>>;
     async fn get_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>>;
-    async fn list_published_repo_files(&self, limit: usize, offset: usize) -> anyhow::Result<Vec<PublishedRepoFile>>;
+    async fn list_published_repo_files(
+        &self,
+        limit: usize,
+        offset: usize,
+        package_name: Option<String>,
+        mock_chroot: Option<String>,
+        kind: Option<ArtifactKind>,
+    ) -> anyhow::Result<Vec<PublishedRepoFile>>;
+    async fn count_published_repo_files(
+        &self,
+        package_name: Option<String>,
+        mock_chroot: Option<String>,
+        kind: Option<ArtifactKind>,
+    ) -> anyhow::Result<u64>;
     async fn list_published_repo_files_for_job(&self, job_id: Uuid) -> anyhow::Result<Vec<PublishedRepoFile>>;
     async fn list_published_repo_files_for_package(&self, package_name: &str) -> anyhow::Result<Vec<PublishedRepoFile>>;
+    async fn list_recent_published_repo_files(&self, limit: usize) -> anyhow::Result<Vec<PublishedRepoFile>>;
+    async fn list_repo_target_summaries(&self) -> anyhow::Result<Vec<RepoTargetSummary>>;
+    async fn get_repo_distinct_counts(&self) -> anyhow::Result<(u64, u64, u64)>;
+    async fn sum_published_repo_file_bytes(&self) -> anyhow::Result<u64>;
     async fn delete_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>>;
     async fn abort_unfinished_jobs(&self, message: &str) -> anyhow::Result<()>;
     async fn list_prunable_successful_job_ids(
@@ -151,8 +188,18 @@ impl DieselStore {
 
 #[async_trait]
 impl JobStore for DieselStore {
-    async fn list_packages(&self, limit: usize, offset: usize) -> anyhow::Result<Vec<PackageResponse>> {
-        package::list_packages(self, limit, offset).await
+    async fn list_packages(
+        &self,
+        limit: usize,
+        offset: usize,
+        search: Option<String>,
+        enabled: Option<bool>,
+    ) -> anyhow::Result<Vec<PackageResponse>> {
+        package::list_packages(self, limit, offset, search, enabled).await
+    }
+
+    async fn count_packages(&self, search: Option<String>, enabled: Option<bool>) -> anyhow::Result<u64> {
+        package::count_packages(self, search, enabled).await
     }
 
     async fn get_package(&self, package_name: &str) -> anyhow::Result<Option<PackageResponse>> {
@@ -203,8 +250,24 @@ impl JobStore for DieselStore {
         job::finish_job(self, job_id, status, error_message, artifacts, published_files, logs_path).await
     }
 
-    async fn list_jobs(&self, limit: usize, offset: usize) -> anyhow::Result<Vec<BuildJobResponse>> {
-        job::list_jobs(self, limit, offset).await
+    async fn list_jobs(
+        &self,
+        limit: usize,
+        offset: usize,
+        status: Option<BuildStatus>,
+        package_name: Option<String>,
+        mock_chroot: Option<String>,
+    ) -> anyhow::Result<Vec<BuildJobResponse>> {
+        job::list_jobs(self, limit, offset, status, package_name, mock_chroot).await
+    }
+
+    async fn count_jobs(
+        &self,
+        status: Option<BuildStatus>,
+        package_name: Option<String>,
+        mock_chroot: Option<String>,
+    ) -> anyhow::Result<u64> {
+        job::count_jobs(self, status, package_name, mock_chroot).await
     }
 
     async fn list_jobs_for_package(&self, package_name: &str) -> anyhow::Result<Vec<BuildJobResponse>> {
@@ -215,8 +278,24 @@ impl JobStore for DieselStore {
         job::get_job(self, job_id).await
     }
 
-    async fn list_published_repo_files(&self, limit: usize, offset: usize) -> anyhow::Result<Vec<PublishedRepoFile>> {
-        repo::list_published_repo_files(self, limit, offset).await
+    async fn list_published_repo_files(
+        &self,
+        limit: usize,
+        offset: usize,
+        package_name: Option<String>,
+        mock_chroot: Option<String>,
+        kind: Option<ArtifactKind>,
+    ) -> anyhow::Result<Vec<PublishedRepoFile>> {
+        repo::list_published_repo_files(self, limit, offset, package_name, mock_chroot, kind).await
+    }
+
+    async fn count_published_repo_files(
+        &self,
+        package_name: Option<String>,
+        mock_chroot: Option<String>,
+        kind: Option<ArtifactKind>,
+    ) -> anyhow::Result<u64> {
+        repo::count_published_repo_files(self, package_name, mock_chroot, kind).await
     }
 
     async fn list_published_repo_files_for_job(&self, job_id: Uuid) -> anyhow::Result<Vec<PublishedRepoFile>> {
@@ -225,6 +304,22 @@ impl JobStore for DieselStore {
 
     async fn list_published_repo_files_for_package(&self, package_name: &str) -> anyhow::Result<Vec<PublishedRepoFile>> {
         repo::list_published_repo_files_for_package(self, package_name).await
+    }
+
+    async fn list_recent_published_repo_files(&self, limit: usize) -> anyhow::Result<Vec<PublishedRepoFile>> {
+        repo::list_recent_published_repo_files(self, limit).await
+    }
+
+    async fn list_repo_target_summaries(&self) -> anyhow::Result<Vec<RepoTargetSummary>> {
+        repo::list_repo_target_summaries(self).await
+    }
+
+    async fn get_repo_distinct_counts(&self) -> anyhow::Result<(u64, u64, u64)> {
+        repo::get_repo_distinct_counts(self).await
+    }
+
+    async fn sum_published_repo_file_bytes(&self) -> anyhow::Result<u64> {
+        repo::sum_published_repo_file_bytes(self).await
     }
 
     async fn delete_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>> {

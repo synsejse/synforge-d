@@ -3,6 +3,8 @@ import api from "../lib/api";
 import LoadingBlock from "./LoadingBlock";
 import PageHeader from "./PageHeader";
 import FaIcon from "./FaIcon";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import {
   faCopy,
   faFolderTree,
@@ -111,6 +113,7 @@ export default function RepositorySetup() {
           <CodeBlock
             label="synforge.repo"
             value={repoFileContents}
+            language="ini"
             copied={copiedLabel === "repo-file"}
             onCopy={() => copy("repo-file", repoFileContents)}
           />
@@ -127,6 +130,7 @@ export default function RepositorySetup() {
             <CodeBlock
               label="usage"
               value={`sudo dnf clean all\nsudo dnf makecache\n${installCommand}`}
+              language="bash"
               copied={copiedLabel === "usage-command"}
               onCopy={() =>
                 copy(
@@ -145,11 +149,13 @@ export default function RepositorySetup() {
 function CodeBlock({
   label,
   value,
+  language,
   copied,
   onCopy,
 }: {
   label: string;
   value: string;
+  language: string;
   copied: boolean;
   onCopy: () => void;
 }) {
@@ -168,9 +174,26 @@ function CodeBlock({
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <pre className="overflow-x-auto px-4 py-4 text-sm leading-6 text-zinc-200">
-        <code>{value}</code>
-      </pre>
+      <SyntaxHighlighter
+        language={language}
+        style={oneDark}
+        customStyle={{
+          margin: 0,
+          padding: "1rem",
+          background: "transparent",
+          fontSize: "0.875rem",
+          lineHeight: "1.5rem",
+          overflowX: "auto",
+        }}
+        codeTagProps={{
+          style: {
+            fontFamily:
+              'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+          },
+        }}
+      >
+        {value}
+      </SyntaxHighlighter>
     </div>
   );
 }

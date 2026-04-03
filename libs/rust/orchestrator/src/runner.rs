@@ -1,15 +1,16 @@
 use std::sync::Arc;
 
-use synforge_core::{DaemonConfig, WorkerAction, WorkerBuildPayload, WorkerJobPayload};
+use synforge_core::{config::DaemonConfig, model::{WorkerAction, WorkerBuildPayload, WorkerJobPayload}};
+use tracing::instrument;
 
 use crate::job_lifecycle::JobLifecycle;
 use crate::scheduler::{BuildScheduler, QueuedBuild};
-use crate::workers::WorkerLauncher;
+use crate::workers::DockerWorkerLauncher;
 
 #[derive(Clone)]
 pub struct BuildRunner {
     config: DaemonConfig,
-    worker_launcher: Arc<dyn WorkerLauncher>,
+    worker_launcher: Arc<DockerWorkerLauncher>,
     lifecycle: Arc<JobLifecycle>,
     scheduler: BuildScheduler,
 }
@@ -17,7 +18,7 @@ pub struct BuildRunner {
 impl BuildRunner {
     pub fn new(
         config: DaemonConfig,
-        worker_launcher: Arc<dyn WorkerLauncher>,
+        worker_launcher: Arc<DockerWorkerLauncher>,
         lifecycle: Arc<JobLifecycle>,
         scheduler: BuildScheduler,
     ) -> Self {
@@ -29,6 +30,7 @@ impl BuildRunner {
         }
     }
 
+    #[instrument(skip(self, build), fields(job_id = %build.job_id, package = %build.package.name, mock_chroot = %build.mock_chroot))]
     pub async fn process_build(&self, build: QueuedBuild) -> anyhow::Result<()> {
         let package_name = build.package.name.clone();
         let result = self.process_build_inner(build).await;

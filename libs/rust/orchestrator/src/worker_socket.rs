@@ -1,15 +1,24 @@
 use anyhow::Context;
 use bytes::Bytes;
 use futures_util::{SinkExt, StreamExt};
+use synforge_core::{model::ArtifactKind, protocol::WorkerWireMessage};
 use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
+use std::collections::HashMap;
+use tokio::sync::watch;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
+use tokio_util::task::TaskTracker;
 use tracing::{error, warn};
 
 use crate::sessions::WorkerSessionBroker;
 
-pub fn start_worker_listener(listen_addr: String, sessions: WorkerSessionBroker) {
-    tokio::spawn(async move {
+pub fn start_worker_listener(
+    listen_addr: String,
+    sessions: WorkerSessionBroker,
+    task_tracker: TaskTracker,
+    mut shutdown_rx: watch::Receiver<bool>,
+) {
+    task_tracker.clone().spawn(async move {
         let listener = match TcpListener::bind(&listen_addr).await {
             Ok(listener) => listener,
             Err(error) => {
@@ -19,16 +28,22 @@ pub fn start_worker_listener(listen_addr: String, sessions: WorkerSessionBroker)
         };
         tracing::info!("worker socket listening on {}", listen_addr);
         loop {
-            match listener.accept().await {
+            tokio::select! {
+                _ = shutdown_rx.changed() => {
+                    break;
+                }
+                accepted = listener.accept() => match accepted {
                 Ok((stream, peer)) => {
                     let sessions = sessions.clone();
-                    tokio::spawn(async move {
+                    let task_tracker = task_tracker.clone();
+                    task_tracker.spawn(async move {
                         if let Err(error) = handle_connection(stream, sessions).await {
                             warn!("worker socket {} failed: {}", peer, error);
                         }
                     });
                 }
                 Err(error) => warn!("worker socket accept failed: {}", error),
+                }
             }
         }
     });
@@ -37,35 +52,44 @@ pub fn start_worker_listener(listen_addr: String, sessions: WorkerSessionBroker)
 async fn handle_connection(stream: TcpStream, sessions: WorkerSessionBroker) -> anyhow::Result<()> {
     let mut framed = Framed::new(stream, LengthDelimitedCodec::new());
     let hello = read_message(&mut framed).await?;
-    let synforge_core::WorkerWireMessage::Hello { worker_id } = hello else {
+    let WorkerWireMessage::Hello { worker_id } = hello else {
         anyhow::bail!("expected worker hello");
     };
 
     let (job_id, payload) = sessions.connect_worker(&worker_id).await?;
-    let log_path = sessions.begin_log_stream(job_id).await?;
-    let mut log_file = tokio::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path)
-        .await
-        .with_context(|| format!("failed to open {}", log_path.display()))?;
 
     write_message(
         &mut framed,
-        &synforge_core::WorkerWireMessage::JobAssignment { payload },
+        &WorkerWireMessage::JobAssignment { payload },
     )
     .await?;
 
     let mut current_artifact: Option<ActiveArtifactUpload> = None;
+    let mut log_files: HashMap<String, tokio::fs::File> = HashMap::new();
     while let Some(frame) = framed.next().await {
         let frame = frame?;
-        let message: synforge_core::WorkerWireMessage = bincode::deserialize(&frame)?;
+        let message: WorkerWireMessage = bincode::deserialize(&frame)?;
         match message {
-            synforge_core::WorkerWireMessage::LogChunk { bytes } => {
-                log_file.write_all(&bytes).await?;
-                log_file.flush().await?;
+            WorkerWireMessage::LogChunk { path, bytes } => {
+                let upload_path = sessions.log_upload_path(job_id, &path);
+                if let Some(parent) = upload_path.parent() {
+                    tokio::fs::create_dir_all(parent).await?;
+                }
+                let file = if let Some(file) = log_files.get_mut(&path) {
+                    file
+                } else {
+                    let file = tokio::fs::OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(&upload_path)
+                        .await
+                        .with_context(|| format!("failed to open {}", upload_path.display()))?;
+                    log_files.entry(path.clone()).or_insert(file)
+                };
+                file.write_all(&bytes).await?;
+                file.flush().await?;
             }
-            synforge_core::WorkerWireMessage::ArtifactStart { path, kind } => {
+            WorkerWireMessage::ArtifactStart { path, kind } => {
                 if current_artifact.is_some() {
                     anyhow::bail!("artifact upload already in progress");
                 }
@@ -80,13 +104,13 @@ async fn handle_connection(stream: TcpStream, sessions: WorkerSessionBroker) -> 
                     file,
                 });
             }
-            synforge_core::WorkerWireMessage::ArtifactChunk { bytes } => {
+            WorkerWireMessage::ArtifactChunk { bytes } => {
                 let upload = current_artifact
                     .as_mut()
                     .ok_or_else(|| anyhow::anyhow!("artifact chunk received without start"))?;
                 upload.file.write_all(&bytes).await?;
             }
-            synforge_core::WorkerWireMessage::ArtifactComplete => {
+            WorkerWireMessage::ArtifactComplete => {
                 let Some(mut upload) = current_artifact.take() else {
                     anyhow::bail!("artifact complete received without start");
                 };
@@ -95,15 +119,16 @@ async fn handle_connection(stream: TcpStream, sessions: WorkerSessionBroker) -> 
                     .finalize_artifact_upload(job_id, &upload.relative_path, upload.kind)
                     .await?;
             }
-            synforge_core::WorkerWireMessage::Result { result } => {
+            WorkerWireMessage::Result { result } => {
                 sessions.complete(job_id, result).await?;
                 return Ok(());
             }
-            synforge_core::WorkerWireMessage::Error { message } => {
+            WorkerWireMessage::Heartbeat => {}
+            WorkerWireMessage::Error { message } => {
                 anyhow::bail!("worker reported error: {}", message);
             }
-            synforge_core::WorkerWireMessage::Hello { .. }
-            | synforge_core::WorkerWireMessage::JobAssignment { .. } => {
+            WorkerWireMessage::Hello { .. }
+            | WorkerWireMessage::JobAssignment { .. } => {
                 anyhow::bail!("unexpected worker message");
             }
         }
@@ -114,7 +139,7 @@ async fn handle_connection(stream: TcpStream, sessions: WorkerSessionBroker) -> 
 
 async fn read_message(
     framed: &mut Framed<TcpStream, LengthDelimitedCodec>,
-) -> anyhow::Result<synforge_core::WorkerWireMessage> {
+) -> anyhow::Result<WorkerWireMessage> {
     let bytes = framed
         .next()
         .await
@@ -124,7 +149,7 @@ async fn read_message(
 
 async fn write_message(
     framed: &mut Framed<TcpStream, LengthDelimitedCodec>,
-    message: &synforge_core::WorkerWireMessage,
+    message: &WorkerWireMessage,
 ) -> anyhow::Result<()> {
     let bytes = bincode::serialize(message)?;
     framed.send(Bytes::from(bytes)).await?;
@@ -133,6 +158,6 @@ async fn write_message(
 
 struct ActiveArtifactUpload {
     relative_path: String,
-    kind: synforge_core::ArtifactKind,
+    kind: ArtifactKind,
     file: tokio::fs::File,
 }

@@ -13,8 +13,11 @@ import type {
   BuildJobListResponse,
   BuildJobResponse,
   LogChunkResponse,
+  LogManifestResponse,
+  LogMetaResponse,
   EffectiveConfigResponse,
   UpdateRuntimeSettingsRequest,
+  PruneJobsResponse,
   ApiError,
 } from "./types";
 
@@ -26,6 +29,13 @@ function loadStoredToken(): string {
     return "";
   }
   return window.localStorage.getItem(TOKEN_STORAGE_KEY) || "";
+}
+
+interface GetJobLogChunkOptions {
+  cursor?: number;
+  offset?: number;
+  limit?: number;
+  source?: string;
 }
 
 class ApiClient {
@@ -135,7 +145,23 @@ class ApiClient {
   }
 
   async getRepoInventory(): Promise<RepoInventoryResponse> {
-    return this.request("GET", "/api/v1/repo/files");
+    const pageSize = 200;
+    let offset = 0;
+    const repoFiles: RepoInventoryResponse["repo_files"] = [];
+
+    while (true) {
+      const page = await this.request<RepoInventoryResponse>(
+        "GET",
+        `/api/v1/repo/files?limit=${pageSize}&offset=${offset}`
+      );
+      repoFiles.push(...page.repo_files);
+      if (page.repo_files.length < pageSize) {
+        break;
+      }
+      offset += pageSize;
+    }
+
+    return { repo_files: repoFiles };
   }
 
   async rebuildPackage(name: string): Promise<BuildJobResponse> {
@@ -163,19 +189,95 @@ class ApiClient {
     return this.request("GET", `/api/v1/jobs/${encodeURIComponent(id)}`);
   }
 
-  async getJobLogChunk(
-    id: string,
-    cursor: number = 0,
-    limit: number = 65536
-  ): Promise<LogChunkResponse> {
+  async getJobLogManifest(id: string): Promise<LogManifestResponse> {
+    return this.request("GET", `/api/v1/jobs/${encodeURIComponent(id)}/logs`);
+  }
+
+  async getJobLogMeta(id: string, source?: string): Promise<LogMetaResponse> {
+    const params = new URLSearchParams();
+    if (source) {
+      params.set("source", source);
+    }
     return this.request(
       "GET",
-      `/api/v1/jobs/${encodeURIComponent(id)}/log/stream?cursor=${encodeURIComponent(String(cursor))}&limit=${encodeURIComponent(String(limit))}`
+      `/api/v1/jobs/${encodeURIComponent(id)}/logs/meta${params.toString() ? `?${params.toString()}` : ""}`
     );
+  }
+
+  async getJobLogChunk(id: string, options: GetJobLogChunkOptions = {}): Promise<LogChunkResponse> {
+    const params = new URLSearchParams({
+      limit: String(options.limit ?? 65536),
+    });
+    if (options.cursor !== undefined) {
+      params.set("cursor", String(options.cursor));
+    }
+    if (options.offset !== undefined) {
+      params.set("offset", String(options.offset));
+    }
+    if (options.source) {
+      params.set("source", options.source);
+    }
+    return this.request(
+      "GET",
+      `/api/v1/jobs/${encodeURIComponent(id)}/logs/stream?${params.toString()}`
+    );
+  }
+
+  async downloadJobLog(id: string, source?: string): Promise<void> {
+    const params = new URLSearchParams();
+    if (source) {
+      params.set("source", source);
+    }
+    const path = `/api/v1/jobs/${encodeURIComponent(id)}/logs/stream${params.toString() ? `?${params.toString()}` : ""}`;
+
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: "GET",
+      headers: this.authHeaders(false),
+    });
+
+    if (!res.ok) {
+      const error: ApiError = await res.json().catch(() => ({
+        code: "internal_error",
+        message: res.statusText,
+      }));
+      throw new ApiClientError(res.status, error);
+    }
+
+    // Download the full log by fetching chunks until complete
+    let fullLog = "";
+    let cursor = 0;
+    let complete = false;
+
+    while (!complete) {
+      const chunk = await this.getJobLogChunk(id, {
+        cursor,
+        limit: 1024 * 1024,
+        source,
+      });
+      fullLog += chunk.contents;
+      cursor = chunk.cursor;
+      complete = chunk.complete;
+    }
+
+    // Create blob and download
+    const blob = new Blob([fullLog], { type: "text/plain;charset=utf-8" });
+    const objectUrl = window.URL.createObjectURL(blob);
+    const fileName = source || "build.log";
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.URL.revokeObjectURL(objectUrl);
   }
 
   async deleteJob(id: string): Promise<BuildJobResponse> {
     return this.request("DELETE", `/api/v1/jobs/${encodeURIComponent(id)}`);
+  }
+
+  async pruneFailedJobs(): Promise<PruneJobsResponse> {
+    return this.request("POST", "/api/v1/jobs/prune-failed", {});
   }
 
   async downloadJobArtifact(id: string, artifact: BuildArtifact): Promise<void> {

@@ -3,15 +3,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
-use async_trait::async_trait;
 use bollard::models::{ContainerCreateBody, HostConfig};
-use bollard::query_parameters::{
-    CreateContainerOptionsBuilder, LogsOptionsBuilder, RemoveContainerOptionsBuilder,
-};
+use bollard::query_parameters::CreateContainerOptionsBuilder;
 use bollard::Docker;
 use futures_util::StreamExt;
-use synforge_core::{DaemonConfig, WorkerJobPayload, WorkerResult};
-use tokio::io::AsyncWriteExt;
+use synforge_core::{config::DaemonConfig, model::{WorkerJobPayload, WorkerResult}};
+use tracing::warn;
 
 use crate::job_lifecycle::JobLifecycle;
 use crate::sessions::WorkerSessionBroker;
@@ -20,17 +17,6 @@ use crate::sessions::WorkerSessionBroker;
 pub struct WorkerExecution {
     pub result: WorkerResult,
     pub logs_path: Option<PathBuf>,
-}
-
-#[async_trait]
-pub trait WorkerLauncher: Send + Sync {
-    async fn run_job(
-        &self,
-        payload: &WorkerJobPayload,
-        config: &DaemonConfig,
-    ) -> anyhow::Result<WorkerExecution>;
-
-    async fn shutdown(&self) -> anyhow::Result<()>;
 }
 
 #[derive(Clone)]
@@ -48,11 +34,8 @@ impl DockerWorkerLauncher {
             lifecycle,
         })
     }
-}
 
-#[async_trait]
-impl WorkerLauncher for DockerWorkerLauncher {
-    async fn run_job(
+    pub async fn run_job(
         &self,
         payload: &WorkerJobPayload,
         config: &DaemonConfig,
@@ -60,7 +43,6 @@ impl WorkerLauncher for DockerWorkerLauncher {
         let paths = config.runtime_paths();
         tokio::fs::create_dir_all(&payload.workspace_dir).await?;
         tokio::fs::create_dir_all(paths.job_logs_dir(payload.job_id)).await?;
-        let logs_path = paths.job_worker_log_path(payload.job_id);
         let session = self
             .sessions
             .create_session(payload.job_id, payload.clone())
@@ -101,24 +83,6 @@ impl WorkerLauncher for DockerWorkerLauncher {
             .with_context(|| format!("failed to start worker container {}", container_id))?;
         self.lifecycle.mark_running(payload.job_id, &container_id).await?;
 
-        let mut log_file = tokio::fs::File::create(&logs_path).await?;
-        let mut logs = self.docker.logs(
-            &container_id,
-            Some(
-                LogsOptionsBuilder::default()
-                    .follow(true)
-                    .stdout(true)
-                    .stderr(true)
-                    .timestamps(false)
-                    .tail("all")
-                    .build(),
-            ),
-        );
-        while let Some(item) = logs.next().await {
-            let item = item?;
-            log_file.write_all(item.into_bytes().as_ref()).await?;
-        }
-
         let mut wait = self
             .docker
             .wait_container(&container_id, None::<bollard::query_parameters::WaitContainerOptions>);
@@ -128,40 +92,36 @@ impl WorkerLauncher for DockerWorkerLauncher {
 
         let result = self
             .sessions
-            .wait_for_result(payload.job_id, Duration::from_secs(10))
+            .wait_for_result(
+                payload.job_id,
+                Duration::from_secs(config.worker_result_timeout_seconds),
+            )
             .await?
             .ok_or_else(|| anyhow::anyhow!("worker {} exited without uploading a result", payload.job_id))?;
 
-        self.docker
-            .remove_container(
-                &container_id,
-                Some(RemoveContainerOptionsBuilder::default().force(true).build()),
-            )
-            .await
-            .ok();
         self.sessions.remove_session(payload.job_id);
 
         Ok(WorkerExecution {
             result,
-            logs_path: Some(logs_path),
+            logs_path: Some(paths.job_logs_dir(payload.job_id).join("worker.log")),
         })
     }
 
-    async fn shutdown(&self) -> anyhow::Result<()> {
+    pub async fn shutdown(&self) -> anyhow::Result<()> {
         for session in self.sessions.active_container_sessions().await {
             self.docker
-                .stop_container(
+                .kill_container(
                     &session.container_id,
-                    None::<bollard::query_parameters::StopContainerOptions>,
+                    None::<bollard::query_parameters::KillContainerOptions>,
                 )
                 .await
-                .ok();
-            self.docker
-                .remove_container(
-                    &session.container_id,
-                    Some(RemoveContainerOptionsBuilder::default().force(true).build()),
-                )
-                .await
+                .map_err(|error| {
+                    warn!(
+                        "failed to kill worker container {} during shutdown: {}",
+                        session.container_id, error
+                    );
+                    error
+                })
                 .ok();
             self.sessions.remove_session(session.job_id);
         }
@@ -175,6 +135,10 @@ fn worker_env(payload: &WorkerJobPayload, config: &DaemonConfig, worker_id: &str
         format!(
             "SYNFORGE_WORKER_CONNECT_ADDR={}",
             config.worker_connect_addr.trim()
+        ),
+        format!(
+            "SYNFORGE_WORKER_SOCKET_TIMEOUT_SECONDS={}",
+            config.worker_socket_timeout_seconds
         ),
         format!("SYNFORGE_JOB_ID={}", payload.job_id),
     ]

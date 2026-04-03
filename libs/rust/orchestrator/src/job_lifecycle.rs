@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use synforge_core::{BuildStatus, DaemonConfig, PublishedRepoFile, WorkerResult};
+use synforge_core::{config::DaemonConfig, model::{BuildStatus, PublishedRepoFile, WorkerResult}, package::PackageDefinition};
 use tracing::warn;
 use uuid::Uuid;
 
 use crate::db::{DieselStore, JobStore};
-use crate::repo_manager::RepoManager;
+use crate::repo_manager::FileRepoManager;
 use crate::scheduler::QueuedBuild;
 use crate::workers::WorkerExecution;
 
@@ -14,11 +14,15 @@ use crate::workers::WorkerExecution;
 pub struct JobLifecycle {
     config: DaemonConfig,
     store: DieselStore,
-    repo_manager: Arc<dyn RepoManager>,
+    repo_manager: Arc<FileRepoManager>,
 }
 
 impl JobLifecycle {
-    pub fn new(config: DaemonConfig, store: DieselStore, repo_manager: Arc<dyn RepoManager>) -> Self {
+    pub fn new(
+        config: DaemonConfig,
+        store: DieselStore,
+        repo_manager: Arc<FileRepoManager>,
+    ) -> Self {
         Self {
             config,
             store,
@@ -120,24 +124,20 @@ impl JobLifecycle {
 
     async fn prune_old_build_history(
         &self,
-        package: &synforge_core::PackageDefinition,
+        package: &PackageDefinition,
         mock_chroot: &str,
     ) -> anyhow::Result<()> {
         let keep = package.package_history_count as usize;
-        let jobs = self.store.list_jobs_for_package(&package.name).await?;
-        let old_jobs = jobs
-            .into_iter()
-            .filter(|job| {
-                job.job.status == BuildStatus::Succeeded && job.job.mock_chroot == mock_chroot
-            })
-            .skip(keep)
-            .collect::<Vec<_>>();
+        let old_job_ids = self
+            .store
+            .list_prunable_successful_job_ids(&package.name, mock_chroot, keep)
+            .await?;
 
-        for job in old_jobs {
-            let published_files = self.store.list_published_repo_files_for_job(job.job.id).await?;
+        for job_id in old_job_ids {
+            let published_files = self.store.list_published_repo_files_for_job(job_id).await?;
             self.remove_published_files(&published_files).await?;
-            let _ = self.store.delete_job(job.job.id).await?;
-            self.remove_job_runtime(job.job.id).await?;
+            let _ = self.store.delete_job(job_id).await?;
+            self.remove_job_runtime(job_id).await?;
         }
 
         Ok(())

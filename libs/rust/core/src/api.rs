@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BuildArtifact, BuildEnvVar, BuildJob, PackageDefinition, PackageRuntimeState,
-    PublishedRepoFile, SpecSource,
+    model::{BuildArtifact, BuildJob, PackageRuntimeState, PublishedRepoFile},
+    package::{BuildEnvVar, PackageDefinition, SpecSource},
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -76,6 +76,14 @@ pub struct PackageListResponse {
     pub packages: Vec<PackageResponse>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub struct PaginationQuery {
+    #[serde(default)]
+    pub limit: Option<usize>,
+    #[serde(default)]
+    pub offset: Option<usize>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BuildJobResponse {
     pub job: BuildJob,
@@ -85,6 +93,11 @@ pub struct BuildJobResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BuildJobListResponse {
     pub jobs: Vec<BuildJobResponse>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PruneJobsResponse {
+    pub deleted_jobs: Vec<BuildJobResponse>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -127,6 +140,12 @@ pub struct EffectiveConfigView {
     pub jobs_root: std::path::PathBuf,
     pub worker_image: String,
     pub max_concurrent_builds: usize,
+    pub db_pool_size: u32,
+    pub queue_buffer_size: usize,
+    pub poller_tick_seconds: u64,
+    pub worker_result_timeout_seconds: u64,
+    pub worker_socket_timeout_seconds: u64,
+    pub git_operation_timeout_seconds: u64,
     pub public_base_url: String,
     pub worker_listen_addr: String,
     pub worker_connect_addr: String,
@@ -145,7 +164,9 @@ pub struct UpdateRuntimeSettingsRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct LogChunkResponse {
     pub job_id: uuid::Uuid,
+    pub source: String,
     pub contents: String,
+    pub start_line: u64,
     pub cursor: u64,
     pub complete: bool,
 }
@@ -153,7 +174,41 @@ pub struct LogChunkResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct LogChunkQuery {
     #[serde(default)]
+    pub source: Option<String>,
+    #[serde(default)]
     pub cursor: Option<u64>,
     #[serde(default)]
+    pub offset: Option<i64>,
+    #[serde(default)]
     pub limit: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct LogMetaResponse {
+    pub job_id: uuid::Uuid,
+    pub source: String,
+    pub file_size: u64,
+    pub max_cursor: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct LogSource {
+    pub name: String,
+    pub path: String,
+    pub size: u64,
+    #[serde(rename = "type")]
+    pub source_type: LogSourceType,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum LogSourceType {
+    Structured,
+    Raw,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct LogManifestResponse {
+    pub job_id: uuid::Uuid,
+    pub sources: Vec<LogSource>,
 }

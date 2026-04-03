@@ -22,6 +22,7 @@ export default function JobList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("all");
+  const [pruning, setPruning] = useState(false);
 
   async function load() {
     try {
@@ -49,6 +50,27 @@ export default function JobList() {
       await load();
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to delete job");
+    }
+  }
+
+  async function handlePruneFailed() {
+    const failedCount = jobs.filter(
+      (entry) => entry.job.status === "failed" || entry.job.status === "timed_out"
+    ).length;
+    if (failedCount === 0) {
+      return;
+    }
+    if (!confirm(`Delete ${failedCount} failed or timed out jobs?`)) {
+      return;
+    }
+    try {
+      setPruning(true);
+      await api.pruneFailedJobs();
+      await load();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to prune failed jobs");
+    } finally {
+      setPruning(false);
     }
   }
 
@@ -81,6 +103,14 @@ export default function JobList() {
       />
 
       <section className="flex flex-wrap gap-2 border border-zinc-800 bg-black p-4">
+        <ActionButton
+          onClick={handlePruneFailed}
+          disabled={pruning || !jobs.some((entry) => entry.job.status === "failed" || entry.job.status === "timed_out")}
+          icon={faTrash}
+          className="text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {pruning ? "Pruning…" : "Prune Failed"}
+        </ActionButton>
         {FILTERS.map((value) => (
           <button
             key={value}

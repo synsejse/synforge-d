@@ -1,14 +1,18 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Context;
 use synforge_core::{
-    BuildEnvVar, DaemonConfig, PackageDefinition, SpecRevision, SpecSource, WorkerAction,
-    WorkerJobPayload, WorkerResult,
+    api::BrowseRepositoryResponse,
+    config::DaemonConfig,
+    model::{WorkerAction, WorkerJobPayload, WorkerParsePayload, WorkerResult},
+    package::{BuildEnvVar, PackageDefinition, SpecRevision, SpecSource},
 };
 use tokio::process::Command;
+use tracing::instrument;
 
-use crate::workers::WorkerLauncher;
+use crate::workers::DockerWorkerLauncher;
 
 #[derive(Debug, Clone)]
 pub struct InspectedPackageSource {
@@ -21,11 +25,11 @@ pub struct InspectedPackageSource {
 pub struct PackageSyncStore {
     root: PathBuf,
     config: DaemonConfig,
-    worker_launcher: Arc<dyn WorkerLauncher>,
+    worker_launcher: Arc<DockerWorkerLauncher>,
 }
 
 impl PackageSyncStore {
-    pub fn new(root: PathBuf, config: DaemonConfig, worker_launcher: Arc<dyn WorkerLauncher>) -> Self {
+    pub fn new(root: PathBuf, config: DaemonConfig, worker_launcher: Arc<DockerWorkerLauncher>) -> Self {
         Self {
             root,
             config,
@@ -33,6 +37,7 @@ impl PackageSyncStore {
         }
     }
 
+    #[instrument(skip(self, source), fields(package_name = %package_name, repo_url = %source.repo_url))]
     pub async fn inspect_source(
         &self,
         package_name: &str,
@@ -48,7 +53,7 @@ impl PackageSyncStore {
             workspace_dir,
             artifact_dir,
             timeout_seconds,
-            action: WorkerAction::Parse(synforge_core::WorkerParsePayload {
+            action: WorkerAction::Parse(WorkerParsePayload {
                 package_name: package_name.to_string(),
                 source: source.clone(),
             }),
@@ -135,10 +140,11 @@ impl PackageSyncStore {
         Ok(())
     }
 
+    #[instrument(skip(self), fields(repo_url = %repo_url))]
     pub async fn browse_repository(
         &self,
         repo_url: &str,
-    ) -> anyhow::Result<synforge_core::BrowseRepositoryResponse> {
+    ) -> anyhow::Result<BrowseRepositoryResponse> {
         let repo_url = repo_url.trim();
         if repo_url.is_empty() {
             anyhow::bail!("repository URL must not be empty");
@@ -148,19 +154,24 @@ impl PackageSyncStore {
         tokio::fs::create_dir_all(paths.temp_root()).await?;
         let clone_dir = paths.browse_workspace_dir(uuid::Uuid::now_v7());
 
-        let clone_result = run_git(&[
+        let git_timeout = Duration::from_secs(self.config.git_operation_timeout_seconds);
+        let clone_result = run_git(
+            None,
+            &[
             "clone",
             "--depth",
             "1",
             repo_url,
             clone_dir.to_string_lossy().as_ref(),
-        ])
+            ],
+            git_timeout,
+        )
         .await;
 
         let response = async {
             clone_result?;
-            let head_commit = run_git_in(&clone_dir, &["rev-parse", "HEAD"]).await?;
-            let files_output = run_git_in(&clone_dir, &["ls-files"]).await?;
+            let head_commit = run_git(Some(&clone_dir), &["rev-parse", "HEAD"], git_timeout).await?;
+            let files_output = run_git(Some(&clone_dir), &["ls-files"], git_timeout).await?;
             let mut files = files_output
                 .lines()
                 .map(str::trim)
@@ -174,7 +185,7 @@ impl PackageSyncStore {
                 .cloned()
                 .collect::<Vec<_>>();
 
-            Ok(synforge_core::BrowseRepositoryResponse {
+            Ok(BrowseRepositoryResponse {
                 repo_url: repo_url.to_string(),
                 head_commit: head_commit.trim().to_string(),
                 files,
@@ -183,26 +194,20 @@ impl PackageSyncStore {
         }
         .await;
 
-        tokio::fs::remove_dir_all(&clone_dir).await.ok();
+        let _ = tokio::fs::remove_dir_all(&clone_dir).await;
         response
     }
 }
 
-async fn run_git(args: &[&str]) -> anyhow::Result<String> {
-    run_git_command(None, args).await
-}
-
-async fn run_git_in(dir: &std::path::Path, args: &[&str]) -> anyhow::Result<String> {
-    run_git_command(Some(dir), args).await
-}
-
-async fn run_git_command(dir: Option<&std::path::Path>, args: &[&str]) -> anyhow::Result<String> {
+async fn run_git(dir: Option<&Path>, args: &[&str], timeout: Duration) -> anyhow::Result<String> {
     let mut command = Command::new("git");
     if let Some(dir) = dir {
         command.current_dir(dir);
     }
     command.args(args);
-    let output = command.output().await?;
+    let output = tokio::time::timeout(timeout, command.output())
+        .await
+        .with_context(|| format!("git {} timed out after {}s", args.join(" "), timeout.as_secs()))??;
     if !output.status.success() {
         anyhow::bail!(
             "git {} failed: {}",

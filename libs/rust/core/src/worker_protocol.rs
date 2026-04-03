@@ -1,15 +1,16 @@
 use serde::{Deserialize, Serialize};
 
-use crate::WorkerJobPayload;
+use crate::model::{ArtifactKind, WorkerJobPayload, WorkerResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum WorkerWireMessage {
     Hello { worker_id: String },
     JobAssignment { payload: WorkerJobPayload },
-    LogChunk { bytes: Vec<u8> },
-    ArtifactStart { path: String, kind: crate::ArtifactKind },
+    Heartbeat,
+    LogChunk { path: String, bytes: Vec<u8> },
+    ArtifactStart { path: String, kind: ArtifactKind },
     ArtifactChunk { bytes: Vec<u8> },
     ArtifactComplete,
-    Result { result: crate::WorkerResult },
+    Result { result: WorkerResult },
     Error { message: String },
 }

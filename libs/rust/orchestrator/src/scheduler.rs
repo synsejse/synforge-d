@@ -6,8 +6,10 @@ use tracing::warn;
 use uuid::Uuid;
 
 use synforge_core::{
-    parse_mock_chroot, BuildJob, BuildJobResponse, BuildStatus, BuildTrigger, SpecRevision,
-    SynforgeError,
+    api::BuildJobResponse,
+    error::SynforgeError,
+    model::{now_utc, BuildJob, BuildStatus, BuildTrigger},
+    package::{parse_mock_chroot, PackageDefinition, SpecRevision},
 };
 
 use crate::db::{DieselStore, JobStore};
@@ -15,7 +17,7 @@ use crate::registry::PackageRegistry;
 
 #[derive(Clone)]
 pub struct QueuedBuild {
-    pub package: synforge_core::PackageDefinition,
+    pub package: PackageDefinition,
     pub mock_chroot: String,
     pub revision: SpecRevision,
     pub trigger: BuildTrigger,
@@ -151,7 +153,7 @@ impl BuildScheduler {
 
     async fn prepare_queued_build(
         &self,
-        package: synforge_core::PackageDefinition,
+        package: PackageDefinition,
         trigger: BuildTrigger,
         force: bool,
     ) -> anyhow::Result<(Vec<BuildJob>, Vec<QueuedBuild>)> {
@@ -194,7 +196,7 @@ impl BuildScheduler {
         }
         self.store.upsert_package(&updated_package).await?;
 
-        let now = synforge_core::now_utc();
+        let now = now_utc();
         let mut jobs = Vec::new();
         let mut queued = Vec::new();
         for mock_chroot in queued_chroots {

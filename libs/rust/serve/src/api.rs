@@ -1,17 +1,18 @@
+use std::path::{Component, PathBuf};
+
 use axum::extract::{Path, Query, State};
 use axum::http::{header, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
 use axum::{Json, Router};
 use axum::routing::{get, post};
-use tokio_util::io::ReaderStream;
-use synforge_core::{
+use synforge_core::api::{
     BrowseRepositoryRequest, BrowseRepositoryResponse, BuildJobListResponse, BuildJobResponse,
-    CreatePackageRequest, EffectiveConfigDto, LogChunkQuery, LogChunkResponse,
-    MockChrootListResponse,
-    PackageBuildHistoryResponse, PackageListResponse, PackageRepoFilesResponse, PackageResponse,
-    RefreshRequest, RebuildRequest, RepoInventoryResponse, UpdatePackageRequest,
-    UpdateRuntimeSettingsRequest,
+    CreatePackageRequest, EffectiveConfigDto, LogChunkQuery, LogChunkResponse, LogManifestResponse,
+    LogMetaResponse, MockChrootListResponse, PackageBuildHistoryResponse, PackageListResponse,
+    PaginationQuery, PackageRepoFilesResponse, PackageResponse, PruneJobsResponse, RefreshRequest,
+    RebuildRequest, RepoInventoryResponse, UpdatePackageRequest, UpdateRuntimeSettingsRequest,
 };
+use tokio_util::io::ReaderStream;
 use uuid::Uuid;
 
 use crate::{AppError, AppState};
@@ -30,17 +31,23 @@ pub fn router(_state: AppState) -> Router<AppState> {
         .route("/packages/{name}/rebuild", post(trigger_rebuild))
         .route("/packages/{name}/refresh", post(trigger_refresh))
         .route("/jobs", get(list_jobs))
+        .route("/jobs/prune-failed", post(prune_failed_jobs))
         .route("/jobs/{id}", get(get_job).delete(delete_job))
-        .route("/jobs/{id}/log/stream", get(get_job_log_chunk))
+        .route("/jobs/{id}/logs", get(get_job_log_manifest))
+        .route("/jobs/{id}/logs/meta", get(get_job_log_meta))
+        .route("/jobs/{id}/logs/stream", get(get_job_log_chunk))
         .route("/jobs/{id}/artifacts/{*path}", get(download_job_artifact))
         .route("/repo/files", get(get_repo_inventory))
         .route("/config/effective", get(get_effective_config))
         .route("/config/runtime", post(update_runtime_settings))
 }
 
-async fn list_packages(State(state): State<AppState>) -> Result<Json<PackageListResponse>, AppError> {
+async fn list_packages(
+    State(state): State<AppState>,
+    Query(query): Query<PaginationQuery>,
+) -> Result<Json<PackageListResponse>, AppError> {
     Ok(Json(PackageListResponse {
-        packages: state.service.list_packages().await?,
+        packages: state.service.list_packages(query.limit, query.offset).await?,
     }))
 }
 
@@ -117,9 +124,12 @@ async fn trigger_refresh(
     Ok(Json(state.service.trigger_refresh(&name, request).await?))
 }
 
-async fn list_jobs(State(state): State<AppState>) -> Result<Json<BuildJobListResponse>, AppError> {
+async fn list_jobs(
+    State(state): State<AppState>,
+    Query(query): Query<PaginationQuery>,
+) -> Result<Json<BuildJobListResponse>, AppError> {
     Ok(Json(BuildJobListResponse {
-        jobs: state.service.list_jobs().await?,
+        jobs: state.service.list_jobs(query.limit, query.offset).await?,
     }))
 }
 
@@ -137,6 +147,19 @@ async fn delete_job(
     Ok(Json(state.service.delete_job(id).await?))
 }
 
+async fn prune_failed_jobs(
+    State(state): State<AppState>,
+) -> Result<Json<PruneJobsResponse>, AppError> {
+    Ok(Json(state.service.prune_failed_jobs().await?))
+}
+
+async fn get_job_log_manifest(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<LogManifestResponse>, AppError> {
+    Ok(Json(state.service.get_job_log_manifest(id).await?))
+}
+
 async fn get_job_log_chunk(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
@@ -145,7 +168,20 @@ async fn get_job_log_chunk(
     Ok(Json(
         state
             .service
-            .get_job_log_chunk(id, query.cursor, query.limit)
+            .get_job_log_chunk(id, query.source, query.cursor, query.offset, query.limit)
+            .await?,
+    ))
+}
+
+async fn get_job_log_meta(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Query(query): Query<LogChunkQuery>,
+) -> Result<Json<LogMetaResponse>, AppError> {
+    Ok(Json(
+        state
+            .service
+            .get_job_log_meta(id, query.source)
             .await?,
     ))
 }
@@ -154,10 +190,10 @@ async fn download_job_artifact(
     State(state): State<AppState>,
     Path((id, path)): Path<(Uuid, String)>,
 ) -> Result<impl IntoResponse, AppError> {
-    let relative_repo_path = path.trim_start_matches('/');
+    let relative_repo_path = normalize_artifact_path(&path)?;
     let artifact_path = state
         .service
-        .resolve_job_artifact_path(id, relative_repo_path)
+        .resolve_job_artifact_path(id, &relative_repo_path)
         .await?;
     let file = tokio::fs::File::open(&artifact_path).await?;
     let file_name = artifact_path
@@ -178,6 +214,22 @@ async fn download_job_artifact(
     Ok((headers, axum::body::Body::from_stream(ReaderStream::new(file))))
 }
 
+fn normalize_artifact_path(path: &str) -> anyhow::Result<String> {
+    let trimmed = path.trim_start_matches('/');
+    let normalized = PathBuf::from(trimmed);
+    if normalized.as_os_str().is_empty() {
+        anyhow::bail!("artifact path must not be empty");
+    }
+
+    if normalized.components().any(|component| {
+        !matches!(component, Component::Normal(_))
+    }) {
+        anyhow::bail!("artifact path contains invalid components");
+    }
+
+    Ok(normalized.to_string_lossy().into_owned())
+}
+
 async fn get_effective_config(
     State(state): State<AppState>,
 ) -> Result<Json<EffectiveConfigDto>, AppError> {
@@ -193,6 +245,7 @@ async fn update_runtime_settings(
 
 async fn get_repo_inventory(
     State(state): State<AppState>,
+    Query(query): Query<PaginationQuery>,
 ) -> Result<Json<RepoInventoryResponse>, AppError> {
-    Ok(Json(state.service.get_repo_inventory().await?))
+    Ok(Json(state.service.get_repo_inventory(query.limit, query.offset).await?))
 }

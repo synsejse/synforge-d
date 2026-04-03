@@ -78,6 +78,7 @@ FROM fedora:44 AS webui-runtime
 RUN dnf -y upgrade-minimal \
     && dnf -y install \
         ca-certificates \
+        curl \
     && dnf clean all
 
 COPY --from=rust-builder /out/synforge-webui /usr/local/bin/synforge-webui

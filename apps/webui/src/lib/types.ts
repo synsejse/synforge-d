@@ -146,9 +146,32 @@ export interface RepoInventoryResponse {
 
 export interface LogChunkResponse {
   job_id: string;
+  source: string;
   contents: string;
+  start_line: number;
   cursor: number;
   complete: boolean;
+}
+
+export interface LogMetaResponse {
+  job_id: string;
+  source: string;
+  file_size: number;
+  max_cursor: number;
+}
+
+export type LogSourceType = "structured" | "raw";
+
+export interface LogSource {
+  name: string;
+  path: string;
+  size: number;
+  source_type: LogSourceType;
+}
+
+export interface LogManifestResponse {
+  job_id: string;
+  sources: LogSource[];
 }
 
 export interface DaemonConfig {

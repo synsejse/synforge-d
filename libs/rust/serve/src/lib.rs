@@ -9,7 +9,7 @@ use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
-use synforge_core::ApiError;
+use synforge_core::{api::ApiError, error::SynforgeError, validated::AuthToken};
 use synforge_orchestrator::SynforgeService;
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
@@ -40,12 +40,14 @@ pub fn router(service: Arc<SynforgeService>) -> Router {
         .with_state(state)
 }
 
-async fn healthz() -> &'static str {
-    "ok"
+async fn healthz(State(state): State<AppState>) -> Result<&'static str, AppError> {
+    state.service.health_check().await?;
+    Ok("ok")
 }
 
-async fn readyz() -> &'static str {
-    "ready"
+async fn readyz(State(state): State<AppState>) -> Result<&'static str, AppError> {
+    state.service.health_check().await?;
+    Ok("ready")
 }
 
 async fn add_security_headers(mut response: Response) -> Response {
@@ -75,19 +77,33 @@ async fn authenticate_request(
     request: axum::extract::Request,
     next: Next,
 ) -> Result<Response, AppError> {
-    let expected = state.service.config().bearer_token.clone();
-    if expected.is_empty() {
+    let Some(expected) = AuthToken::new(&state.service.config().bearer_token).ok() else {
         return Ok(next.run(request).await);
-    }
+    };
     let value = headers
         .get(header::AUTHORIZATION)
         .and_then(|value| value.to_str().ok())
         .ok_or_else(|| AppError::auth("missing Authorization header"))?;
     let prefix = "Bearer ";
-    if !value.starts_with(prefix) || value[prefix.len()..] != expected {
+    if !value.starts_with(prefix) || !constant_time_eq(&value[prefix.len()..], expected.secret()) {
         return Err(AppError::auth("invalid bearer token"));
     }
     Ok(next.run(request).await)
+}
+
+fn constant_time_eq(left: &str, right: &str) -> bool {
+    let left = left.as_bytes();
+    let right = right.as_bytes();
+    let max_len = left.len().max(right.len());
+    let mut diff = left.len() ^ right.len();
+
+    for index in 0..max_len {
+        let left_byte = left.get(index).copied().unwrap_or_default();
+        let right_byte = right.get(index).copied().unwrap_or_default();
+        diff |= usize::from(left_byte ^ right_byte);
+    }
+
+    diff == 0
 }
 
 #[derive(Debug)]
@@ -95,7 +111,7 @@ pub struct AppError(anyhow::Error);
 
 impl AppError {
     fn auth(message: impl Into<String>) -> Self {
-        Self(anyhow::anyhow!(synforge_core::SynforgeError::Unauthorized).context(message.into()))
+        Self(anyhow::anyhow!(SynforgeError::Unauthorized).context(message.into()))
     }
 }
 
@@ -114,31 +130,31 @@ impl IntoResponse for AppError {
         let mut code = "internal_error";
         let mut message = self.0.to_string();
         for cause in self.0.chain() {
-            if let Some(error) = cause.downcast_ref::<synforge_core::SynforgeError>() {
+            if let Some(error) = cause.downcast_ref::<SynforgeError>() {
                 match error {
-                    synforge_core::SynforgeError::Unauthorized => {
+                    SynforgeError::Unauthorized => {
                         status = StatusCode::UNAUTHORIZED;
                         code = "unauthorized";
                         message = error.to_string();
                     }
-                    synforge_core::SynforgeError::NotFound(_) => {
+                    SynforgeError::NotFound(_) => {
                         status = StatusCode::NOT_FOUND;
                         code = "not_found";
                         message = error.to_string();
                     }
-                    synforge_core::SynforgeError::Conflict(_) => {
+                    SynforgeError::Conflict(_) => {
                         status = StatusCode::CONFLICT;
                         code = "conflict";
                         message = error.to_string();
                     }
-                    synforge_core::SynforgeError::BadRequest(_)
-                    | synforge_core::SynforgeError::Spec(_)
-                    | synforge_core::SynforgeError::Config(_) => {
+                    SynforgeError::BadRequest(_)
+                    | SynforgeError::Spec(_)
+                    | SynforgeError::Config(_) => {
                         status = StatusCode::BAD_REQUEST;
                         code = "bad_request";
                         message = error.to_string();
                     }
-                    synforge_core::SynforgeError::Internal(_) => {
+                    SynforgeError::Internal(_) => {
                         status = StatusCode::INTERNAL_SERVER_ERROR;
                         code = "internal_error";
                         message = error.to_string();

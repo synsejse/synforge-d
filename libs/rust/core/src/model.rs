@@ -5,6 +5,11 @@ use serde::{Deserialize, Serialize};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use uuid::Uuid;
 
+pub trait DbTextEnum: Sized + Copy {
+    fn as_db_text(self) -> &'static str;
+    fn from_db_text(value: &str) -> Self;
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum BuildTrigger {
@@ -58,6 +63,68 @@ pub enum ArtifactKind {
     Other,
 }
 
+impl DbTextEnum for BuildTrigger {
+    fn as_db_text(self) -> &'static str {
+        match self {
+            Self::Poll => "poll",
+            Self::ManualRefresh => "manual_refresh",
+            Self::ManualRebuild => "manual_rebuild",
+            Self::Api => "api",
+        }
+    }
+
+    fn from_db_text(value: &str) -> Self {
+        match value {
+            "manualrefresh" | "manual_refresh" => Self::ManualRefresh,
+            "manualrebuild" | "manual_rebuild" => Self::ManualRebuild,
+            "api" => Self::Api,
+            _ => Self::Poll,
+        }
+    }
+}
+
+impl DbTextEnum for BuildStatus {
+    fn as_db_text(self) -> &'static str {
+        match self {
+            Self::Pending => "pending",
+            Self::Running => "running",
+            Self::Succeeded => "succeeded",
+            Self::Failed => "failed",
+            Self::TimedOut => "timed_out",
+        }
+    }
+
+    fn from_db_text(value: &str) -> Self {
+        match value {
+            "running" => Self::Running,
+            "succeeded" => Self::Succeeded,
+            "failed" => Self::Failed,
+            "timedout" | "timed_out" => Self::TimedOut,
+            _ => Self::Pending,
+        }
+    }
+}
+
+impl DbTextEnum for ArtifactKind {
+    fn as_db_text(self) -> &'static str {
+        match self {
+            Self::Rpm => "rpm",
+            Self::Srpm => "srpm",
+            Self::Log => "log",
+            Self::Other => "other",
+        }
+    }
+
+    fn from_db_text(value: &str) -> Self {
+        match value {
+            "srpm" => Self::Srpm,
+            "log" => Self::Log,
+            "other" => Self::Other,
+            _ => Self::Rpm,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BuildJob {
     pub id: Uuid,
@@ -105,13 +172,13 @@ pub enum WorkerAction {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WorkerParsePayload {
     pub package_name: String,
-    pub source: crate::SpecSource,
+    pub source: crate::package::SpecSource,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WorkerBuildPayload {
     pub package_name: String,
-    pub package: crate::PackageDefinition,
+    pub package: crate::package::PackageDefinition,
     pub mock_chroot: String,
     pub trigger: BuildTrigger,
     pub revision: String,
@@ -121,8 +188,8 @@ pub struct WorkerBuildPayload {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WorkerParseResult {
-    pub parsed: crate::ParsedSpec,
-    pub revision: crate::SpecRevision,
+    pub parsed: crate::package::ParsedSpec,
+    pub revision: crate::package::SpecRevision,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -151,7 +218,7 @@ pub struct RepoPublication {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct EffectiveConfigResponse {
-    pub config: crate::DaemonConfig,
+    pub config: crate::config::DaemonConfig,
 }
 
 pub fn now_utc() -> OffsetDateTime {

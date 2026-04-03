@@ -61,16 +61,8 @@ impl RuntimePaths {
         self.job_root(job_id).join("artifacts")
     }
 
-    pub fn job_log_path(&self, job_id: Uuid) -> PathBuf {
-        self.job_root(job_id).join("log.txt")
-    }
-
     pub fn job_logs_dir(&self, job_id: Uuid) -> PathBuf {
         self.job_root(job_id).join("logs")
-    }
-
-    pub fn job_worker_log_path(&self, job_id: Uuid) -> PathBuf {
-        self.job_logs_dir(job_id).join("worker.txt")
     }
 
     pub fn temp_root(&self) -> PathBuf {

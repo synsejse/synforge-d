@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use synforge_core::DaemonConfig;
+use synforge_core::config::DaemonConfig;
 use synforge_orchestrator::SynforgeService;
 use tracing::warn;
 

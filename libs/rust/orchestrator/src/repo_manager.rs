@@ -1,50 +1,28 @@
 use std::fs;
-use std::path::Path;
 use std::collections::HashSet;
+use std::path::Path;
 
 use anyhow::Context;
-use async_trait::async_trait;
 use synforge_core::{
-    format_timestamp, now_utc, BuildStatus, DaemonConfig, PackageDefinition, PublishedRepoFile,
-    RepoPublication, WorkerBuildResult,
+    config::DaemonConfig,
+    model::{format_timestamp, now_utc, ArtifactKind, BuildArtifact, BuildStatus, PublishedRepoFile, RepoPublication, WorkerBuildResult},
+    package::PackageDefinition,
 };
 use tokio::process::Command;
 use uuid::Uuid;
 
-#[async_trait]
-pub trait RepoManager: Send + Sync {
-    async fn ensure_repo(
-        &self,
-        config: &DaemonConfig,
-    ) -> anyhow::Result<()>;
-
-    async fn publish_build(
-        &self,
-        package: &PackageDefinition,
-        worker_result: &WorkerBuildResult,
-        config: &DaemonConfig,
-    ) -> anyhow::Result<RepoPublication>;
-
-    async fn remove_build_files(
-        &self,
-        files: &[PublishedRepoFile],
-        config: &DaemonConfig,
-    ) -> anyhow::Result<()>;
-}
-
 #[derive(Debug, Default, Clone)]
 pub struct FileRepoManager;
 
-#[async_trait]
-impl RepoManager for FileRepoManager {
-    async fn ensure_repo(
+impl FileRepoManager {
+    pub async fn ensure_repo(
         &self,
         config: &DaemonConfig,
     ) -> anyhow::Result<()> {
         regenerate_metadata(config.runtime_paths().repo_dir()).await
     }
 
-    async fn publish_build(
+    pub async fn publish_build(
         &self,
         package: &PackageDefinition,
         worker_result: &WorkerBuildResult,
@@ -58,7 +36,7 @@ impl RepoManager for FileRepoManager {
         let mut files = Vec::new();
         let mut seen_repo_paths = HashSet::new();
         for artifact in &worker_result.artifacts {
-            if artifact.kind == synforge_core::ArtifactKind::Srpm && !package.publish_srpm {
+            if artifact.kind == ArtifactKind::Srpm && !package.publish_srpm {
                 continue;
             }
             let build_root = build_repo_build_dir(config, package, worker_result.job_id, artifact);
@@ -113,7 +91,7 @@ impl RepoManager for FileRepoManager {
         })
     }
 
-    async fn remove_build_files(
+    pub async fn remove_build_files(
         &self,
         files: &[PublishedRepoFile],
         config: &DaemonConfig,
@@ -139,7 +117,7 @@ fn build_repo_build_dir(
     config: &DaemonConfig,
     package: &PackageDefinition,
     job_id: Uuid,
-    artifact: &synforge_core::BuildArtifact,
+    artifact: &BuildArtifact,
 ) -> std::path::PathBuf {
     config
         .runtime_paths()
@@ -153,7 +131,7 @@ fn build_repo_build_dir(
 
 fn published_arch<'a>(
     _package: &'a PackageDefinition,
-    artifact: &'a synforge_core::BuildArtifact,
+    artifact: &'a BuildArtifact,
 ) -> &'a str {
     let Some(filename) = artifact.path.file_name().and_then(|value| value.to_str()) else {
         return artifact.arch.as_str();

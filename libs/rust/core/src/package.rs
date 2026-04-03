@@ -3,7 +3,8 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::SynforgeError;
+use crate::error::SynforgeError;
+use crate::validation::{BuildEnvVarValidator, PackageDefinitionValidator, SpecSourceValidator, Validator};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PackageDefinition {
@@ -94,68 +95,7 @@ fn default_true() -> bool {
 
 impl PackageDefinition {
     pub fn validate(&self) -> Result<(), SynforgeError> {
-        if !is_dns_label(&self.name) {
-            return Err(SynforgeError::Spec(format!(
-                "package name {} is not DNS-label safe",
-                self.name
-            )));
-        }
-        if self.mock_chroots.is_empty() {
-            return Err(SynforgeError::Spec(
-                "at least one mock chroot must be selected".to_string(),
-            ));
-        }
-        for chroot in &self.mock_chroots {
-            parse_mock_chroot(chroot).ok_or_else(|| {
-                SynforgeError::Spec(format!("mock chroot {} is not a valid mock target name", chroot))
-            })?;
-        }
-        if self.repo_subdir.trim().is_empty() {
-            return Err(SynforgeError::Spec(
-                "repo_subdir must not be empty".to_string(),
-            ));
-        }
-        if self.version.trim().is_empty() {
-            return Err(SynforgeError::Spec(
-                "spec version must not be empty".to_string(),
-            ));
-        }
-        if self.poll_interval_seconds == 0 {
-            return Err(SynforgeError::Spec(
-                "poll_interval_seconds must be greater than zero".to_string(),
-            ));
-        }
-        if self.build_timeout_seconds == 0 {
-            return Err(SynforgeError::Spec(
-                "build_timeout_seconds must be greater than zero".to_string(),
-            ));
-        }
-        if self.package_history_count == 0 {
-            return Err(SynforgeError::Spec(
-                "package_history_count must be greater than zero".to_string(),
-            ));
-        }
-        for entry in &self.build_env {
-            entry.validate()?;
-        }
-        if self.release.trim().is_empty() {
-            return Err(SynforgeError::Spec(
-                "spec release must not be empty".to_string(),
-            ));
-        }
-        if self.spec_path.extension().and_then(|value| value.to_str()) != Some("spec") {
-            return Err(SynforgeError::Spec(format!(
-                "spec path {} must end with .spec",
-                self.spec_path.display()
-            )));
-        }
-        if self.spec_path.is_absolute() {
-            return Err(SynforgeError::Spec(
-                "spec path must be relative to the git repository root".to_string(),
-            ));
-        }
-        self.source.validate()?;
-        Ok(())
+        PackageDefinitionValidator.validate(self)
     }
 
     pub fn revision(&self) -> SpecRevision {
@@ -169,58 +109,13 @@ impl PackageDefinition {
 
 impl BuildEnvVar {
     pub fn validate(&self) -> Result<(), SynforgeError> {
-        let key = self.key.trim();
-        if key.is_empty() {
-            return Err(SynforgeError::Spec(
-                "build environment variable key must not be empty".to_string(),
-            ));
-        }
-        let mut chars = key.chars();
-        let Some(first) = chars.next() else {
-            return Err(SynforgeError::Spec(
-                "build environment variable key must not be empty".to_string(),
-            ));
-        };
-        if !(first.is_ascii_alphabetic() || first == '_') {
-            return Err(SynforgeError::Spec(format!(
-                "build environment variable key {} must start with a letter or underscore",
-                self.key
-            )));
-        }
-        if !chars.all(|ch| ch.is_ascii_alphanumeric() || ch == '_') {
-            return Err(SynforgeError::Spec(format!(
-                "build environment variable key {} contains invalid characters",
-                self.key
-            )));
-        }
-        Ok(())
+        BuildEnvVarValidator.validate(self)
     }
 }
 
 impl SpecSource {
     pub fn validate(&self) -> Result<(), SynforgeError> {
-        if self.repo_url.trim().is_empty() {
-            return Err(SynforgeError::Spec(
-                "git repository URL must not be empty".to_string(),
-            ));
-        }
-        if self.spec_path.trim().is_empty() {
-            return Err(SynforgeError::Spec(
-                "spec path must not be empty".to_string(),
-            ));
-        }
-        let spec_path = PathBuf::from(self.spec_path.trim());
-        if spec_path.is_absolute() {
-            return Err(SynforgeError::Spec(
-                "spec path must be relative to the repository root".to_string(),
-            ));
-        }
-        if spec_path.extension().and_then(|value| value.to_str()) != Some("spec") {
-            return Err(SynforgeError::Spec(
-                "spec path must point to a .spec file".to_string(),
-            ));
-        }
-        Ok(())
+        SpecSourceValidator.validate(self)
     }
 
     pub fn polling_enabled(&self) -> bool {

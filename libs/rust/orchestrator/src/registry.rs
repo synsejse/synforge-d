@@ -1,7 +1,8 @@
 use anyhow::Context;
 use synforge_core::{
-    BrowseRepositoryResponse, BuildEnvVar, CreatePackageRequest, PackageDefinition, PackageResponse,
-    SpecRevision, SpecSource, SynforgeError, UpdatePackageRequest,
+    api::{BrowseRepositoryResponse, CreatePackageRequest, PackageResponse, UpdatePackageRequest},
+    error::SynforgeError,
+    package::{BuildEnvVar, PackageDefinition, SpecRevision, SpecSource},
 };
 
 use crate::db::{DieselStore, JobStore};
@@ -18,14 +19,14 @@ impl PackageRegistry {
         Self { store, package_store }
     }
 
-    pub async fn list_packages(&self) -> anyhow::Result<Vec<PackageResponse>> {
-        self.store.list_packages().await
+    pub async fn list_packages(&self, limit: usize, offset: usize) -> anyhow::Result<Vec<PackageResponse>> {
+        self.store.list_packages(limit, offset).await
     }
 
     pub async fn list_definitions(&self) -> anyhow::Result<Vec<PackageDefinition>> {
         Ok(self
             .store
-            .list_packages()
+            .list_packages(10_000, 0)
             .await?
             .into_iter()
             .map(|response| response.package)

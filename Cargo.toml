@@ -40,7 +40,7 @@ sha2 = "0.10.9"
 thiserror = "2.0.17"
 time = { version = "0.3.44", features = ["formatting", "parsing", "serde"] }
 tokio = { version = "1.47.1", features = ["fs", "macros", "process", "rt-multi-thread", "signal", "sync", "time"] }
-tokio-util = { version = "0.7.13", features = ["codec", "io"] }
+tokio-util = { version = "0.7.13", features = ["codec", "io", "rt"] }
 tower = "0.5.2"
 tower-http = { version = "0.6.6", features = ["auth", "fs", "trace"] }
 tracing = "0.1.41"

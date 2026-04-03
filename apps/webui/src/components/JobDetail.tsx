@@ -117,7 +117,7 @@ export default function JobDetail({ jobId }: Props) {
     artifact: BuildJobResponse["artifacts"][number],
   ) {
     try {
-      setDownloadingArtifactPath(artifact.relative_repo_path);
+      setDownloadingArtifactPath(artifact.path);
       await api.downloadJobArtifact(jobId, artifact);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to download artifact");
@@ -304,12 +304,12 @@ export default function JobDetail({ jobId }: Props) {
               <div className="grid gap-3">
                 {job.artifacts.map((artifact) => (
                   <div
-                    key={`${artifact.path}-${artifact.relative_repo_path}`}
+                    key={`${artifact.id}-${artifact.path}`}
                     className="grid gap-3 border border-zinc-800 bg-black px-4 py-4 md:grid-cols-[minmax(0,1fr)_auto_auto_auto]"
                   >
                     <div>
                       <div className="font-mono text-sm text-white">
-                        {artifact.relative_repo_path}
+                        {artifact.path}
                       </div>
                       <div className="mt-1 text-xs text-zinc-500">
                         {artifact.sha256}
@@ -324,17 +324,14 @@ export default function JobDetail({ jobId }: Props) {
                     <div className="flex md:justify-end">
                       <button
                         onClick={() => handleArtifactDownload(artifact)}
-                        disabled={
-                          downloadingArtifactPath ===
-                          artifact.relative_repo_path
-                        }
+                        disabled={downloadingArtifactPath === artifact.path}
                         className="inline-flex items-center border border-zinc-800 bg-black px-3 py-1.5 text-xs text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <FaIcon
                           icon={faDownload}
                           className="mr-2 text-[0.95em]"
                         />
-                        {downloadingArtifactPath === artifact.relative_repo_path
+                        {downloadingArtifactPath === artifact.path
                           ? "Downloading…"
                           : "Download"}
                       </button>

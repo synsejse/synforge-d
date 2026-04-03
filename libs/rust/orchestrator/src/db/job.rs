@@ -103,7 +103,6 @@ pub(super) async fn finish_job(
     error_message: Option<&str>,
     artifacts: &[BuildArtifact],
     published_files: &[PublishedRepoFile],
-    _logs_dir: Option<&Path>,
 ) -> anyhow::Result<()> {
     let job_id = job_id.to_string();
     let error_message = error_message.map(ToOwned::to_owned);
@@ -136,15 +135,11 @@ pub(super) async fn finish_job(
                     let rows = artifacts
                         .iter()
                         .map(|artifact| NewArtifactRecord {
+                            id: artifact.id.to_string(),
                             job_id: job_id.clone(),
                             package_name: job_row.package_name.clone(),
                             mock_chroot: job_row.mock_chroot.clone(),
-                            arch: artifact.arch.clone(),
                             path: artifact.path.to_string_lossy().to_string(),
-                            relative_repo_path: artifact
-                                .relative_repo_path
-                                .to_string_lossy()
-                                .to_string(),
                             sha256: artifact.sha256.clone(),
                             size_bytes: artifact.size_bytes as i64,
                             kind: artifact.kind,
@@ -157,7 +152,11 @@ pub(super) async fn finish_job(
 
                 diesel::delete(
                     published_repo_files::table
-                        .filter(published_repo_files::job_id.eq(job_id.as_str())),
+                        .filter(published_repo_files::artifact_id.eq_any(
+                            build_artifacts::table
+                                .filter(build_artifacts::job_id.eq(job_id.as_str()))
+                                .select(build_artifacts::id),
+                        )),
                 )
                 .execute(conn)?;
 
@@ -165,13 +164,8 @@ pub(super) async fn finish_job(
                     let rows = published_files
                         .iter()
                         .map(|file| NewPublishedRepoFileRecord {
-                            job_id: job_id.clone(),
-                            package_name: file.package_name.clone(),
-                            mock_chroot: file.mock_chroot.clone(),
+                            artifact_id: file.artifact_id.to_string(),
                             repo_path: file.repo_path.to_string_lossy().to_string(),
-                            sha256: file.sha256.clone(),
-                            size_bytes: file.size_bytes as i64,
-                            kind: file.kind,
                             published_at: format_timestamp(file.published_at),
                         })
                         .collect::<Vec<_>>();
@@ -396,7 +390,11 @@ pub(super) async fn delete_job(
                     .execute(conn)?;
                 diesel::delete(
                     published_repo_files::table
-                        .filter(published_repo_files::job_id.eq(job_id.as_str())),
+                        .filter(published_repo_files::artifact_id.eq_any(
+                            build_artifacts::table
+                                .filter(build_artifacts::job_id.eq(job_id.as_str()))
+                                .select(build_artifacts::id),
+                        )),
                 )
                 .execute(conn)?;
                 diesel::delete(build_jobs::table.find(job_id.as_str())).execute(conn)?;
@@ -483,11 +481,10 @@ fn load_artifacts_map_for_job_ids(
     for row in rows {
         let job_id = Uuid::parse_str(&row.job_id)?;
         map.entry(job_id).or_default().push(BuildArtifact {
+            id: Uuid::parse_str(&row.id)?,
             package_name: row.package_name,
             mock_chroot: row.mock_chroot,
-            arch: row.arch,
             path: PathBuf::from(row.path),
-            relative_repo_path: PathBuf::from(row.relative_repo_path),
             sha256: row.sha256,
             size_bytes: row.size_bytes as u64,
             kind: row.kind,

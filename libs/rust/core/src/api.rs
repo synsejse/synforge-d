@@ -383,7 +383,6 @@ pub struct LogMetaResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct LogSource {
-    pub name: String,
     pub path: String,
     pub size: u64,
     #[serde(rename = "type")]

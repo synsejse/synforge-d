@@ -45,6 +45,7 @@ impl FileRepoManager {
             tokio::fs::create_dir_all(&build_root)
                 .await
                 .with_context(|| format!("failed to create {}", build_root.display()))?;
+            let source_path = paths.job_artifacts_dir(worker_result.job_id).join(&artifact.path);
             let file_name = artifact.path.file_name().ok_or_else(|| {
                 anyhow::anyhow!("artifact path {} has no filename", artifact.path.display())
             })?;
@@ -60,18 +61,19 @@ impl FileRepoManager {
                 fs::remove_file(&destination)
                     .with_context(|| format!("failed to replace {}", destination.display()))?;
             }
-            fs::hard_link(&artifact.path, &destination).or_else(|_| {
-                fs::copy(&artifact.path, &destination)
+            fs::hard_link(&source_path, &destination).or_else(|_| {
+                fs::copy(&source_path, &destination)
                     .map(|_| ())
                     .with_context(|| {
                         format!(
                             "failed to copy artifact {} to {}",
-                            artifact.path.display(),
+                            source_path.display(),
                             destination.display()
                         )
                     })
             })?;
             files.push(PublishedRepoFile {
+                artifact_id: artifact.id,
                 job_id: worker_result.job_id,
                 package_name: package.name.clone(),
                 mock_chroot: artifact.mock_chroot.clone(),

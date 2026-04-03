@@ -1,6 +1,18 @@
 use super::*;
 use std::collections::{HashMap, HashSet};
 
+type PublishedRepoRow = (
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    i64,
+    ArtifactKind,
+    String,
+);
+
 pub(super) async fn list_published_repo_files(
     store: &DieselStore,
     limit: usize,
@@ -11,26 +23,40 @@ pub(super) async fn list_published_repo_files(
 ) -> anyhow::Result<Vec<PublishedRepoFile>> {
     store
         .with_connection(move |conn| {
-            let mut query = published_repo_files::table.into_boxed();
+            let mut query = published_repo_files::table
+                .inner_join(
+                    build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
+                )
+                .into_boxed();
             if let Some(package_name) = package_name.as_deref() {
-                query = query.filter(published_repo_files::package_name.eq(package_name));
+                query = query.filter(build_artifacts::package_name.eq(package_name));
             }
             if let Some(mock_chroot) = mock_chroot.as_deref() {
-                query = query.filter(published_repo_files::mock_chroot.eq(mock_chroot));
+                query = query.filter(build_artifacts::mock_chroot.eq(mock_chroot));
             }
             if let Some(kind) = kind {
-                query = query.filter(published_repo_files::kind.eq(kind));
+                query = query.filter(build_artifacts::kind.eq(kind));
             }
             let rows = query
                 .order((
-                    published_repo_files::package_name.asc(),
+                    build_artifacts::package_name.asc(),
                     published_repo_files::published_at.desc(),
                     published_repo_files::repo_path.asc(),
                 ))
                 .limit(limit as i64)
                 .offset(offset as i64)
-                .select(PublishedRepoFileRecord::as_select())
-                .load(conn)?;
+                .select((
+                    published_repo_files::artifact_id,
+                    build_artifacts::job_id,
+                    build_artifacts::package_name,
+                    build_artifacts::mock_chroot,
+                    published_repo_files::repo_path,
+                    build_artifacts::sha256,
+                    build_artifacts::size_bytes,
+                    build_artifacts::kind,
+                    published_repo_files::published_at,
+                ))
+                .load::<PublishedRepoRow>(conn)?;
             rows.into_iter()
                 .map(published_repo_file_from_record)
                 .collect()
@@ -56,13 +82,26 @@ pub(super) async fn list_published_repo_files_for_package(
     store
         .with_connection(move |conn| {
             let rows = published_repo_files::table
-                .filter(published_repo_files::package_name.eq(package_name.as_str()))
+                .inner_join(
+                    build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
+                )
+                .filter(build_artifacts::package_name.eq(package_name.as_str()))
                 .order((
                     published_repo_files::published_at.desc(),
                     published_repo_files::repo_path.asc(),
                 ))
-                .select(PublishedRepoFileRecord::as_select())
-                .load(conn)?;
+                .select((
+                    published_repo_files::artifact_id,
+                    build_artifacts::job_id,
+                    build_artifacts::package_name,
+                    build_artifacts::mock_chroot,
+                    published_repo_files::repo_path,
+                    build_artifacts::sha256,
+                    build_artifacts::size_bytes,
+                    build_artifacts::kind,
+                    published_repo_files::published_at,
+                ))
+                .load::<PublishedRepoRow>(conn)?;
             rows.into_iter()
                 .map(published_repo_file_from_record)
                 .collect()
@@ -78,15 +117,19 @@ pub(super) async fn count_published_repo_files(
 ) -> anyhow::Result<u64> {
     store
         .with_connection(move |conn| {
-            let mut query = published_repo_files::table.into_boxed();
+            let mut query = published_repo_files::table
+                .inner_join(
+                    build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
+                )
+                .into_boxed();
             if let Some(package_name) = package_name.as_deref() {
-                query = query.filter(published_repo_files::package_name.eq(package_name));
+                query = query.filter(build_artifacts::package_name.eq(package_name));
             }
             if let Some(mock_chroot) = mock_chroot.as_deref() {
-                query = query.filter(published_repo_files::mock_chroot.eq(mock_chroot));
+                query = query.filter(build_artifacts::mock_chroot.eq(mock_chroot));
             }
             if let Some(kind) = kind {
-                query = query.filter(published_repo_files::kind.eq(kind));
+                query = query.filter(build_artifacts::kind.eq(kind));
             }
             let count = query.count().get_result::<i64>(conn)?;
             Ok(count as u64)
@@ -101,13 +144,26 @@ pub(super) async fn list_recent_published_repo_files(
     store
         .with_connection(move |conn| {
             let rows = published_repo_files::table
+                .inner_join(
+                    build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
+                )
                 .order((
                     published_repo_files::published_at.desc(),
                     published_repo_files::repo_path.asc(),
                 ))
                 .limit(limit as i64)
-                .select(PublishedRepoFileRecord::as_select())
-                .load(conn)?;
+                .select((
+                    published_repo_files::artifact_id,
+                    build_artifacts::job_id,
+                    build_artifacts::package_name,
+                    build_artifacts::mock_chroot,
+                    published_repo_files::repo_path,
+                    build_artifacts::sha256,
+                    build_artifacts::size_bytes,
+                    build_artifacts::kind,
+                    published_repo_files::published_at,
+                ))
+                .load::<PublishedRepoRow>(conn)?;
             rows.into_iter()
                 .map(published_repo_file_from_record)
                 .collect()
@@ -121,16 +177,24 @@ pub(super) async fn list_repo_target_summaries(
     store
         .with_connection(move |conn| {
             let rows = published_repo_files::table
-                .select(PublishedRepoFileRecord::as_select())
-                .load(conn)?;
+                .inner_join(
+                    build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
+                )
+                .select((
+                    build_artifacts::package_name,
+                    build_artifacts::mock_chroot,
+                    build_artifacts::job_id,
+                    build_artifacts::size_bytes,
+                ))
+                .load::<(String, String, String, i64)>(conn)?;
             let mut by_target = HashMap::<String, (HashSet<String>, HashSet<String>, u64)>::new();
             for row in rows {
                 let entry = by_target
-                    .entry(row.mock_chroot.clone())
+                    .entry(row.1.clone())
                     .or_insert_with(|| (HashSet::new(), HashSet::new(), 0));
-                entry.0.insert(row.package_name);
-                entry.1.insert(row.job_id);
-                entry.2 += row.size_bytes as u64;
+                entry.0.insert(row.0);
+                entry.1.insert(row.2);
+                entry.2 += row.3 as u64;
             }
 
             let mut targets = by_target
@@ -156,10 +220,13 @@ pub(super) async fn get_repo_distinct_counts(
     store
         .with_connection(|conn| {
             let rows = published_repo_files::table
+                .inner_join(
+                    build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
+                )
                 .select((
-                    published_repo_files::package_name,
-                    published_repo_files::mock_chroot,
-                    published_repo_files::job_id,
+                    build_artifacts::package_name,
+                    build_artifacts::mock_chroot,
+                    build_artifacts::job_id,
                 ))
                 .load::<(String, String, String)>(conn)?;
 
@@ -186,7 +253,10 @@ pub(super) async fn sum_published_repo_file_bytes(store: &DieselStore) -> anyhow
     store
         .with_connection(|conn| {
             let sizes = published_repo_files::table
-                .select(published_repo_files::size_bytes)
+                .inner_join(
+                    build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
+                )
+                .select(build_artifacts::size_bytes)
                 .load::<i64>(conn)?;
             Ok(sizes.into_iter().map(|value| value as u64).sum())
         })

@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -7,20 +6,11 @@ use bollard::Docker;
 use bollard::models::{ContainerCreateBody, HostConfig};
 use bollard::query_parameters::CreateContainerOptionsBuilder;
 use futures_util::StreamExt;
-use synforge_core::{
-    config::DaemonConfig,
-    model::{WorkerJobPayload, WorkerResult},
-};
+use synforge_core::{config::DaemonConfig, model::{WorkerJobPayload, WorkerResult}};
 use tracing::warn;
 
 use crate::job_lifecycle::JobLifecycle;
 use crate::sessions::WorkerSessionBroker;
-
-#[derive(Debug, Clone)]
-pub struct WorkerExecution {
-    pub result: WorkerResult,
-    pub logs_path: Option<PathBuf>,
-}
 
 #[derive(Clone)]
 pub struct DockerWorkerLauncher {
@@ -49,10 +39,9 @@ impl DockerWorkerLauncher {
         &self,
         payload: &WorkerJobPayload,
         config: &DaemonConfig,
-    ) -> anyhow::Result<WorkerExecution> {
-        let paths = config.runtime_paths();
+    ) -> anyhow::Result<WorkerResult> {
         tokio::fs::create_dir_all(&payload.workspace_dir).await?;
-        tokio::fs::create_dir_all(paths.job_logs_dir(payload.job_id)).await?;
+        tokio::fs::create_dir_all(config.runtime_paths().job_logs_dir(payload.job_id)).await?;
         let session = self
             .sessions
             .create_session(payload.job_id, payload.clone())
@@ -105,8 +94,7 @@ impl DockerWorkerLauncher {
         );
         while let Some(next) = wait.next().await {
             next?;
-        }
-
+        };
         let result = self
             .sessions
             .wait_for_result(
@@ -123,10 +111,7 @@ impl DockerWorkerLauncher {
 
         self.sessions.remove_session(payload.job_id);
 
-        Ok(WorkerExecution {
-            result,
-            logs_path: Some(paths.job_logs_dir(payload.job_id).join("worker.log")),
-        })
+        Ok(result)
     }
 
     pub async fn shutdown(&self) -> anyhow::Result<()> {

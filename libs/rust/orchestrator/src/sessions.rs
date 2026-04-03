@@ -123,6 +123,7 @@ impl WorkerSessionBroker {
     pub async fn finalize_artifact_upload(
         &self,
         job_id: Uuid,
+        artifact_id: Uuid,
         relative_path: &str,
         kind: ArtifactKind,
     ) -> anyhow::Result<BuildArtifact> {
@@ -130,7 +131,7 @@ impl WorkerSessionBroker {
             .state
             .get(&job_id)
             .ok_or_else(|| anyhow::anyhow!("worker session {} not found", job_id))?;
-        let (package_name, mock_chroot, target_arch) = build_metadata_from_payload(&entry.payload)?;
+        let (package_name, mock_chroot) = build_metadata_from_payload(&entry.payload)?;
         let path = self.artifact_upload_path(job_id, relative_path);
         let mut file = tokio::fs::File::open(&path).await?;
         let mut hasher = sha2::Sha256::new();
@@ -148,11 +149,10 @@ impl WorkerSessionBroker {
             tokio::fs::create_dir_all(parent).await?;
         }
         let artifact = BuildArtifact {
+            id: artifact_id,
             package_name,
             mock_chroot,
-            arch: artifact_arch_from_filename(relative_path).unwrap_or(target_arch),
-            path: path.clone(),
-            relative_repo_path: PathBuf::from(relative_path),
+            path: PathBuf::from(relative_path),
             sha256: format!("{:x}", hasher.finalize()),
             size_bytes,
             kind,
@@ -224,30 +224,17 @@ impl WorkerSessionBroker {
 
 fn build_metadata_from_payload(
     payload: &WorkerJobPayload,
-) -> anyhow::Result<(String, String, String)> {
+) -> anyhow::Result<(String, String)> {
     match &payload.action {
         WorkerAction::Build(build) => {
-            let target = parse_mock_chroot(&build.mock_chroot)
+            parse_mock_chroot(&build.mock_chroot)
                 .ok_or_else(|| anyhow::anyhow!("invalid mock chroot {}", build.mock_chroot))?;
-            Ok((
-                build.package.name.clone(),
-                build.mock_chroot.clone(),
-                target.arch,
-            ))
+            Ok((build.package.name.clone(), build.mock_chroot.clone()))
         }
         WorkerAction::Parse(_) => Err(anyhow::anyhow!(
             "artifact upload received for non-build worker session"
         )),
     }
-}
-
-fn artifact_arch_from_filename(filename: &str) -> Option<String> {
-    let name = Path::new(filename).file_name()?.to_str()?;
-    if let Some(base) = name.strip_suffix(".src.rpm") {
-        return base.rsplit('.').next().map(ToOwned::to_owned);
-    }
-    let base = name.strip_suffix(".rpm")?;
-    base.rsplit('.').next().map(ToOwned::to_owned)
 }
 
 fn merge_result(result: WorkerResult, artifacts: &[BuildArtifact]) -> WorkerResult {

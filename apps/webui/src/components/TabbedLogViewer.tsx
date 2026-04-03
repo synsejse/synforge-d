@@ -256,7 +256,7 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
                 : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
-            {source.name}
+            {source.path}
             {source.size > 0 && (
               <span className="ml-2 text-xs text-zinc-500">
                 ({formatBytes(source.size)})

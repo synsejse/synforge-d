@@ -13,6 +13,7 @@ use synforge_core::{
     package::{BuildEnvVar, PackageDefinition},
 };
 use tokio::process::Command;
+use uuid::Uuid;
 
 use crate::git::clone_repository;
 use crate::logging::{
@@ -137,7 +138,6 @@ async fn execute_spec_build(
                 package_name: package.name.clone(),
                 status: BuildStatus::Succeeded,
                 artifacts,
-                logs_path: None,
                 message: None,
             })
         }
@@ -156,7 +156,6 @@ async fn execute_spec_build(
                 package_name: package.name.clone(),
                 status: BuildStatus::Failed,
                 artifacts,
-                logs_path: None,
                 message: Some(combine_messages(message, artifact_message)),
             })
         }
@@ -174,7 +173,6 @@ async fn execute_spec_build(
                 package_name: package.name.clone(),
                 status: BuildStatus::TimedOut,
                 artifacts,
-                logs_path: None,
                 message: Some(combine_messages(
                     "build timed out".to_string(),
                     artifact_message,
@@ -332,7 +330,7 @@ async fn collect_artifacts(
             let path = entry?;
             if path.is_file() {
                 let artifact = build_artifact(package, topdir, path, mock_chroot).await?;
-                if seen.insert(artifact.relative_repo_path.clone()) {
+                if seen.insert(artifact.path.clone()) {
                     artifacts.push(artifact);
                 }
             }
@@ -378,15 +376,6 @@ async fn prepare_topdir(topdir: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn artifact_rpm_arch(path: &Path) -> Option<&str> {
-    let filename = path.file_name()?.to_str()?;
-    if filename.ends_with(".src.rpm") {
-        return Some("src");
-    }
-    let name = filename.strip_suffix(".rpm")?;
-    name.rsplit('.').next()
-}
-
 async fn build_artifact(
     package: &PackageDefinition,
     topdir: &Path,
@@ -406,18 +395,18 @@ async fn build_artifact(
     } else {
         ArtifactKind::Rpm
     };
+    let artifact_root = topdir.parent().unwrap_or(topdir);
     Ok(BuildArtifact {
+        id: Uuid::now_v7(),
         package_name: package.name.clone(),
         mock_chroot: mock_chroot.to_string(),
-        arch: artifact_rpm_arch(&path).unwrap_or("unknown").to_string(),
         size_bytes: bytes.len() as u64,
-        relative_repo_path: path
-            .strip_prefix(topdir)
+        path: path
+            .strip_prefix(artifact_root)
             .ok()
             .map(PathBuf::from)
             .or_else(|| path.file_name().map(PathBuf::from))
             .unwrap_or_else(|| PathBuf::from("artifact.rpm")),
-        path,
         sha256,
         kind,
     })

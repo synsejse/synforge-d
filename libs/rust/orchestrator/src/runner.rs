@@ -45,13 +45,11 @@ impl BuildRunner {
     async fn process_build_inner(&self, build: QueuedBuild) -> anyhow::Result<()> {
         let paths = self.config.runtime_paths();
         let job_root = paths.job_root(build.job_id);
-        let artifact_dir = paths.job_artifacts_dir(build.job_id);
-        tokio::fs::create_dir_all(&artifact_dir).await?;
+        tokio::fs::create_dir_all(paths.job_artifacts_dir(build.job_id)).await?;
 
         let payload = WorkerJobPayload {
             job_id: build.job_id,
             workspace_dir: job_root,
-            artifact_dir,
             timeout_seconds: build.package.build_timeout_seconds,
             action: WorkerAction::Build(WorkerBuildPayload {
                 package_name: build.package.name.clone(),

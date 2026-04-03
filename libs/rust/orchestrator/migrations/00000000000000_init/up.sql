@@ -33,16 +33,15 @@ CREATE TABLE IF NOT EXISTS build_jobs (
 );
 
 CREATE TABLE IF NOT EXISTS build_artifacts (
+    id VARCHAR(36) NOT NULL,
     job_id VARCHAR(36) NOT NULL,
     package_name VARCHAR(255) NOT NULL,
     mock_chroot VARCHAR(255) NOT NULL,
-    arch VARCHAR(64) NOT NULL,
     path VARCHAR(512) NOT NULL,
-    relative_repo_path VARCHAR(512) NOT NULL,
     sha256 VARCHAR(64) NOT NULL,
     size_bytes BIGINT NOT NULL,
     kind VARCHAR(64) NOT NULL,
-    PRIMARY KEY (job_id, path)
+    PRIMARY KEY (id)
 );
 
 CREATE TABLE IF NOT EXISTS build_logs (
@@ -53,21 +52,11 @@ CREATE TABLE IF NOT EXISTS build_logs (
     PRIMARY KEY (job_id, source_path)
 );
 
-CREATE TABLE IF NOT EXISTS daemon_runtime_settings (
-    id INT PRIMARY KEY,
-    public_base_url TEXT
-);
-
 CREATE TABLE IF NOT EXISTS published_repo_files (
-    job_id VARCHAR(36) NOT NULL,
-    package_name VARCHAR(255) NOT NULL,
-    mock_chroot VARCHAR(255) NOT NULL,
+    artifact_id VARCHAR(36) NOT NULL,
     repo_path VARCHAR(512) NOT NULL,
-    sha256 VARCHAR(64) NOT NULL,
-    size_bytes BIGINT NOT NULL,
-    kind VARCHAR(64) NOT NULL,
     published_at VARCHAR(64) NOT NULL,
-    PRIMARY KEY (job_id, repo_path)
+    PRIMARY KEY (artifact_id)
 );
 
 CREATE INDEX idx_build_jobs_package_created_at
@@ -78,7 +67,7 @@ CREATE INDEX idx_build_jobs_package_chroot_status_finished_at
     ON build_jobs (package_name, mock_chroot, status, finished_at);
 CREATE INDEX idx_build_artifacts_job_id
     ON build_artifacts (job_id);
-CREATE INDEX idx_published_repo_files_job_id
-    ON published_repo_files (job_id);
-CREATE INDEX idx_published_repo_files_package_published_at
-    ON published_repo_files (package_name, published_at);
+CREATE UNIQUE INDEX idx_build_artifacts_job_path
+    ON build_artifacts (job_id, path);
+CREATE UNIQUE INDEX idx_published_repo_files_repo_path
+    ON published_repo_files (repo_path);

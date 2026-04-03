@@ -12,8 +12,6 @@ use uuid::Uuid;
 use crate::db::{DieselStore, JobStore};
 use crate::repo_manager::FileRepoManager;
 use crate::scheduler::QueuedBuild;
-use crate::workers::WorkerExecution;
-
 #[derive(Clone)]
 pub struct JobLifecycle {
     config: DaemonConfig,
@@ -46,7 +44,6 @@ impl JobLifecycle {
         build: &QueuedBuild,
         error_message: &str,
     ) -> anyhow::Result<()> {
-        let logs_dir = self.config.runtime_paths().job_logs_dir(build.job_id);
         self.store
             .finish_job(
                 build.job_id,
@@ -54,7 +51,6 @@ impl JobLifecycle {
                 Some(error_message),
                 &[],
                 &[],
-                Some(&logs_dir),
             )
             .await
             .context("failed to persist failed build result")
@@ -63,9 +59,9 @@ impl JobLifecycle {
     pub async fn finalize_execution(
         &self,
         build: &QueuedBuild,
-        execution: WorkerExecution,
+        execution: WorkerResult,
     ) -> anyhow::Result<()> {
-        let WorkerResult::Build(build_result) = execution.result else {
+        let WorkerResult::Build(build_result) = execution else {
             anyhow::bail!(
                 "worker returned parse result for build job {}",
                 build.job_id
@@ -97,11 +93,6 @@ impl JobLifecycle {
                 error_message.as_deref(),
                 &build_result.artifacts,
                 &published_files,
-                build_result
-                    .logs_path
-                    .as_deref()
-                    .or(execution.logs_path.as_deref())
-                    .and_then(|path| path.parent()),
             )
             .await?;
 

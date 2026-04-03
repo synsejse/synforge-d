@@ -108,7 +108,7 @@ impl SynforgeService {
     pub async fn resolve_job_artifact_path(
         &self,
         job_id: Uuid,
-        relative_repo_path: &str,
+        relative_artifact_path: &str,
     ) -> anyhow::Result<PathBuf> {
         let job = self
             .store
@@ -118,12 +118,16 @@ impl SynforgeService {
         let artifact = job
             .artifacts
             .into_iter()
-            .find(|artifact| artifact.relative_repo_path == PathBuf::from(relative_repo_path))
+            .find(|artifact| artifact.path == PathBuf::from(relative_artifact_path))
             .ok_or_else(|| {
-                anyhow::anyhow!(SynforgeError::NotFound(relative_repo_path.to_string()))
+                anyhow::anyhow!(SynforgeError::NotFound(relative_artifact_path.to_string()))
             })?;
 
-        let path = artifact.path;
+        let path = self
+            .config
+            .runtime_paths()
+            .job_artifacts_dir(job_id)
+            .join(&artifact.path);
         if !tokio::fs::try_exists(&path).await? {
             return Err(anyhow::anyhow!(SynforgeError::NotFound(
                 path.display().to_string()
@@ -901,7 +905,6 @@ impl SynforgeService {
             let log_path = PathBuf::from(&row.log_path);
             if let Ok(meta) = tokio::fs::metadata(&log_path).await {
                 sources.push(LogSource {
-                    name: row.source_path.clone(),
                     path: row.source_path,
                     size: meta.len(),
                     source_type: LogSourceType::Raw,

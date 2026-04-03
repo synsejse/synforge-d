@@ -102,14 +102,15 @@ export type ArtifactKind = "rpm" | "srpm" | "log" | "other";
 export type UserPermission = "read" | "write" | "repo";
 
 export interface BuildArtifact {
+  id: string;
   path: string;
-  relative_repo_path: string;
   sha256: string;
   size_bytes: number;
   kind: ArtifactKind;
 }
 
 export interface PublishedRepoFile {
+  artifact_id: string;
   job_id: string;
   package_name: string;
   mock_chroot: string;
@@ -201,7 +202,6 @@ export interface LogMetaResponse {
 export type LogSourceType = "structured" | "raw";
 
 export interface LogSource {
-  name: string;
   path: string;
   size: number;
   source_type: LogSourceType;

@@ -724,10 +724,10 @@ pub(crate) async fn download_job_artifact(
     State(state): State<AppState>,
     Path((id, path)): Path<(Uuid, String)>,
 ) -> Result<impl IntoResponse, AppError> {
-    let relative_repo_path = normalize_artifact_path(&path)?;
+    let relative_artifact_path = normalize_artifact_path(&path)?;
     let artifact_path = state
         .service
-        .resolve_job_artifact_path(id, &relative_repo_path)
+        .resolve_job_artifact_path(id, &relative_artifact_path)
         .await?;
     let file = tokio::fs::File::open(&artifact_path).await?;
     let file_name = artifact_path

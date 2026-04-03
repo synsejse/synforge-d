@@ -107,7 +107,11 @@ async fn handle_connection(
                 file.write_all(&bytes).await?;
                 file.flush().await?;
             }
-            WorkerWireMessage::ArtifactStart { path, kind } => {
+            WorkerWireMessage::ArtifactStart {
+                artifact_id,
+                path,
+                kind,
+            } => {
                 if current_artifact.is_some() {
                     anyhow::bail!("artifact upload already in progress");
                 }
@@ -117,6 +121,7 @@ async fn handle_connection(
                 }
                 let file = tokio::fs::File::create(&upload_path).await?;
                 current_artifact = Some(ActiveArtifactUpload {
+                    artifact_id,
                     relative_path: path,
                     kind,
                     file,
@@ -134,7 +139,12 @@ async fn handle_connection(
                 };
                 upload.file.flush().await?;
                 sessions
-                    .finalize_artifact_upload(job_id, &upload.relative_path, upload.kind)
+                    .finalize_artifact_upload(
+                        job_id,
+                        upload.artifact_id,
+                        &upload.relative_path,
+                        upload.kind,
+                    )
                     .await?;
             }
             WorkerWireMessage::Result { result } => {
@@ -174,6 +184,7 @@ async fn write_message(
 }
 
 struct ActiveArtifactUpload {
+    artifact_id: uuid::Uuid,
     relative_path: String,
     kind: ArtifactKind,
     file: tokio::fs::File,

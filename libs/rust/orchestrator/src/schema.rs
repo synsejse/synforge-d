@@ -38,13 +38,12 @@ diesel::table! {
 }
 
 diesel::table! {
-    build_artifacts (job_id, path) {
+    build_artifacts (id) {
+        id -> Text,
         job_id -> Text,
         package_name -> Text,
         mock_chroot -> Text,
-        arch -> Text,
         path -> Text,
-        relative_repo_path -> Text,
         sha256 -> Text,
         size_bytes -> BigInt,
         kind -> Text,
@@ -57,13 +56,6 @@ diesel::table! {
         source_path -> Text,
         log_path -> Text,
         updated_at -> Text,
-    }
-}
-
-diesel::table! {
-    daemon_runtime_settings (id) {
-        id -> Integer,
-        public_base_url -> Nullable<Text>,
     }
 }
 
@@ -95,14 +87,9 @@ diesel::table! {
 }
 
 diesel::table! {
-    published_repo_files (job_id, repo_path) {
-        job_id -> Text,
-        package_name -> Text,
-        mock_chroot -> Text,
+    published_repo_files (artifact_id) {
+        artifact_id -> Text,
         repo_path -> Text,
-        sha256 -> Text,
-        size_bytes -> BigInt,
-        kind -> Text,
         published_at -> Text,
     }
 }
@@ -112,7 +99,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     build_jobs,
     build_artifacts,
     build_logs,
-    daemon_runtime_settings,
     users,
     user_permissions,
     user_repo_metrics,

@@ -70,7 +70,6 @@ where
             })
         });
         tokio::fs::create_dir_all(&payload.workspace_dir).await?;
-        tokio::fs::create_dir_all(&payload.artifact_dir).await?;
         let local_result = match &payload.action {
             WorkerAction::Parse(parse) => {
                 WorkerResult::Parse(spec::execute_spec_parse(&payload, parse).await?)
@@ -91,7 +90,12 @@ where
             task.abort();
             let _ = task.await;
         }
-        publish_worker_result(transport.as_ref(), &local_result).await?;
+        publish_worker_result(
+            transport.as_ref(),
+            &local_result,
+            &payload.workspace_dir.join("rpmbuild"),
+        )
+        .await?;
         Ok(local_result)
     }
 }
@@ -114,6 +118,7 @@ fn env_u64(name: &str) -> Option<u64> {
 async fn publish_worker_result(
     transport: Option<&WorkerTransportHandle>,
     result: &WorkerResult,
+    artifact_root: &std::path::Path,
 ) -> anyhow::Result<()> {
     let Some(transport) = transport else {
         return Ok(());
@@ -124,11 +129,10 @@ async fn publish_worker_result(
         WorkerResult::Build(build) => WorkerResult::Build(WorkerBuildResult {
             artifacts: {
                 for artifact in &build.artifacts {
-                    transport.send_artifact(artifact).await?;
+                    transport.send_artifact(artifact_root, artifact).await?;
                 }
                 Vec::new()
             },
-            logs_path: None,
             ..build.clone()
         }),
     };

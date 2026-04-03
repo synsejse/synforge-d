@@ -51,11 +51,9 @@ impl PackageSyncStore {
         let job_id = uuid::Uuid::now_v7();
         let paths = self.config.runtime_paths();
         let workspace_dir = paths.parse_workspace_dir(job_id);
-        let artifact_dir = workspace_dir.join("artifacts");
         let payload = WorkerJobPayload {
             job_id,
             workspace_dir,
-            artifact_dir,
             timeout_seconds,
             action: WorkerAction::Parse(WorkerParsePayload {
                 package_name: package_name.to_string(),
@@ -63,7 +61,7 @@ impl PackageSyncStore {
             }),
         };
         let execution = self.worker_launcher.run_job(&payload, &self.config).await?;
-        let WorkerResult::Parse(result) = execution.result else {
+        let WorkerResult::Parse(result) = execution else {
             return Err(anyhow::anyhow!("worker did not return a parse result"));
         };
 

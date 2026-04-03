@@ -21,4 +21,4 @@ pub use runner::BuildRunner;
 pub use scheduler::{BuildScheduler, QueuedBuild, SchedulerError};
 pub use service::SynforgeService;
 pub use sessions::{ActiveWorkerSession, WorkerSession, WorkerSessionBroker};
-pub use workers::{DockerWorkerLauncher, WorkerExecution};
+pub use workers::DockerWorkerLauncher;

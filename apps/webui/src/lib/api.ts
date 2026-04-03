@@ -353,7 +353,7 @@ class ApiClient {
     id: string,
     artifact: BuildArtifact,
   ): Promise<void> {
-    const path = `/api/v1/jobs/${encodeURIComponent(id)}/artifacts/${artifact.relative_repo_path
+    const path = `/api/v1/jobs/${encodeURIComponent(id)}/artifacts/${artifact.path
       .split("/")
       .map((segment) => encodeURIComponent(segment))
       .join("/")}`;
@@ -386,8 +386,7 @@ class ApiClient {
     const objectUrl = window.URL.createObjectURL(blob);
     const disposition = res.headers.get("content-disposition") || "";
     const match = disposition.match(/filename="([^"]+)"/i);
-    const fallbackName =
-      artifact.relative_repo_path.split("/").at(-1) || "artifact.bin";
+    const fallbackName = artifact.path.split("/").at(-1) || "artifact.bin";
     const fileName = match?.[1] || fallbackName;
     const anchor = document.createElement("a");
     anchor.href = objectUrl;

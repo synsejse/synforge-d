@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::model::{ArtifactKind, WorkerJobPayload, WorkerResult};
 
@@ -8,7 +9,11 @@ pub enum WorkerWireMessage {
     JobAssignment { payload: WorkerJobPayload },
     Heartbeat,
     LogChunk { path: String, bytes: Vec<u8> },
-    ArtifactStart { path: String, kind: ArtifactKind },
+    ArtifactStart {
+        artifact_id: Uuid,
+        path: String,
+        kind: ArtifactKind,
+    },
     ArtifactChunk { bytes: Vec<u8> },
     ArtifactComplete,
     Result { result: WorkerResult },

@@ -38,13 +38,11 @@ pub enum BuildStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct BuildArtifact {
+    pub id: Uuid,
     pub package_name: String,
     pub mock_chroot: String,
-    pub arch: String,
     #[schema(value_type = String)]
     pub path: PathBuf,
-    #[schema(value_type = String)]
-    pub relative_repo_path: PathBuf,
     pub sha256: String,
     pub size_bytes: u64,
     pub kind: ArtifactKind,
@@ -52,6 +50,7 @@ pub struct BuildArtifact {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct PublishedRepoFile {
+    pub artifact_id: Uuid,
     pub job_id: Uuid,
     pub package_name: String,
     pub mock_chroot: String,
@@ -231,7 +230,6 @@ pub struct SourceRevision {
 pub struct WorkerJobPayload {
     pub job_id: Uuid,
     pub workspace_dir: PathBuf,
-    pub artifact_dir: PathBuf,
     pub timeout_seconds: u64,
     pub action: WorkerAction,
 }
@@ -271,7 +269,6 @@ pub struct WorkerBuildResult {
     pub package_name: String,
     pub status: BuildStatus,
     pub artifacts: Vec<BuildArtifact>,
-    pub logs_path: Option<PathBuf>,
     pub message: Option<String>,
 }
 

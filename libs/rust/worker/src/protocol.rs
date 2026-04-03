@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -60,14 +61,19 @@ impl WorkerTransportHandle {
         .await
     }
 
-    pub(crate) async fn send_artifact(&self, artifact: &BuildArtifact) -> anyhow::Result<()> {
-        let path = artifact.relative_repo_path.to_string_lossy().to_string();
+    pub(crate) async fn send_artifact(
+        &self,
+        artifact_root: &Path,
+        artifact: &BuildArtifact,
+    ) -> anyhow::Result<()> {
+        let path = artifact.path.to_string_lossy().to_string();
         self.send_message(WorkerWireMessage::ArtifactStart {
+            artifact_id: artifact.id,
             path,
             kind: artifact.kind,
         })
         .await?;
-        let bytes = tokio::fs::read(&artifact.path).await?;
+        let bytes = tokio::fs::read(artifact_root.join(&artifact.path)).await?;
         for chunk in bytes.chunks(64 * 1024) {
             self.send_message(WorkerWireMessage::ArtifactChunk {
                 bytes: chunk.to_vec(),

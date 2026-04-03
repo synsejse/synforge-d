@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::path::PathBuf;
 
@@ -6,18 +7,21 @@ use bollard::models::{ContainerCreateBody, HostConfig};
 use bollard::query_parameters::{CreateContainerOptionsBuilder, LogsOptionsBuilder};
 use bollard::Docker;
 use futures_util::StreamExt;
+use serde_json::Value;
 use synforge_core::{
     api::{
         BrowseRepositoryRequest, BrowseRepositoryResponse, BuildJobResponse, CreatePackageRequest,
-        EffectiveConfigDto, EffectiveConfigView, LogChunkResponse, LogManifestResponse, LogMetaResponse,
-        LogSource, LogSourceType, MockChrootListResponse, PackageBuildHistoryResponse,
-        PackageBuildInventoryEntry, PackageRepoFilesResponse, PackageResponse, PruneJobsResponse,
-        RefreshRequest, RebuildRequest, RepoInventoryResponse, UpdatePackageRequest,
-        UpdateRuntimeSettingsRequest,
+        ChangePasswordRequest, ConfigFieldDescriptor, ConfigFieldType, ConfigSchemaResponse,
+        CreateUserRequest, EffectiveConfigDto, EffectiveConfigView, LogChunkResponse,
+        LogManifestResponse, LogMetaResponse, LogSource, LogSourceType, MockChrootListResponse,
+        PackageBuildHistoryResponse, PackageBuildInventoryEntry, PackageRepoFilesResponse,
+        PackageResponse, PruneJobsResponse, RefreshRequest, RebuildRequest, RepoInventoryResponse,
+        SessionResponse, SetupInitializeRequest, UpdatePackageRequest, UpdateRuntimeSettingsRequest,
+        UpdateUserRequest, UserListResponse, UserMetricsResponse, UserResponse,
     },
     config::DaemonConfig,
     error::SynforgeError,
-    model::{BuildStatus, BuildTrigger, PublishedRepoFile},
+    model::{BuildStatus, BuildTrigger, PublishedRepoFile, UserAccount, UserPermission},
     package::parse_mock_chroot,
 };
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
@@ -26,6 +30,7 @@ use tokio_util::task::TaskTracker;
 use tracing::{error, warn};
 use uuid::Uuid;
 
+use crate::auth::{hash_password, verify_password};
 use crate::db::{DieselStore, JobStore};
 use crate::job_lifecycle::JobLifecycle;
 use crate::packages::PackageSyncStore;
@@ -55,6 +60,12 @@ pub struct SynforgeService {
 }
 
 impl SynforgeService {
+    pub async fn config_schema(&self) -> ConfigSchemaResponse {
+        ConfigSchemaResponse {
+            fields: editable_config_fields(),
+        }
+    }
+
     pub async fn health_check(&self) -> anyhow::Result<()> {
         self.store.health_check().await?;
 
@@ -207,32 +218,27 @@ impl SynforgeService {
     }
 
     pub async fn effective_config(&self) -> EffectiveConfigDto {
-        let paths = self.config.runtime_paths();
-        let public_base_url = self
-            .store
-            .get_public_base_url_override()
-            .await
-            .ok()
-            .flatten()
-            .unwrap_or_else(|| self.config.public_base_url.clone());
+        let current = DaemonConfig::load().unwrap_or_else(|_| self.config.clone());
+        let paths = current.runtime_paths();
         EffectiveConfigDto {
             config: EffectiveConfigView {
-                listen_addr: self.config.listen_addr.clone(),
-                bearer_token: self.config.bearer_token.clone(),
-                runtime_root: self.config.runtime_root.clone(),
+                config_path: DaemonConfig::config_path(),
+                bootstrap_completed: current.bootstrap_completed,
+                listen_addr: current.listen_addr.clone(),
+                runtime_root: current.runtime_root.clone(),
                 database_path: paths.database_path().to_path_buf(),
                 packages_dir: paths.packages_dir().to_path_buf(),
                 repo_dir: paths.repo_dir().to_path_buf(),
                 jobs_root: paths.jobs_root().to_path_buf(),
-                worker_image: self.config.worker_image.clone(),
-                max_concurrent_builds: self.config.max_concurrent_builds,
-                db_pool_size: self.config.db_pool_size,
-                queue_buffer_size: self.config.queue_buffer_size,
-                poller_tick_seconds: self.config.poller_tick_seconds,
-                worker_result_timeout_seconds: self.config.worker_result_timeout_seconds,
-                worker_socket_timeout_seconds: self.config.worker_socket_timeout_seconds,
-                git_operation_timeout_seconds: self.config.git_operation_timeout_seconds,
-                public_base_url,
+                worker_image: current.worker_image.clone(),
+                max_concurrent_builds: current.max_concurrent_builds,
+                db_pool_size: current.db_pool_size,
+                queue_buffer_size: current.queue_buffer_size,
+                poller_tick_seconds: current.poller_tick_seconds,
+                worker_result_timeout_seconds: current.worker_result_timeout_seconds,
+                worker_socket_timeout_seconds: current.worker_socket_timeout_seconds,
+                git_operation_timeout_seconds: current.git_operation_timeout_seconds,
+                public_base_url: current.public_base_url,
             },
         }
     }
@@ -241,12 +247,38 @@ impl SynforgeService {
         &self,
         request: UpdateRuntimeSettingsRequest,
     ) -> anyhow::Result<EffectiveConfigDto> {
-        if request.public_base_url.trim().is_empty() {
-            anyhow::bail!("public_base_url must not be empty");
+        let mut config = DaemonConfig::load()?;
+        apply_config_settings(&mut config, &request.settings, false)?;
+        config.save()?;
+        Ok(self.effective_config().await)
+    }
+
+    pub async fn initialize_setup(&self, request: SetupInitializeRequest) -> anyhow::Result<EffectiveConfigDto> {
+        let current = DaemonConfig::load()?;
+        if current.bootstrap_completed {
+            anyhow::bail!("setup has already been completed");
         }
-        self.store
-            .set_public_base_url_override(&request.public_base_url)
-            .await?;
+        validate_user_handle(&request.admin.handle)?;
+        validate_display_name(&request.admin.display_name)?;
+        validate_password(&request.admin.password)?;
+        let mut config = current;
+        apply_config_settings(&mut config, &request.settings, true)?;
+        config.bootstrap_completed = false;
+        config
+            .validate()
+            .map_err(|error| anyhow::anyhow!(error.to_string()))?;
+        if self.store.user_count().await? > 0 {
+            anyhow::bail!("initial admin cannot be created because users already exist");
+        }
+        config.save()?;
+        self.bootstrap_admin(
+            &request.admin.handle,
+            &request.admin.display_name,
+            &request.admin.password,
+        )
+        .await?;
+        config.bootstrap_completed = true;
+        config.save()?;
         Ok(self.effective_config().await)
     }
 
@@ -312,6 +344,216 @@ impl SynforgeService {
         Ok(RepoInventoryResponse {
             repo_files: self.store.list_published_repo_files(limit, offset).await?,
         })
+    }
+
+    pub async fn authenticate_user(
+        &self,
+        handle: &str,
+        password: &str,
+        required: UserPermission,
+    ) -> anyhow::Result<UserAccount> {
+        let Some(record) = self.store.get_user_auth_by_handle(handle).await? else {
+            return Err(anyhow::anyhow!(SynforgeError::Unauthorized));
+        };
+        if !record.user.active {
+            return Err(anyhow::anyhow!(SynforgeError::Unauthorized));
+        }
+        if !verify_password(&record.password_hash, password)? {
+            return Err(anyhow::anyhow!(SynforgeError::Unauthorized));
+        }
+        if !record.user.has_permission(required) {
+            return Err(anyhow::anyhow!(SynforgeError::Unauthorized));
+        }
+        Ok(record.user)
+    }
+
+    pub async fn authorize_user(
+        &self,
+        user_id: Uuid,
+        required: UserPermission,
+    ) -> anyhow::Result<UserAccount> {
+        let Some(summary) = self.store.get_user(user_id).await? else {
+            return Err(anyhow::anyhow!(SynforgeError::Unauthorized));
+        };
+        if !summary.user.active || !summary.user.has_permission(required) {
+            return Err(anyhow::anyhow!(SynforgeError::Unauthorized));
+        }
+        Ok(summary.user)
+    }
+
+    pub async fn get_session(&self, user: UserAccount) -> SessionResponse {
+        SessionResponse { user }
+    }
+
+    pub async fn list_users(&self) -> anyhow::Result<UserListResponse> {
+        let users = self
+            .store
+            .list_users()
+            .await?
+            .into_iter()
+            .map(|summary| UserResponse {
+                user: summary.user,
+                metrics: summary.metrics,
+            })
+            .collect();
+        Ok(UserListResponse { users })
+    }
+
+    pub async fn create_user(&self, request: CreateUserRequest) -> anyhow::Result<UserResponse> {
+        validate_user_handle(&request.handle)?;
+        validate_display_name(&request.display_name)?;
+        validate_password(&request.password)?;
+        validate_permissions(&request.permissions)?;
+        if self.store.get_user_by_handle(&request.handle).await?.is_some() {
+            return Err(anyhow::anyhow!(SynforgeError::Conflict(format!(
+                "user handle {} already exists",
+                request.handle
+            ))));
+        }
+        let password_hash = hash_password(&request.password)?;
+        let summary = self
+            .store
+            .create_user(
+                &request.handle,
+                &request.display_name,
+                &password_hash,
+                request.active,
+                &request.permissions,
+            )
+            .await?;
+        Ok(UserResponse {
+            user: summary.user,
+            metrics: summary.metrics,
+        })
+    }
+
+    pub async fn bootstrap_admin(
+        &self,
+        handle: &str,
+        display_name: &str,
+        password: &str,
+    ) -> anyhow::Result<UserResponse> {
+        validate_user_handle(handle)?;
+        validate_display_name(display_name)?;
+        validate_password(password)?;
+        if self.store.user_count().await? > 0 {
+            anyhow::bail!("initial admin already exists");
+        }
+        let password_hash = hash_password(password)?;
+        let summary = self
+            .store
+            .create_user(
+                handle,
+                display_name,
+                &password_hash,
+                true,
+                &[UserPermission::Read, UserPermission::Write, UserPermission::Repo],
+            )
+            .await?;
+        Ok(UserResponse {
+            user: summary.user,
+            metrics: summary.metrics,
+        })
+    }
+
+    pub async fn update_user(
+        &self,
+        user_id: Uuid,
+        request: UpdateUserRequest,
+    ) -> anyhow::Result<UserResponse> {
+        validate_user_handle(&request.handle)?;
+        validate_display_name(&request.display_name)?;
+        validate_permissions(&request.permissions)?;
+        if let Some(existing) = self.store.get_user_by_handle(&request.handle).await?
+            && existing.user.id != user_id
+        {
+            return Err(anyhow::anyhow!(SynforgeError::Conflict(format!(
+                "user handle {} already exists",
+                request.handle
+            ))));
+        }
+        let summary = self
+            .store
+            .update_user(
+                user_id,
+                &request.handle,
+                &request.display_name,
+                request.active,
+                &request.permissions,
+            )
+            .await?
+            .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(user_id.to_string())))?;
+        Ok(UserResponse {
+            user: summary.user,
+            metrics: summary.metrics,
+        })
+    }
+
+    pub async fn change_user_password(
+        &self,
+        user_id: Uuid,
+        request: ChangePasswordRequest,
+    ) -> anyhow::Result<()> {
+        validate_password(&request.password)?;
+        let password_hash = hash_password(&request.password)?;
+        let updated = self
+            .store
+            .update_user_password(user_id, &password_hash)
+            .await?;
+        if !updated {
+            return Err(anyhow::anyhow!(SynforgeError::NotFound(user_id.to_string())));
+        }
+        Ok(())
+    }
+
+    pub async fn delete_user(&self, user_id: Uuid) -> anyhow::Result<UserResponse> {
+        if self.store.get_user(user_id).await?.is_none() {
+            return Err(anyhow::anyhow!(SynforgeError::NotFound(user_id.to_string())));
+        }
+        let user_count = self.store.user_count().await?;
+        if user_count <= 1 {
+            anyhow::bail!("cannot delete the last user");
+        }
+        let summary = self
+            .store
+            .delete_user(user_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(user_id.to_string())))?;
+        Ok(UserResponse {
+            user: summary.user,
+            metrics: summary.metrics,
+        })
+    }
+
+    pub async fn get_user_metrics(&self, user_id: Uuid) -> anyhow::Result<UserMetricsResponse> {
+        let summary = self
+            .store
+            .get_user(user_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(user_id.to_string())))?;
+        Ok(UserMetricsResponse {
+            metrics: summary.metrics,
+        })
+    }
+
+    pub async fn increment_user_download_bytes(&self, user_id: Uuid, bytes: u64) -> anyhow::Result<()> {
+        self.store.increment_user_download_bytes(user_id, bytes).await
+    }
+
+    pub async fn resolve_repo_file_path(&self, relative_repo_path: &str) -> anyhow::Result<PathBuf> {
+        let requested = normalize_repo_path(relative_repo_path)?;
+        let repo_root = self.config.runtime_paths().repo_dir().to_path_buf();
+        let path = repo_root.join(&requested);
+        if !tokio::fs::try_exists(&path).await? {
+            return Err(anyhow::anyhow!(SynforgeError::NotFound(requested)));
+        }
+
+        let repo_root = tokio::fs::canonicalize(repo_root).await?;
+        let resolved = tokio::fs::canonicalize(&path).await?;
+        if !resolved.starts_with(&repo_root) {
+            anyhow::bail!("resolved repo path escapes repository root");
+        }
+        Ok(resolved)
     }
 
     pub async fn create_package(
@@ -458,17 +700,17 @@ impl SynforgeService {
     ) -> anyhow::Result<LogChunkResponse> {
         let source_name = source.unwrap_or_else(|| "worker.log".to_string());
         let path = self.resolve_job_log_path(job_id, &source_name).await?;
-        
+
         let mut file = tokio::fs::File::open(&path)
             .await
             .with_context(|| format!("failed to open {}", path.display()))?;
-        
+
         let file_size = file.metadata().await?.len();
         let max_len = limit.unwrap_or(64 * 1024).clamp(1024, 512 * 1024) as u64;
         let start = ((cursor.unwrap_or(0).min(file_size) as i128) + offset.unwrap_or(0) as i128)
             .clamp(0, file_size as i128) as u64;
         let read_len = max_len.min(file_size.saturating_sub(start));
-        
+
         if read_len == 0 {
             return Ok(LogChunkResponse {
                 job_id,
@@ -479,21 +721,21 @@ impl SynforgeService {
                 complete: true,
             });
         }
-        
+
         file.seek(std::io::SeekFrom::Start(start)).await?;
         let mut buffer = vec![0u8; read_len as usize];
         let bytes_read = file.read(&mut buffer).await?;
         buffer.truncate(bytes_read);
-        
+
         // Find UTF-8 safe boundary to avoid splitting multi-byte characters
         let safe_len = find_utf8_boundary(&buffer);
         buffer.truncate(safe_len);
-        
+
         let contents = String::from_utf8_lossy(&buffer).into_owned();
         let start_line = count_lines_before(&path, start).await?;
         let new_cursor = start + safe_len as u64;
         let complete = new_cursor >= file_size;
-        
+
         Ok(LogChunkResponse {
             job_id,
             source: source_name,
@@ -522,13 +764,13 @@ impl SynforgeService {
             max_cursor: file_size,
         })
     }
-    
+
     pub async fn get_job_log_manifest(&self, job_id: Uuid) -> anyhow::Result<LogManifestResponse> {
         let paths = self.config.runtime_paths();
         let logs_dir = paths.job_logs_dir(job_id);
-        
+
         let mut sources = Vec::new();
-        
+
         for (name, filename, source_type) in [("Worker Output", "worker.log", LogSourceType::Raw)] {
             let log_path = logs_dir.join(filename);
             if tokio::fs::try_exists(&log_path).await.unwrap_or(false) {
@@ -666,11 +908,283 @@ impl SynforgeService {
     }
 }
 
+fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
+    vec![
+        config_string_field(
+            "listen_addr",
+            "Listen address",
+            "Daemon HTTP listen address.",
+            "0.0.0.0:8080",
+            true,
+            false,
+        ),
+        config_string_field(
+            "runtime_root",
+            "Runtime root",
+            "Root directory for database, package metadata, repo files, and jobs.",
+            "/var/lib/synforge",
+            true,
+            false,
+        ),
+        config_string_field(
+            "public_base_url",
+            "Public base URL",
+            "Base URL used in generated links and repo setup.",
+            "http://localhost:8080",
+            true,
+            true,
+        ),
+        config_string_field(
+            "worker_image",
+            "Worker image",
+            "Docker image used for spawned worker containers.",
+            "synforge-worker-fedora:latest",
+            true,
+            true,
+        ),
+        config_number_field(
+            "max_concurrent_builds",
+            "Max concurrent builds",
+            "Maximum number of active builds at once.",
+            2,
+            true,
+            true,
+        ),
+        config_number_field(
+            "db_pool_size",
+            "DB pool size",
+            "Number of SQLite connection pool slots.",
+            5,
+            true,
+            false,
+        ),
+        config_number_field(
+            "queue_buffer_size",
+            "Queue buffer size",
+            "In-memory queued build channel capacity.",
+            128,
+            true,
+            true,
+        ),
+        config_number_field(
+            "poller_tick_seconds",
+            "Poller tick seconds",
+            "How often package polling wakes up.",
+            30,
+            true,
+            true,
+        ),
+        config_number_field(
+            "worker_result_timeout_seconds",
+            "Worker result timeout seconds",
+            "Timeout while waiting for worker completion after request dispatch.",
+            10,
+            true,
+            true,
+        ),
+        config_number_field(
+            "worker_socket_timeout_seconds",
+            "Worker socket timeout seconds",
+            "Socket timeout used for worker protocol I/O.",
+            30,
+            true,
+            true,
+        ),
+        config_number_field(
+            "git_operation_timeout_seconds",
+            "Git operation timeout seconds",
+            "Timeout applied to git inspection and sync commands.",
+            600,
+            true,
+            true,
+        ),
+    ]
+}
+
+fn config_string_field(
+    key: &str,
+    label: &str,
+    description: &str,
+    default_value: &str,
+    editable_in_setup: bool,
+    editable_in_runtime: bool,
+) -> ConfigFieldDescriptor {
+    ConfigFieldDescriptor {
+        key: key.to_string(),
+        label: label.to_string(),
+        description: description.to_string(),
+        field_type: ConfigFieldType::String,
+        required: true,
+        min_value: None,
+        editable_in_setup,
+        editable_in_runtime,
+        default_value: Value::String(default_value.to_string()),
+    }
+}
+
+fn config_number_field(
+    key: &str,
+    label: &str,
+    description: &str,
+    default_value: u64,
+    editable_in_setup: bool,
+    editable_in_runtime: bool,
+) -> ConfigFieldDescriptor {
+    ConfigFieldDescriptor {
+        key: key.to_string(),
+        label: label.to_string(),
+        description: description.to_string(),
+        field_type: ConfigFieldType::Number,
+        required: true,
+        min_value: Some(1),
+        editable_in_setup,
+        editable_in_runtime,
+        default_value: Value::Number(default_value.into()),
+    }
+}
+
+fn apply_config_settings(
+    config: &mut DaemonConfig,
+    settings: &BTreeMap<String, Value>,
+    allow_setup_only: bool,
+) -> anyhow::Result<()> {
+    for key in settings.keys() {
+        let Some(field) = editable_config_fields().into_iter().find(|field| field.key == *key) else {
+            anyhow::bail!("unknown config setting: {key}");
+        };
+        if allow_setup_only {
+            if !field.editable_in_setup {
+                anyhow::bail!("config setting is not editable during setup: {key}");
+            }
+        } else if !field.editable_in_runtime {
+            anyhow::bail!("config setting is not editable at runtime: {key}");
+        }
+    }
+
+    if let Some(value) = settings.get("listen_addr") {
+        config.listen_addr = parse_string_setting(value, "listen_addr")?;
+    }
+    if let Some(value) = settings.get("runtime_root") {
+        config.runtime_root = PathBuf::from(parse_string_setting(value, "runtime_root")?);
+    }
+    if let Some(value) = settings.get("public_base_url") {
+        config.public_base_url = parse_string_setting(value, "public_base_url")?;
+    }
+    if let Some(value) = settings.get("worker_image") {
+        config.worker_image = parse_string_setting(value, "worker_image")?;
+    }
+    if let Some(value) = settings.get("max_concurrent_builds") {
+        config.max_concurrent_builds = parse_usize_setting(value, "max_concurrent_builds")?;
+    }
+    if let Some(value) = settings.get("db_pool_size") {
+        config.db_pool_size = parse_u32_setting(value, "db_pool_size")?;
+    }
+    if let Some(value) = settings.get("queue_buffer_size") {
+        config.queue_buffer_size = parse_usize_setting(value, "queue_buffer_size")?;
+    }
+    if let Some(value) = settings.get("poller_tick_seconds") {
+        config.poller_tick_seconds = parse_u64_setting(value, "poller_tick_seconds")?;
+    }
+    if let Some(value) = settings.get("worker_result_timeout_seconds") {
+        config.worker_result_timeout_seconds =
+            parse_u64_setting(value, "worker_result_timeout_seconds")?;
+    }
+    if let Some(value) = settings.get("worker_socket_timeout_seconds") {
+        config.worker_socket_timeout_seconds =
+            parse_u64_setting(value, "worker_socket_timeout_seconds")?;
+    }
+    if let Some(value) = settings.get("git_operation_timeout_seconds") {
+        config.git_operation_timeout_seconds =
+            parse_u64_setting(value, "git_operation_timeout_seconds")?;
+    }
+
+    Ok(())
+}
+
+fn parse_string_setting(value: &Value, key: &str) -> anyhow::Result<String> {
+    let Some(value) = value.as_str() else {
+        anyhow::bail!("config setting must be a string: {key}");
+    };
+    let value = value.trim().to_string();
+    if value.is_empty() {
+        anyhow::bail!("config setting must not be empty: {key}");
+    }
+    Ok(value)
+}
+
+fn parse_u64_setting(value: &Value, key: &str) -> anyhow::Result<u64> {
+    let Some(value) = value.as_u64() else {
+        anyhow::bail!("config setting must be a positive integer: {key}");
+    };
+    if value == 0 {
+        anyhow::bail!("config setting must be greater than zero: {key}");
+    }
+    Ok(value)
+}
+
+fn parse_usize_setting(value: &Value, key: &str) -> anyhow::Result<usize> {
+    Ok(parse_u64_setting(value, key)? as usize)
+}
+
+fn parse_u32_setting(value: &Value, key: &str) -> anyhow::Result<u32> {
+    Ok(u32::try_from(parse_u64_setting(value, key)?)
+        .map_err(|_| anyhow::anyhow!("config setting is out of range: {key}"))?)
+}
+
 fn normalize_pagination(limit: Option<usize>, offset: Option<usize>) -> (usize, usize) {
     (
         limit.unwrap_or(DEFAULT_PAGE_SIZE).clamp(1, MAX_PAGE_SIZE),
         offset.unwrap_or(0),
     )
+}
+
+fn validate_user_handle(handle: &str) -> anyhow::Result<()> {
+    if handle.is_empty() {
+        anyhow::bail!("user handle must not be empty");
+    }
+    if !handle
+        .chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '-'))
+    {
+        anyhow::bail!("user handle may only contain letters, digits, '.', '_' and '-'");
+    }
+    Ok(())
+}
+
+fn validate_display_name(display_name: &str) -> anyhow::Result<()> {
+    if display_name.trim().is_empty() {
+        anyhow::bail!("display_name must not be empty");
+    }
+    Ok(())
+}
+
+fn validate_password(password: &str) -> anyhow::Result<()> {
+    if password.is_empty() {
+        anyhow::bail!("password must not be empty");
+    }
+    Ok(())
+}
+
+fn validate_permissions(permissions: &[UserPermission]) -> anyhow::Result<()> {
+    if permissions.is_empty() {
+        anyhow::bail!("at least one permission is required");
+    }
+    Ok(())
+}
+
+fn normalize_repo_path(path: &str) -> anyhow::Result<String> {
+    let trimmed = path.trim_start_matches('/');
+    let normalized = PathBuf::from(trimmed);
+    if normalized.as_os_str().is_empty() {
+        anyhow::bail!("repository path must not be empty");
+    }
+    if normalized
+        .components()
+        .any(|component| !matches!(component, std::path::Component::Normal(_)))
+    {
+        anyhow::bail!("repository path contains invalid components");
+    }
+    Ok(normalized.to_string_lossy().into_owned())
 }
 
 /// Find a safe UTF-8 boundary in a byte slice.
@@ -679,15 +1193,15 @@ fn find_utf8_boundary(buffer: &[u8]) -> usize {
     if buffer.is_empty() {
         return 0;
     }
-    
+
     // Start from the end and work backwards to find a valid boundary
     let mut end = buffer.len();
-    
+
     // Check if we're in the middle of a UTF-8 sequence
     // UTF-8 continuation bytes have the pattern 10xxxxxx (0x80-0xBF)
     while end > 0 {
         let byte = buffer[end - 1];
-        
+
         // If this byte is ASCII or a UTF-8 start byte, we're at a valid boundary
         if byte < 0x80 {
             // ASCII byte - valid boundary
@@ -702,7 +1216,7 @@ fn find_utf8_boundary(buffer: &[u8]) -> usize {
             } else {
                 2
             };
-            
+
             if end + char_len - 1 <= buffer.len() {
                 // Full character fits, include it
                 break;
@@ -715,7 +1229,7 @@ fn find_utf8_boundary(buffer: &[u8]) -> usize {
             end -= 1;
         }
     }
-    
+
     end
 }
 

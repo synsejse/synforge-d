@@ -99,7 +99,6 @@ impl BuildScheduler {
         queue_tx: &tokio::sync::mpsc::Sender<QueuedBuild>,
     ) -> anyhow::Result<BuildJobResponse> {
         let package = self.registry.get_definition(package_name).await?;
-        self.ensure_not_active(package_name).await?;
         self.reserve(package_name)?;
 
         let result = self
@@ -144,13 +143,6 @@ impl BuildScheduler {
         Ok(())
     }
 
-    async fn ensure_not_active(&self, package_name: &str) -> anyhow::Result<()> {
-        if self.store.has_active_job(package_name).await? {
-            return Err(SchedulerError::AlreadyQueued(package_name.to_string()).into());
-        }
-        Ok(())
-    }
-
     async fn prepare_queued_build(
         &self,
         package: PackageDefinition,
@@ -165,7 +157,16 @@ impl BuildScheduler {
 
         let build_chroots = package.mock_chroots.clone();
         let mut queued_chroots = Vec::new();
+        let mut blocked_by_active_job = false;
         for mock_chroot in &build_chroots {
+            if self
+                .store
+                .has_active_job_for_target(&package.name, mock_chroot)
+                .await?
+            {
+                blocked_by_active_job = true;
+                continue;
+            }
             let previous_revision = self
                 .store
                 .get_last_successful_revision(&package.name, mock_chroot)
@@ -175,6 +176,9 @@ impl BuildScheduler {
             }
         }
         if queued_chroots.is_empty() {
+            if blocked_by_active_job {
+                return Err(SchedulerError::AlreadyQueued(package.name.clone()).into());
+            }
             return Err(SchedulerError::NoSourceChanges.into());
         }
 
@@ -184,6 +188,7 @@ impl BuildScheduler {
                 &package.source,
                 &inspected,
                 package.enabled,
+                package.network_access,
                 package.mock_chroots.clone(),
                 package.poll_interval_seconds,
                 package.build_timeout_seconds,

@@ -8,10 +8,6 @@ services:
     restart: unless-stopped
     security_opt:
       - label=disable
-    environment:
-      SYNFORGE_BEARER_TOKEN: ${SYNFORGE_BEARER_TOKEN:?SYNFORGE_BEARER_TOKEN must be set}
-      SYNFORGE_WORKER_IMAGE: synforge-worker-fedora:latest
-      SYNFORGE_PUBLIC_BASE_URL: http://localhost:8080
     expose:
       - "8080"
       - "8090"

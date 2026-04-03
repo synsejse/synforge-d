@@ -1,5 +1,3 @@
-PRAGMA journal_mode = WAL;
-
 CREATE TABLE IF NOT EXISTS packages (
     name TEXT PRIMARY KEY,
     description TEXT NOT NULL,

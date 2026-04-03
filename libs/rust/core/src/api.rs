@@ -1,7 +1,13 @@
+use std::collections::BTreeMap;
+
+use serde_json::Value;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    model::{BuildArtifact, BuildJob, PackageRuntimeState, PublishedRepoFile},
+    model::{
+        BuildArtifact, BuildJob, PackageRuntimeState, PublishedRepoFile, UserAccount, UserPermission,
+        UserRepoMetrics,
+    },
     package::{BuildEnvVar, PackageDefinition, SpecSource},
 };
 
@@ -9,6 +15,8 @@ use crate::{
 pub struct CreatePackageRequest {
     pub name: String,
     pub source: SpecSource,
+    #[serde(default)]
+    pub network_access: bool,
     pub mock_chroots: Vec<String>,
     pub poll_interval_seconds: u64,
     pub build_timeout_seconds: u64,
@@ -25,6 +33,8 @@ pub struct UpdatePackageRequest {
     pub enabled: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub publish_srpm: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub network_access: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mock_chroots: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -124,6 +134,79 @@ pub struct RepoInventoryResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct UserResponse {
+    pub user: UserAccount,
+    pub metrics: UserRepoMetrics,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct UserListResponse {
+    pub users: Vec<UserResponse>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CreateUserRequest {
+    pub handle: String,
+    pub display_name: String,
+    pub password: String,
+    pub permissions: Vec<UserPermission>,
+    #[serde(default = "default_user_active")]
+    pub active: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct UpdateUserRequest {
+    pub handle: String,
+    pub display_name: String,
+    pub permissions: Vec<UserPermission>,
+    pub active: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ChangePasswordRequest {
+    pub password: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SessionLoginRequest {
+    pub handle: String,
+    pub password: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SetupStatusResponse {
+    pub initialized: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SetupAdminRequest {
+    pub handle: String,
+    pub display_name: String,
+    pub password: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SetupInitializeRequest {
+    #[serde(default)]
+    pub settings: BTreeMap<String, Value>,
+    pub admin: SetupAdminRequest,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct UserMetricsResponse {
+    pub metrics: UserRepoMetrics,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SessionResponse {
+    pub user: UserAccount,
+}
+
+fn default_user_active() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ApiError {
     pub code: &'static str,
     pub message: String,
@@ -131,8 +214,9 @@ pub struct ApiError {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct EffectiveConfigView {
+    pub config_path: std::path::PathBuf,
+    pub bootstrap_completed: bool,
     pub listen_addr: String,
-    pub bearer_token: String,
     pub runtime_root: std::path::PathBuf,
     pub database_path: std::path::PathBuf,
     pub packages_dir: std::path::PathBuf,
@@ -156,7 +240,35 @@ pub struct EffectiveConfigDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct UpdateRuntimeSettingsRequest {
-    pub public_base_url: String,
+    #[serde(default)]
+    pub settings: BTreeMap<String, Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ConfigFieldType {
+    String,
+    Number,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ConfigFieldDescriptor {
+    pub key: String,
+    pub label: String,
+    pub description: String,
+    #[serde(rename = "type")]
+    pub field_type: ConfigFieldType,
+    pub required: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_value: Option<u64>,
+    pub editable_in_setup: bool,
+    pub editable_in_runtime: bool,
+    pub default_value: Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ConfigSchemaResponse {
+    pub fields: Vec<ConfigFieldDescriptor>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

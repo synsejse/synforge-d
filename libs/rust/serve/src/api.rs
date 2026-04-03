@@ -1,21 +1,25 @@
 use std::path::{Component, PathBuf};
 
-use axum::extract::{Path, Query, State};
+use axum::extract::{Extension, Path, Query, State};
 use axum::http::{header, HeaderValue, StatusCode};
-use axum::response::IntoResponse;
+use axum::response::{IntoResponse, Response};
 use axum::{Json, Router};
 use axum::routing::{get, post};
 use synforge_core::api::{
     BrowseRepositoryRequest, BrowseRepositoryResponse, BuildJobListResponse, BuildJobResponse,
-    CreatePackageRequest, EffectiveConfigDto, LogChunkQuery, LogChunkResponse, LogManifestResponse,
-    LogMetaResponse, MockChrootListResponse, PackageBuildHistoryResponse, PackageListResponse,
-    PaginationQuery, PackageRepoFilesResponse, PackageResponse, PruneJobsResponse, RefreshRequest,
-    RebuildRequest, RepoInventoryResponse, UpdatePackageRequest, UpdateRuntimeSettingsRequest,
+    ChangePasswordRequest, ConfigSchemaResponse, CreatePackageRequest, CreateUserRequest,
+    EffectiveConfigDto, LogChunkQuery, LogChunkResponse, LogManifestResponse, LogMetaResponse,
+    MockChrootListResponse, PackageBuildHistoryResponse, PackageListResponse, PaginationQuery,
+    PackageRepoFilesResponse, PackageResponse, PruneJobsResponse, RefreshRequest, RebuildRequest,
+    RepoInventoryResponse, SessionLoginRequest, SessionResponse, SetupInitializeRequest,
+    SetupStatusResponse, UpdatePackageRequest, UpdateRuntimeSettingsRequest, UpdateUserRequest,
+    UserListResponse, UserMetricsResponse, UserResponse,
 };
+use synforge_core::model::{UserAccount, UserPermission};
 use tokio_util::io::ReaderStream;
 use uuid::Uuid;
 
-use crate::{AppError, AppState};
+use crate::{AppError, AppState, clear_session_cookie, create_session_cookie};
 
 pub fn router(_state: AppState) -> Router<AppState> {
     Router::new()
@@ -32,12 +36,24 @@ pub fn router(_state: AppState) -> Router<AppState> {
         .route("/packages/{name}/refresh", post(trigger_refresh))
         .route("/jobs", get(list_jobs))
         .route("/jobs/prune-failed", post(prune_failed_jobs))
+        .route("/session", get(get_session))
+        .route("/session/login", post(login_session))
+        .route("/session/logout", post(logout_session))
+        .route("/setup/status", get(get_setup_status))
+        .route("/setup/initialize", post(initialize_setup))
+        .route("/users", get(list_users).post(create_user))
+        .route(
+            "/users/{id}",
+            get(get_user_metrics).put(update_user).delete(delete_user),
+        )
+        .route("/users/{id}/password", post(change_user_password))
         .route("/jobs/{id}", get(get_job).delete(delete_job))
         .route("/jobs/{id}/logs", get(get_job_log_manifest))
         .route("/jobs/{id}/logs/meta", get(get_job_log_meta))
         .route("/jobs/{id}/logs/stream", get(get_job_log_chunk))
         .route("/jobs/{id}/artifacts/{*path}", get(download_job_artifact))
         .route("/repo/files", get(get_repo_inventory))
+        .route("/config/schema", get(get_config_schema))
         .route("/config/effective", get(get_effective_config))
         .route("/config/runtime", post(update_runtime_settings))
 }
@@ -140,6 +156,104 @@ async fn get_job(
     Ok(Json(state.service.get_job(id).await?))
 }
 
+async fn get_session(
+    Extension(user): Extension<UserAccount>,
+    State(state): State<AppState>,
+) -> Result<Json<SessionResponse>, AppError> {
+    Ok(Json(state.service.get_session(user).await))
+}
+
+async fn get_setup_status(State(state): State<AppState>) -> Result<Json<SetupStatusResponse>, AppError> {
+    let initialized = synforge_core::config::DaemonConfig::load_from_file(&state.config_path)
+        .map(|config| config.bootstrap_completed)
+        .unwrap_or(false);
+    Ok(Json(SetupStatusResponse { initialized }))
+}
+
+async fn initialize_setup(
+    State(state): State<AppState>,
+    Json(request): Json<SetupInitializeRequest>,
+) -> Result<Json<EffectiveConfigDto>, AppError> {
+    Ok(Json(state.service.initialize_setup(request).await?))
+}
+
+async fn login_session(
+    State(state): State<AppState>,
+    Json(request): Json<SessionLoginRequest>,
+) -> Result<Response, AppError> {
+    let user = state
+        .service
+        .authenticate_user(&request.handle, &request.password, UserPermission::Read)
+        .await?;
+    let mut response = Json(state.service.get_session(user.clone()).await).into_response();
+    response.headers_mut().append(
+        header::SET_COOKIE,
+        create_session_cookie(
+            user.id,
+            state.service.config().session_secret.as_bytes(),
+            state.service.config().public_base_url.starts_with("https://"),
+        )?,
+    );
+    Ok(response)
+}
+
+async fn logout_session(State(state): State<AppState>) -> Result<Response, AppError> {
+    let mut response = StatusCode::NO_CONTENT.into_response();
+    response.headers_mut().append(
+        header::SET_COOKIE,
+        clear_session_cookie(state.service.config().public_base_url.starts_with("https://"))?,
+    );
+    Ok(response)
+}
+
+async fn list_users(State(state): State<AppState>) -> Result<Json<UserListResponse>, AppError> {
+    Ok(Json(state.service.list_users().await?))
+}
+
+async fn create_user(
+    State(state): State<AppState>,
+    Json(request): Json<CreateUserRequest>,
+) -> Result<Json<UserResponse>, AppError> {
+    Ok(Json(state.service.create_user(request).await?))
+}
+
+async fn update_user(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(request): Json<UpdateUserRequest>,
+) -> Result<Json<UserResponse>, AppError> {
+    Ok(Json(state.service.update_user(id, request).await?))
+}
+
+async fn change_user_password(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(request): Json<ChangePasswordRequest>,
+) -> Result<StatusCode, AppError> {
+    state.service.change_user_password(id, request).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn delete_user(
+    Extension(current_user): Extension<UserAccount>,
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<UserResponse>, AppError> {
+    if current_user.id == id {
+        return Err(AppError::from(anyhow::anyhow!(
+            "cannot delete the currently authenticated user"
+        )));
+    }
+    Ok(Json(state.service.delete_user(id).await?))
+}
+
+async fn get_user_metrics(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<UserMetricsResponse>, AppError> {
+    Ok(Json(state.service.get_user_metrics(id).await?))
+}
+
 async fn delete_job(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
@@ -234,6 +348,12 @@ async fn get_effective_config(
     State(state): State<AppState>,
 ) -> Result<Json<EffectiveConfigDto>, AppError> {
     Ok(Json(state.service.effective_config().await))
+}
+
+async fn get_config_schema(
+    State(state): State<AppState>,
+) -> Result<Json<ConfigSchemaResponse>, AppError> {
+    Ok(Json(state.service.config_schema().await))
 }
 
 async fn update_runtime_settings(

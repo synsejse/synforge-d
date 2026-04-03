@@ -79,11 +79,12 @@ export default function PackageDetail({ packageName }: Props) {
     buildEnv: "",
     enabled: true,
     publish_srpm: true,
+    network_access: false,
   });
 
   const selectableFiles = useMemo(
     () => browseFiles.filter((file) => file.endsWith(".spec")),
-    [browseFiles]
+    [browseFiles],
   );
 
   async function load() {
@@ -94,7 +95,10 @@ export default function PackageDetail({ packageName }: Props) {
         api.getPackageBuilds(packageName),
         api.getPackageRepoFiles(packageName),
       ]);
-      api.listMockChroots().then((response) => setAvailableChroots(response.chroots)).catch(() => undefined);
+      api
+        .listMockChroots()
+        .then((response) => setAvailableChroots(response.chroots))
+        .catch(() => undefined);
       setPkg(packageRes);
       setBuilds(buildsRes.builds);
       setRepoFiles(repoFilesRes.repo_files);
@@ -109,6 +113,7 @@ export default function PackageDetail({ packageName }: Props) {
         buildEnv: encodeBuildEnv(packageRes.package.build_env),
         enabled: packageRes.package.enabled,
         publish_srpm: packageRes.package.publish_srpm,
+        network_access: packageRes.package.network_access,
       });
       setError(null);
     } catch (e) {
@@ -135,6 +140,7 @@ export default function PackageDetail({ packageName }: Props) {
         source,
         enabled: form.enabled,
         publish_srpm: form.publish_srpm,
+        network_access: form.network_access,
         mock_chroots: form.mockChroots,
         poll_interval_seconds: Number(form.pollIntervalSeconds),
         build_timeout_seconds: Number(form.buildTimeoutSeconds),
@@ -151,7 +157,11 @@ export default function PackageDetail({ packageName }: Props) {
   }
 
   async function handleDelete() {
-    if (!confirm(`Delete package "${packageName}"? This removes its stored spec sources.`)) {
+    if (
+      !confirm(
+        `Delete package "${packageName}"? This removes its stored spec sources.`,
+      )
+    ) {
       return;
     }
     setDeleting(true);
@@ -178,7 +188,11 @@ export default function PackageDetail({ packageName }: Props) {
   }
 
   async function handleDeleteJob(jobId: string) {
-    if (!confirm(`Delete build ${jobId}? This also removes repo files published by that build.`)) {
+    if (
+      !confirm(
+        `Delete build ${jobId}? This also removes repo files published by that build.`,
+      )
+    ) {
       return;
     }
     setDeletingJobId(jobId);
@@ -209,13 +223,20 @@ export default function PackageDetail({ packageName }: Props) {
     setBrowsing(true);
     setBrowseError(null);
     try {
-      const response = await api.browseRepository({ repo_url: form.repoUrl.trim() });
+      const response = await api.browseRepository({
+        repo_url: form.repoUrl.trim(),
+      });
       setBrowseFiles(response.files);
       if (!form.specPath && response.spec_files.length > 0) {
-        setForm((current) => ({ ...current, specPath: response.spec_files[0] }));
+        setForm((current) => ({
+          ...current,
+          specPath: response.spec_files[0],
+        }));
       }
     } catch (e) {
-      setBrowseError(e instanceof Error ? e.message : "Failed to browse repository");
+      setBrowseError(
+        e instanceof Error ? e.message : "Failed to browse repository",
+      );
     } finally {
       setBrowsing(false);
     }
@@ -226,7 +247,11 @@ export default function PackageDetail({ packageName }: Props) {
   }
 
   if (error || !pkg) {
-    return <div className="border border-zinc-800 bg-black p-4 text-zinc-200">Error: {error || "Failed to load package"}</div>;
+    return (
+      <div className="border border-zinc-800 bg-black p-4 text-zinc-200">
+        Error: {error || "Failed to load package"}
+      </div>
+    );
   }
 
   const latestBuilds = builds.slice(0, 12);
@@ -236,13 +261,20 @@ export default function PackageDetail({ packageName }: Props) {
       <section className="border border-zinc-800 bg-black p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
-            <a href="/packages/" className="text-sm text-zinc-400 transition hover:text-zinc-100">
+            <a
+              href="/packages/"
+              className="text-sm text-zinc-400 transition hover:text-zinc-100"
+            >
               <FaIcon icon={faArrowLeft} className="mr-2" />
               Back to packages
             </a>
             <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">Package Control</p>
-              <h1 className="mt-2 text-4xl font-semibold tracking-tight text-white">{pkg.package.name}</h1>
+              <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">
+                Package Control
+              </p>
+              <h1 className="mt-2 text-4xl font-semibold tracking-tight text-white">
+                {pkg.package.name}
+              </h1>
             </div>
             <p className="max-w-3xl text-sm leading-6 text-zinc-300">
               {pkg.package.description || "No description"}
@@ -283,17 +315,25 @@ export default function PackageDetail({ packageName }: Props) {
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-white">Edit Package</h2>
             <p className="mt-2 text-sm text-zinc-400">
-              Update the tracked repository, selected spec path, polling behavior, and package state from one place.
+              Update the tracked repository, selected spec path, polling
+              behavior, and package state from one place.
             </p>
           </div>
 
           <div className="space-y-5">
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">Git repository URL</span>
+              <span className="mb-2 block text-sm font-medium text-zinc-300">
+                Git repository URL
+              </span>
               <input
                 type="url"
                 value={form.repoUrl}
-                onChange={(event) => setForm((current) => ({ ...current, repoUrl: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    repoUrl: event.target.value,
+                  }))
+                }
                 className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
                 required
               />
@@ -302,8 +342,12 @@ export default function PackageDetail({ packageName }: Props) {
             <div className="border border-zinc-800 bg-black p-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <span className="block text-sm font-medium text-zinc-300">Repository spec path</span>
-                  <span className="mt-1 block text-xs text-zinc-500">Choose the .spec file from the tracked repository.</span>
+                  <span className="block text-sm font-medium text-zinc-300">
+                    Repository spec path
+                  </span>
+                  <span className="mt-1 block text-xs text-zinc-500">
+                    Choose the .spec file from the tracked repository.
+                  </span>
                 </div>
                 <button
                   type="button"
@@ -317,7 +361,12 @@ export default function PackageDetail({ packageName }: Props) {
               <input
                 type="text"
                 value={form.specPath}
-                onChange={(event) => setForm((current) => ({ ...current, specPath: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    specPath: event.target.value,
+                  }))
+                }
                 placeholder="path/to/package.spec"
                 className="mt-4 w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
                 required
@@ -326,14 +375,19 @@ export default function PackageDetail({ packageName }: Props) {
 
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-zinc-300">Poll interval (seconds)</span>
+                <span className="mb-2 block text-sm font-medium text-zinc-300">
+                  Poll interval (seconds)
+                </span>
                 <input
                   type="number"
                   min="1"
                   step="1"
                   value={form.pollIntervalSeconds}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, pollIntervalSeconds: event.target.value }))
+                    setForm((current) => ({
+                      ...current,
+                      pollIntervalSeconds: event.target.value,
+                    }))
                   }
                   className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
                   required
@@ -341,14 +395,19 @@ export default function PackageDetail({ packageName }: Props) {
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-zinc-300">Build timeout (seconds)</span>
+                <span className="mb-2 block text-sm font-medium text-zinc-300">
+                  Build timeout (seconds)
+                </span>
                 <input
                   type="number"
                   min="1"
                   step="1"
                   value={form.buildTimeoutSeconds}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, buildTimeoutSeconds: event.target.value }))
+                    setForm((current) => ({
+                      ...current,
+                      buildTimeoutSeconds: event.target.value,
+                    }))
                   }
                   className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
                   required
@@ -356,14 +415,19 @@ export default function PackageDetail({ packageName }: Props) {
               </label>
 
               <label className="block md:col-span-2">
-                <span className="mb-2 block text-sm font-medium text-zinc-300">History count</span>
+                <span className="mb-2 block text-sm font-medium text-zinc-300">
+                  History count
+                </span>
                 <input
                   type="number"
                   min="1"
                   step="1"
                   value={form.packageHistoryCount}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, packageHistoryCount: event.target.value }))
+                    setForm((current) => ({
+                      ...current,
+                      packageHistoryCount: event.target.value,
+                    }))
                   }
                   className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
                   required
@@ -373,8 +437,12 @@ export default function PackageDetail({ packageName }: Props) {
               <div className="border border-zinc-800 bg-black p-4 md:col-span-2">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <span className="block text-sm font-medium text-zinc-300">Mock chroots</span>
-                    <span className="mt-1 block text-xs text-zinc-500">Each selected chroot becomes a separate build job.</span>
+                    <span className="block text-sm font-medium text-zinc-300">
+                      Mock chroots
+                    </span>
+                    <span className="mt-1 block text-xs text-zinc-500">
+                      Each selected chroot becomes a separate build job.
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -385,46 +453,95 @@ export default function PackageDetail({ packageName }: Props) {
                   </button>
                 </div>
                 <div className="mt-4 border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-mono text-zinc-200">
-                  {form.mockChroots.length > 0 ? formatMockChroots(form.mockChroots) : "No chroots selected"}
+                  {form.mockChroots.length > 0
+                    ? formatMockChroots(form.mockChroots)
+                    : "No chroots selected"}
                 </div>
               </div>
 
               <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
                 <span>
-                  <span className="block text-sm font-medium text-white">Enabled</span>
-                  <span className="mt-1 block text-xs text-zinc-400">Allow new builds for this package.</span>
+                  <span className="block text-sm font-medium text-white">
+                    Enabled
+                  </span>
+                  <span className="mt-1 block text-xs text-zinc-400">
+                    Allow new builds for this package.
+                  </span>
                 </span>
                 <input
                   type="checkbox"
                   checked={form.enabled}
-                  onChange={(event) => setForm((current) => ({ ...current, enabled: event.target.checked }))}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      enabled: event.target.checked,
+                    }))
+                  }
                   className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
                 />
               </label>
 
               <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
                 <span>
-                  <span className="block text-sm font-medium text-white">Source Polling</span>
-                  <span className="mt-1 block text-xs text-zinc-400">Watch the tracked git repository for new commits.</span>
+                  <span className="block text-sm font-medium text-white">
+                    Source Polling
+                  </span>
+                  <span className="mt-1 block text-xs text-zinc-400">
+                    Watch the tracked git repository for new commits.
+                  </span>
                 </span>
                 <input
                   type="checkbox"
                   checked={form.poll}
-                  onChange={(event) => setForm((current) => ({ ...current, poll: event.target.checked }))}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      poll: event.target.checked,
+                    }))
+                  }
                   className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
                 />
               </label>
 
               <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3 md:col-span-2">
                 <span>
-                  <span className="block text-sm font-medium text-white">Publish SRPM</span>
-                  <span className="mt-1 block text-xs text-zinc-400">Keep source RPM publication enabled for this package.</span>
+                  <span className="block text-sm font-medium text-white">
+                    Publish SRPM
+                  </span>
+                  <span className="mt-1 block text-xs text-zinc-400">
+                    Keep source RPM publication enabled for this package.
+                  </span>
                 </span>
                 <input
                   type="checkbox"
                   checked={form.publish_srpm}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, publish_srpm: event.target.checked }))
+                    setForm((current) => ({
+                      ...current,
+                      publish_srpm: event.target.checked,
+                    }))
+                  }
+                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                />
+              </label>
+
+              <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3 md:col-span-2">
+                <span>
+                  <span className="block text-sm font-medium text-white">
+                    Network access
+                  </span>
+                  <span className="mt-1 block text-xs text-zinc-400">
+                    Allow mock builds for this package to access the network.
+                  </span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={form.network_access}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      network_access: event.target.checked,
+                    }))
                   }
                   className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
                 />
@@ -432,17 +549,27 @@ export default function PackageDetail({ packageName }: Props) {
             </div>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">Build environment</span>
+              <span className="mb-2 block text-sm font-medium text-zinc-300">
+                Build environment
+              </span>
               <textarea
                 value={form.buildEnv}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, buildEnv: event.target.value }))
+                  setForm((current) => ({
+                    ...current,
+                    buildEnv: event.target.value,
+                  }))
                 }
                 rows={6}
-                placeholder={"KEY=value\nMESON_ARGS=-Dgallium-drivers=swrast\nRUSTFLAGS=-C debuginfo=1"}
+                placeholder={
+                  "KEY=value\nMESON_ARGS=-Dgallium-drivers=swrast\nRUSTFLAGS=-C debuginfo=1"
+                }
                 className="w-full border border-zinc-800 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition focus:border-zinc-600"
               />
-              <span className="mt-2 block text-xs text-zinc-500">One `KEY=value` entry per line. Applied to SRPM creation and mock rebuild steps.</span>
+              <span className="mt-2 block text-xs text-zinc-500">
+                One `KEY=value` entry per line. Applied to SRPM creation and
+                mock rebuild steps.
+              </span>
             </label>
 
             <div className="flex justify-end">
@@ -461,21 +588,57 @@ export default function PackageDetail({ packageName }: Props) {
         <aside className="space-y-4 border border-zinc-800 bg-black p-6">
           <div>
             <h2 className="text-xl font-semibold text-white">State</h2>
-            <p className="mt-2 text-sm text-zinc-400">Current package and build status.</p>
+            <p className="mt-2 text-sm text-zinc-400">
+              Current package and build status.
+            </p>
           </div>
           <div>
-            <div className="mb-2 text-xs uppercase tracking-[0.18em] text-zinc-500">Status</div>
+            <div className="mb-2 text-xs uppercase tracking-[0.18em] text-zinc-500">
+              Status
+            </div>
             <StatusPill status={pkg.package.enabled ? "enabled" : "disabled"} />
           </div>
-          <DetailStat label="Version" value={`${pkg.package.version}-${pkg.package.release}`} />
-          <DetailStat label="Mock Chroots" value={formatMockChroots(pkg.package.mock_chroots)} />
-          <DetailStat label="Repository" value={pkg.package.source.repo_url} mono />
-          <DetailStat label="Poll Interval" value={`${pkg.package.poll_interval_seconds}s`} />
-          <DetailStat label="Build Timeout" value={`${pkg.package.build_timeout_seconds}s`} />
-          <DetailStat label="History Count" value={pkg.package.package_history_count} />
-          <DetailStat label="Build Env Vars" value={String(pkg.package.build_env.length)} />
-          <DetailStat label="Last Successful Revision" value={pkg.state.last_revision || "None yet"} />
-          <DetailStat label="Active Job" value={pkg.state.active_job_id || "None"} />
+          <DetailStat
+            label="Version"
+            value={`${pkg.package.version}-${pkg.package.release}`}
+          />
+          <DetailStat
+            label="Mock Chroots"
+            value={formatMockChroots(pkg.package.mock_chroots)}
+          />
+          <DetailStat
+            label="Repository"
+            value={pkg.package.source.repo_url}
+            mono
+          />
+          <DetailStat
+            label="Poll Interval"
+            value={`${pkg.package.poll_interval_seconds}s`}
+          />
+          <DetailStat
+            label="Build Timeout"
+            value={`${pkg.package.build_timeout_seconds}s`}
+          />
+          <DetailStat
+            label="History Count"
+            value={pkg.package.package_history_count}
+          />
+          <DetailStat
+            label="Network Access"
+            value={pkg.package.network_access ? "Enabled" : "Disabled"}
+          />
+          <DetailStat
+            label="Build Env Vars"
+            value={String(pkg.package.build_env.length)}
+          />
+          <DetailStat
+            label="Last Successful Revision"
+            value={pkg.state.last_revision || "None yet"}
+          />
+          <DetailStat
+            label="Active Job"
+            value={pkg.state.active_job_id || "None"}
+          />
           <DetailStat label="Spec Path" value={pkg.package.spec_path} mono />
         </aside>
       </section>
@@ -485,7 +648,8 @@ export default function PackageDetail({ packageName }: Props) {
           <div>
             <h2 className="text-xl font-semibold text-white">Build History</h2>
             <p className="mt-2 text-sm text-zinc-400">
-              Build activity for this package, including revisions, outcomes, and managed repo ownership.
+              Build activity for this package, including revisions, outcomes,
+              and managed repo ownership.
             </p>
           </div>
           <div className="border border-zinc-800 bg-black px-4 py-2 text-xs uppercase tracking-[0.2em] text-zinc-400">
@@ -512,43 +676,60 @@ export default function PackageDetail({ packageName }: Props) {
               <tbody className="divide-y divide-white/10 bg-black">
                 {latestBuilds.map((entry) => {
                   const publishedFiles = entry.repo_files;
-                  const live = entry.build.job.status === "pending" || entry.build.job.status === "running";
+                  const live =
+                    entry.build.job.status === "pending" ||
+                    entry.build.job.status === "running";
                   return (
-                  <tr key={entry.build.job.id} className="hover:bg-zinc-950">
-                    <td className="px-4 py-3 text-sm font-mono text-zinc-300">{entry.build.job.mock_chroot}</td>
-                    <td className="px-4 py-3">
-                      <div className="font-mono text-sm text-zinc-200">{entry.build.job.revision}</div>
-                      <div className="mt-1 text-xs text-zinc-500">{entry.build.job.id}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusPill status={entry.build.job.status} />
-                    </td>
-                    <td className="px-4 py-3 text-sm text-zinc-400">{entry.build.job.trigger}</td>
-                    <td className="px-4 py-3 text-sm text-zinc-400">
-                      {formatDateTime(entry.build.job.created_at)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-zinc-300">{publishedFiles.length}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-3">
-                        <a
-                          href={`/jobs/view/?id=${encodeURIComponent(entry.build.job.id)}`}
-                          className="text-sm font-medium text-zinc-300 transition hover:text-white"
-                        >
-                          <FaIcon icon={faFolderOpen} className="mr-2" />
-                          Open Job
-                        </a>
-                        <button
-                          onClick={() => handleDeleteJob(entry.build.job.id)}
-                          disabled={live || deletingJobId === entry.build.job.id}
-                          className="text-sm font-medium text-zinc-500 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <FaIcon icon={faTrash} className="mr-2" />
-                          {deletingJobId === entry.build.job.id ? "Deleting…" : "Delete Build"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )})}
+                    <tr key={entry.build.job.id} className="hover:bg-zinc-950">
+                      <td className="px-4 py-3 text-sm font-mono text-zinc-300">
+                        {entry.build.job.mock_chroot}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-mono text-sm text-zinc-200">
+                          {entry.build.job.revision}
+                        </div>
+                        <div className="mt-1 text-xs text-zinc-500">
+                          {entry.build.job.id}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusPill status={entry.build.job.status} />
+                      </td>
+                      <td className="px-4 py-3 text-sm text-zinc-400">
+                        {entry.build.job.trigger}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-zinc-400">
+                        {formatDateTime(entry.build.job.created_at)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-zinc-300">
+                        {publishedFiles.length}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-3">
+                          <a
+                            href={`/jobs/view/?id=${encodeURIComponent(entry.build.job.id)}`}
+                            className="text-sm font-medium text-zinc-300 transition hover:text-white"
+                          >
+                            <FaIcon icon={faFolderOpen} className="mr-2" />
+                            Open Job
+                          </a>
+                          <button
+                            onClick={() => handleDeleteJob(entry.build.job.id)}
+                            disabled={
+                              live || deletingJobId === entry.build.job.id
+                            }
+                            className="text-sm font-medium text-zinc-500 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <FaIcon icon={faTrash} className="mr-2" />
+                            {deletingJobId === entry.build.job.id
+                              ? "Deleting…"
+                              : "Delete Build"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -558,9 +739,12 @@ export default function PackageDetail({ packageName }: Props) {
       <section className="border border-zinc-800 bg-black p-6">
         <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-white">Repository Files</h2>
+            <h2 className="text-xl font-semibold text-white">
+              Repository Files
+            </h2>
             <p className="mt-2 text-sm text-zinc-400">
-              Build-owned files currently present in the repo namespace for this package.
+              Build-owned files currently present in the repo namespace for this
+              package.
             </p>
           </div>
           <div className="border border-zinc-800 bg-black px-4 py-2 text-xs uppercase tracking-[0.2em] text-zinc-400">
@@ -569,7 +753,9 @@ export default function PackageDetail({ packageName }: Props) {
         </div>
 
         {repoFiles.length === 0 ? (
-          <EmptyState>No repo files are currently tracked for this package.</EmptyState>
+          <EmptyState>
+            No repo files are currently tracked for this package.
+          </EmptyState>
         ) : (
           <div className="overflow-x-auto border border-zinc-800">
             <table className="min-w-[980px] w-full">
@@ -584,8 +770,13 @@ export default function PackageDetail({ packageName }: Props) {
               </thead>
               <tbody className="divide-y divide-white/10 bg-black">
                 {repoFiles.map((file) => (
-                  <tr key={`${file.job_id}:${file.repo_path}`} className="hover:bg-zinc-950">
-                    <td className="px-4 py-3 font-mono text-sm text-zinc-200">{file.repo_path}</td>
+                  <tr
+                    key={`${file.job_id}:${file.repo_path}`}
+                    className="hover:bg-zinc-950"
+                  >
+                    <td className="px-4 py-3 font-mono text-sm text-zinc-200">
+                      {file.repo_path}
+                    </td>
                     <td className="px-4 py-3">
                       <a
                         href={`/jobs/view/?id=${encodeURIComponent(file.job_id)}`}
@@ -595,9 +786,15 @@ export default function PackageDetail({ packageName }: Props) {
                         {file.job_id}
                       </a>
                     </td>
-                    <td className="px-4 py-3 text-sm uppercase tracking-[0.18em] text-zinc-500">{file.kind}</td>
-                    <td className="px-4 py-3 text-sm text-zinc-400">{formatBytes(file.size_bytes)}</td>
-                    <td className="px-4 py-3 text-sm text-zinc-400">{formatDateTime(file.published_at)}</td>
+                    <td className="px-4 py-3 text-sm uppercase tracking-[0.18em] text-zinc-500">
+                      {file.kind}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-zinc-400">
+                      {formatBytes(file.size_bytes)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-zinc-400">
+                      {formatDateTime(file.published_at)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -622,7 +819,11 @@ export default function PackageDetail({ packageName }: Props) {
               <FaIcon icon={faMagnifyingGlass} className="mr-2" />
               {browsing ? "Browsing…" : "Load repository files"}
             </button>
-            {browseError ? <div className="border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-200">{browseError}</div> : null}
+            {browseError ? (
+              <div className="border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-200">
+                {browseError}
+              </div>
+            ) : null}
             <div className="max-h-[50vh] overflow-auto border border-zinc-800 bg-black">
               {selectableFiles.length > 0 ? (
                 selectableFiles.map((file) => (
@@ -634,14 +835,18 @@ export default function PackageDetail({ packageName }: Props) {
                       setShowSpecPicker(false);
                     }}
                     className={`block w-full border-b border-zinc-800 px-4 py-2 text-left font-mono text-sm transition last:border-b-0 ${
-                      form.specPath === file ? "bg-zinc-950 text-white" : "bg-black text-zinc-300 hover:bg-zinc-950"
+                      form.specPath === file
+                        ? "bg-zinc-950 text-white"
+                        : "bg-black text-zinc-300 hover:bg-zinc-950"
                     }`}
                   >
                     {file}
                   </button>
                 ))
               ) : (
-                <div className="px-4 py-3 text-sm text-zinc-400">No spec files loaded yet.</div>
+                <div className="px-4 py-3 text-sm text-zinc-400">
+                  No spec files loaded yet.
+                </div>
               )}
             </div>
           </div>
@@ -665,7 +870,9 @@ export default function PackageDetail({ packageName }: Props) {
                   <input
                     type="checkbox"
                     checked={form.mockChroots.includes(chroot)}
-                    onChange={(event) => toggleChroot(chroot, event.target.checked)}
+                    onChange={(event) =>
+                      toggleChroot(chroot, event.target.checked)
+                    }
                     className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
                   />
                 </label>
@@ -714,6 +921,7 @@ function SelectionDialog({
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GiB`;
 }

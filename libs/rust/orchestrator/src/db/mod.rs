@@ -1,7 +1,7 @@
 mod job;
 mod package;
 mod repo;
-mod settings;
+mod user;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -17,8 +17,8 @@ use synforge_core::{
     api::{BuildJobResponse, PackageResponse},
     model::{
         format_timestamp, now_utc, ArtifactKind, BuildArtifact, BuildJob, BuildStatus, BuildTrigger,
-        DbTextEnum,
-        PackageRuntimeState, PublishedRepoFile,
+        PackageRuntimeState, PublishedRepoFile, UserAccount, UserPermission, UserRepoMetrics,
+        UserSummary,
     },
     package::{BuildEnvVar, PackageDefinition, SpecSource},
 };
@@ -26,7 +26,8 @@ use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use uuid::Uuid;
 
 use crate::schema::{
-    build_artifacts, build_jobs, build_logs, daemon_runtime_settings, packages, published_repo_files,
+    build_artifacts, build_jobs, build_logs, packages, published_repo_files, user_permissions,
+    user_repo_metrics, users,
 };
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
@@ -42,7 +43,11 @@ pub trait JobStore: Send + Sync {
         package_name: &str,
         mock_chroot: &str,
     ) -> anyhow::Result<Option<String>>;
-    async fn has_active_job(&self, package_name: &str) -> anyhow::Result<bool>;
+    async fn has_active_job_for_target(
+        &self,
+        package_name: &str,
+        mock_chroot: &str,
+    ) -> anyhow::Result<bool>;
     async fn insert_job(&self, job: &BuildJob) -> anyhow::Result<()>;
     async fn set_job_running(&self, job_id: Uuid, worker_container_id: Option<&str>) -> anyhow::Result<()>;
     async fn finish_job(
@@ -68,8 +73,30 @@ pub trait JobStore: Send + Sync {
         mock_chroot: &str,
         keep: usize,
     ) -> anyhow::Result<Vec<Uuid>>;
-    async fn get_public_base_url_override(&self) -> anyhow::Result<Option<String>>;
-    async fn set_public_base_url_override(&self, value: &str) -> anyhow::Result<()>;
+    async fn user_count(&self) -> anyhow::Result<u64>;
+    async fn list_users(&self) -> anyhow::Result<Vec<UserSummary>>;
+    async fn get_user(&self, user_id: Uuid) -> anyhow::Result<Option<UserSummary>>;
+    async fn get_user_by_handle(&self, handle: &str) -> anyhow::Result<Option<UserSummary>>;
+    async fn get_user_auth_by_handle(&self, handle: &str) -> anyhow::Result<Option<UserAuthRecord>>;
+    async fn create_user(
+        &self,
+        handle: &str,
+        display_name: &str,
+        password_hash: &str,
+        active: bool,
+        permissions: &[UserPermission],
+    ) -> anyhow::Result<UserSummary>;
+    async fn update_user(
+        &self,
+        user_id: Uuid,
+        handle: &str,
+        display_name: &str,
+        active: bool,
+        permissions: &[UserPermission],
+    ) -> anyhow::Result<Option<UserSummary>>;
+    async fn update_user_password(&self, user_id: Uuid, password_hash: &str) -> anyhow::Result<bool>;
+    async fn delete_user(&self, user_id: Uuid) -> anyhow::Result<Option<UserSummary>>;
+    async fn increment_user_download_bytes(&self, user_id: Uuid, bytes: u64) -> anyhow::Result<()>;
 }
 
 #[derive(Clone)]
@@ -89,6 +116,7 @@ impl DieselStore {
             let manager = ConnectionManager::<SqliteConnection>::new(database_url);
             let pool = Pool::builder().max_size(pool_size).build(manager)?;
             let mut conn = pool.get()?;
+            diesel::sql_query("PRAGMA journal_mode = WAL;").execute(&mut conn)?;
             conn.run_pending_migrations(MIGRATIONS)
                 .map_err(|error| anyhow::anyhow!("failed to run diesel migrations: {}", error))?;
             Ok(pool)
@@ -147,8 +175,12 @@ impl JobStore for DieselStore {
         job::get_last_successful_revision(self, package_name, mock_chroot).await
     }
 
-    async fn has_active_job(&self, package_name: &str) -> anyhow::Result<bool> {
-        job::has_active_job(self, package_name).await
+    async fn has_active_job_for_target(
+        &self,
+        package_name: &str,
+        mock_chroot: &str,
+    ) -> anyhow::Result<bool> {
+        job::has_active_job_for_target(self, package_name, mock_chroot).await
     }
 
     async fn insert_job(&self, job: &BuildJob) -> anyhow::Result<()> {
@@ -212,12 +244,58 @@ impl JobStore for DieselStore {
         job::list_prunable_successful_job_ids(self, package_name, mock_chroot, keep).await
     }
 
-    async fn get_public_base_url_override(&self) -> anyhow::Result<Option<String>> {
-        settings::get_public_base_url_override(self).await
+    async fn user_count(&self) -> anyhow::Result<u64> {
+        user::user_count(self).await
     }
 
-    async fn set_public_base_url_override(&self, value: &str) -> anyhow::Result<()> {
-        settings::set_public_base_url_override(self, value).await
+    async fn list_users(&self) -> anyhow::Result<Vec<UserSummary>> {
+        user::list_users(self).await
+    }
+
+    async fn get_user(&self, user_id: Uuid) -> anyhow::Result<Option<UserSummary>> {
+        user::get_user(self, user_id).await
+    }
+
+    async fn get_user_by_handle(&self, handle: &str) -> anyhow::Result<Option<UserSummary>> {
+        user::get_user_by_handle(self, handle).await
+    }
+
+    async fn get_user_auth_by_handle(&self, handle: &str) -> anyhow::Result<Option<UserAuthRecord>> {
+        user::get_user_auth_by_handle(self, handle).await
+    }
+
+    async fn create_user(
+        &self,
+        handle: &str,
+        display_name: &str,
+        password_hash: &str,
+        active: bool,
+        permissions: &[UserPermission],
+    ) -> anyhow::Result<UserSummary> {
+        user::create_user(self, handle, display_name, password_hash, active, permissions).await
+    }
+
+    async fn update_user(
+        &self,
+        user_id: Uuid,
+        handle: &str,
+        display_name: &str,
+        active: bool,
+        permissions: &[UserPermission],
+    ) -> anyhow::Result<Option<UserSummary>> {
+        user::update_user(self, user_id, handle, display_name, active, permissions).await
+    }
+
+    async fn update_user_password(&self, user_id: Uuid, password_hash: &str) -> anyhow::Result<bool> {
+        user::update_user_password(self, user_id, password_hash).await
+    }
+
+    async fn delete_user(&self, user_id: Uuid) -> anyhow::Result<Option<UserSummary>> {
+        user::delete_user(self, user_id).await
+    }
+
+    async fn increment_user_download_bytes(&self, user_id: Uuid, bytes: u64) -> anyhow::Result<()> {
+        user::increment_user_download_bytes(self, user_id, bytes).await
     }
 }
 
@@ -229,6 +307,7 @@ pub(crate) struct PackageRecord {
     pub(crate) enabled: bool,
     pub(crate) repo_subdir: String,
     pub(crate) publish_srpm: bool,
+    pub(crate) network_access: bool,
     pub(crate) mock_chroots_json: String,
     pub(crate) source_repo_url: String,
     pub(crate) source_spec_path: String,
@@ -250,6 +329,7 @@ pub(crate) struct NewPackageRecord<'a> {
     pub(crate) enabled: bool,
     pub(crate) repo_subdir: &'a str,
     pub(crate) publish_srpm: bool,
+    pub(crate) network_access: bool,
     pub(crate) mock_chroots_json: &'a str,
     pub(crate) source_repo_url: &'a str,
     pub(crate) source_spec_path: &'a str,
@@ -270,8 +350,8 @@ pub(crate) struct JobRecord {
     pub(crate) package_name: String,
     pub(crate) mock_chroot: String,
     pub(crate) revision: String,
-    pub(crate) trigger: String,
-    pub(crate) status: String,
+    pub(crate) trigger: BuildTrigger,
+    pub(crate) status: BuildStatus,
     pub(crate) spec_path: String,
     pub(crate) worker_container_id: Option<String>,
     pub(crate) created_at: String,
@@ -287,8 +367,8 @@ pub(crate) struct NewJobRecord<'a> {
     pub(crate) package_name: &'a str,
     pub(crate) mock_chroot: &'a str,
     pub(crate) revision: &'a str,
-    pub(crate) trigger: &'a str,
-    pub(crate) status: &'a str,
+    pub(crate) trigger: BuildTrigger,
+    pub(crate) status: BuildStatus,
     pub(crate) spec_path: &'a str,
     pub(crate) worker_container_id: Option<&'a str>,
     pub(crate) created_at: String,
@@ -308,7 +388,7 @@ pub(crate) struct ArtifactRecord {
     pub(crate) relative_repo_path: String,
     pub(crate) sha256: String,
     pub(crate) size_bytes: i64,
-    pub(crate) kind: String,
+    pub(crate) kind: ArtifactKind,
 }
 
 #[derive(Insertable)]
@@ -322,7 +402,7 @@ pub(crate) struct NewArtifactRecord {
     pub(crate) relative_repo_path: String,
     pub(crate) sha256: String,
     pub(crate) size_bytes: i64,
-    pub(crate) kind: String,
+    pub(crate) kind: ArtifactKind,
 }
 
 #[derive(Insertable)]
@@ -343,7 +423,7 @@ pub(crate) struct PublishedRepoFileRecord {
     pub(crate) repo_path: String,
     pub(crate) sha256: String,
     pub(crate) size_bytes: i64,
-    pub(crate) kind: String,
+    pub(crate) kind: ArtifactKind,
     pub(crate) published_at: String,
 }
 
@@ -357,15 +437,68 @@ pub(crate) struct NewPublishedRepoFileRecord {
     pub(crate) repo_path: String,
     pub(crate) sha256: String,
     pub(crate) size_bytes: i64,
-    pub(crate) kind: String,
+    pub(crate) kind: ArtifactKind,
     pub(crate) published_at: String,
 }
 
+#[derive(Debug, Queryable, Selectable)]
+#[diesel(table_name = users)]
+pub struct UserRecord {
+    pub id: String,
+    pub handle: String,
+    pub display_name: String,
+    pub password_hash: String,
+    pub active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct UserAuthRecord {
+    pub user: UserAccount,
+    pub password_hash: String,
+}
+
 #[derive(Insertable)]
-#[diesel(table_name = daemon_runtime_settings)]
-pub(crate) struct RuntimeSettingsRecord<'a> {
-    pub(crate) id: i32,
-    pub(crate) public_base_url: Option<&'a str>,
+#[diesel(table_name = users)]
+pub(crate) struct NewUserRecord<'a> {
+    pub(crate) id: &'a str,
+    pub(crate) handle: &'a str,
+    pub(crate) display_name: &'a str,
+    pub(crate) password_hash: &'a str,
+    pub(crate) active: bool,
+    pub(crate) created_at: &'a str,
+    pub(crate) updated_at: &'a str,
+}
+
+#[derive(Debug, Queryable, Selectable)]
+#[diesel(table_name = user_permissions)]
+pub(crate) struct UserPermissionRecord {
+    pub(crate) user_id: String,
+    pub(crate) permission: UserPermission,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = user_permissions)]
+pub(crate) struct NewUserPermissionRecord<'a> {
+    pub(crate) user_id: &'a str,
+    pub(crate) permission: UserPermission,
+}
+
+#[derive(Debug, Queryable, Selectable)]
+#[diesel(table_name = user_repo_metrics)]
+pub(crate) struct UserRepoMetricsRecord {
+    pub(crate) user_id: String,
+    pub(crate) downloaded_bytes: i64,
+    pub(crate) updated_at: String,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = user_repo_metrics)]
+pub(crate) struct NewUserRepoMetricsRecord<'a> {
+    pub(crate) user_id: &'a str,
+    pub(crate) downloaded_bytes: i64,
+    pub(crate) updated_at: &'a str,
 }
 
 pub(crate) fn package_response_from_record(
@@ -378,6 +511,7 @@ pub(crate) fn package_response_from_record(
         enabled: record.enabled,
         repo_subdir: record.repo_subdir,
         publish_srpm: record.publish_srpm,
+        network_access: record.network_access,
         mock_chroots: serde_json::from_str::<Vec<String>>(&record.mock_chroots_json)
             .unwrap_or_default(),
         source: SpecSource {
@@ -404,7 +538,7 @@ pub(crate) fn derive_package_state(
 ) -> anyhow::Result<PackageRuntimeState> {
     let last_success = build_jobs::table
         .filter(build_jobs::package_name.eq(package_name))
-        .filter(build_jobs::status.eq(BuildStatus::Succeeded.as_db_text()))
+        .filter(build_jobs::status.eq(BuildStatus::Succeeded))
         .order(build_jobs::finished_at.desc())
         .select((build_jobs::id, build_jobs::revision))
         .first::<(String, String)>(conn)
@@ -414,8 +548,8 @@ pub(crate) fn derive_package_state(
         .filter(build_jobs::package_name.eq(package_name))
         .filter(
             build_jobs::status
-                .eq(BuildStatus::Pending.as_db_text())
-                .or(build_jobs::status.eq(BuildStatus::Running.as_db_text())),
+                .eq(BuildStatus::Pending)
+                .or(build_jobs::status.eq(BuildStatus::Running)),
         )
         .order(build_jobs::created_at.desc())
         .select(build_jobs::id)
@@ -459,8 +593,8 @@ pub(crate) fn row_to_build_job(row: JobRecord) -> anyhow::Result<BuildJob> {
         package_name: row.package_name,
         mock_chroot: row.mock_chroot,
         revision: row.revision,
-        trigger: BuildTrigger::from_db_text(&row.trigger),
-        status: BuildStatus::from_db_text(&row.status),
+        trigger: row.trigger,
+        status: row.status,
         spec_path: PathBuf::from(row.spec_path),
         worker_container_id: row.worker_container_id,
         created_at: parse_timestamp(&row.created_at)?,
@@ -497,7 +631,30 @@ pub(crate) fn published_repo_file_from_record(
         repo_path: PathBuf::from(row.repo_path),
         sha256: row.sha256,
         size_bytes: row.size_bytes.max(0) as u64,
-        kind: ArtifactKind::from_db_text(&row.kind),
+        kind: row.kind,
         published_at: parse_timestamp(&row.published_at)?,
+    })
+}
+
+pub(crate) fn user_from_record(
+    row: UserRecord,
+    permissions: Vec<UserPermission>,
+) -> anyhow::Result<UserAccount> {
+    Ok(UserAccount {
+        id: Uuid::parse_str(&row.id)?,
+        handle: row.handle,
+        display_name: row.display_name,
+        active: row.active,
+        permissions,
+        created_at: parse_timestamp(&row.created_at)?,
+        updated_at: parse_timestamp(&row.updated_at)?,
+    })
+}
+
+pub(crate) fn user_metrics_from_record(row: UserRepoMetricsRecord) -> anyhow::Result<UserRepoMetrics> {
+    Ok(UserRepoMetrics {
+        user_id: Uuid::parse_str(&row.user_id)?,
+        downloaded_bytes: row.downloaded_bytes.max(0) as u64,
+        updated_at: parse_timestamp(&row.updated_at)?,
     })
 }

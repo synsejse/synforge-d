@@ -73,7 +73,11 @@ export default function PackageList() {
   }
 
   if (error) {
-    return <div className="border border-zinc-800 bg-black p-4 text-zinc-200">Error: {error}</div>;
+    return (
+      <div className="border border-zinc-800 bg-black p-4 text-zinc-200">
+        Error: {error}
+      </div>
+    );
   }
 
   return (
@@ -82,11 +86,20 @@ export default function PackageList() {
         eyebrow="Package Registry"
         title="Packages"
         description="Sources, targets, and builds."
-        actions={[{ onClick: () => setShowAddModal(true), label: "Add Package", icon: faPlus, variant: "primary" }]}
+        actions={[
+          {
+            onClick: () => setShowAddModal(true),
+            label: "Add Package",
+            icon: faPlus,
+            variant: "primary",
+          },
+        ]}
       />
 
       {packages.length === 0 ? (
-        <EmptyState>No packages configured yet. Add a spec source to start building.</EmptyState>
+        <EmptyState>
+          No packages configured yet. Add a spec source to start building.
+        </EmptyState>
       ) : (
         <div className="overflow-x-auto border border-zinc-800 bg-black">
           <table className="min-w-[1220px] w-full">
@@ -105,7 +118,11 @@ export default function PackageList() {
             <tbody className="divide-y divide-white/8">
               {packages.map((entry) => {
                 const active = Boolean(entry.state.active_job_id);
-                const status = active ? "running" : entry.package.enabled ? "enabled" : "disabled";
+                const status = active
+                  ? "running"
+                  : entry.package.enabled
+                    ? "enabled"
+                    : "disabled";
                 return (
                   <tr key={entry.package.name} className="hover:bg-zinc-950">
                     <td className="px-4 py-3">
@@ -231,7 +248,10 @@ function AddPackageModal({
   const [repoUrl, setRepoUrl] = useState("");
   const [specPath, setSpecPath] = useState("");
   const [poll, setPoll] = useState(true);
-  const [mockChroots, setMockChroots] = useState<string[]>(["fedora-44-x86_64"]);
+  const [networkAccess, setNetworkAccess] = useState(false);
+  const [mockChroots, setMockChroots] = useState<string[]>([
+    "fedora-44-x86_64",
+  ]);
   const [pollIntervalSeconds, setPollIntervalSeconds] = useState("900");
   const [buildTimeoutSeconds, setBuildTimeoutSeconds] = useState("7200");
   const [packageHistoryCount, setPackageHistoryCount] = useState("3");
@@ -248,7 +268,7 @@ function AddPackageModal({
 
   const selectableFiles = useMemo(
     () => browseFiles.filter((file) => file.endsWith(".spec")),
-    [browseFiles]
+    [browseFiles],
   );
 
   useEffect(() => {
@@ -266,7 +286,9 @@ function AddPackageModal({
           return response.chroots.length > 0 ? [response.chroots[0]] : [];
         });
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load mock chroots");
+        setError(
+          e instanceof Error ? e.message : "Failed to load mock chroots",
+        );
       } finally {
         setChrootsLoading(false);
       }
@@ -289,7 +311,9 @@ function AddPackageModal({
         setSpecPath(response.spec_files[0]);
       }
     } catch (e) {
-      setBrowseError(e instanceof Error ? e.message : "Failed to browse repository");
+      setBrowseError(
+        e instanceof Error ? e.message : "Failed to browse repository",
+      );
     } finally {
       setBrowsing(false);
     }
@@ -309,6 +333,7 @@ function AddPackageModal({
     const request: CreatePackageRequest = {
       name: name.trim(),
       source,
+      network_access: networkAccess,
       mock_chroots: mockChroots,
       poll_interval_seconds: Number(pollIntervalSeconds),
       build_timeout_seconds: Number(buildTimeoutSeconds),
@@ -339,13 +364,22 @@ function AddPackageModal({
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 px-4 py-6">
       <div className="mx-auto w-full max-w-3xl border border-zinc-800 bg-black">
         <div className="border-b border-zinc-800 px-6 py-5">
-          <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">Package</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">Add package</h2>
+          <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">
+            Package
+          </p>
+          <h2 className="mt-2 text-2xl font-semibold text-white">
+            Add package
+          </h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="max-h-[calc(100vh-8rem)] space-y-5 overflow-y-auto px-6 py-6">
+        <form
+          onSubmit={handleSubmit}
+          className="max-h-[calc(100vh-8rem)] space-y-5 overflow-y-auto px-6 py-6"
+        >
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-zinc-300">Package name</span>
+            <span className="mb-2 block text-sm font-medium text-zinc-300">
+              Package name
+            </span>
             <input
               type="text"
               value={name}
@@ -357,7 +391,9 @@ function AddPackageModal({
           </label>
 
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-zinc-300">Git repository URL</span>
+            <span className="mb-2 block text-sm font-medium text-zinc-300">
+              Git repository URL
+            </span>
             <input
               type="url"
               value={repoUrl}
@@ -370,8 +406,12 @@ function AddPackageModal({
 
           <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
             <span>
-              <span className="block text-sm font-medium text-white">Enable polling</span>
-              <span className="mt-1 block text-xs text-zinc-400">Automatically watch the source for updates.</span>
+              <span className="block text-sm font-medium text-white">
+                Enable polling
+              </span>
+              <span className="mt-1 block text-xs text-zinc-400">
+                Automatically watch the source for updates.
+              </span>
             </span>
             <input
               type="checkbox"
@@ -381,11 +421,31 @@ function AddPackageModal({
             />
           </label>
 
+          <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+            <span>
+              <span className="block text-sm font-medium text-white">
+                Network access
+              </span>
+              <span className="mt-1 block text-xs text-zinc-400">
+                Allow mock builds to access the network for packages that cannot
+                build fully offline.
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={networkAccess}
+              onChange={(event) => setNetworkAccess(event.target.checked)}
+              className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+            />
+          </label>
+
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="border border-zinc-800 bg-black p-4 lg:col-span-2">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <span className="block text-sm font-medium text-zinc-300">Mock chroots</span>
+                  <span className="block text-sm font-medium text-zinc-300">
+                    Mock chroots
+                  </span>
                   <span className="mt-1 block text-xs text-zinc-500">
                     Each selected chroot becomes a separate build job.
                   </span>
@@ -399,12 +459,16 @@ function AddPackageModal({
                 </button>
               </div>
               <div className="mt-4 border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-mono text-zinc-200">
-                {mockChroots.length > 0 ? formatMockChroots(mockChroots) : "No chroots selected"}
+                {mockChroots.length > 0
+                  ? formatMockChroots(mockChroots)
+                  : "No chroots selected"}
               </div>
             </div>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">Poll interval (seconds)</span>
+              <span className="mb-2 block text-sm font-medium text-zinc-300">
+                Poll interval (seconds)
+              </span>
               <input
                 type="number"
                 min="1"
@@ -417,7 +481,9 @@ function AddPackageModal({
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">Build timeout (seconds)</span>
+              <span className="mb-2 block text-sm font-medium text-zinc-300">
+                Build timeout (seconds)
+              </span>
               <input
                 type="number"
                 min="1"
@@ -430,7 +496,9 @@ function AddPackageModal({
             </label>
 
             <label className="block lg:col-span-2">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">History count</span>
+              <span className="mb-2 block text-sm font-medium text-zinc-300">
+                History count
+              </span>
               <input
                 type="number"
                 min="1"
@@ -444,22 +512,31 @@ function AddPackageModal({
           </div>
 
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-zinc-300">Build environment</span>
+            <span className="mb-2 block text-sm font-medium text-zinc-300">
+              Build environment
+            </span>
             <textarea
               value={buildEnv}
               onChange={(event) => setBuildEnv(event.target.value)}
               rows={6}
-              placeholder={"KEY=value\nMESON_ARGS=-Dgallium-drivers=swrast\nRUSTFLAGS=-C debuginfo=1"}
+              placeholder={
+                "KEY=value\nMESON_ARGS=-Dgallium-drivers=swrast\nRUSTFLAGS=-C debuginfo=1"
+              }
               className="w-full border border-zinc-800 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition focus:border-zinc-600"
             />
-            <span className="mt-2 block text-xs text-zinc-500">One `KEY=value` entry per line. Applied to SRPM creation and mock rebuild steps.</span>
+            <span className="mt-2 block text-xs text-zinc-500">
+              One `KEY=value` entry per line. Applied to SRPM creation and mock
+              rebuild steps.
+            </span>
           </label>
 
           <div className="border border-zinc-800 bg-black p-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <div className="text-sm font-medium text-white">Spec file</div>
-                <div className="mt-1 text-xs text-zinc-400">Browse the repository and select the `.spec` file to build.</div>
+                <div className="mt-1 text-xs text-zinc-400">
+                  Browse the repository and select the `.spec` file to build.
+                </div>
               </div>
               <button
                 type="button"
@@ -524,7 +601,11 @@ function AddPackageModal({
               <FaIcon icon={faMagnifyingGlass} className="mr-2" />
               {browsing ? "Browsing…" : "Load repository files"}
             </button>
-            {browseError ? <div className="border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-200">{browseError}</div> : null}
+            {browseError ? (
+              <div className="border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-200">
+                {browseError}
+              </div>
+            ) : null}
             <div className="max-h-[50vh] overflow-auto border border-zinc-800 bg-black">
               {selectableFiles.length > 0 ? (
                 selectableFiles.map((file) => (
@@ -536,14 +617,18 @@ function AddPackageModal({
                       setShowSpecPicker(false);
                     }}
                     className={`block w-full border-b border-zinc-800 px-4 py-2 text-left font-mono text-sm transition last:border-b-0 ${
-                      specPath === file ? "bg-zinc-950 text-white" : "bg-black text-zinc-300 hover:bg-zinc-950"
+                      specPath === file
+                        ? "bg-zinc-950 text-white"
+                        : "bg-black text-zinc-300 hover:bg-zinc-950"
                     }`}
                   >
                     {file}
                   </button>
                 ))
               ) : (
-                <div className="px-4 py-3 text-sm text-zinc-400">No spec files loaded yet.</div>
+                <div className="px-4 py-3 text-sm text-zinc-400">
+                  No spec files loaded yet.
+                </div>
               )}
             </div>
           </div>
@@ -558,9 +643,13 @@ function AddPackageModal({
         >
           <div className="max-h-[50vh] overflow-y-auto border border-zinc-800 bg-black">
             {chrootsLoading ? (
-              <div className="px-4 py-3 text-sm text-zinc-400">Loading available chroots…</div>
+              <div className="px-4 py-3 text-sm text-zinc-400">
+                Loading available chroots…
+              </div>
             ) : availableChroots.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-zinc-400">No mock chroots available.</div>
+              <div className="px-4 py-3 text-sm text-zinc-400">
+                No mock chroots available.
+              </div>
             ) : (
               <div className="divide-y divide-white/8">
                 {availableChroots.map((chroot) => (
@@ -572,7 +661,9 @@ function AddPackageModal({
                     <input
                       type="checkbox"
                       checked={mockChroots.includes(chroot)}
-                      onChange={(event) => toggleChroot(chroot, event.target.checked)}
+                      onChange={(event) =>
+                        toggleChroot(chroot, event.target.checked)
+                      }
                       className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
                     />
                   </label>

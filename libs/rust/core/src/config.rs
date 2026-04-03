@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use rand_core::{OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 
 use crate::{error::SynforgeError, runtime::RuntimePaths};
@@ -44,12 +45,26 @@ fn default_public_base_url() -> String {
     "http://localhost:8080".to_string()
 }
 
+fn default_session_secret() -> String {
+    "synforge-dev-session-secret-change-me".to_string()
+}
+
+fn default_bootstrap_completed() -> bool {
+    false
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DaemonConfig {
+    #[serde(default = "default_listen_addr")]
     pub listen_addr: String,
-    pub bearer_token: String,
+    #[serde(default = "default_runtime_root")]
     pub runtime_root: PathBuf,
+    #[serde(default = "default_worker_image")]
     pub worker_image: String,
+    #[serde(default = "default_session_secret")]
+    pub session_secret: String,
+    #[serde(default = "default_bootstrap_completed")]
+    pub bootstrap_completed: bool,
     #[serde(default = "default_max_concurrent_builds")]
     pub max_concurrent_builds: usize,
     #[serde(default = "default_db_pool_size")]
@@ -64,6 +79,7 @@ pub struct DaemonConfig {
     pub worker_socket_timeout_seconds: u64,
     #[serde(default = "default_git_operation_timeout_seconds")]
     pub git_operation_timeout_seconds: u64,
+    #[serde(default = "default_public_base_url")]
     pub public_base_url: String,
 }
 
@@ -71,9 +87,10 @@ impl Default for DaemonConfig {
     fn default() -> Self {
         Self {
             listen_addr: default_listen_addr(),
-            bearer_token: String::new(),
             runtime_root: default_runtime_root(),
             worker_image: default_worker_image(),
+            session_secret: default_session_secret(),
+            bootstrap_completed: default_bootstrap_completed(),
             max_concurrent_builds: default_max_concurrent_builds(),
             db_pool_size: default_db_pool_size(),
             queue_buffer_size: default_queue_buffer_size(),
@@ -87,33 +104,54 @@ impl Default for DaemonConfig {
 }
 
 impl DaemonConfig {
-    pub fn load_from_env() -> anyhow::Result<Self> {
-        let config = Self {
-            listen_addr: env_string("SYNFORGE_LISTEN_ADDR").unwrap_or_else(default_listen_addr),
-            bearer_token: env_string("SYNFORGE_BEARER_TOKEN").unwrap_or_default(),
-            runtime_root: env_string("SYNFORGE_RUNTIME_ROOT")
-                .map(PathBuf::from)
-                .unwrap_or_else(default_runtime_root),
-            worker_image: env_string("SYNFORGE_WORKER_IMAGE").unwrap_or_else(default_worker_image),
-            max_concurrent_builds: env_usize("SYNFORGE_MAX_CONCURRENT_BUILDS")
-                .unwrap_or_else(default_max_concurrent_builds),
-            db_pool_size: env_u32("SYNFORGE_DB_POOL_SIZE").unwrap_or_else(default_db_pool_size),
-            queue_buffer_size: env_usize("SYNFORGE_QUEUE_BUFFER_SIZE")
-                .unwrap_or_else(default_queue_buffer_size),
-            poller_tick_seconds: env_u64("SYNFORGE_POLLER_TICK_SECONDS")
-                .unwrap_or_else(default_poller_tick_seconds),
-            worker_result_timeout_seconds: env_u64("SYNFORGE_WORKER_RESULT_TIMEOUT_SECONDS")
-                .unwrap_or_else(default_worker_result_timeout_seconds),
-            worker_socket_timeout_seconds: env_u64("SYNFORGE_WORKER_SOCKET_TIMEOUT_SECONDS")
-                .unwrap_or_else(default_worker_socket_timeout_seconds),
-            git_operation_timeout_seconds: env_u64("SYNFORGE_GIT_OPERATION_TIMEOUT_SECONDS")
-                .unwrap_or_else(default_git_operation_timeout_seconds),
-            public_base_url: env_string("SYNFORGE_PUBLIC_BASE_URL").unwrap_or_else(default_public_base_url),
+    pub fn load() -> anyhow::Result<Self> {
+        let path = Self::config_path();
+        let mut config = if path.exists() {
+            Self::load_from_file(&path)?
+        } else {
+            let mut config = Self::default();
+            config.session_secret = generate_session_secret();
+            config.save_to_file(&path)?;
+            config
         };
+        if session_secret_needs_generation(&config.session_secret) {
+            config.session_secret = generate_session_secret();
+            config.save_to_file(&path)?;
+        }
         config
             .validate()
             .map_err(|error| anyhow::anyhow!(error.to_string()))?;
         Ok(config)
+    }
+
+    pub fn load_from_file(path: &std::path::Path) -> anyhow::Result<Self> {
+        let raw = std::fs::read_to_string(path)?;
+        let mut config: Self = serde_yaml::from_str(&raw)?;
+        if config.runtime_root.as_os_str().is_empty() {
+            config.runtime_root = default_runtime_root();
+        }
+        Ok(config)
+    }
+
+    pub fn save(&self) -> anyhow::Result<()> {
+        self.save_to_file(&Self::config_path())
+    }
+
+    pub fn save_to_file(&self, path: &std::path::Path) -> anyhow::Result<()> {
+        self.validate()
+            .map_err(|error| anyhow::anyhow!(error.to_string()))?;
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let contents = serde_yaml::to_string(self)?;
+        write_config_atomically(path, &contents)
+    }
+
+    pub fn config_path() -> PathBuf {
+        if let Some(value) = env_string("SYNFORGE_CONFIG_PATH") {
+            return PathBuf::from(value);
+        }
+        default_runtime_root().join("config/config.yaml")
     }
 
     pub fn validate(&self) -> Result<(), SynforgeError> {
@@ -163,6 +201,11 @@ impl DaemonConfig {
                 "worker_image must not be empty".to_string(),
             ));
         }
+        if self.session_secret.trim().is_empty() {
+            return Err(SynforgeError::Config(
+                "session_secret must not be empty".to_string(),
+            ));
+        }
         Ok(())
     }
 
@@ -180,6 +223,17 @@ fn default_worker_image() -> String {
     "synforge-worker-fedora:latest".to_string()
 }
 
+fn generate_session_secret() -> String {
+    let mut bytes = [0u8; 32];
+    OsRng.fill_bytes(&mut bytes);
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+fn session_secret_needs_generation(value: &str) -> bool {
+    let value = value.trim();
+    value.is_empty() || value == default_session_secret()
+}
+
 fn env_string(name: &str) -> Option<String> {
     std::env::var(name)
         .ok()
@@ -187,14 +241,9 @@ fn env_string(name: &str) -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
-fn env_usize(name: &str) -> Option<usize> {
-    env_string(name).and_then(|value| value.parse::<usize>().ok())
-}
-
-fn env_u32(name: &str) -> Option<u32> {
-    env_string(name).and_then(|value| value.parse::<u32>().ok())
-}
-
-fn env_u64(name: &str) -> Option<u64> {
-    env_string(name).and_then(|value| value.parse::<u64>().ok())
+fn write_config_atomically(path: &std::path::Path, contents: &str) -> anyhow::Result<()> {
+    let temp_path = path.with_extension("yaml.tmp");
+    std::fs::write(&temp_path, contents)?;
+    std::fs::rename(&temp_path, path)?;
+    Ok(())
 }

@@ -1,17 +1,18 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+use diesel::deserialize::{self, FromSql, FromSqlRow};
+use diesel::expression::AsExpression;
+use diesel::serialize::{self, IsNull, Output, ToSql};
+use diesel::sql_types::Text;
+use diesel::sqlite::{Sqlite, SqliteValue};
 use serde::{Deserialize, Serialize};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use uuid::Uuid;
 
-pub trait DbTextEnum: Sized + Copy {
-    fn as_db_text(self) -> &'static str;
-    fn from_db_text(value: &str) -> Self;
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow)]
 #[serde(rename_all = "snake_case")]
+#[diesel(sql_type = Text)]
 pub enum BuildTrigger {
     Poll,
     ManualRefresh,
@@ -19,8 +20,9 @@ pub enum BuildTrigger {
     Api,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow)]
 #[serde(rename_all = "snake_case")]
+#[diesel(sql_type = Text)]
 pub enum BuildStatus {
     Pending,
     Running,
@@ -54,8 +56,9 @@ pub struct PublishedRepoFile {
     pub published_at: OffsetDateTime,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow)]
 #[serde(rename_all = "snake_case")]
+#[diesel(sql_type = Text)]
 pub enum ArtifactKind {
     Rpm,
     Srpm,
@@ -63,67 +66,76 @@ pub enum ArtifactKind {
     Other,
 }
 
-impl DbTextEnum for BuildTrigger {
-    fn as_db_text(self) -> &'static str {
-        match self {
-            Self::Poll => "poll",
-            Self::ManualRefresh => "manual_refresh",
-            Self::ManualRebuild => "manual_rebuild",
-            Self::Api => "api",
-        }
-    }
-
-    fn from_db_text(value: &str) -> Self {
-        match value {
-            "manualrefresh" | "manual_refresh" => Self::ManualRefresh,
-            "manualrebuild" | "manual_rebuild" => Self::ManualRebuild,
-            "api" => Self::Api,
-            _ => Self::Poll,
-        }
-    }
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, AsExpression, FromSqlRow)]
+#[serde(rename_all = "snake_case")]
+#[diesel(sql_type = Text)]
+pub enum UserPermission {
+    Read,
+    Write,
+    Repo,
 }
 
-impl DbTextEnum for BuildStatus {
-    fn as_db_text(self) -> &'static str {
-        match self {
-            Self::Pending => "pending",
-            Self::Running => "running",
-            Self::Succeeded => "succeeded",
-            Self::Failed => "failed",
-            Self::TimedOut => "timed_out",
-        }
-    }
+macro_rules! impl_sqlite_text_enum {
+    ($name:ident {
+        $($variant:ident => [$primary:literal $(, $alias:literal)*]),+ $(,)?
+    }) => {
+        impl $name {
+            fn db_text(self) -> &'static str {
+                match self {
+                    $(Self::$variant => $primary,)+
+                }
+            }
 
-    fn from_db_text(value: &str) -> Self {
-        match value {
-            "running" => Self::Running,
-            "succeeded" => Self::Succeeded,
-            "failed" => Self::Failed,
-            "timedout" | "timed_out" => Self::TimedOut,
-            _ => Self::Pending,
+            fn from_db_text(value: &str) -> deserialize::Result<Self> {
+                match value {
+                    $($primary $(| $alias)* => Ok(Self::$variant),)+
+                    _ => Err(format!("invalid {} value: {}", stringify!($name), value).into()),
+                }
+            }
         }
-    }
+
+        impl ToSql<Text, Sqlite> for $name {
+            fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Sqlite>) -> serialize::Result {
+                out.set_value(self.db_text());
+                Ok(IsNull::No)
+            }
+        }
+
+        impl FromSql<Text, Sqlite> for $name {
+            fn from_sql(mut value: SqliteValue<'_, '_, '_>) -> deserialize::Result<Self> {
+                Self::from_db_text(value.read_text())
+            }
+        }
+    };
 }
 
-impl DbTextEnum for ArtifactKind {
-    fn as_db_text(self) -> &'static str {
-        match self {
-            Self::Rpm => "rpm",
-            Self::Srpm => "srpm",
-            Self::Log => "log",
-            Self::Other => "other",
-        }
-    }
+impl_sqlite_text_enum!(BuildTrigger {
+    Poll => ["poll"],
+    ManualRefresh => ["manual_refresh", "manualrefresh"],
+    ManualRebuild => ["manual_rebuild", "manualrebuild"],
+    Api => ["api"],
+});
 
-    fn from_db_text(value: &str) -> Self {
-        match value {
-            "srpm" => Self::Srpm,
-            "log" => Self::Log,
-            "other" => Self::Other,
-            _ => Self::Rpm,
-        }
-    }
-}
+impl_sqlite_text_enum!(BuildStatus {
+    Pending => ["pending"],
+    Running => ["running"],
+    Succeeded => ["succeeded"],
+    Failed => ["failed"],
+    TimedOut => ["timed_out", "timedout"],
+});
+
+impl_sqlite_text_enum!(ArtifactKind {
+    Rpm => ["rpm"],
+    Srpm => ["srpm"],
+    Log => ["log"],
+    Other => ["other"],
+});
+
+impl_sqlite_text_enum!(UserPermission {
+    Read => ["read"],
+    Write => ["write"],
+    Repo => ["repo"],
+});
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BuildJob {
@@ -139,6 +151,36 @@ pub struct BuildJob {
     pub updated_at: OffsetDateTime,
     pub finished_at: Option<OffsetDateTime>,
     pub error_message: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct UserAccount {
+    pub id: Uuid,
+    pub handle: String,
+    pub display_name: String,
+    pub active: bool,
+    pub permissions: Vec<UserPermission>,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
+}
+
+impl UserAccount {
+    pub fn has_permission(&self, permission: UserPermission) -> bool {
+        self.permissions.contains(&permission)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct UserRepoMetrics {
+    pub user_id: Uuid,
+    pub downloaded_bytes: u64,
+    pub updated_at: OffsetDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct UserSummary {
+    pub user: UserAccount,
+    pub metrics: UserRepoMetrics,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

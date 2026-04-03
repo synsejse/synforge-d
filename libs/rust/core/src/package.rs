@@ -17,6 +17,8 @@ pub struct PackageDefinition {
     #[serde(default = "default_publish_srpm")]
     pub publish_srpm: bool,
     #[serde(default)]
+    pub network_access: bool,
+    #[serde(default)]
     pub mock_chroots: Vec<String>,
     pub source: SpecSource,
     #[serde(default = "default_poll_interval_seconds")]

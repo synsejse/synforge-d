@@ -14,7 +14,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    let config = DaemonConfig::load_from_env()?;
+    let config = DaemonConfig::load()?;
     let service = SynforgeService::new(config.clone()).await?;
     let listener = tokio::net::TcpListener::bind(&config.listen_addr)
         .await

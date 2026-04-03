@@ -253,6 +253,9 @@ async fn run_mock_build(
         .arg("--isolation=simple")
         .arg("--resultdir")
         .arg(topdir);
+    if package.network_access {
+        command.arg("--enable-network");
+    }
     apply_mock_build_env(&mut command, &package.build_env);
     command.arg("--rebuild").arg(srpm_path);
     run_mock_command(&mut command, logger, topdir).await

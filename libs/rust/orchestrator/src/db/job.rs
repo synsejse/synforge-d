@@ -12,7 +12,7 @@ pub(super) async fn get_last_successful_revision(
             Ok(build_jobs::table
                 .filter(build_jobs::package_name.eq(package_name.as_str()))
                 .filter(build_jobs::mock_chroot.eq(mock_chroot.as_str()))
-                .filter(build_jobs::status.eq(BuildStatus::Succeeded.as_db_text()))
+                .filter(build_jobs::status.eq(BuildStatus::Succeeded))
                 .order(build_jobs::finished_at.desc())
                 .select(build_jobs::revision)
                 .first::<String>(conn)
@@ -21,16 +21,22 @@ pub(super) async fn get_last_successful_revision(
         .await
 }
 
-pub(super) async fn has_active_job(store: &DieselStore, package_name: &str) -> anyhow::Result<bool> {
+pub(super) async fn has_active_job_for_target(
+    store: &DieselStore,
+    package_name: &str,
+    mock_chroot: &str,
+) -> anyhow::Result<bool> {
     let package_name = package_name.to_string();
+    let mock_chroot = mock_chroot.to_string();
     store
         .with_connection(move |conn| {
             let active_job = build_jobs::table
                 .filter(build_jobs::package_name.eq(package_name.as_str()))
+                .filter(build_jobs::mock_chroot.eq(mock_chroot.as_str()))
                 .filter(
                     build_jobs::status
-                        .eq(BuildStatus::Pending.as_db_text())
-                        .or(build_jobs::status.eq(BuildStatus::Running.as_db_text())),
+                        .eq(BuildStatus::Pending)
+                        .or(build_jobs::status.eq(BuildStatus::Running)),
                 )
                 .select(build_jobs::id)
                 .first::<String>(conn)
@@ -51,8 +57,8 @@ pub(super) async fn insert_job(store: &DieselStore, job: &BuildJob) -> anyhow::R
                 package_name: job.package_name.as_str(),
                 mock_chroot: job.mock_chroot.as_str(),
                 revision: job.revision.as_str(),
-                trigger: job.trigger.as_db_text(),
-                status: job.status.as_db_text(),
+                trigger: job.trigger,
+                status: job.status,
                 spec_path: spec_path.as_str(),
                 worker_container_id: job.worker_container_id.as_deref(),
                 created_at: format_timestamp(job.created_at),
@@ -80,7 +86,7 @@ pub(super) async fn set_job_running(
         .with_connection(move |conn| {
             diesel::update(build_jobs::table.find(job_id.as_str()))
                 .set((
-                    build_jobs::status.eq(BuildStatus::Running.as_db_text()),
+                    build_jobs::status.eq(BuildStatus::Running),
                     build_jobs::updated_at.eq(now.as_str()),
                     build_jobs::worker_container_id.eq(worker_container_id.as_deref()),
                 ))
@@ -100,7 +106,6 @@ pub(super) async fn finish_job(
     logs_path: Option<&Path>,
 ) -> anyhow::Result<()> {
     let job_id = job_id.to_string();
-    let status_value = status.as_db_text().to_string();
     let error_message = error_message.map(ToOwned::to_owned);
     let logs_path = logs_path.map(Path::to_path_buf);
     let artifacts = artifacts.to_vec();
@@ -116,7 +121,7 @@ pub(super) async fn finish_job(
 
                 diesel::update(build_jobs::table.find(job_id.as_str()))
                     .set((
-                        build_jobs::status.eq(status_value.as_str()),
+                        build_jobs::status.eq(status),
                         build_jobs::updated_at.eq(now.as_str()),
                         build_jobs::finished_at.eq(Some(now.as_str())),
                         build_jobs::error_message.eq(error_message.as_deref()),
@@ -138,7 +143,7 @@ pub(super) async fn finish_job(
                             relative_repo_path: artifact.relative_repo_path.to_string_lossy().to_string(),
                             sha256: artifact.sha256.clone(),
                             size_bytes: artifact.size_bytes as i64,
-                            kind: artifact.kind.as_db_text().to_string(),
+                            kind: artifact.kind,
                         })
                         .collect::<Vec<_>>();
                     diesel::insert_into(build_artifacts::table)
@@ -180,7 +185,7 @@ pub(super) async fn finish_job(
                             repo_path: file.repo_path.to_string_lossy().to_string(),
                             sha256: file.sha256.clone(),
                             size_bytes: file.size_bytes as i64,
-                            kind: file.kind.as_db_text().to_string(),
+                            kind: file.kind,
                             published_at: format_timestamp(file.published_at),
                         })
                         .collect::<Vec<_>>();
@@ -299,7 +304,7 @@ pub(super) async fn abort_unfinished_jobs(
             let now = format_timestamp(now_utc());
             diesel::update(build_jobs::table.filter(build_jobs::finished_at.is_null()))
                 .set((
-                    build_jobs::status.eq(BuildStatus::Failed.as_db_text()),
+                    build_jobs::status.eq(BuildStatus::Failed),
                     build_jobs::updated_at.eq(now.as_str()),
                     build_jobs::finished_at.eq(Some(now.as_str())),
                     build_jobs::error_message.eq(Some(message.as_str())),
@@ -323,7 +328,7 @@ pub(super) async fn list_prunable_successful_job_ids(
             let rows = build_jobs::table
                 .filter(build_jobs::package_name.eq(package_name.as_str()))
                 .filter(build_jobs::mock_chroot.eq(mock_chroot.as_str()))
-                .filter(build_jobs::status.eq(BuildStatus::Succeeded.as_db_text()))
+                .filter(build_jobs::status.eq(BuildStatus::Succeeded))
                 .order(build_jobs::finished_at.desc())
                 .offset(keep as i64)
                 .select(build_jobs::id)
@@ -368,7 +373,7 @@ fn load_artifacts_map_for_job_ids(
             relative_repo_path: PathBuf::from(row.relative_repo_path),
             sha256: row.sha256,
             size_bytes: row.size_bytes as u64,
-            kind: ArtifactKind::from_db_text(&row.kind),
+            kind: row.kind,
         });
     }
     Ok(map)

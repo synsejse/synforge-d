@@ -54,6 +54,7 @@ impl PackageRegistry {
                 &request.name,
                 &request.source,
                 true,
+                request.network_access,
                 request.mock_chroots,
                 request.poll_interval_seconds,
                 request.build_timeout_seconds,
@@ -93,12 +94,16 @@ impl PackageRegistry {
         let mock_chroots = request
             .mock_chroots
             .unwrap_or_else(|| existing.package.mock_chroots.clone());
+        let network_access = request
+            .network_access
+            .unwrap_or(existing.package.network_access);
         let (package, _) = self
             .package_store
             .sync_source(
                 package_name,
                 &request.source,
                 enabled,
+                network_access,
                 mock_chroots,
                 poll_interval_seconds,
                 build_timeout_seconds,
@@ -115,6 +120,7 @@ impl PackageRegistry {
         package.publish_srpm = request
             .publish_srpm
             .unwrap_or(existing.package.publish_srpm);
+        package.network_access = network_access;
         self.store.upsert_package(&package).await?;
         self.get_package(package_name).await
     }
@@ -141,6 +147,7 @@ impl PackageRegistry {
         source: &SpecSource,
         inspected: &InspectedPackageSource,
         enabled: bool,
+        network_access: bool,
         mock_chroots: Vec<String>,
         poll_interval_seconds: u64,
         build_timeout_seconds: u64,
@@ -152,6 +159,7 @@ impl PackageRegistry {
                 source,
                 inspected,
                 enabled,
+                network_access,
                 mock_chroots,
                 poll_interval_seconds,
                 build_timeout_seconds,
@@ -171,6 +179,7 @@ impl PackageRegistry {
                 &package.name,
                 &package.source,
                 package.enabled,
+                package.network_access,
                 package.mock_chroots.clone(),
                 package.poll_interval_seconds,
                 package.build_timeout_seconds,

@@ -16,20 +16,21 @@ import type {
   LogManifestResponse,
   LogMetaResponse,
   EffectiveConfigResponse,
+  ConfigSchemaResponse,
   UpdateRuntimeSettingsRequest,
   PruneJobsResponse,
   ApiError,
+  SessionLoginRequest,
+  SessionResponse,
+  UserListResponse,
+  UserResponse,
+  CreateUserRequest as CreateUserPayload,
+  UpdateUserRequest as UpdateUserPayload,
+  ChangePasswordRequest,
+  UserMetricsResponse,
 } from "./types";
 
 const API_BASE = import.meta.env.PUBLIC_API_URL || "";
-const TOKEN_STORAGE_KEY = "synforge.bearerToken";
-
-function loadStoredToken(): string {
-  if (typeof window === "undefined") {
-    return "";
-  }
-  return window.localStorage.getItem(TOKEN_STORAGE_KEY) || "";
-}
 
 interface GetJobLogChunkOptions {
   cursor?: number;
@@ -39,23 +40,10 @@ interface GetJobLogChunkOptions {
 }
 
 class ApiClient {
-  private token: string;
-
-  constructor(token: string = loadStoredToken()) {
-    this.token = token;
-  }
-
-  setToken(token: string) {
-    this.token = token;
-  }
-
   private authHeaders(contentType = true): Record<string, string> {
     const headers: Record<string, string> = {};
     if (contentType) {
       headers["Content-Type"] = "application/json";
-    }
-    if (this.token) {
-      headers["Authorization"] = `Bearer ${this.token}`;
     }
     return headers;
   }
@@ -63,13 +51,14 @@ class ApiClient {
   private async request<T>(
     method: string,
     path: string,
-    body?: unknown
+    body?: unknown,
   ): Promise<T> {
     const headers = this.authHeaders();
 
     const res = await fetch(`${API_BASE}${path}`, {
       method,
       headers,
+      credentials: "include",
       body: body ? JSON.stringify(body) : undefined,
     });
 
@@ -85,7 +74,7 @@ class ApiClient {
               path,
               error,
             },
-          })
+          }),
         );
       }
       throw new ApiClientError(res.status, error);
@@ -96,6 +85,18 @@ class ApiClient {
     }
 
     return res.json();
+  }
+
+  async getSession(): Promise<SessionResponse> {
+    return this.request("GET", "/api/v1/session");
+  }
+
+  async login(req: SessionLoginRequest): Promise<SessionResponse> {
+    return this.request("POST", "/api/v1/session/login", req);
+  }
+
+  async logout(): Promise<void> {
+    return this.request("POST", "/api/v1/session/logout", {});
   }
 
   // Packages
@@ -112,7 +113,7 @@ class ApiClient {
   }
 
   async browseRepository(
-    req: BrowseRepositoryRequest
+    req: BrowseRepositoryRequest,
   ): Promise<BrowseRepositoryResponse> {
     return this.request("POST", "/api/v1/repositories/browse", req);
   }
@@ -123,25 +124,34 @@ class ApiClient {
 
   async updatePackage(
     name: string,
-    req: UpdatePackageRequest
+    req: UpdatePackageRequest,
   ): Promise<PackageResponse> {
     return this.request(
       "PUT",
       `/api/v1/packages/${encodeURIComponent(name)}`,
-      req
+      req,
     );
   }
 
   async deletePackage(name: string): Promise<void> {
-    return this.request("DELETE", `/api/v1/packages/${encodeURIComponent(name)}`);
+    return this.request(
+      "DELETE",
+      `/api/v1/packages/${encodeURIComponent(name)}`,
+    );
   }
 
   async getPackageBuilds(name: string): Promise<PackageBuildHistoryResponse> {
-    return this.request("GET", `/api/v1/packages/${encodeURIComponent(name)}/builds`);
+    return this.request(
+      "GET",
+      `/api/v1/packages/${encodeURIComponent(name)}/builds`,
+    );
   }
 
   async getPackageRepoFiles(name: string): Promise<PackageRepoFilesResponse> {
-    return this.request("GET", `/api/v1/packages/${encodeURIComponent(name)}/repo-files`);
+    return this.request(
+      "GET",
+      `/api/v1/packages/${encodeURIComponent(name)}/repo-files`,
+    );
   }
 
   async getRepoInventory(): Promise<RepoInventoryResponse> {
@@ -152,7 +162,7 @@ class ApiClient {
     while (true) {
       const page = await this.request<RepoInventoryResponse>(
         "GET",
-        `/api/v1/repo/files?limit=${pageSize}&offset=${offset}`
+        `/api/v1/repo/files?limit=${pageSize}&offset=${offset}`,
       );
       repoFiles.push(...page.repo_files);
       if (page.repo_files.length < pageSize) {
@@ -168,7 +178,7 @@ class ApiClient {
     return this.request(
       "POST",
       `/api/v1/packages/${encodeURIComponent(name)}/rebuild`,
-      {}
+      {},
     );
   }
 
@@ -176,7 +186,7 @@ class ApiClient {
     return this.request(
       "POST",
       `/api/v1/packages/${encodeURIComponent(name)}/refresh`,
-      {}
+      {},
     );
   }
 
@@ -200,11 +210,14 @@ class ApiClient {
     }
     return this.request(
       "GET",
-      `/api/v1/jobs/${encodeURIComponent(id)}/logs/meta${params.toString() ? `?${params.toString()}` : ""}`
+      `/api/v1/jobs/${encodeURIComponent(id)}/logs/meta${params.toString() ? `?${params.toString()}` : ""}`,
     );
   }
 
-  async getJobLogChunk(id: string, options: GetJobLogChunkOptions = {}): Promise<LogChunkResponse> {
+  async getJobLogChunk(
+    id: string,
+    options: GetJobLogChunkOptions = {},
+  ): Promise<LogChunkResponse> {
     const params = new URLSearchParams({
       limit: String(options.limit ?? 65536),
     });
@@ -219,7 +232,7 @@ class ApiClient {
     }
     return this.request(
       "GET",
-      `/api/v1/jobs/${encodeURIComponent(id)}/logs/stream?${params.toString()}`
+      `/api/v1/jobs/${encodeURIComponent(id)}/logs/stream?${params.toString()}`,
     );
   }
 
@@ -233,6 +246,7 @@ class ApiClient {
     const res = await fetch(`${API_BASE}${path}`, {
       method: "GET",
       headers: this.authHeaders(false),
+      credentials: "include",
     });
 
     if (!res.ok) {
@@ -280,7 +294,10 @@ class ApiClient {
     return this.request("POST", "/api/v1/jobs/prune-failed", {});
   }
 
-  async downloadJobArtifact(id: string, artifact: BuildArtifact): Promise<void> {
+  async downloadJobArtifact(
+    id: string,
+    artifact: BuildArtifact,
+  ): Promise<void> {
     const path = `/api/v1/jobs/${encodeURIComponent(id)}/artifacts/${artifact.relative_repo_path
       .split("/")
       .map((segment) => encodeURIComponent(segment))
@@ -289,6 +306,7 @@ class ApiClient {
     const res = await fetch(`${API_BASE}${path}`, {
       method: "GET",
       headers: this.authHeaders(false),
+      credentials: "include",
     });
 
     if (!res.ok) {
@@ -303,7 +321,7 @@ class ApiClient {
               path,
               error,
             },
-          })
+          }),
         );
       }
       throw new ApiClientError(res.status, error);
@@ -313,7 +331,8 @@ class ApiClient {
     const objectUrl = window.URL.createObjectURL(blob);
     const disposition = res.headers.get("content-disposition") || "";
     const match = disposition.match(/filename="([^"]+)"/i);
-    const fallbackName = artifact.relative_repo_path.split("/").at(-1) || "artifact.bin";
+    const fallbackName =
+      artifact.relative_repo_path.split("/").at(-1) || "artifact.bin";
     const fileName = match?.[1] || fallbackName;
     const anchor = document.createElement("a");
     anchor.href = objectUrl;
@@ -329,10 +348,46 @@ class ApiClient {
     return this.request("GET", "/api/v1/config/effective");
   }
 
+  async getConfigSchema(): Promise<ConfigSchemaResponse> {
+    return this.request("GET", "/api/v1/config/schema");
+  }
+
   async updateRuntimeSettings(
-    req: UpdateRuntimeSettingsRequest
+    req: UpdateRuntimeSettingsRequest,
   ): Promise<EffectiveConfigResponse> {
     return this.request("POST", "/api/v1/config/runtime", req);
+  }
+
+  // Users
+  async listUsers(): Promise<UserListResponse> {
+    return this.request("GET", "/api/v1/users");
+  }
+
+  async createUser(req: CreateUserPayload): Promise<UserResponse> {
+    return this.request("POST", "/api/v1/users", req);
+  }
+
+  async updateUser(id: string, req: UpdateUserPayload): Promise<UserResponse> {
+    return this.request("PUT", `/api/v1/users/${encodeURIComponent(id)}`, req);
+  }
+
+  async changeUserPassword(
+    id: string,
+    req: ChangePasswordRequest,
+  ): Promise<void> {
+    return this.request(
+      "POST",
+      `/api/v1/users/${encodeURIComponent(id)}/password`,
+      req,
+    );
+  }
+
+  async deleteUser(id: string): Promise<UserResponse> {
+    return this.request("DELETE", `/api/v1/users/${encodeURIComponent(id)}`);
+  }
+
+  async getUserMetrics(id: string): Promise<UserMetricsResponse> {
+    return this.request("GET", `/api/v1/users/${encodeURIComponent(id)}`);
   }
 }
 
@@ -350,4 +405,3 @@ export class ApiClientError extends Error {
 
 export const api = new ApiClient();
 export default api;
-export { TOKEN_STORAGE_KEY };

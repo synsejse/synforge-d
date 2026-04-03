@@ -4,29 +4,32 @@ import PageHeader from "./PageHeader";
 import FaIcon from "./FaIcon";
 import {
   faCopy,
-  faDownload,
   faFolderTree,
   faTerminal,
 } from "@fortawesome/free-solid-svg-icons";
 
-type ShellKind = "bash" | "zsh" | "fish";
-
 export default function RepositorySetup() {
   const [publicBaseUrl, setPublicBaseUrl] = useState("");
+  const [repoHandle, setRepoHandle] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
-  const [selectedShell, setSelectedShell] = useState<ShellKind>("bash");
 
   useEffect(() => {
     async function load() {
       try {
         setLoading(true);
-        const configRes = await api.getConfig();
+        const [configRes, sessionRes] = await Promise.all([
+          api.getConfig(),
+          api.getSession(),
+        ]);
         setPublicBaseUrl(normalizeBaseUrl(configRes.config.public_base_url));
+        setRepoHandle(sessionRes.user.handle);
         setError(null);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load repository setup");
+        setError(
+          e instanceof Error ? e.message : "Failed to load repository setup",
+        );
       } finally {
         setLoading(false);
       }
@@ -42,10 +45,9 @@ export default function RepositorySetup() {
     return `${publicBaseUrl}/repo`;
   }, [publicBaseUrl]);
 
-  const repoFileContents = useMemo(() => buildRepoFile(repoBaseUrl), [repoBaseUrl]);
-  const writeRepoCommands = useMemo(
-    () => buildRepoWriteCommands(repoFileContents),
-    [repoFileContents]
+  const repoFileContents = useMemo(
+    () => buildRepoFile(repoBaseUrl, repoHandle),
+    [repoBaseUrl, repoHandle],
   );
   const installCommand = "sudo dnf install <package-name>";
 
@@ -61,24 +63,16 @@ export default function RepositorySetup() {
     }
   }
 
-  function downloadRepoFile() {
-    const blob = new Blob([repoFileContents], { type: "text/plain;charset=utf-8" });
-    const url = window.URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "synforge.repo";
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    window.URL.revokeObjectURL(url);
-  }
-
   if (loading) {
     return <div className="text-zinc-400">Loading repository setup…</div>;
   }
 
   if (error) {
-    return <div className="border border-zinc-800 bg-black p-4 text-zinc-200">Error: {error}</div>;
+    return (
+      <div className="border border-zinc-800 bg-black p-4 text-zinc-200">
+        Error: {error}
+      </div>
+    );
   }
 
   return (
@@ -87,26 +81,29 @@ export default function RepositorySetup() {
         eyebrow="Repository Access"
         title="Add Repo To Fedora"
         description="Repo file and basic DNF usage."
-        actions={[{ href: "/repository/", label: "Browse Repository", icon: faFolderTree }]}
+        actions={[
+          {
+            href: "/repository/",
+            label: "Browse Repository",
+            icon: faFolderTree,
+          },
+        ]}
       />
 
       <section className="border border-zinc-800 bg-black p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-semibold text-white">Repo File</h2>
-            <p className="mt-2 text-sm text-zinc-400">
-              Save <span className="font-mono text-zinc-200">synforge.repo</span> into
-              <span className="font-mono text-zinc-200"> /etc/yum.repos.d/</span>.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={downloadRepoFile}
-            className="border border-zinc-200 bg-zinc-100 px-4 py-2 text-sm font-semibold text-black transition hover:bg-white"
-          >
-            <FaIcon icon={faDownload} className="mr-2" />
-            Download repo file
-          </button>
+        <div>
+          <h2 className="text-xl font-semibold text-white">Repo File</h2>
+          <p className="mt-2 text-sm text-zinc-400">
+            Copy this into{" "}
+            <span className="font-mono text-zinc-200">
+              /etc/yum.repos.d/synforge.repo
+            </span>
+            . The current account handle is already filled into{" "}
+            <span className="font-mono text-zinc-200">username</span>; replace{" "}
+            <span className="font-mono text-zinc-200">&lt;password&gt;</span>{" "}
+            with that account's password or another user that has the{" "}
+            <span className="font-mono text-zinc-200">repo</span> permission.
+          </p>
         </div>
 
         <div className="mt-5 border border-zinc-800 bg-zinc-950">
@@ -119,39 +116,7 @@ export default function RepositorySetup() {
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        <article className="border border-zinc-800 bg-black p-6">
-          <div className="flex items-center gap-2 text-sm font-medium text-white">
-            <FaIcon icon={faTerminal} />
-            Install repo file
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {(["bash", "zsh", "fish"] as ShellKind[]).map((shell) => (
-              <button
-                key={shell}
-                type="button"
-                onClick={() => setSelectedShell(shell)}
-                className={[
-                  "border px-3 py-1.5 text-xs uppercase tracking-[0.18em] transition",
-                  selectedShell === shell
-                    ? "border-zinc-200 bg-zinc-100 text-black"
-                    : "border-zinc-800 bg-black text-zinc-300 hover:border-zinc-600 hover:bg-zinc-950",
-                ].join(" ")}
-              >
-                {shell}
-              </button>
-            ))}
-          </div>
-          <div className="mt-4 border border-zinc-800 bg-zinc-950">
-            <CodeBlock
-              label={`${selectedShell} · write synforge.repo`}
-              value={writeRepoCommands[selectedShell]}
-              copied={copiedLabel === `write-command-${selectedShell}`}
-              onCopy={() => copy(`write-command-${selectedShell}`, writeRepoCommands[selectedShell])}
-            />
-          </div>
-        </article>
-
+      <section className="grid gap-4">
         <article className="border border-zinc-800 bg-black p-6">
           <div className="flex items-center gap-2 text-sm font-medium text-white">
             <FaIcon icon={faTerminal} />
@@ -162,7 +127,12 @@ export default function RepositorySetup() {
               label="usage"
               value={`sudo dnf clean all\nsudo dnf makecache\n${installCommand}`}
               copied={copiedLabel === "usage-command"}
-              onCopy={() => copy("usage-command", `sudo dnf clean all\nsudo dnf makecache\n${installCommand}`)}
+              onCopy={() =>
+                copy(
+                  "usage-command",
+                  `sudo dnf clean all\nsudo dnf makecache\n${installCommand}`,
+                )
+              }
             />
           </div>
         </article>
@@ -185,7 +155,9 @@ function CodeBlock({
   return (
     <div>
       <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
-        <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">{label}</div>
+        <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+          {label}
+        </div>
         <button
           type="button"
           onClick={onCopy}
@@ -202,25 +174,16 @@ function CodeBlock({
   );
 }
 
-function buildRepoFile(repoBaseUrl: string) {
+function buildRepoFile(repoBaseUrl: string, repoHandle: string) {
   return `[synforge]
 name=Synforge Managed Repository
 baseurl=${repoBaseUrl}
+username=${repoHandle || "<handle>"}
+password=<password>
 enabled=1
 gpgcheck=0
 repo_gpgcheck=0
 metadata_expire=30s`;
-}
-
-function buildRepoWriteCommands(repoFileContents: string): Record<ShellKind, string> {
-  return {
-    bash: `cat <<'EOF' | sudo tee /etc/yum.repos.d/synforge.repo >/dev/null\n${repoFileContents}\nEOF`,
-    zsh: `cat <<'EOF' | sudo tee /etc/yum.repos.d/synforge.repo >/dev/null\n${repoFileContents}\nEOF`,
-    fish: `begin\n${repoFileContents
-      .split("\n")
-      .map((line) => `  echo "${line.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`)
-      .join("\n")}\nend | sudo tee /etc/yum.repos.d/synforge.repo >/dev/null`,
-  };
 }
 
 function normalizeBaseUrl(baseUrl: string) {

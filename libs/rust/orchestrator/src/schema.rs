@@ -5,6 +5,7 @@ diesel::table! {
         enabled -> Bool,
         repo_subdir -> Text,
         publish_srpm -> Bool,
+        network_access -> Bool,
         mock_chroots_json -> Text,
         source_repo_url -> Text,
         source_spec_path -> Text,
@@ -66,6 +67,33 @@ diesel::table! {
 }
 
 diesel::table! {
+    users (id) {
+        id -> Text,
+        handle -> Text,
+        display_name -> Text,
+        password_hash -> Text,
+        active -> Bool,
+        created_at -> Text,
+        updated_at -> Text,
+    }
+}
+
+diesel::table! {
+    user_permissions (user_id, permission) {
+        user_id -> Text,
+        permission -> Text,
+    }
+}
+
+diesel::table! {
+    user_repo_metrics (user_id) {
+        user_id -> Text,
+        downloaded_bytes -> BigInt,
+        updated_at -> Text,
+    }
+}
+
+diesel::table! {
     published_repo_files (job_id, repo_path) {
         job_id -> Text,
         package_name -> Text,
@@ -85,5 +113,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     build_artifacts,
     build_logs,
     daemon_runtime_settings,
+    users,
+    user_permissions,
+    user_repo_metrics,
     published_repo_files,
 );

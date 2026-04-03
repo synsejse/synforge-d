@@ -17,6 +17,7 @@ export interface PackageDefinition {
   enabled: boolean;
   repo_subdir: string;
   publish_srpm: boolean;
+  network_access: boolean;
   mock_chroots: string[];
   source: SpecSource;
   poll_interval_seconds: number;
@@ -46,6 +47,7 @@ export interface PackageListResponse {
 export interface CreatePackageRequest {
   name: string;
   source: SpecSource;
+  network_access: boolean;
   mock_chroots: string[];
   poll_interval_seconds: number;
   build_timeout_seconds: number;
@@ -57,6 +59,7 @@ export interface UpdatePackageRequest {
   source: SpecSource;
   enabled?: boolean;
   publish_srpm?: boolean;
+  network_access?: boolean;
   mock_chroots?: string[];
   poll_interval_seconds?: number;
   build_timeout_seconds?: number;
@@ -80,8 +83,14 @@ export interface MockChrootListResponse {
 }
 
 export type BuildTrigger = "poll" | "manual_rebuild" | "manual_refresh" | "api";
-export type BuildStatus = "pending" | "running" | "succeeded" | "failed" | "timed_out";
+export type BuildStatus =
+  | "pending"
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "timed_out";
 export type ArtifactKind = "rpm" | "srpm" | "log" | "other";
+export type UserPermission = "read" | "write" | "repo";
 
 export interface BuildArtifact {
   path: string;
@@ -175,8 +184,9 @@ export interface LogManifestResponse {
 }
 
 export interface DaemonConfig {
+  config_path: string;
+  bootstrap_completed: boolean;
   listen_addr: string;
-  bearer_token: string;
   runtime_root: string;
   database_path: string;
   packages_dir: string;
@@ -184,6 +194,12 @@ export interface DaemonConfig {
   jobs_root: string;
   worker_image: string;
   max_concurrent_builds: number;
+  db_pool_size: number;
+  queue_buffer_size: number;
+  poller_tick_seconds: number;
+  worker_result_timeout_seconds: number;
+  worker_socket_timeout_seconds: number;
+  git_operation_timeout_seconds: number;
   public_base_url: string;
 }
 
@@ -191,11 +207,106 @@ export interface EffectiveConfigResponse {
   config: DaemonConfig;
 }
 
+export type ConfigFieldType = "string" | "number";
+
+export interface ConfigFieldDescriptor {
+  key: string;
+  label: string;
+  description: string;
+  type: ConfigFieldType;
+  required: boolean;
+  min_value?: number;
+  editable_in_setup: boolean;
+  editable_in_runtime: boolean;
+  default_value: string | number;
+}
+
+export interface ConfigSchemaResponse {
+  fields: ConfigFieldDescriptor[];
+}
+
 export interface UpdateRuntimeSettingsRequest {
-  public_base_url: string;
+  settings: Record<string, string | number>;
 }
 
 export interface ApiError {
-  code: "unauthorized" | "not_found" | "conflict" | "bad_request" | "internal_error";
+  code:
+    | "unauthorized"
+    | "not_found"
+    | "conflict"
+    | "bad_request"
+    | "internal_error";
   message: string;
+}
+
+export interface UserAccount {
+  id: string;
+  handle: string;
+  display_name: string;
+  active: boolean;
+  permissions: UserPermission[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserRepoMetrics {
+  user_id: string;
+  downloaded_bytes: number;
+  updated_at: string;
+}
+
+export interface UserResponse {
+  user: UserAccount;
+  metrics: UserRepoMetrics;
+}
+
+export interface UserListResponse {
+  users: UserResponse[];
+}
+
+export interface CreateUserRequest {
+  handle: string;
+  display_name: string;
+  password: string;
+  permissions: UserPermission[];
+  active: boolean;
+}
+
+export interface UpdateUserRequest {
+  handle: string;
+  display_name: string;
+  permissions: UserPermission[];
+  active: boolean;
+}
+
+export interface ChangePasswordRequest {
+  password: string;
+}
+
+export interface SessionLoginRequest {
+  handle: string;
+  password: string;
+}
+
+export interface SetupStatusResponse {
+  initialized: boolean;
+}
+
+export interface SetupAdminRequest {
+  handle: string;
+  display_name: string;
+  password: string;
+}
+
+export interface SetupInitializeRequest {
+  settings: Record<string, string | number>;
+  admin: SetupAdminRequest;
+}
+
+export interface UserMetricsResponse {
+  metrics: UserRepoMetrics;
+}
+
+export interface SessionResponse {
+  user: UserAccount;
 }

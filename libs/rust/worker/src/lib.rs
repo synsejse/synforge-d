@@ -34,7 +34,8 @@ where
 {
     pub async fn run_from_env(&self) -> anyhow::Result<WorkerResult> {
         let worker_id = env_required("SYNFORGE_WORKER_ID")?;
-        let connect_addr = env_required("SYNFORGE_WORKER_CONNECT_ADDR")?;
+        let connect_addr = env_string("SYNFORGE_WORKER_CONNECT_ADDR")
+            .unwrap_or_else(|| "daemon:8090".to_string());
         let socket_timeout = env_u64("SYNFORGE_WORKER_SOCKET_TIMEOUT_SECONDS").unwrap_or(30);
         let transport = WorkerTransportHandle::connect(
             &connect_addr,
@@ -95,6 +96,13 @@ where
 
 fn env_required(name: &str) -> anyhow::Result<String> {
     std::env::var(name).map_err(|_| anyhow::anyhow!("missing required env var {}", name))
+}
+
+fn env_string(name: &str) -> Option<String> {
+    std::env::var(name)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
 }
 
 fn env_u64(name: &str) -> Option<u64> {

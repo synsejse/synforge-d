@@ -38,6 +38,7 @@ use crate::workers::DockerWorkerLauncher;
 use crate::worker_socket::start_worker_listener;
 const DEFAULT_PAGE_SIZE: usize = 50;
 const MAX_PAGE_SIZE: usize = 200;
+const WORKER_LISTEN_ADDR: &str = "0.0.0.0:8090";
 
 pub struct SynforgeService {
     config: DaemonConfig,
@@ -127,7 +128,7 @@ impl SynforgeService {
             store.clone(),
             repo_manager.clone(),
         ));
-        let worker_launcher = Arc::new(DockerWorkerLauncher::new(sessions.clone(), lifecycle.clone())?);
+        let worker_launcher = Arc::new(DockerWorkerLauncher::new(sessions.clone(), lifecycle.clone()).await?);
         Self::new_with_components(
             config,
             store,
@@ -191,7 +192,7 @@ impl SynforgeService {
             shutdown_tx,
         });
         start_worker_listener(
-            service.config.worker_listen_addr.clone(),
+            WORKER_LISTEN_ADDR.to_string(),
             service.sessions.clone(),
             service.task_tracker.clone(),
             shutdown_rx.clone(),
@@ -232,8 +233,6 @@ impl SynforgeService {
                 worker_socket_timeout_seconds: self.config.worker_socket_timeout_seconds,
                 git_operation_timeout_seconds: self.config.git_operation_timeout_seconds,
                 public_base_url,
-                worker_listen_addr: self.config.worker_listen_addr.clone(),
-                worker_connect_addr: self.config.worker_connect_addr.clone(),
             },
         }
     }

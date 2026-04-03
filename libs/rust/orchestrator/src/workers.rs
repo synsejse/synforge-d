@@ -24,14 +24,18 @@ pub struct DockerWorkerLauncher {
     docker: Docker,
     sessions: WorkerSessionBroker,
     lifecycle: Arc<JobLifecycle>,
+    network_mode: Option<String>,
 }
 
 impl DockerWorkerLauncher {
-    pub fn new(sessions: WorkerSessionBroker, lifecycle: Arc<JobLifecycle>) -> anyhow::Result<Self> {
+    pub async fn new(sessions: WorkerSessionBroker, lifecycle: Arc<JobLifecycle>) -> anyhow::Result<Self> {
+        let docker = Docker::connect_with_local_defaults()?;
+        let network_mode = detect_daemon_network(&docker).await;
         Ok(Self {
-            docker: Docker::connect_with_local_defaults()?,
+            docker,
             sessions,
             lifecycle,
+            network_mode,
         })
     }
 
@@ -59,11 +63,16 @@ impl DockerWorkerLauncher {
                 ),
                 ContainerCreateBody {
                     image: Some(config.worker_image.clone()),
-                    env: Some(worker_env(payload, config, &session.worker_id)),
+                    env: Some(worker_env(
+                        payload,
+                        config,
+                        &session.worker_id,
+                    )),
                     host_config: Some(HostConfig {
                         auto_remove: Some(true),
                         privileged: Some(true),
                         extra_hosts: Some(vec!["host.docker.internal:host-gateway".to_string()]),
+                        network_mode: self.network_mode.clone(),
                         ..Default::default()
                     }),
                     working_dir: Some("/synforge".to_string()),
@@ -129,17 +138,43 @@ impl DockerWorkerLauncher {
     }
 }
 
-fn worker_env(payload: &WorkerJobPayload, config: &DaemonConfig, worker_id: &str) -> Vec<String> {
+fn worker_env(
+    payload: &WorkerJobPayload,
+    config: &DaemonConfig,
+    worker_id: &str,
+) -> Vec<String> {
     vec![
         format!("SYNFORGE_WORKER_ID={worker_id}"),
-        format!(
-            "SYNFORGE_WORKER_CONNECT_ADDR={}",
-            config.worker_connect_addr.trim()
-        ),
+        format!("SYNFORGE_WORKER_CONNECT_ADDR={}:8090", daemon_hostname()),
         format!(
             "SYNFORGE_WORKER_SOCKET_TIMEOUT_SECONDS={}",
             config.worker_socket_timeout_seconds
         ),
         format!("SYNFORGE_JOB_ID={}", payload.job_id),
     ]
+}
+
+fn daemon_hostname() -> String {
+    std::env::var("HOSTNAME")
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| "daemon".to_string())
+}
+
+async fn detect_daemon_network(docker: &Docker) -> Option<String> {
+    let hostname = std::env::var("HOSTNAME").ok()?;
+    let inspect = docker
+        .inspect_container(
+            &hostname,
+            None::<bollard::query_parameters::InspectContainerOptions>,
+        )
+        .await
+        .ok()?;
+    let networks = inspect.network_settings?.networks?;
+    networks
+        .keys()
+        .find(|name| name.as_str() != "bridge" && name.as_str() != "host" && name.as_str() != "none")
+        .cloned()
+        .or_else(|| networks.keys().next().cloned())
 }

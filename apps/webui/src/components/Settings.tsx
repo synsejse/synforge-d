@@ -73,8 +73,6 @@ export default function Settings() {
       title: "Worker",
       items: [
         { label: "Worker image", value: config.worker_image },
-        { label: "Worker listen", value: config.worker_listen_addr },
-        { label: "Worker connect", value: config.worker_connect_addr },
       ],
     },
     {

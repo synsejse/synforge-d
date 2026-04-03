@@ -185,8 +185,6 @@ export interface DaemonConfig {
   worker_image: string;
   max_concurrent_builds: number;
   public_base_url: string;
-  worker_listen_addr: string;
-  worker_connect_addr: string;
 }
 
 export interface EffectiveConfigResponse {

@@ -72,7 +72,7 @@ The daemon is the source of truth for managed repo contents.
 ## Notes
 
 - The daemon expects Docker socket access so it can create worker containers.
-- Runtime settings come from environment variables such as `SYNFORGE_BEARER_TOKEN`, `SYNFORGE_RUNTIME_ROOT`, `SYNFORGE_WORKER_IMAGE`, `SYNFORGE_PUBLIC_BASE_URL`, `SYNFORGE_WORKER_LISTEN_ADDR`, and `SYNFORGE_WORKER_CONNECT_ADDR`.
+- Runtime settings come from environment variables such as `SYNFORGE_BEARER_TOKEN`, `SYNFORGE_RUNTIME_ROOT`, `SYNFORGE_WORKER_IMAGE`, and `SYNFORGE_PUBLIC_BASE_URL`.
 - `SYNFORGE_WORKER_IMAGE` selects the generic Fedora worker image, for example `synforge-worker-fedora:latest`.
 - Schema changes should now be treated as forward-migration changes. The earlier reset-style schema churn was only for the pre-stabilization cleanup phase.
 - The default compose setup stores daemon data in the named Docker volume `synforge-runtime`. To reset local state, use `docker compose down -v` or remove that volume explicitly.

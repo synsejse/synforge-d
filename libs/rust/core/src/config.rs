@@ -44,14 +44,6 @@ fn default_public_base_url() -> String {
     "http://localhost:8080".to_string()
 }
 
-fn default_worker_listen_addr() -> String {
-    "0.0.0.0:8090".to_string()
-}
-
-fn default_worker_connect_addr() -> String {
-    "host.docker.internal:8090".to_string()
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DaemonConfig {
     pub listen_addr: String,
@@ -73,8 +65,6 @@ pub struct DaemonConfig {
     #[serde(default = "default_git_operation_timeout_seconds")]
     pub git_operation_timeout_seconds: u64,
     pub public_base_url: String,
-    pub worker_listen_addr: String,
-    pub worker_connect_addr: String,
 }
 
 impl Default for DaemonConfig {
@@ -92,8 +82,6 @@ impl Default for DaemonConfig {
             worker_socket_timeout_seconds: default_worker_socket_timeout_seconds(),
             git_operation_timeout_seconds: default_git_operation_timeout_seconds(),
             public_base_url: default_public_base_url(),
-            worker_listen_addr: default_worker_listen_addr(),
-            worker_connect_addr: default_worker_connect_addr(),
         }
     }
 }
@@ -121,10 +109,6 @@ impl DaemonConfig {
             git_operation_timeout_seconds: env_u64("SYNFORGE_GIT_OPERATION_TIMEOUT_SECONDS")
                 .unwrap_or_else(default_git_operation_timeout_seconds),
             public_base_url: env_string("SYNFORGE_PUBLIC_BASE_URL").unwrap_or_else(default_public_base_url),
-            worker_listen_addr: env_string("SYNFORGE_WORKER_LISTEN_ADDR")
-                .unwrap_or_else(default_worker_listen_addr),
-            worker_connect_addr: env_string("SYNFORGE_WORKER_CONNECT_ADDR")
-                .unwrap_or_else(default_worker_connect_addr),
         };
         config
             .validate()
@@ -172,16 +156,6 @@ impl DaemonConfig {
         if self.git_operation_timeout_seconds == 0 {
             return Err(SynforgeError::Config(
                 "git_operation_timeout_seconds must be greater than zero".to_string(),
-            ));
-        }
-        if self.worker_listen_addr.trim().is_empty() {
-            return Err(SynforgeError::Config(
-                "worker_listen_addr must not be empty".to_string(),
-            ));
-        }
-        if self.worker_connect_addr.trim().is_empty() {
-            return Err(SynforgeError::Config(
-                "worker_connect_addr must not be empty".to_string(),
             ));
         }
         if self.worker_image.trim().is_empty() {

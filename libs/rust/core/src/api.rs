@@ -147,8 +147,6 @@ pub struct EffectiveConfigView {
     pub worker_socket_timeout_seconds: u64,
     pub git_operation_timeout_seconds: u64,
     pub public_base_url: String,
-    pub worker_listen_addr: String,
-    pub worker_connect_addr: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

@@ -18,7 +18,10 @@ pub(super) async fn list_users(store: &DieselStore) -> anyhow::Result<Vec<UserSu
         .await
 }
 
-pub(super) async fn get_user(store: &DieselStore, user_id: Uuid) -> anyhow::Result<Option<UserSummary>> {
+pub(super) async fn get_user(
+    store: &DieselStore,
+    user_id: Uuid,
+) -> anyhow::Result<Option<UserSummary>> {
     let user_id = user_id.to_string();
     store
         .with_connection(move |conn| {
@@ -65,7 +68,7 @@ pub(super) async fn get_user_auth_by_handle(
             let row = users::table
                 .filter(users::handle.eq(handle.as_str()))
                 .select(UserRecord::as_select())
-            .first(conn)
+                .first(conn)
                 .optional()?;
             let Some(row) = row else {
                 return Ok(None);
@@ -107,7 +110,9 @@ pub(super) async fn create_user(
                     created_at: now.as_str(),
                     updated_at: now.as_str(),
                 };
-                diesel::insert_into(users::table).values(&user).execute(conn)?;
+                diesel::insert_into(users::table)
+                    .values(&user)
+                    .execute(conn)?;
                 replace_permissions(conn, user_id.as_str(), &permissions)?;
                 let metrics = NewUserRepoMetricsRecord {
                     user_id: user_id.as_str(),
@@ -200,10 +205,15 @@ pub(super) async fn delete_user(
                     return Ok(None);
                 };
                 let existing = load_user_summary(conn, user_id.as_str())?;
-                diesel::delete(user_permissions::table.filter(user_permissions::user_id.eq(user_id.as_str())))
-                    .execute(conn)?;
-                diesel::delete(user_repo_metrics::table.filter(user_repo_metrics::user_id.eq(user_id.as_str())))
-                    .execute(conn)?;
+                diesel::delete(
+                    user_permissions::table.filter(user_permissions::user_id.eq(user_id.as_str())),
+                )
+                .execute(conn)?;
+                diesel::delete(
+                    user_repo_metrics::table
+                        .filter(user_repo_metrics::user_id.eq(user_id.as_str())),
+                )
+                .execute(conn)?;
                 diesel::delete(users::table.find(user_id.as_str())).execute(conn)?;
                 Ok(Some(existing))
             })
@@ -228,7 +238,7 @@ pub(super) async fn increment_user_download_bytes(
             };
             diesel::insert_into(user_repo_metrics::table)
                 .values(&row)
-                .on_conflict(user_repo_metrics::user_id)
+                .on_conflict(diesel::dsl::DuplicatedKeys)
                 .do_update()
                 .set((
                     user_repo_metrics::downloaded_bytes
@@ -242,7 +252,7 @@ pub(super) async fn increment_user_download_bytes(
 }
 
 fn build_user_summaries(
-    conn: &mut SqliteConnection,
+    conn: &mut MysqlConnection,
     rows: Vec<UserRecord>,
 ) -> anyhow::Result<Vec<UserSummary>> {
     let ids = rows.iter().map(|row| row.id.clone()).collect::<Vec<_>>();
@@ -264,7 +274,7 @@ fn build_user_summaries(
         .collect()
 }
 
-fn load_user_summary(conn: &mut SqliteConnection, user_id: &str) -> anyhow::Result<UserSummary> {
+fn load_user_summary(conn: &mut MysqlConnection, user_id: &str) -> anyhow::Result<UserSummary> {
     let row = users::table
         .find(user_id)
         .select(UserRecord::as_select())
@@ -274,7 +284,7 @@ fn load_user_summary(conn: &mut SqliteConnection, user_id: &str) -> anyhow::Resu
 }
 
 fn load_permissions_map(
-    conn: &mut SqliteConnection,
+    conn: &mut MysqlConnection,
     user_ids: &[String],
 ) -> anyhow::Result<HashMap<String, Vec<UserPermission>>> {
     if user_ids.is_empty() {
@@ -283,7 +293,10 @@ fn load_permissions_map(
 
     let rows = user_permissions::table
         .filter(user_permissions::user_id.eq_any(user_ids))
-        .order((user_permissions::user_id.asc(), user_permissions::permission.asc()))
+        .order((
+            user_permissions::user_id.asc(),
+            user_permissions::permission.asc(),
+        ))
         .select(UserPermissionRecord::as_select())
         .load::<UserPermissionRecord>(conn)?;
     let mut map = HashMap::<String, Vec<UserPermission>>::new();
@@ -294,7 +307,7 @@ fn load_permissions_map(
 }
 
 fn load_metrics_map(
-    conn: &mut SqliteConnection,
+    conn: &mut MysqlConnection,
     user_ids: &[String],
 ) -> anyhow::Result<HashMap<String, UserRepoMetrics>> {
     if user_ids.is_empty() {
@@ -313,11 +326,12 @@ fn load_metrics_map(
 }
 
 fn replace_permissions(
-    conn: &mut SqliteConnection,
+    conn: &mut MysqlConnection,
     user_id: &str,
     permissions: &[UserPermission],
 ) -> Result<(), diesel::result::Error> {
-    diesel::delete(user_permissions::table.filter(user_permissions::user_id.eq(user_id))).execute(conn)?;
+    diesel::delete(user_permissions::table.filter(user_permissions::user_id.eq(user_id)))
+        .execute(conn)?;
     let mut values = permissions.to_vec();
     values.sort_unstable();
     values.dedup();

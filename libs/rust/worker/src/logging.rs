@@ -46,7 +46,7 @@ impl LogFile {
             file: Arc::new(Mutex::new(file)),
         })
     }
-    
+
     async fn write(&self, bytes: &[u8]) -> anyhow::Result<()> {
         let mut file = self.file.lock().await;
         file.write_all(bytes).await?;
@@ -70,30 +70,32 @@ impl BuildLogger {
             logs_dir: logs_dir.to_path_buf(),
         })
     }
-    
+
     /// Write a plain text section header to the primary log.
     pub(crate) async fn section(&self, title: impl AsRef<str>) -> anyhow::Result<()> {
         let message = format!("\n== {} ==\n", title.as_ref());
         self.primary.write(message.as_bytes()).await?;
-        self.stream_to_transport("worker.log", message.as_bytes()).await?;
+        self.stream_to_transport("worker.log", message.as_bytes())
+            .await?;
         Ok(())
     }
-    
+
     /// Write a line to the primary log
     pub(crate) async fn line(&self, message: impl AsRef<str>) -> anyhow::Result<()> {
         let formatted = format!("{}\n", message.as_ref());
         self.primary.write(formatted.as_bytes()).await?;
-        self.stream_to_transport("worker.log", formatted.as_bytes()).await?;
+        self.stream_to_transport("worker.log", formatted.as_bytes())
+            .await?;
         Ok(())
     }
-    
+
     /// Write raw bytes to the primary log
     pub(crate) async fn write(&self, bytes: &[u8]) -> anyhow::Result<()> {
         self.primary.write(bytes).await?;
         self.stream_to_transport("worker.log", bytes).await?;
         Ok(())
     }
-    
+
     /// Get the path to the primary log file
     #[allow(dead_code)] // will be used when we need individual log path
     pub(crate) fn primary_log_path(&self) -> &Path {
@@ -116,7 +118,7 @@ impl BuildLogger {
         self.stream_to_transport(path, bytes).await?;
         Ok(())
     }
-    
+
     async fn stream_to_transport(&self, path: &str, bytes: &[u8]) -> anyhow::Result<()> {
         if let Some(transport) = &self.transport {
             // Don't fail the build if transport fails - logs are on disk
@@ -206,9 +208,18 @@ pub(crate) async fn run_mock_command(
     let (tail_shutdown_tx, tail_shutdown_rx) = oneshot::channel();
     let tail_task = tokio::spawn(tail_named_files_until_exit(
         vec![
-            ("mock-root.log".to_string(), mock_result_dir.join("root.log")),
-            ("mock-build.log".to_string(), mock_result_dir.join("build.log")),
-            ("mock-state.log".to_string(), mock_result_dir.join("state.log")),
+            (
+                "mock-root.log".to_string(),
+                mock_result_dir.join("root.log"),
+            ),
+            (
+                "mock-build.log".to_string(),
+                mock_result_dir.join("build.log"),
+            ),
+            (
+                "mock-state.log".to_string(),
+                mock_result_dir.join("state.log"),
+            ),
         ],
         logger.clone(),
         tail_shutdown_rx,
@@ -275,10 +286,7 @@ where
     Ok(())
 }
 
-async fn forward_to_console<R>(
-    mut reader: R,
-    stderr: bool,
-) -> anyhow::Result<()>
+async fn forward_to_console<R>(mut reader: R, stderr: bool) -> anyhow::Result<()>
 where
     R: AsyncRead + Unpin,
 {

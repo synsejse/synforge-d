@@ -31,7 +31,9 @@ pub(super) async fn list_published_repo_files(
                 .offset(offset as i64)
                 .select(PublishedRepoFileRecord::as_select())
                 .load(conn)?;
-            rows.into_iter().map(published_repo_file_from_record).collect()
+            rows.into_iter()
+                .map(published_repo_file_from_record)
+                .collect()
         })
         .await
 }
@@ -61,7 +63,9 @@ pub(super) async fn list_published_repo_files_for_package(
                 ))
                 .select(PublishedRepoFileRecord::as_select())
                 .load(conn)?;
-            rows.into_iter().map(published_repo_file_from_record).collect()
+            rows.into_iter()
+                .map(published_repo_file_from_record)
+                .collect()
         })
         .await
 }
@@ -104,7 +108,9 @@ pub(super) async fn list_recent_published_repo_files(
                 .limit(limit as i64)
                 .select(PublishedRepoFileRecord::as_select())
                 .load(conn)?;
-            rows.into_iter().map(published_repo_file_from_record).collect()
+            rows.into_iter()
+                .map(published_repo_file_from_record)
+                .collect()
         })
         .await
 }
@@ -129,12 +135,14 @@ pub(super) async fn list_repo_target_summaries(
 
             let mut targets = by_target
                 .into_iter()
-                .map(|(mock_chroot, (packages, jobs, size_bytes))| RepoTargetSummary {
-                    mock_chroot,
-                    package_count: packages.len() as u64,
-                    build_count: jobs.len() as u64,
-                    size_bytes,
-                })
+                .map(
+                    |(mock_chroot, (packages, jobs, size_bytes))| RepoTargetSummary {
+                        mock_chroot,
+                        package_count: packages.len() as u64,
+                        build_count: jobs.len() as u64,
+                        size_bytes,
+                    },
+                )
                 .collect::<Vec<_>>();
             targets.sort_by(|left, right| right.mock_chroot.cmp(&left.mock_chroot));
             Ok(targets)
@@ -142,7 +150,9 @@ pub(super) async fn list_repo_target_summaries(
         .await
 }
 
-pub(super) async fn get_repo_distinct_counts(store: &DieselStore) -> anyhow::Result<(u64, u64, u64)> {
+pub(super) async fn get_repo_distinct_counts(
+    store: &DieselStore,
+) -> anyhow::Result<(u64, u64, u64)> {
     store
         .with_connection(|conn| {
             let rows = published_repo_files::table

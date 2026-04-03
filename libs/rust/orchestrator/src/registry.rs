@@ -16,10 +16,17 @@ pub struct PackageRegistry {
 
 impl PackageRegistry {
     pub fn new(store: DieselStore, package_store: PackageSyncStore) -> Self {
-        Self { store, package_store }
+        Self {
+            store,
+            package_store,
+        }
     }
 
-    pub async fn list_packages(&self, limit: usize, offset: usize) -> anyhow::Result<Vec<PackageResponse>> {
+    pub async fn list_packages(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> anyhow::Result<Vec<PackageResponse>> {
         self.store.list_packages(limit, offset, None, None).await
     }
 
@@ -189,7 +196,10 @@ impl PackageRegistry {
             .await
     }
 
-    pub async fn browse_repository(&self, repo_url: &str) -> anyhow::Result<BrowseRepositoryResponse> {
+    pub async fn browse_repository(
+        &self,
+        repo_url: &str,
+    ) -> anyhow::Result<BrowseRepositoryResponse> {
         self.package_store.browse_repository(repo_url).await
     }
 }

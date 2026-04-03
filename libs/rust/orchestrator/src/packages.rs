@@ -29,7 +29,11 @@ pub struct PackageSyncStore {
 }
 
 impl PackageSyncStore {
-    pub fn new(root: PathBuf, config: DaemonConfig, worker_launcher: Arc<DockerWorkerLauncher>) -> Self {
+    pub fn new(
+        root: PathBuf,
+        config: DaemonConfig,
+        worker_launcher: Arc<DockerWorkerLauncher>,
+    ) -> Self {
         Self {
             root,
             config,
@@ -162,11 +166,11 @@ impl PackageSyncStore {
         let clone_result = run_git(
             None,
             &[
-            "clone",
-            "--depth",
-            "1",
-            repo_url,
-            clone_dir.to_string_lossy().as_ref(),
+                "clone",
+                "--depth",
+                "1",
+                repo_url,
+                clone_dir.to_string_lossy().as_ref(),
             ],
             git_timeout,
         )
@@ -174,7 +178,8 @@ impl PackageSyncStore {
 
         let response = async {
             clone_result?;
-            let head_commit = run_git(Some(&clone_dir), &["rev-parse", "HEAD"], git_timeout).await?;
+            let head_commit =
+                run_git(Some(&clone_dir), &["rev-parse", "HEAD"], git_timeout).await?;
             let files_output = run_git(Some(&clone_dir), &["ls-files"], git_timeout).await?;
             let mut files = files_output
                 .lines()
@@ -211,7 +216,13 @@ async fn run_git(dir: Option<&Path>, args: &[&str], timeout: Duration) -> anyhow
     command.args(args);
     let output = tokio::time::timeout(timeout, command.output())
         .await
-        .with_context(|| format!("git {} timed out after {}s", args.join(" "), timeout.as_secs()))??;
+        .with_context(|| {
+            format!(
+                "git {} timed out after {}s",
+                args.join(" "),
+                timeout.as_secs()
+            )
+        })??;
     if !output.status.success() {
         anyhow::bail!(
             "git {} failed: {}",

@@ -108,25 +108,25 @@ pub(super) async fn upsert_package(
             };
             diesel::insert_into(packages::table)
                 .values(&new_row)
-                .on_conflict(packages::name)
+                .on_conflict(diesel::dsl::DuplicatedKeys)
                 .do_update()
                 .set((
-                    packages::description.eq(excluded(packages::description)),
-                    packages::enabled.eq(excluded(packages::enabled)),
-                    packages::repo_subdir.eq(excluded(packages::repo_subdir)),
-                    packages::publish_srpm.eq(excluded(packages::publish_srpm)),
-                    packages::network_access.eq(excluded(packages::network_access)),
-                    packages::mock_chroots_json.eq(excluded(packages::mock_chroots_json)),
-                    packages::source_repo_url.eq(excluded(packages::source_repo_url)),
-                    packages::source_spec_path.eq(excluded(packages::source_spec_path)),
-                    packages::source_poll.eq(excluded(packages::source_poll)),
-                    packages::poll_interval_seconds.eq(excluded(packages::poll_interval_seconds)),
-                    packages::build_timeout_seconds.eq(excluded(packages::build_timeout_seconds)),
-                    packages::package_history_count.eq(excluded(packages::package_history_count)),
-                    packages::build_env_json.eq(excluded(packages::build_env_json)),
-                    packages::spec_path.eq(excluded(packages::spec_path)),
-                    packages::version.eq(excluded(packages::version)),
-                    packages::release.eq(excluded(packages::release)),
+                    packages::description.eq(new_row.description),
+                    packages::enabled.eq(new_row.enabled),
+                    packages::repo_subdir.eq(new_row.repo_subdir),
+                    packages::publish_srpm.eq(new_row.publish_srpm),
+                    packages::network_access.eq(new_row.network_access),
+                    packages::mock_chroots_json.eq(new_row.mock_chroots_json),
+                    packages::source_repo_url.eq(new_row.source_repo_url),
+                    packages::source_spec_path.eq(new_row.source_spec_path),
+                    packages::source_poll.eq(new_row.source_poll),
+                    packages::poll_interval_seconds.eq(new_row.poll_interval_seconds),
+                    packages::build_timeout_seconds.eq(new_row.build_timeout_seconds),
+                    packages::package_history_count.eq(new_row.package_history_count),
+                    packages::build_env_json.eq(new_row.build_env_json),
+                    packages::spec_path.eq(new_row.spec_path),
+                    packages::version.eq(new_row.version),
+                    packages::release.eq(new_row.release),
                 ))
                 .execute(conn)?;
             Ok(())

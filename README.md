@@ -5,7 +5,7 @@
 ## Workspace
 
 - `libs/rust/core`: shared package, config, API, and job models
-- `libs/rust/orchestrator`: SQLite state, git source syncing, queueing, polling, Docker worker launcher, managed repo publication
+- `libs/rust/orchestrator`: MariaDB-backed state, git source syncing, queueing, polling, Docker worker launcher, managed repo publication
 - `libs/rust/serve`: Axum HTTP API and static repo serving
 - `libs/rust/worker`: one-shot worker runtime and RPM spec execution
 - `apps/rust/daemon`: combined daemon binary
@@ -24,7 +24,6 @@
 
 The daemon uses a single `runtime_root` and derives all managed paths from it:
 
-- `runtime_root/metadata/database/state.db`
 - `runtime_root/metadata/packages/`
 - `runtime_root/metadata/repo/fedora/`
 - `runtime_root/metadata/tmp/`

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Context;
-use axum::body::{to_bytes, Body};
+use axum::body::{Body, to_bytes};
 use axum::extract::{DefaultBodyLimit, Request, State};
 use axum::http::header::{self, HeaderName};
 use axum::http::{HeaderMap, HeaderValue, Response, StatusCode};
@@ -30,10 +30,11 @@ async fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    let listen_addr = env_string("SYNFORGE_WEBUI_LISTEN_ADDR")
-        .unwrap_or_else(|| "0.0.0.0:80".to_string());
+    let listen_addr =
+        env_string("SYNFORGE_WEBUI_LISTEN_ADDR").unwrap_or_else(|| "0.0.0.0:80".to_string());
     let daemon_base_url = normalize_base_url(
-        &env_string("SYNFORGE_WEBUI_DAEMON_URL").unwrap_or_else(|| "http://daemon:8080".to_string()),
+        &env_string("SYNFORGE_WEBUI_DAEMON_URL")
+            .unwrap_or_else(|| "http://daemon:8080".to_string()),
     );
     let static_dir = env_string("SYNFORGE_WEBUI_STATIC_DIR")
         .map(PathBuf::from)
@@ -61,10 +62,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/oauth2-redirect.html", any(proxy_to_daemon))
         .route("/repo", any(proxy_to_daemon))
         .route("/repo/{*path}", any(proxy_to_daemon))
-        .fallback_service(
-            ServeDir::new(static_dir)
-                .not_found_service(ServeFile::new(index_path))
-        )
+        .fallback_service(ServeDir::new(static_dir).not_found_service(ServeFile::new(index_path)))
         .layer(middleware::map_response(add_security_headers))
         .layer(DefaultBodyLimit::max(MAX_REQUEST_BODY_BYTES))
         .layer(TraceLayer::new_for_http())

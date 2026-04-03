@@ -1,6 +1,11 @@
 # syntax=docker/dockerfile:1.7
 
 FROM rust:1.94 AS chef
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        default-libmysqlclient-dev \
+        pkg-config \
+    && rm -rf /var/lib/apt/lists/*
 RUN cargo install cargo-chef
 WORKDIR /app
 
@@ -13,7 +18,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS cooker
 COPY --from=planner /app/recipe.json recipe.json
 RUN --mount=type=cache,id=synforge-cargo-registry,target=/usr/local/cargo/registry \
-    --mount=type=cache,id=synforge-cargo-target,target=/app/target \
+    --mount=type=cache,id=synforge-cargo-target-v2,target=/app/target \
     cargo chef cook --release --recipe-path recipe.json
 
 FROM chef AS rust-builder
@@ -22,7 +27,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY apps/rust ./apps/rust
 COPY libs/rust ./libs/rust
 RUN --mount=type=cache,id=synforge-cargo-registry,target=/usr/local/cargo/registry \
-    --mount=type=cache,id=synforge-cargo-target,target=/app/target \
+    --mount=type=cache,id=synforge-cargo-target-v2,target=/app/target \
     cargo build --release \
       -p synforge-daemon \
       -p synforge-worker-bin \
@@ -46,6 +51,7 @@ RUN dnf -y upgrade-minimal \
         createrepo_c \
         curl \
         git \
+        mariadb-connector-c \
     && dnf clean all
 
 COPY --from=rust-builder /out/daemon /usr/local/bin/daemon

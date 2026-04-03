@@ -1,17 +1,19 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+use diesel::backend::Backend;
 use diesel::deserialize::{self, FromSql, FromSqlRow};
 use diesel::expression::AsExpression;
-use diesel::serialize::{self, IsNull, Output, ToSql};
+use diesel::serialize::{self, Output, ToSql};
 use diesel::sql_types::Text;
-use diesel::sqlite::{Sqlite, SqliteValue};
 use serde::{Deserialize, Serialize};
-use time::{format_description::well_known::Rfc3339, OffsetDateTime};
+use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow, ToSchema)]
+#[derive(
+    Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow, ToSchema,
+)]
 #[serde(rename_all = "snake_case")]
 #[diesel(sql_type = Text)]
 pub enum BuildTrigger {
@@ -21,7 +23,9 @@ pub enum BuildTrigger {
     Api,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow, ToSchema)]
+#[derive(
+    Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow, ToSchema,
+)]
 #[serde(rename_all = "snake_case")]
 #[diesel(sql_type = Text)]
 pub enum BuildStatus {
@@ -51,7 +55,6 @@ pub struct PublishedRepoFile {
     pub job_id: Uuid,
     pub package_name: String,
     pub mock_chroot: String,
-    pub arch: String,
     #[schema(value_type = String)]
     pub repo_path: PathBuf,
     pub sha256: String,
@@ -60,7 +63,9 @@ pub struct PublishedRepoFile {
     pub published_at: OffsetDateTime,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow, ToSchema)]
+#[derive(
+    Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow, ToSchema,
+)]
 #[serde(rename_all = "snake_case")]
 #[diesel(sql_type = Text)]
 pub enum ArtifactKind {
@@ -70,7 +75,20 @@ pub enum ArtifactKind {
     Other,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, AsExpression, FromSqlRow, ToSchema)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    AsExpression,
+    FromSqlRow,
+    ToSchema,
+)]
 #[serde(rename_all = "snake_case")]
 #[diesel(sql_type = Text)]
 pub enum UserPermission {
@@ -79,7 +97,7 @@ pub enum UserPermission {
     Repo,
 }
 
-macro_rules! impl_sqlite_text_enum {
+macro_rules! impl_text_enum {
     ($name:ident {
         $($variant:ident => [$primary:literal $(, $alias:literal)*]),+ $(,)?
     }) => {
@@ -98,29 +116,37 @@ macro_rules! impl_sqlite_text_enum {
             }
         }
 
-        impl ToSql<Text, Sqlite> for $name {
-            fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Sqlite>) -> serialize::Result {
-                out.set_value(self.db_text());
-                Ok(IsNull::No)
+        impl<DB> ToSql<Text, DB> for $name
+        where
+            DB: Backend,
+            str: ToSql<Text, DB>,
+        {
+            fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, DB>) -> serialize::Result {
+                self.db_text().to_sql(out)
             }
         }
 
-        impl FromSql<Text, Sqlite> for $name {
-            fn from_sql(mut value: SqliteValue<'_, '_, '_>) -> deserialize::Result<Self> {
-                Self::from_db_text(value.read_text())
+        impl<DB> FromSql<Text, DB> for $name
+        where
+            DB: Backend,
+            String: FromSql<Text, DB>,
+        {
+            fn from_sql(value: DB::RawValue<'_>) -> deserialize::Result<Self> {
+                let value = String::from_sql(value)?;
+                Self::from_db_text(&value)
             }
         }
     };
 }
 
-impl_sqlite_text_enum!(BuildTrigger {
+impl_text_enum!(BuildTrigger {
     Poll => ["poll"],
     ManualRefresh => ["manual_refresh", "manualrefresh"],
     ManualRebuild => ["manual_rebuild", "manualrebuild"],
     Api => ["api"],
 });
 
-impl_sqlite_text_enum!(BuildStatus {
+impl_text_enum!(BuildStatus {
     Pending => ["pending"],
     Running => ["running"],
     Succeeded => ["succeeded"],
@@ -128,14 +154,14 @@ impl_sqlite_text_enum!(BuildStatus {
     TimedOut => ["timed_out", "timedout"],
 });
 
-impl_sqlite_text_enum!(ArtifactKind {
+impl_text_enum!(ArtifactKind {
     Rpm => ["rpm"],
     Srpm => ["srpm"],
     Log => ["log"],
     Other => ["other"],
 });
 
-impl_sqlite_text_enum!(UserPermission {
+impl_text_enum!(UserPermission {
     Read => ["read"],
     Write => ["write"],
     Repo => ["repo"],
@@ -279,5 +305,7 @@ pub fn format_timestamp(value: OffsetDateTime) -> String {
 }
 
 pub fn env_map_to_vec(map: &BTreeMap<String, String>) -> Vec<(String, String)> {
-    map.iter().map(|(key, value)| (key.clone(), value.clone())).collect()
+    map.iter()
+        .map(|(key, value)| (key.clone(), value.clone()))
+        .collect()
 }

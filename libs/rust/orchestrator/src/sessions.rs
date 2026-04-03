@@ -9,7 +9,10 @@ use tokio::sync::{Mutex, Notify};
 use uuid::Uuid;
 
 use synforge_core::{
-    model::{ArtifactKind, BuildArtifact, WorkerAction, WorkerBuildResult, WorkerJobPayload, WorkerResult},
+    model::{
+        ArtifactKind, BuildArtifact, WorkerAction, WorkerBuildResult, WorkerJobPayload,
+        WorkerResult,
+    },
     package::parse_mock_chroot,
 };
 
@@ -47,7 +50,11 @@ impl WorkerSessionBroker {
         }
     }
 
-    pub async fn create_session(&self, job_id: Uuid, payload: WorkerJobPayload) -> anyhow::Result<WorkerSession> {
+    pub async fn create_session(
+        &self,
+        job_id: Uuid,
+        payload: WorkerJobPayload,
+    ) -> anyhow::Result<WorkerSession> {
         let worker_id = job_id.to_string();
         let job_root = self.job_root(job_id);
         tokio::fs::create_dir_all(job_root.join("artifacts")).await?;
@@ -72,7 +79,10 @@ impl WorkerSessionBroker {
         }
     }
 
-    pub async fn connect_worker(&self, worker_id: &str) -> anyhow::Result<(Uuid, WorkerJobPayload)> {
+    pub async fn connect_worker(
+        &self,
+        worker_id: &str,
+    ) -> anyhow::Result<(Uuid, WorkerJobPayload)> {
         for entry in self.state.iter() {
             if entry.worker_id == worker_id {
                 return Ok((*entry.key(), entry.payload.clone()));
@@ -116,11 +126,11 @@ impl WorkerSessionBroker {
         relative_path: &str,
         kind: ArtifactKind,
     ) -> anyhow::Result<BuildArtifact> {
-        let entry = self.state
+        let entry = self
+            .state
             .get(&job_id)
             .ok_or_else(|| anyhow::anyhow!("worker session {} not found", job_id))?;
-        let (package_name, mock_chroot, target_arch) =
-            build_metadata_from_payload(&entry.payload)?;
+        let (package_name, mock_chroot, target_arch) = build_metadata_from_payload(&entry.payload)?;
         let path = self.artifact_upload_path(job_id, relative_path);
         let mut file = tokio::fs::File::open(&path).await?;
         let mut hasher = sha2::Sha256::new();
@@ -167,7 +177,8 @@ impl WorkerSessionBroker {
     }
 
     pub async fn complete(&self, job_id: Uuid, result: WorkerResult) -> anyhow::Result<()> {
-        let entry = self.state
+        let entry = self
+            .state
             .get(&job_id)
             .ok_or_else(|| anyhow::anyhow!("worker session {} not found", job_id))?;
         let artifacts = entry.artifacts.lock().await;
@@ -218,11 +229,15 @@ fn build_metadata_from_payload(
         WorkerAction::Build(build) => {
             let target = parse_mock_chroot(&build.mock_chroot)
                 .ok_or_else(|| anyhow::anyhow!("invalid mock chroot {}", build.mock_chroot))?;
-            Ok((build.package.name.clone(), build.mock_chroot.clone(), target.arch))
+            Ok((
+                build.package.name.clone(),
+                build.mock_chroot.clone(),
+                target.arch,
+            ))
         }
-        WorkerAction::Parse(_) => {
-            Err(anyhow::anyhow!("artifact upload received for non-build worker session"))
-        }
+        WorkerAction::Parse(_) => Err(anyhow::anyhow!(
+            "artifact upload received for non-build worker session"
+        )),
     }
 }
 
@@ -235,10 +250,7 @@ fn artifact_arch_from_filename(filename: &str) -> Option<String> {
     base.rsplit('.').next().map(ToOwned::to_owned)
 }
 
-fn merge_result(
-    result: WorkerResult,
-    artifacts: &[BuildArtifact],
-) -> WorkerResult {
+fn merge_result(result: WorkerResult, artifacts: &[BuildArtifact]) -> WorkerResult {
     match result {
         WorkerResult::Parse(parse) => WorkerResult::Parse(parse),
         WorkerResult::Build(build) => WorkerResult::Build(WorkerBuildResult {

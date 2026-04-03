@@ -93,10 +93,7 @@ impl PackageName {
             ));
         }
         DnsLabel::new(&normalized).map_err(|_| {
-            SynforgeError::Spec(format!(
-                "package name {} is not DNS-label safe",
-                value
-            ))
+            SynforgeError::Spec(format!("package name {} is not DNS-label safe", value))
         })?;
         Ok(Self(normalized))
     }

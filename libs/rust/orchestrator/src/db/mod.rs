@@ -8,21 +8,20 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 use async_trait::async_trait;
+use diesel::mysql::MysqlConnection;
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool};
-use diesel::sqlite::SqliteConnection;
-use diesel::upsert::excluded;
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use synforge_core::{
     api::{BuildJobResponse, PackageResponse, RepoTargetSummary},
     model::{
-        format_timestamp, now_utc, ArtifactKind, BuildArtifact, BuildJob, BuildStatus, BuildTrigger,
-        PackageRuntimeState, PublishedRepoFile, UserAccount, UserPermission, UserRepoMetrics,
-        UserSummary,
+        ArtifactKind, BuildArtifact, BuildJob, BuildStatus, BuildTrigger, PackageRuntimeState,
+        PublishedRepoFile, UserAccount, UserPermission, UserRepoMetrics, UserSummary,
+        format_timestamp, now_utc,
     },
     package::{BuildEnvVar, PackageDefinition, SpecSource},
 };
-use time::{format_description::well_known::Rfc3339, OffsetDateTime};
+use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use uuid::Uuid;
 
 use crate::schema::{
@@ -41,7 +40,11 @@ pub trait JobStore: Send + Sync {
         search: Option<String>,
         enabled: Option<bool>,
     ) -> anyhow::Result<Vec<PackageResponse>>;
-    async fn count_packages(&self, search: Option<String>, enabled: Option<bool>) -> anyhow::Result<u64>;
+    async fn count_packages(
+        &self,
+        search: Option<String>,
+        enabled: Option<bool>,
+    ) -> anyhow::Result<u64>;
     async fn get_package(&self, package_name: &str) -> anyhow::Result<Option<PackageResponse>>;
     async fn upsert_package(&self, package: &PackageDefinition) -> anyhow::Result<()>;
     async fn remove_package(&self, package_name: &str) -> anyhow::Result<()>;
@@ -56,7 +59,11 @@ pub trait JobStore: Send + Sync {
         mock_chroot: &str,
     ) -> anyhow::Result<bool>;
     async fn insert_job(&self, job: &BuildJob) -> anyhow::Result<()>;
-    async fn set_job_running(&self, job_id: Uuid, worker_container_id: Option<&str>) -> anyhow::Result<()>;
+    async fn set_job_running(
+        &self,
+        job_id: Uuid,
+        worker_container_id: Option<&str>,
+    ) -> anyhow::Result<()>;
     async fn finish_job(
         &self,
         job_id: Uuid,
@@ -64,8 +71,20 @@ pub trait JobStore: Send + Sync {
         error_message: Option<&str>,
         artifacts: &[BuildArtifact],
         published_files: &[PublishedRepoFile],
-        logs_path: Option<&Path>,
+        logs_dir: Option<&Path>,
     ) -> anyhow::Result<()>;
+    async fn upsert_build_log(
+        &self,
+        job_id: Uuid,
+        source_path: &str,
+        log_path: &Path,
+    ) -> anyhow::Result<()>;
+    async fn list_build_logs_for_job(&self, job_id: Uuid) -> anyhow::Result<Vec<BuildLogRecord>>;
+    async fn get_build_log_for_job_source(
+        &self,
+        job_id: Uuid,
+        source_path: &str,
+    ) -> anyhow::Result<Option<BuildLogRecord>>;
     async fn list_jobs(
         &self,
         limit: usize,
@@ -80,7 +99,10 @@ pub trait JobStore: Send + Sync {
         package_name: Option<String>,
         mock_chroot: Option<String>,
     ) -> anyhow::Result<u64>;
-    async fn list_jobs_for_package(&self, package_name: &str) -> anyhow::Result<Vec<BuildJobResponse>>;
+    async fn list_jobs_for_package(
+        &self,
+        package_name: &str,
+    ) -> anyhow::Result<Vec<BuildJobResponse>>;
     async fn get_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>>;
     async fn list_published_repo_files(
         &self,
@@ -96,9 +118,18 @@ pub trait JobStore: Send + Sync {
         mock_chroot: Option<String>,
         kind: Option<ArtifactKind>,
     ) -> anyhow::Result<u64>;
-    async fn list_published_repo_files_for_job(&self, job_id: Uuid) -> anyhow::Result<Vec<PublishedRepoFile>>;
-    async fn list_published_repo_files_for_package(&self, package_name: &str) -> anyhow::Result<Vec<PublishedRepoFile>>;
-    async fn list_recent_published_repo_files(&self, limit: usize) -> anyhow::Result<Vec<PublishedRepoFile>>;
+    async fn list_published_repo_files_for_job(
+        &self,
+        job_id: Uuid,
+    ) -> anyhow::Result<Vec<PublishedRepoFile>>;
+    async fn list_published_repo_files_for_package(
+        &self,
+        package_name: &str,
+    ) -> anyhow::Result<Vec<PublishedRepoFile>>;
+    async fn list_recent_published_repo_files(
+        &self,
+        limit: usize,
+    ) -> anyhow::Result<Vec<PublishedRepoFile>>;
     async fn list_repo_target_summaries(&self) -> anyhow::Result<Vec<RepoTargetSummary>>;
     async fn get_repo_distinct_counts(&self) -> anyhow::Result<(u64, u64, u64)>;
     async fn sum_published_repo_file_bytes(&self) -> anyhow::Result<u64>;
@@ -114,7 +145,8 @@ pub trait JobStore: Send + Sync {
     async fn list_users(&self) -> anyhow::Result<Vec<UserSummary>>;
     async fn get_user(&self, user_id: Uuid) -> anyhow::Result<Option<UserSummary>>;
     async fn get_user_by_handle(&self, handle: &str) -> anyhow::Result<Option<UserSummary>>;
-    async fn get_user_auth_by_handle(&self, handle: &str) -> anyhow::Result<Option<UserAuthRecord>>;
+    async fn get_user_auth_by_handle(&self, handle: &str)
+    -> anyhow::Result<Option<UserAuthRecord>>;
     async fn create_user(
         &self,
         handle: &str,
@@ -131,29 +163,27 @@ pub trait JobStore: Send + Sync {
         active: bool,
         permissions: &[UserPermission],
     ) -> anyhow::Result<Option<UserSummary>>;
-    async fn update_user_password(&self, user_id: Uuid, password_hash: &str) -> anyhow::Result<bool>;
+    async fn update_user_password(
+        &self,
+        user_id: Uuid,
+        password_hash: &str,
+    ) -> anyhow::Result<bool>;
     async fn delete_user(&self, user_id: Uuid) -> anyhow::Result<Option<UserSummary>>;
     async fn increment_user_download_bytes(&self, user_id: Uuid, bytes: u64) -> anyhow::Result<()>;
 }
 
 #[derive(Clone)]
 pub struct DieselStore {
-    pool: Pool<ConnectionManager<SqliteConnection>>,
+    pool: Pool<ConnectionManager<MysqlConnection>>,
 }
 
 impl DieselStore {
-    pub async fn new(database_path: &Path, pool_size: u32) -> anyhow::Result<Self> {
-        if let Some(parent) = database_path.parent() {
-            tokio::fs::create_dir_all(parent)
-                .await
-                .with_context(|| format!("failed to create {}", parent.display()))?;
-        }
-        let database_url = database_path.to_string_lossy().to_string();
+    pub async fn new(database_url: &str, pool_size: u32) -> anyhow::Result<Self> {
+        let database_url = database_url.to_string();
         let pool = tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
-            let manager = ConnectionManager::<SqliteConnection>::new(database_url);
+            let manager = ConnectionManager::<MysqlConnection>::new(&database_url);
             let pool = Pool::builder().max_size(pool_size).build(manager)?;
             let mut conn = pool.get()?;
-            diesel::sql_query("PRAGMA journal_mode = WAL;").execute(&mut conn)?;
             conn.run_pending_migrations(MIGRATIONS)
                 .map_err(|error| anyhow::anyhow!("failed to run diesel migrations: {}", error))?;
             Ok(pool)
@@ -166,7 +196,7 @@ impl DieselStore {
     pub(crate) async fn with_connection<T, F>(&self, f: F) -> anyhow::Result<T>
     where
         T: Send + 'static,
-        F: FnOnce(&mut SqliteConnection) -> anyhow::Result<T> + Send + 'static,
+        F: FnOnce(&mut MysqlConnection) -> anyhow::Result<T> + Send + 'static,
     {
         let pool = self.pool.clone();
         tokio::task::spawn_blocking(move || {
@@ -198,7 +228,11 @@ impl JobStore for DieselStore {
         package::list_packages(self, limit, offset, search, enabled).await
     }
 
-    async fn count_packages(&self, search: Option<String>, enabled: Option<bool>) -> anyhow::Result<u64> {
+    async fn count_packages(
+        &self,
+        search: Option<String>,
+        enabled: Option<bool>,
+    ) -> anyhow::Result<u64> {
         package::count_packages(self, search, enabled).await
     }
 
@@ -234,7 +268,11 @@ impl JobStore for DieselStore {
         job::insert_job(self, job).await
     }
 
-    async fn set_job_running(&self, job_id: Uuid, worker_container_id: Option<&str>) -> anyhow::Result<()> {
+    async fn set_job_running(
+        &self,
+        job_id: Uuid,
+        worker_container_id: Option<&str>,
+    ) -> anyhow::Result<()> {
         job::set_job_running(self, job_id, worker_container_id).await
     }
 
@@ -245,9 +283,39 @@ impl JobStore for DieselStore {
         error_message: Option<&str>,
         artifacts: &[BuildArtifact],
         published_files: &[PublishedRepoFile],
-        logs_path: Option<&Path>,
+        logs_dir: Option<&Path>,
     ) -> anyhow::Result<()> {
-        job::finish_job(self, job_id, status, error_message, artifacts, published_files, logs_path).await
+        job::finish_job(
+            self,
+            job_id,
+            status,
+            error_message,
+            artifacts,
+            published_files,
+            logs_dir,
+        )
+        .await
+    }
+
+    async fn list_build_logs_for_job(&self, job_id: Uuid) -> anyhow::Result<Vec<BuildLogRecord>> {
+        job::list_build_logs_for_job(self, job_id).await
+    }
+
+    async fn upsert_build_log(
+        &self,
+        job_id: Uuid,
+        source_path: &str,
+        log_path: &Path,
+    ) -> anyhow::Result<()> {
+        job::upsert_build_log(self, job_id, source_path, log_path).await
+    }
+
+    async fn get_build_log_for_job_source(
+        &self,
+        job_id: Uuid,
+        source_path: &str,
+    ) -> anyhow::Result<Option<BuildLogRecord>> {
+        job::get_build_log_for_job_source(self, job_id, source_path).await
     }
 
     async fn list_jobs(
@@ -270,7 +338,10 @@ impl JobStore for DieselStore {
         job::count_jobs(self, status, package_name, mock_chroot).await
     }
 
-    async fn list_jobs_for_package(&self, package_name: &str) -> anyhow::Result<Vec<BuildJobResponse>> {
+    async fn list_jobs_for_package(
+        &self,
+        package_name: &str,
+    ) -> anyhow::Result<Vec<BuildJobResponse>> {
         job::list_jobs_for_package(self, package_name).await
     }
 
@@ -298,15 +369,24 @@ impl JobStore for DieselStore {
         repo::count_published_repo_files(self, package_name, mock_chroot, kind).await
     }
 
-    async fn list_published_repo_files_for_job(&self, job_id: Uuid) -> anyhow::Result<Vec<PublishedRepoFile>> {
+    async fn list_published_repo_files_for_job(
+        &self,
+        job_id: Uuid,
+    ) -> anyhow::Result<Vec<PublishedRepoFile>> {
         repo::list_published_repo_files_for_job(self, job_id).await
     }
 
-    async fn list_published_repo_files_for_package(&self, package_name: &str) -> anyhow::Result<Vec<PublishedRepoFile>> {
+    async fn list_published_repo_files_for_package(
+        &self,
+        package_name: &str,
+    ) -> anyhow::Result<Vec<PublishedRepoFile>> {
         repo::list_published_repo_files_for_package(self, package_name).await
     }
 
-    async fn list_recent_published_repo_files(&self, limit: usize) -> anyhow::Result<Vec<PublishedRepoFile>> {
+    async fn list_recent_published_repo_files(
+        &self,
+        limit: usize,
+    ) -> anyhow::Result<Vec<PublishedRepoFile>> {
         repo::list_recent_published_repo_files(self, limit).await
     }
 
@@ -355,7 +435,10 @@ impl JobStore for DieselStore {
         user::get_user_by_handle(self, handle).await
     }
 
-    async fn get_user_auth_by_handle(&self, handle: &str) -> anyhow::Result<Option<UserAuthRecord>> {
+    async fn get_user_auth_by_handle(
+        &self,
+        handle: &str,
+    ) -> anyhow::Result<Option<UserAuthRecord>> {
         user::get_user_auth_by_handle(self, handle).await
     }
 
@@ -367,7 +450,15 @@ impl JobStore for DieselStore {
         active: bool,
         permissions: &[UserPermission],
     ) -> anyhow::Result<UserSummary> {
-        user::create_user(self, handle, display_name, password_hash, active, permissions).await
+        user::create_user(
+            self,
+            handle,
+            display_name,
+            password_hash,
+            active,
+            permissions,
+        )
+        .await
     }
 
     async fn update_user(
@@ -381,7 +472,11 @@ impl JobStore for DieselStore {
         user::update_user(self, user_id, handle, display_name, active, permissions).await
     }
 
-    async fn update_user_password(&self, user_id: Uuid, password_hash: &str) -> anyhow::Result<bool> {
+    async fn update_user_password(
+        &self,
+        user_id: Uuid,
+        password_hash: &str,
+    ) -> anyhow::Result<bool> {
         user::update_user_password(self, user_id, password_hash).await
     }
 
@@ -504,8 +599,18 @@ pub(crate) struct NewArtifactRecord {
 #[diesel(table_name = build_logs)]
 pub(crate) struct NewBuildLogRecord<'a> {
     pub(crate) job_id: &'a str,
+    pub(crate) source_path: &'a str,
     pub(crate) log_path: &'a str,
     pub(crate) updated_at: &'a str,
+}
+
+#[derive(Debug, Queryable, Selectable)]
+#[diesel(table_name = build_logs)]
+pub(crate) struct BuildLogRecord {
+    pub(crate) job_id: String,
+    pub(crate) source_path: String,
+    pub(crate) log_path: String,
+    pub(crate) updated_at: String,
 }
 
 #[derive(Debug, Queryable, Selectable)]
@@ -514,7 +619,6 @@ pub(crate) struct PublishedRepoFileRecord {
     pub(crate) job_id: String,
     pub(crate) package_name: String,
     pub(crate) mock_chroot: String,
-    pub(crate) arch: String,
     pub(crate) repo_path: String,
     pub(crate) sha256: String,
     pub(crate) size_bytes: i64,
@@ -528,7 +632,6 @@ pub(crate) struct NewPublishedRepoFileRecord {
     pub(crate) job_id: String,
     pub(crate) package_name: String,
     pub(crate) mock_chroot: String,
-    pub(crate) arch: String,
     pub(crate) repo_path: String,
     pub(crate) sha256: String,
     pub(crate) size_bytes: i64,
@@ -597,7 +700,7 @@ pub(crate) struct NewUserRepoMetricsRecord<'a> {
 }
 
 pub(crate) fn package_response_from_record(
-    conn: &mut SqliteConnection,
+    conn: &mut MysqlConnection,
     record: PackageRecord,
 ) -> anyhow::Result<PackageResponse> {
     let package = PackageDefinition {
@@ -628,7 +731,7 @@ pub(crate) fn package_response_from_record(
 }
 
 pub(crate) fn derive_package_state(
-    conn: &mut SqliteConnection,
+    conn: &mut MysqlConnection,
     package_name: &str,
 ) -> anyhow::Result<PackageRuntimeState> {
     let last_success = build_jobs::table
@@ -662,7 +765,7 @@ pub(crate) fn derive_package_state(
 }
 
 pub(crate) fn load_job_responses(
-    conn: &mut SqliteConnection,
+    conn: &mut MysqlConnection,
     rows: Vec<JobRecord>,
 ) -> anyhow::Result<Vec<BuildJobResponse>> {
     let artifacts = job::load_artifacts_map_for_rows(conn, rows.iter())?;
@@ -694,7 +797,11 @@ pub(crate) fn row_to_build_job(row: JobRecord) -> anyhow::Result<BuildJob> {
         worker_container_id: row.worker_container_id,
         created_at: parse_timestamp(&row.created_at)?,
         updated_at: parse_timestamp(&row.updated_at)?,
-        finished_at: row.finished_at.as_deref().map(parse_timestamp).transpose()?,
+        finished_at: row
+            .finished_at
+            .as_deref()
+            .map(parse_timestamp)
+            .transpose()?,
         error_message: row.error_message,
     })
 }
@@ -704,7 +811,7 @@ pub(crate) fn parse_timestamp(value: &str) -> anyhow::Result<OffsetDateTime> {
 }
 
 pub(crate) fn load_published_repo_files_for_job(
-    conn: &mut SqliteConnection,
+    conn: &mut MysqlConnection,
     job_id: &str,
 ) -> anyhow::Result<Vec<PublishedRepoFile>> {
     let rows = published_repo_files::table
@@ -712,7 +819,9 @@ pub(crate) fn load_published_repo_files_for_job(
         .order(published_repo_files::repo_path.asc())
         .select(PublishedRepoFileRecord::as_select())
         .load(conn)?;
-    rows.into_iter().map(published_repo_file_from_record).collect()
+    rows.into_iter()
+        .map(published_repo_file_from_record)
+        .collect()
 }
 
 pub(crate) fn published_repo_file_from_record(
@@ -722,7 +831,6 @@ pub(crate) fn published_repo_file_from_record(
         job_id: Uuid::parse_str(&row.job_id)?,
         package_name: row.package_name,
         mock_chroot: row.mock_chroot,
-        arch: row.arch,
         repo_path: PathBuf::from(row.repo_path),
         sha256: row.sha256,
         size_bytes: row.size_bytes.max(0) as u64,
@@ -746,7 +854,9 @@ pub(crate) fn user_from_record(
     })
 }
 
-pub(crate) fn user_metrics_from_record(row: UserRepoMetricsRecord) -> anyhow::Result<UserRepoMetrics> {
+pub(crate) fn user_metrics_from_record(
+    row: UserRepoMetricsRecord,
+) -> anyhow::Result<UserRepoMetrics> {
     Ok(UserRepoMetrics {
         user_id: Uuid::parse_str(&row.user_id)?,
         downloaded_bytes: row.downloaded_bytes.max(0) as u64,

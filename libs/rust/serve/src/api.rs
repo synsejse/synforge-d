@@ -1,17 +1,17 @@
 use std::path::{Component, PathBuf};
 
 use axum::extract::{Extension, Path, Query, State};
-use axum::http::{header, HeaderValue, StatusCode};
+use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
-use axum::{Json, Router};
 use axum::routing::{get, post};
+use axum::{Json, Router};
 use synforge_core::api::{
     BrowseRepositoryRequest, BrowseRepositoryResponse, BuildJobListResponse, BuildJobResponse,
     ChangePasswordRequest, ConfigSchemaResponse, CreatePackageRequest, CreateUserRequest,
     EffectiveConfigDto, JobListQuery, LogChunkQuery, LogChunkResponse, LogManifestResponse,
     LogMetaResponse, MockChrootListResponse, PackageBuildHistoryResponse, PackageListQuery,
-    PackageListResponse, PackageRepoFilesResponse, PackageResponse, RepoInventoryQuery,
-    PruneJobsResponse, RefreshRequest, RebuildRequest, RepoInventoryResponse, RepoSummaryResponse,
+    PackageListResponse, PackageRepoFilesResponse, PackageResponse, PruneJobsResponse,
+    RebuildRequest, RefreshRequest, RepoInventoryQuery, RepoInventoryResponse, RepoSummaryResponse,
     SessionLoginRequest, SessionResponse, SetupInitializeRequest, SetupStatusResponse,
     UpdatePackageRequest, UpdateRuntimeSettingsRequest, UpdateUserRequest, UserListResponse,
     UserMetricsResponse, UserResponse,
@@ -372,7 +372,9 @@ pub(crate) async fn get_session(
         (status = 200, description = "Get daemon setup status", body = SetupStatusResponse)
     )
 )]
-pub(crate) async fn get_setup_status(State(state): State<AppState>) -> Result<Json<SetupStatusResponse>, AppError> {
+pub(crate) async fn get_setup_status(
+    State(state): State<AppState>,
+) -> Result<Json<SetupStatusResponse>, AppError> {
     let initialized = synforge_core::config::DaemonConfig::load_from_file(&state.config_path)
         .map(|config| config.bootstrap_completed)
         .unwrap_or(false);
@@ -422,7 +424,11 @@ pub(crate) async fn login_session(
         create_session_cookie(
             user.id,
             state.service.config().session_secret.as_bytes(),
-            state.service.config().public_base_url.starts_with("https://"),
+            state
+                .service
+                .config()
+                .public_base_url
+                .starts_with("https://"),
         )?,
     );
     Ok(response)
@@ -440,7 +446,13 @@ pub(crate) async fn logout_session(State(state): State<AppState>) -> Result<Resp
     let mut response = StatusCode::NO_CONTENT.into_response();
     response.headers_mut().append(
         header::SET_COOKIE,
-        clear_session_cookie(state.service.config().public_base_url.starts_with("https://"))?,
+        clear_session_cookie(
+            state
+                .service
+                .config()
+                .public_base_url
+                .starts_with("https://"),
+        )?,
     );
     Ok(response)
 }
@@ -455,7 +467,9 @@ pub(crate) async fn logout_session(State(state): State<AppState>) -> Result<Resp
         (status = 401, body = synforge_core::api::ApiError)
     )
 )]
-pub(crate) async fn list_users(State(state): State<AppState>) -> Result<Json<UserListResponse>, AppError> {
+pub(crate) async fn list_users(
+    State(state): State<AppState>,
+) -> Result<Json<UserListResponse>, AppError> {
     Ok(Json(state.service.list_users().await?))
 }
 
@@ -686,10 +700,7 @@ pub(crate) async fn get_job_log_meta(
     Query(query): Query<LogChunkQuery>,
 ) -> Result<Json<LogMetaResponse>, AppError> {
     Ok(Json(
-        state
-            .service
-            .get_job_log_meta(id, query.source)
-            .await?,
+        state.service.get_job_log_meta(id, query.source).await?,
     ))
 }
 
@@ -722,7 +733,9 @@ pub(crate) async fn download_job_artifact(
     let file_name = artifact_path
         .file_name()
         .and_then(|value| value.to_str())
-        .ok_or_else(|| anyhow::anyhow!("artifact path {} has no filename", artifact_path.display()))?;
+        .ok_or_else(|| {
+            anyhow::anyhow!("artifact path {} has no filename", artifact_path.display())
+        })?;
 
     let mut headers = axum::http::HeaderMap::new();
     headers.insert(
@@ -734,7 +747,10 @@ pub(crate) async fn download_job_artifact(
         HeaderValue::from_str(&format!("attachment; filename=\"{}\"", file_name))?,
     );
 
-    Ok((headers, axum::body::Body::from_stream(ReaderStream::new(file))))
+    Ok((
+        headers,
+        axum::body::Body::from_stream(ReaderStream::new(file)),
+    ))
 }
 
 fn normalize_artifact_path(path: &str) -> anyhow::Result<String> {
@@ -744,9 +760,10 @@ fn normalize_artifact_path(path: &str) -> anyhow::Result<String> {
         anyhow::bail!("artifact path must not be empty");
     }
 
-    if normalized.components().any(|component| {
-        !matches!(component, Component::Normal(_))
-    }) {
+    if normalized
+        .components()
+        .any(|component| !matches!(component, Component::Normal(_)))
+    {
         anyhow::bail!("artifact path contains invalid components");
     }
 

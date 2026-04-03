@@ -45,7 +45,10 @@ impl WorkerTransportHandle {
         match self.read_message().await? {
             WorkerWireMessage::JobAssignment { payload } => Ok(payload),
             WorkerWireMessage::Error { message } => Err(anyhow::anyhow!(message)),
-            other => Err(anyhow::anyhow!("unexpected worker assignment message: {:?}", other)),
+            other => Err(anyhow::anyhow!(
+                "unexpected worker assignment message: {:?}",
+                other
+            )),
         }
     }
 
@@ -75,7 +78,8 @@ impl WorkerTransportHandle {
     }
 
     pub(crate) async fn send_result(&self, result: WorkerResult) -> anyhow::Result<()> {
-        self.send_message(WorkerWireMessage::Result { result }).await
+        self.send_message(WorkerWireMessage::Result { result })
+            .await
     }
 
     pub(crate) async fn send_heartbeat(&self) -> anyhow::Result<()> {
@@ -91,12 +95,9 @@ impl WorkerTransportHandle {
 
     async fn read_message(&self) -> anyhow::Result<WorkerWireMessage> {
         let mut framed = self.framed.lock().await;
-        let bytes = tokio::time::timeout(
-            self.socket_timeout,
-            framed.next(),
-        )
-        .await
-        .context("timed out waiting for worker socket message")?
+        let bytes = tokio::time::timeout(self.socket_timeout, framed.next())
+            .await
+            .context("timed out waiting for worker socket message")?
             .ok_or_else(|| anyhow::anyhow!("worker socket disconnected"))??;
         Ok(bincode::deserialize(&bytes)?)
     }

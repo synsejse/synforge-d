@@ -1,11 +1,14 @@
-use std::fs;
 use std::collections::HashSet;
+use std::fs;
 use std::path::Path;
 
 use anyhow::Context;
 use synforge_core::{
     config::DaemonConfig,
-    model::{format_timestamp, now_utc, ArtifactKind, BuildArtifact, BuildStatus, PublishedRepoFile, RepoPublication, WorkerBuildResult},
+    model::{
+        ArtifactKind, BuildArtifact, BuildStatus, PublishedRepoFile, RepoPublication,
+        WorkerBuildResult, format_timestamp, now_utc,
+    },
     package::PackageDefinition,
 };
 use tokio::process::Command;
@@ -15,10 +18,7 @@ use uuid::Uuid;
 pub struct FileRepoManager;
 
 impl FileRepoManager {
-    pub async fn ensure_repo(
-        &self,
-        config: &DaemonConfig,
-    ) -> anyhow::Result<()> {
+    pub async fn ensure_repo(&self, config: &DaemonConfig) -> anyhow::Result<()> {
         regenerate_metadata(config.runtime_paths().repo_dir()).await
     }
 
@@ -30,7 +30,9 @@ impl FileRepoManager {
     ) -> anyhow::Result<RepoPublication> {
         let paths = config.runtime_paths();
         if worker_result.status != BuildStatus::Succeeded {
-            return Err(anyhow::anyhow!("cannot publish artifacts for failed worker result"));
+            return Err(anyhow::anyhow!(
+                "cannot publish artifacts for failed worker result"
+            ));
         }
         let published_at = now_utc();
         let mut files = Vec::new();
@@ -43,10 +45,9 @@ impl FileRepoManager {
             tokio::fs::create_dir_all(&build_root)
                 .await
                 .with_context(|| format!("failed to create {}", build_root.display()))?;
-            let file_name = artifact
-                .path
-                .file_name()
-                .ok_or_else(|| anyhow::anyhow!("artifact path {} has no filename", artifact.path.display()))?;
+            let file_name = artifact.path.file_name().ok_or_else(|| {
+                anyhow::anyhow!("artifact path {} has no filename", artifact.path.display())
+            })?;
             let destination = build_root.join(file_name);
             let repo_path = destination
                 .strip_prefix(paths.repo_dir())
@@ -74,7 +75,6 @@ impl FileRepoManager {
                 job_id: worker_result.job_id,
                 package_name: package.name.clone(),
                 mock_chroot: artifact.mock_chroot.clone(),
-                arch: published_arch(package, artifact).to_string(),
                 repo_path,
                 sha256: artifact.sha256.clone(),
                 size_bytes: artifact.size_bytes,
@@ -104,7 +104,7 @@ impl FileRepoManager {
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
                 Err(error) => {
                     return Err(anyhow::Error::from(error))
-                        .context(format!("failed to remove {}", path.display()))
+                        .context(format!("failed to remove {}", path.display()));
                 }
             }
         }
@@ -127,22 +127,6 @@ fn build_repo_build_dir(
         .join(&artifact.mock_chroot)
         .join("builds")
         .join(job_id.to_string())
-}
-
-fn published_arch<'a>(
-    _package: &'a PackageDefinition,
-    artifact: &'a BuildArtifact,
-) -> &'a str {
-    let Some(filename) = artifact.path.file_name().and_then(|value| value.to_str()) else {
-        return artifact.arch.as_str();
-    };
-    if let Some(base) = filename.strip_suffix(".src.rpm") {
-        return base.rsplit('.').next().unwrap_or("src");
-    }
-    if let Some(base) = filename.strip_suffix(".rpm") {
-        return base.rsplit('.').next().unwrap_or(artifact.arch.as_str());
-    }
-    artifact.arch.as_str()
 }
 
 async fn regenerate_metadata(repo_dir: &Path) -> anyhow::Result<()> {

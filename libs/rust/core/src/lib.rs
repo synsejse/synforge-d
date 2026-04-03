@@ -3,9 +3,9 @@ pub mod config;
 pub mod error;
 pub mod model;
 pub mod package;
-#[path = "runtime_paths.rs"]
-pub mod runtime;
 #[path = "worker_protocol.rs"]
 pub mod protocol;
+#[path = "runtime_paths.rs"]
+pub mod runtime;
 pub mod validated;
 pub mod validation;

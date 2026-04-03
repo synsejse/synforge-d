@@ -34,8 +34,8 @@ where
 {
     pub async fn run_from_env(&self) -> anyhow::Result<WorkerResult> {
         let worker_id = env_required("SYNFORGE_WORKER_ID")?;
-        let connect_addr = env_string("SYNFORGE_WORKER_CONNECT_ADDR")
-            .unwrap_or_else(|| "daemon:8090".to_string());
+        let connect_addr =
+            env_string("SYNFORGE_WORKER_CONNECT_ADDR").unwrap_or_else(|| "daemon:8090".to_string());
         let socket_timeout = env_u64("SYNFORGE_WORKER_SOCKET_TIMEOUT_SECONDS").unwrap_or(30);
         let transport = WorkerTransportHandle::connect(
             &connect_addr,
@@ -72,7 +72,9 @@ where
         tokio::fs::create_dir_all(&payload.workspace_dir).await?;
         tokio::fs::create_dir_all(&payload.artifact_dir).await?;
         let local_result = match &payload.action {
-            WorkerAction::Parse(parse) => WorkerResult::Parse(spec::execute_spec_parse(&payload, parse).await?),
+            WorkerAction::Parse(parse) => {
+                WorkerResult::Parse(spec::execute_spec_parse(&payload, parse).await?)
+            }
             WorkerAction::Build(build) => {
                 build
                     .package

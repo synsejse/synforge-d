@@ -165,10 +165,12 @@ const themes = [
 
         <div
             id="setup-screen"
-            class="hidden min-h-full items-center justify-center px-6 py-12"
+            class="hidden min-h-full items-start justify-center px-6 py-6 lg:items-center lg:py-12"
         >
-            <div class="w-full max-w-3xl border border-zinc-800 bg-black p-8">
-                <div class="mb-8">
+            <div
+                class="flex max-h-[calc(100vh-3rem)] w-full max-w-3xl flex-col overflow-hidden border border-zinc-800 bg-black p-8"
+            >
+                <div class="mb-8 shrink-0">
                     <p
                         class="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500"
                     >
@@ -186,56 +188,58 @@ const themes = [
                     </p>
                 </div>
 
-                <form id="setup-form" class="grid gap-4 xl:grid-cols-2">
-                    <div id="setup-config-fields" class="contents"></div>
-                    <label class="block">
-                        <span
-                            class="mb-2 block text-sm font-medium text-zinc-300"
-                            >Admin handle</span
+                <form id="setup-form" class="min-h-0 overflow-y-auto pr-1">
+                    <div class="grid gap-4 xl:grid-cols-2">
+                        <div id="setup-config-fields" class="contents"></div>
+                        <label class="block">
+                            <span
+                                class="mb-2 block text-sm font-medium text-zinc-300"
+                                >Admin handle</span
+                            >
+                            <input
+                                id="setup-admin-handle"
+                                type="text"
+                                value="admin"
+                                class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
+                            />
+                        </label>
+                        <label class="block">
+                            <span
+                                class="mb-2 block text-sm font-medium text-zinc-300"
+                                >Admin display name</span
+                            >
+                            <input
+                                id="setup-admin-display-name"
+                                type="text"
+                                value="Administrator"
+                                class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
+                            />
+                        </label>
+                        <label class="block xl:col-span-2">
+                            <span
+                                class="mb-2 block text-sm font-medium text-zinc-300"
+                                >Admin password</span
+                            >
+                            <input
+                                id="setup-admin-password"
+                                type="password"
+                                class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
+                                placeholder="Choose a strong password"
+                            />
+                        </label>
+                        <p
+                            id="setup-error"
+                            class="hidden xl:col-span-2 border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-300"
                         >
-                        <input
-                            id="setup-admin-handle"
-                            type="text"
-                            value="admin"
-                            class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
-                        />
-                    </label>
-                    <label class="block">
-                        <span
-                            class="mb-2 block text-sm font-medium text-zinc-300"
-                            >Admin display name</span
-                        >
-                        <input
-                            id="setup-admin-display-name"
-                            type="text"
-                            value="Administrator"
-                            class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
-                        />
-                    </label>
-                    <label class="block xl:col-span-2">
-                        <span
-                            class="mb-2 block text-sm font-medium text-zinc-300"
-                            >Admin password</span
-                        >
-                        <input
-                            id="setup-admin-password"
-                            type="password"
-                            class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
-                            placeholder="Choose a strong password"
-                        />
-                    </label>
-                    <p
-                        id="setup-error"
-                        class="hidden xl:col-span-2 border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-300"
-                    >
-                    </p>
-                    <div class="xl:col-span-2 flex justify-end">
-                        <button
-                            type="submit"
-                            class="border border-zinc-200 bg-zinc-100 px-4 py-3 text-sm font-semibold text-black transition hover:bg-white"
-                        >
-                            Initialize Synforge
-                        </button>
+                        </p>
+                        <div class="xl:col-span-2 flex justify-end">
+                            <button
+                                type="submit"
+                                class="border border-zinc-200 bg-zinc-100 px-4 py-3 text-sm font-semibold text-black transition hover:bg-white"
+                            >
+                                Initialize Synforge
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>

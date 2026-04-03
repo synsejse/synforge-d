@@ -1,11 +1,11 @@
 use std::collections::BTreeMap;
-use std::sync::Arc;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Context;
+use bollard::Docker;
 use bollard::models::{ContainerCreateBody, HostConfig};
 use bollard::query_parameters::{CreateContainerOptionsBuilder, LogsOptionsBuilder};
-use bollard::Docker;
 use futures_util::StreamExt;
 use serde_json::Value;
 use synforge_core::{
@@ -16,9 +16,10 @@ use synforge_core::{
         LogChunkResponse, LogManifestResponse, LogMetaResponse, LogSource, LogSourceType,
         MockChrootListResponse, PackageBuildHistoryResponse, PackageBuildInventoryEntry,
         PackageListResponse, PackageRepoFilesResponse, PackageResponse, PageInfo,
-        PruneJobsResponse, RefreshRequest, RebuildRequest, RepoInventoryResponse, RepoSummaryResponse,
-        SessionResponse, SetupInitializeRequest, UpdatePackageRequest, UpdateRuntimeSettingsRequest,
-        UpdateUserRequest, UserListResponse, UserMetricsResponse, UserResponse,
+        PruneJobsResponse, RebuildRequest, RefreshRequest, RepoInventoryResponse,
+        RepoSummaryResponse, SessionResponse, SetupInitializeRequest, UpdatePackageRequest,
+        UpdateRuntimeSettingsRequest, UpdateUserRequest, UserListResponse, UserMetricsResponse,
+        UserResponse,
     },
     config::DaemonConfig,
     error::SynforgeError,
@@ -26,7 +27,7 @@ use synforge_core::{
     package::parse_mock_chroot,
 };
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
-use tokio::sync::{mpsc, watch, Semaphore};
+use tokio::sync::{Semaphore, mpsc, watch};
 use tokio_util::task::TaskTracker;
 use tracing::{error, warn};
 use uuid::Uuid;
@@ -35,13 +36,13 @@ use crate::auth::{hash_password, verify_password};
 use crate::db::{DieselStore, JobStore};
 use crate::job_lifecycle::JobLifecycle;
 use crate::packages::PackageSyncStore;
-use crate::repo_manager::FileRepoManager;
 use crate::registry::PackageRegistry;
+use crate::repo_manager::FileRepoManager;
 use crate::runner::BuildRunner;
 use crate::scheduler::BuildScheduler;
 use crate::sessions::WorkerSessionBroker;
-use crate::workers::DockerWorkerLauncher;
 use crate::worker_socket::start_worker_listener;
+use crate::workers::DockerWorkerLauncher;
 const DEFAULT_PAGE_SIZE: usize = 50;
 const MAX_PAGE_SIZE: usize = 200;
 const WORKER_LISTEN_ADDR: &str = "0.0.0.0:8090";
@@ -80,17 +81,28 @@ impl SynforgeService {
         Ok(())
     }
 
-    async fn resolve_job_log_path(&self, job_id: Uuid, source: &str) -> anyhow::Result<std::path::PathBuf> {
-        let paths = self.config.runtime_paths();
-        let logs_dir = paths.job_logs_dir(job_id);
-        let path = logs_dir.join(source);
+    async fn resolve_job_log_path(
+        &self,
+        job_id: Uuid,
+        source: &str,
+    ) -> anyhow::Result<std::path::PathBuf> {
+        let row = self
+            .store
+            .get_build_log_for_job_source(job_id, source)
+            .await?
+            .ok_or_else(|| {
+                anyhow::anyhow!(SynforgeError::NotFound(format!(
+                    "log source {} for job {}",
+                    source, job_id
+                )))
+            })?;
+        let path = PathBuf::from(row.log_path);
         if tokio::fs::try_exists(&path).await.unwrap_or(false) {
             return Ok(path);
         }
-        Err(anyhow::anyhow!(SynforgeError::NotFound(format!(
-            "log source {} for job {}",
-            source, job_id
-        ))))
+        Err(anyhow::anyhow!(SynforgeError::NotFound(
+            path.display().to_string()
+        )))
     }
 
     pub async fn resolve_job_artifact_path(
@@ -100,22 +112,28 @@ impl SynforgeService {
     ) -> anyhow::Result<PathBuf> {
         let job = self
             .store
-            .get_job(job_id).await?
+            .get_job(job_id)
+            .await?
             .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(job_id.to_string())))?;
         let artifact = job
             .artifacts
             .into_iter()
             .find(|artifact| artifact.relative_repo_path == PathBuf::from(relative_repo_path))
-            .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(relative_repo_path.to_string())))?;
+            .ok_or_else(|| {
+                anyhow::anyhow!(SynforgeError::NotFound(relative_repo_path.to_string()))
+            })?;
 
         let path = artifact.path;
         if !tokio::fs::try_exists(&path).await? {
-            return Err(anyhow::anyhow!(SynforgeError::NotFound(path.display().to_string())));
+            return Err(anyhow::anyhow!(SynforgeError::NotFound(
+                path.display().to_string()
+            )));
         }
 
-        let artifacts_root = tokio::fs::canonicalize(self.config.runtime_paths().job_artifacts_dir(job_id))
-            .await
-            .with_context(|| format!("failed to resolve job artifact root for {}", job_id))?;
+        let artifacts_root =
+            tokio::fs::canonicalize(self.config.runtime_paths().job_artifacts_dir(job_id))
+                .await
+                .with_context(|| format!("failed to resolve job artifact root for {}", job_id))?;
         let resolved_path = tokio::fs::canonicalize(&path)
             .await
             .with_context(|| format!("failed to resolve artifact path {}", path.display()))?;
@@ -132,7 +150,7 @@ impl SynforgeService {
 
     pub async fn new(config: DaemonConfig) -> anyhow::Result<Arc<Self>> {
         let paths = config.runtime_paths();
-        let store = DieselStore::new(paths.database_path(), config.db_pool_size).await?;
+        let store = DieselStore::new(&config.database_url, config.db_pool_size).await?;
         let sessions = WorkerSessionBroker::new(paths.jobs_root().to_path_buf());
         let repo_manager = Arc::new(FileRepoManager);
         let lifecycle = Arc::new(JobLifecycle::new(
@@ -140,7 +158,8 @@ impl SynforgeService {
             store.clone(),
             repo_manager.clone(),
         ));
-        let worker_launcher = Arc::new(DockerWorkerLauncher::new(sessions.clone(), lifecycle.clone()).await?);
+        let worker_launcher =
+            Arc::new(DockerWorkerLauncher::new(sessions.clone(), lifecycle.clone()).await?);
         Self::new_with_components(
             config,
             store,
@@ -205,6 +224,7 @@ impl SynforgeService {
         });
         start_worker_listener(
             WORKER_LISTEN_ADDR.to_string(),
+            service.store.clone(),
             service.sessions.clone(),
             service.task_tracker.clone(),
             shutdown_rx.clone(),
@@ -227,7 +247,7 @@ impl SynforgeService {
                 bootstrap_completed: current.bootstrap_completed,
                 listen_addr: current.listen_addr.clone(),
                 runtime_root: current.runtime_root.clone(),
-                database_path: paths.database_path().to_path_buf(),
+                database_url: current.database_url.clone(),
                 packages_dir: paths.packages_dir().to_path_buf(),
                 repo_dir: paths.repo_dir().to_path_buf(),
                 jobs_root: paths.jobs_root().to_path_buf(),
@@ -254,7 +274,10 @@ impl SynforgeService {
         Ok(self.effective_config().await)
     }
 
-    pub async fn initialize_setup(&self, request: SetupInitializeRequest) -> anyhow::Result<EffectiveConfigDto> {
+    pub async fn initialize_setup(
+        &self,
+        request: SetupInitializeRequest,
+    ) -> anyhow::Result<EffectiveConfigDto> {
         let current = DaemonConfig::load()?;
         if current.bootstrap_completed {
             anyhow::bail!("setup has already been completed");
@@ -292,7 +315,10 @@ impl SynforgeService {
     ) -> anyhow::Result<PackageListResponse> {
         let (limit, offset) = normalize_pagination(limit, offset);
         let total = self.store.count_packages(search.clone(), enabled).await?;
-        let packages = self.store.list_packages(limit, offset, search, enabled).await?;
+        let packages = self
+            .store
+            .list_packages(limit, offset, search, enabled)
+            .await?;
         Ok(PackageListResponse {
             page: build_page_info(limit, offset, total, packages.len()),
             packages,
@@ -313,7 +339,8 @@ impl SynforgeService {
             .store
             .list_published_repo_files_for_package(package_name)
             .await?;
-        let mut published_files_by_job = std::collections::HashMap::<Uuid, Vec<PublishedRepoFile>>::new();
+        let mut published_files_by_job =
+            std::collections::HashMap::<Uuid, Vec<PublishedRepoFile>>::new();
         for file in &published_files {
             published_files_by_job
                 .entry(file.job_id)
@@ -323,7 +350,9 @@ impl SynforgeService {
         let builds = jobs
             .into_iter()
             .map(|build| PackageBuildInventoryEntry {
-                repo_files: published_files_by_job.remove(&build.job.id).unwrap_or_default(),
+                repo_files: published_files_by_job
+                    .remove(&build.job.id)
+                    .unwrap_or_default(),
                 build,
             })
             .collect();
@@ -343,7 +372,7 @@ impl SynforgeService {
             repo_files: self
                 .store
                 .list_published_repo_files_for_package(package_name)
-            .await?,
+                .await?,
         })
     }
 
@@ -371,13 +400,17 @@ impl SynforgeService {
     }
 
     pub async fn get_repo_summary(&self) -> anyhow::Result<RepoSummaryResponse> {
-        let (package_count, target_count, build_count) = self.store.get_repo_distinct_counts().await?;
+        let (package_count, target_count, build_count) =
+            self.store.get_repo_distinct_counts().await?;
         Ok(RepoSummaryResponse {
             package_count,
             target_count,
             build_count,
             stored_bytes: self.store.sum_published_repo_file_bytes().await?,
-            published_file_count: self.store.count_published_repo_files(None, None, None).await?,
+            published_file_count: self
+                .store
+                .count_published_repo_files(None, None, None)
+                .await?,
             targets: self.store.list_repo_target_summaries().await?,
             recent_files: self.store.list_recent_published_repo_files(10).await?,
         })
@@ -441,7 +474,12 @@ impl SynforgeService {
         validate_display_name(&request.display_name)?;
         validate_password(&request.password)?;
         validate_permissions(&request.permissions)?;
-        if self.store.get_user_by_handle(&request.handle).await?.is_some() {
+        if self
+            .store
+            .get_user_by_handle(&request.handle)
+            .await?
+            .is_some()
+        {
             return Err(anyhow::anyhow!(SynforgeError::Conflict(format!(
                 "user handle {} already exists",
                 request.handle
@@ -484,7 +522,11 @@ impl SynforgeService {
                 display_name,
                 &password_hash,
                 true,
-                &[UserPermission::Read, UserPermission::Write, UserPermission::Repo],
+                &[
+                    UserPermission::Read,
+                    UserPermission::Write,
+                    UserPermission::Repo,
+                ],
             )
             .await?;
         Ok(UserResponse {
@@ -538,14 +580,18 @@ impl SynforgeService {
             .update_user_password(user_id, &password_hash)
             .await?;
         if !updated {
-            return Err(anyhow::anyhow!(SynforgeError::NotFound(user_id.to_string())));
+            return Err(anyhow::anyhow!(SynforgeError::NotFound(
+                user_id.to_string()
+            )));
         }
         Ok(())
     }
 
     pub async fn delete_user(&self, user_id: Uuid) -> anyhow::Result<UserResponse> {
         if self.store.get_user(user_id).await?.is_none() {
-            return Err(anyhow::anyhow!(SynforgeError::NotFound(user_id.to_string())));
+            return Err(anyhow::anyhow!(SynforgeError::NotFound(
+                user_id.to_string()
+            )));
         }
         let user_count = self.store.user_count().await?;
         if user_count <= 1 {
@@ -573,11 +619,20 @@ impl SynforgeService {
         })
     }
 
-    pub async fn increment_user_download_bytes(&self, user_id: Uuid, bytes: u64) -> anyhow::Result<()> {
-        self.store.increment_user_download_bytes(user_id, bytes).await
+    pub async fn increment_user_download_bytes(
+        &self,
+        user_id: Uuid,
+        bytes: u64,
+    ) -> anyhow::Result<()> {
+        self.store
+            .increment_user_download_bytes(user_id, bytes)
+            .await
     }
 
-    pub async fn resolve_repo_file_path(&self, relative_repo_path: &str) -> anyhow::Result<PathBuf> {
+    pub async fn resolve_repo_file_path(
+        &self,
+        relative_repo_path: &str,
+    ) -> anyhow::Result<PathBuf> {
         let requested = normalize_repo_path(relative_repo_path)?;
         let repo_root = self.config.runtime_paths().repo_dir().to_path_buf();
         let path = repo_root.join(&requested);
@@ -625,7 +680,10 @@ impl SynforgeService {
 
         let container_id = container.id;
         docker
-            .start_container(&container_id, None::<bollard::query_parameters::StartContainerOptions>)
+            .start_container(
+                &container_id,
+                None::<bollard::query_parameters::StartContainerOptions>,
+            )
             .await?;
 
         let mut stdout = String::new();
@@ -645,8 +703,10 @@ impl SynforgeService {
             stdout.push_str(&String::from_utf8_lossy(item?.into_bytes().as_ref()));
         }
 
-        let mut wait = docker
-            .wait_container(&container_id, None::<bollard::query_parameters::WaitContainerOptions>);
+        let mut wait = docker.wait_container(
+            &container_id,
+            None::<bollard::query_parameters::WaitContainerOptions>,
+        );
         while let Some(next) = wait.next().await {
             next?;
         }
@@ -687,7 +747,10 @@ impl SynforgeService {
                 BuildStatus::Pending | BuildStatus::Running
             )
         }) {
-            anyhow::bail!("cannot delete package {} while a job is pending or running", package_name);
+            anyhow::bail!(
+                "cannot delete package {} while a job is pending or running",
+                package_name
+            );
         }
         for job in jobs {
             self.delete_job(job.job.id).await?;
@@ -701,7 +764,12 @@ impl SynforgeService {
         _request: RefreshRequest,
     ) -> anyhow::Result<BuildJobResponse> {
         self.scheduler
-            .enqueue_package(package_name, BuildTrigger::ManualRefresh, false, &self.queue_tx)
+            .enqueue_package(
+                package_name,
+                BuildTrigger::ManualRefresh,
+                false,
+                &self.queue_tx,
+            )
             .await
     }
 
@@ -711,7 +779,12 @@ impl SynforgeService {
         _request: RebuildRequest,
     ) -> anyhow::Result<BuildJobResponse> {
         self.scheduler
-            .enqueue_package(package_name, BuildTrigger::ManualRebuild, true, &self.queue_tx)
+            .enqueue_package(
+                package_name,
+                BuildTrigger::ManualRebuild,
+                true,
+                &self.queue_tx,
+            )
             .await
     }
 
@@ -821,40 +894,18 @@ impl SynforgeService {
     }
 
     pub async fn get_job_log_manifest(&self, job_id: Uuid) -> anyhow::Result<LogManifestResponse> {
-        let paths = self.config.runtime_paths();
-        let logs_dir = paths.job_logs_dir(job_id);
-
         let mut sources = Vec::new();
+        let db_logs = self.store.list_build_logs_for_job(job_id).await?;
 
-        for (name, filename, source_type) in [("Worker Output", "worker.log", LogSourceType::Raw)] {
-            let log_path = logs_dir.join(filename);
-            if tokio::fs::try_exists(&log_path).await.unwrap_or(false) {
-                if let Ok(meta) = tokio::fs::metadata(&log_path).await {
-                    sources.push(LogSource {
-                        name: name.to_string(),
-                        path: filename.to_string(),
-                        size: meta.len(),
-                        source_type,
-                    });
-                }
-            }
-        }
-
-        for (name, filename) in [
-            ("Mock Root Log", "mock-root.log"),
-            ("Mock Build Log", "mock-build.log"),
-            ("Mock State Log", "mock-state.log"),
-        ] {
-            let log_path = logs_dir.join(filename);
-            if tokio::fs::try_exists(&log_path).await.unwrap_or(false) {
-                if let Ok(meta) = tokio::fs::metadata(&log_path).await {
-                    sources.push(LogSource {
-                        name: name.to_string(),
-                        path: filename.to_string(),
-                        size: meta.len(),
-                        source_type: LogSourceType::Raw,
-                    });
-                }
+        for row in db_logs {
+            let log_path = PathBuf::from(&row.log_path);
+            if let Ok(meta) = tokio::fs::metadata(&log_path).await {
+                sources.push(LogSource {
+                    name: row.source_path.clone(),
+                    path: row.source_path,
+                    size: meta.len(),
+                    source_type: LogSourceType::Raw,
+                });
             }
         }
 
@@ -863,7 +914,9 @@ impl SynforgeService {
 
     pub async fn delete_job(&self, job_id: Uuid) -> anyhow::Result<BuildJobResponse> {
         let published_files = self.store.list_published_repo_files_for_job(job_id).await?;
-        self.lifecycle.remove_published_files(&published_files).await?;
+        self.lifecycle
+            .remove_published_files(&published_files)
+            .await?;
         let deleted = self
             .store
             .delete_job(job_id)
@@ -874,10 +927,7 @@ impl SynforgeService {
     }
 
     pub async fn prune_failed_jobs(&self) -> anyhow::Result<PruneJobsResponse> {
-        let jobs = self
-            .store
-            .list_jobs(10_000, 0, None, None, None)
-            .await?;
+        let jobs = self.store.list_jobs(10_000, 0, None, None, None).await?;
         let mut deleted_jobs = Vec::new();
         for job in jobs {
             if matches!(job.job.status, BuildStatus::Failed | BuildStatus::TimedOut) {
@@ -948,8 +998,9 @@ impl SynforgeService {
     fn start_poller(self: &Arc<Self>, mut shutdown_rx: watch::Receiver<bool>) {
         let service = Arc::clone(self);
         self.task_tracker.spawn(async move {
-            let mut ticker =
-                tokio::time::interval(std::time::Duration::from_secs(service.config.poller_tick_seconds));
+            let mut ticker = tokio::time::interval(std::time::Duration::from_secs(
+                service.config.poller_tick_seconds,
+            ));
             loop {
                 tokio::select! {
                     _ = shutdown_rx.changed() => {
@@ -1023,7 +1074,7 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
             "Database",
             "db_pool_size",
             "DB pool size",
-            "Number of SQLite connection pool slots.",
+            "Number of database connection pool slots.",
             5,
             true,
             false,
@@ -1137,7 +1188,10 @@ fn apply_config_settings(
     allow_setup_only: bool,
 ) -> anyhow::Result<()> {
     for key in settings.keys() {
-        let Some(field) = editable_config_fields().into_iter().find(|field| field.key == *key) else {
+        let Some(field) = editable_config_fields()
+            .into_iter()
+            .find(|field| field.key == *key)
+        else {
             anyhow::bail!("unknown config setting: {key}");
         };
         if allow_setup_only {

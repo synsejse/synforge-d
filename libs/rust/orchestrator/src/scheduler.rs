@@ -1,3 +1,4 @@
+use std::hash::{Hash, Hasher};
 use std::time::{Duration, Instant};
 
 use dashmap::{DashMap, DashSet};
@@ -8,8 +9,8 @@ use uuid::Uuid;
 use synforge_core::{
     api::BuildJobResponse,
     error::SynforgeError,
-    model::{now_utc, BuildJob, BuildStatus, BuildTrigger},
-    package::{parse_mock_chroot, PackageDefinition, SpecRevision},
+    model::{BuildJob, BuildStatus, BuildTrigger, now_utc},
+    package::{PackageDefinition, SpecRevision, parse_mock_chroot},
 };
 
 use crate::db::{DieselStore, JobStore};
@@ -34,11 +35,39 @@ pub enum SchedulerError {
     PackageRenamed,
 }
 
+#[derive(Debug, Clone, Eq)]
+struct TargetKey {
+    package_name: String,
+    mock_chroot: String,
+}
+
+impl TargetKey {
+    fn new(package_name: &str, mock_chroot: &str) -> Self {
+        Self {
+            package_name: package_name.to_string(),
+            mock_chroot: mock_chroot.to_string(),
+        }
+    }
+}
+
+impl PartialEq for TargetKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.package_name == other.package_name && self.mock_chroot == other.mock_chroot
+    }
+}
+
+impl Hash for TargetKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.package_name.hash(state);
+        self.mock_chroot.hash(state);
+    }
+}
+
 #[derive(Clone)]
 pub struct BuildScheduler {
     store: DieselStore,
     registry: PackageRegistry,
-    scheduled_packages: DashSet<String>,
+    active_targets: DashSet<TargetKey>,
     last_polled_at: DashMap<String, Instant>,
 }
 
@@ -47,7 +76,7 @@ impl BuildScheduler {
         Self {
             store,
             registry,
-            scheduled_packages: DashSet::new(),
+            active_targets: DashSet::new(),
             last_polled_at: DashMap::new(),
         }
     }
@@ -99,11 +128,8 @@ impl BuildScheduler {
         queue_tx: &tokio::sync::mpsc::Sender<QueuedBuild>,
     ) -> anyhow::Result<BuildJobResponse> {
         let package = self.registry.get_definition(package_name).await?;
-        self.reserve(package_name)?;
 
-        let result = self
-            .prepare_queued_build(package, trigger, force)
-            .await;
+        let result = self.prepare_queued_build(package, trigger, force).await;
 
         match result {
             Ok((jobs, queued_builds)) => {
@@ -111,36 +137,43 @@ impl BuildScheduler {
                     .first()
                     .map(|job| job.id)
                     .ok_or_else(|| anyhow::anyhow!("no build jobs were created"))?;
+
+                // Mark all targets as active before inserting jobs
+                let mut reserved_targets = Vec::new();
+                for job in &jobs {
+                    let key = TargetKey::new(&job.package_name, &job.mock_chroot);
+                    self.active_targets.insert(key.clone());
+                    reserved_targets.push(key);
+                }
+
                 for job in &jobs {
                     self.store.insert_job(job).await?;
                 }
                 for queued in queued_builds {
                     if let Err(error) = queue_tx.send(queued).await {
-                        self.release(package_name);
+                        // Rollback: release all reserved targets
+                        for key in &reserved_targets {
+                            self.active_targets.remove(key);
+                        }
                         return Err(anyhow::anyhow!("failed to queue build: {}", error));
                     }
                 }
-                self.store
-                    .get_job(response_job_id)
-                    .await?
-                    .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(response_job_id.to_string())))
+                self.store.get_job(response_job_id).await?.ok_or_else(|| {
+                    anyhow::anyhow!(SynforgeError::NotFound(response_job_id.to_string()))
+                })
             }
-            Err(error) => {
-                self.release(package_name);
-                Err(error)
-            }
+            Err(error) => Err(error),
         }
     }
 
-    pub fn release(&self, package_name: &str) {
-        self.scheduled_packages.remove(package_name);
+    pub fn release_target(&self, package_name: &str, mock_chroot: &str) {
+        self.active_targets
+            .remove(&TargetKey::new(package_name, mock_chroot));
     }
 
-    fn reserve(&self, package_name: &str) -> anyhow::Result<()> {
-        if !self.scheduled_packages.insert(package_name.to_string()) {
-            return Err(SchedulerError::AlreadyQueued(package_name.to_string()).into());
-        }
-        Ok(())
+    fn target_is_active(&self, package_name: &str, mock_chroot: &str) -> bool {
+        self.active_targets
+            .contains(&TargetKey::new(package_name, mock_chroot))
     }
 
     async fn prepare_queued_build(
@@ -151,7 +184,11 @@ impl BuildScheduler {
     ) -> anyhow::Result<(Vec<BuildJob>, Vec<QueuedBuild>)> {
         let inspected = self
             .registry
-                    .inspect_source(&package.name, &package.source, package.build_timeout_seconds)
+            .inspect_source(
+                &package.name,
+                &package.source,
+                package.build_timeout_seconds,
+            )
             .await?;
         let revision_key = inspected.revision.comparison_key();
 
@@ -159,10 +196,12 @@ impl BuildScheduler {
         let mut queued_chroots = Vec::new();
         let mut blocked_by_active_job = false;
         for mock_chroot in &build_chroots {
-            if self
-                .store
-                .has_active_job_for_target(&package.name, mock_chroot)
-                .await?
+            // Check both in-memory (queued but not yet in DB) and DB (running)
+            if self.target_is_active(&package.name, mock_chroot)
+                || self
+                    .store
+                    .has_active_job_for_target(&package.name, mock_chroot)
+                    .await?
             {
                 blocked_by_active_job = true;
                 continue;

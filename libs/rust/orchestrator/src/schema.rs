@@ -52,8 +52,9 @@ diesel::table! {
 }
 
 diesel::table! {
-    build_logs (job_id) {
+    build_logs (job_id, source_path) {
         job_id -> Text,
+        source_path -> Text,
         log_path -> Text,
         updated_at -> Text,
     }
@@ -98,7 +99,6 @@ diesel::table! {
         job_id -> Text,
         package_name -> Text,
         mock_chroot -> Text,
-        arch -> Text,
         repo_path -> Text,
         sha256 -> Text,
         size_bytes -> BigInt,

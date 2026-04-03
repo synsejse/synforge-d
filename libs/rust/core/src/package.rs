@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::error::SynforgeError;
-use crate::validation::{BuildEnvVarValidator, PackageDefinitionValidator, SpecSourceValidator, Validator};
+use crate::validation::{
+    BuildEnvVarValidator, PackageDefinitionValidator, SpecSourceValidator, Validator,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct PackageDefinition {

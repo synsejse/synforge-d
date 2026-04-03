@@ -79,7 +79,10 @@ pub(crate) async fn git_rev_parse(repo_dir: &Path, rev: &str) -> anyhow::Result<
 pub(crate) async fn run_command(command: &mut Command) -> anyhow::Result<()> {
     let output = command.output().await?;
     if !output.status.success() {
-        anyhow::bail!("{}", String::from_utf8_lossy(&output.stderr).trim().to_string());
+        anyhow::bail!(
+            "{}",
+            String::from_utf8_lossy(&output.stderr).trim().to_string()
+        );
     }
     Ok(())
 }

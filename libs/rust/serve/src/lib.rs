@@ -1,11 +1,11 @@
 mod api;
 mod openapi;
 
-use std::sync::Arc;
 use std::path::PathBuf;
+use std::sync::Arc;
 
-use axum::extract::State;
 use axum::body::Body;
+use axum::extract::State;
 use axum::extract::{Extension, Path};
 use axum::http::header::{self, HeaderName, HeaderValue};
 use axum::http::{HeaderMap, Method, StatusCode};
@@ -24,8 +24,8 @@ use synforge_core::{
 };
 use synforge_orchestrator::SynforgeService;
 use time::{Duration, OffsetDateTime};
-use tower_http::trace::TraceLayer;
 use tokio_util::io::ReaderStream;
+use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use uuid::Uuid;
@@ -46,12 +46,13 @@ pub fn router(service: Arc<SynforgeService>) -> Router {
         service: Arc::clone(&service),
         config_path,
     };
-    let api = api::router(state.clone())
-        .with_state(state.clone())
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            authenticate_api_request,
-        ));
+    let api =
+        api::router(state.clone())
+            .with_state(state.clone())
+            .layer(middleware::from_fn_with_state(
+                state.clone(),
+                authenticate_api_request,
+            ));
     let docs = Router::new()
         .merge(SwaggerUi::new("/docs").url("/openapi.json", openapi::ApiDoc::openapi()))
         .with_state(state.clone())
@@ -164,7 +165,10 @@ async fn authenticate_session_headers(
 ) -> Result<UserAccount, AppError> {
     let cookie_value = find_cookie(headers, SESSION_COOKIE_NAME)
         .ok_or_else(|| AppError::auth("missing session cookie"))?;
-    let claims = decode_session_cookie(cookie_value, state.service.config().session_secret.as_bytes())?;
+    let claims = decode_session_cookie(
+        cookie_value,
+        state.service.config().session_secret.as_bytes(),
+    )?;
     state
         .service
         .authorize_user(claims.user_id, required)
@@ -289,9 +293,7 @@ pub(crate) fn create_session_cookie(
 }
 
 pub(crate) fn clear_session_cookie(secure: bool) -> Result<HeaderValue, AppError> {
-    let mut cookie = format!(
-        "{SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax"
-    );
+    let mut cookie = format!("{SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax");
     if secure {
         cookie.push_str("; Secure");
     }
@@ -301,10 +303,11 @@ pub(crate) fn clear_session_cookie(secure: bool) -> Result<HeaderValue, AppError
 fn encode_session_cookie(claims: &UiSessionClaims, secret: &[u8]) -> Result<String, AppError> {
     let payload = serde_json::to_vec(claims).map_err(AppError::from)?;
     let payload = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(payload);
-    let mut mac = HmacSha256::new_from_slice(secret)
-        .map_err(|_| AppError::auth("invalid session secret"))?;
+    let mut mac =
+        HmacSha256::new_from_slice(secret).map_err(|_| AppError::auth("invalid session secret"))?;
     mac.update(payload.as_bytes());
-    let signature = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes());
+    let signature =
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes());
     Ok(format!("{payload}.{signature}"))
 }
 
@@ -312,8 +315,8 @@ fn decode_session_cookie(cookie: &str, secret: &[u8]) -> Result<UiSessionClaims,
     let (payload, signature) = cookie
         .split_once('.')
         .ok_or_else(|| AppError::auth("invalid session cookie"))?;
-    let mut mac = HmacSha256::new_from_slice(secret)
-        .map_err(|_| AppError::auth("invalid session secret"))?;
+    let mut mac =
+        HmacSha256::new_from_slice(secret).map_err(|_| AppError::auth("invalid session secret"))?;
     mac.update(payload.as_bytes());
     let signature = base64::engine::general_purpose::URL_SAFE_NO_PAD
         .decode(signature)

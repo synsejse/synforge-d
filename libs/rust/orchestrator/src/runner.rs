@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use synforge_core::{config::DaemonConfig, model::{WorkerAction, WorkerBuildPayload, WorkerJobPayload}};
+use synforge_core::{
+    config::DaemonConfig,
+    model::{WorkerAction, WorkerBuildPayload, WorkerJobPayload},
+};
 use tracing::instrument;
 
 use crate::job_lifecycle::JobLifecycle;
@@ -33,8 +36,9 @@ impl BuildRunner {
     #[instrument(skip(self, build), fields(job_id = %build.job_id, package = %build.package.name, mock_chroot = %build.mock_chroot))]
     pub async fn process_build(&self, build: QueuedBuild) -> anyhow::Result<()> {
         let package_name = build.package.name.clone();
+        let mock_chroot = build.mock_chroot.clone();
         let result = self.process_build_inner(build).await;
-        self.scheduler.release(&package_name);
+        self.scheduler.release_target(&package_name, &mock_chroot);
         result
     }
 

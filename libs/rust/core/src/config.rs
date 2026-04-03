@@ -13,6 +13,11 @@ fn default_runtime_root() -> PathBuf {
     PathBuf::from("/var/lib/synforge")
 }
 
+fn default_database_url() -> String {
+    std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "mysql://synforge:synforge_dev@localhost:3306/synforge".to_string())
+}
+
 fn default_max_concurrent_builds() -> usize {
     2
 }
@@ -59,6 +64,8 @@ pub struct DaemonConfig {
     pub listen_addr: String,
     #[serde(default = "default_runtime_root")]
     pub runtime_root: PathBuf,
+    #[serde(default = "default_database_url")]
+    pub database_url: String,
     #[serde(default = "default_worker_image")]
     pub worker_image: String,
     #[serde(default = "default_session_secret")]
@@ -88,6 +95,7 @@ impl Default for DaemonConfig {
         Self {
             listen_addr: default_listen_addr(),
             runtime_root: default_runtime_root(),
+            database_url: default_database_url(),
             worker_image: default_worker_image(),
             session_secret: default_session_secret(),
             bootstrap_completed: default_bootstrap_completed(),
@@ -156,10 +164,14 @@ impl DaemonConfig {
 
     pub fn validate(&self) -> Result<(), SynforgeError> {
         if self.listen_addr.trim().is_empty() {
-            return Err(SynforgeError::Config("listen_addr must not be empty".to_string()));
+            return Err(SynforgeError::Config(
+                "listen_addr must not be empty".to_string(),
+            ));
         }
         if self.runtime_root.as_os_str().is_empty() {
-            return Err(SynforgeError::Config("runtime_root must not be empty".to_string()));
+            return Err(SynforgeError::Config(
+                "runtime_root must not be empty".to_string(),
+            ));
         }
         if self.max_concurrent_builds == 0 {
             return Err(SynforgeError::Config(
@@ -211,7 +223,7 @@ impl DaemonConfig {
 
     pub fn runtime_paths(&self) -> RuntimePaths {
         RuntimePaths::new(
-            self.runtime_root.join("metadata/database/state.db"),
+            self.runtime_root.join("metadata"),
             self.runtime_root.join("metadata/packages"),
             self.runtime_root.join("metadata/repo/fedora"),
             self.runtime_root.join("jobs"),

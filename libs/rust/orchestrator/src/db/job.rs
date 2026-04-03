@@ -103,11 +103,10 @@ pub(super) async fn finish_job(
     error_message: Option<&str>,
     artifacts: &[BuildArtifact],
     published_files: &[PublishedRepoFile],
-    logs_path: Option<&Path>,
+    _logs_dir: Option<&Path>,
 ) -> anyhow::Result<()> {
     let job_id = job_id.to_string();
     let error_message = error_message.map(ToOwned::to_owned);
-    let logs_path = logs_path.map(Path::to_path_buf);
     let artifacts = artifacts.to_vec();
     let published_files = published_files.to_vec();
     store
@@ -128,8 +127,10 @@ pub(super) async fn finish_job(
                     ))
                     .execute(conn)?;
 
-                diesel::delete(build_artifacts::table.filter(build_artifacts::job_id.eq(job_id.as_str())))
-                    .execute(conn)?;
+                diesel::delete(
+                    build_artifacts::table.filter(build_artifacts::job_id.eq(job_id.as_str())),
+                )
+                .execute(conn)?;
 
                 if !artifacts.is_empty() {
                     let rows = artifacts
@@ -140,7 +141,10 @@ pub(super) async fn finish_job(
                             mock_chroot: job_row.mock_chroot.clone(),
                             arch: artifact.arch.clone(),
                             path: artifact.path.to_string_lossy().to_string(),
-                            relative_repo_path: artifact.relative_repo_path.to_string_lossy().to_string(),
+                            relative_repo_path: artifact
+                                .relative_repo_path
+                                .to_string_lossy()
+                                .to_string(),
                             sha256: artifact.sha256.clone(),
                             size_bytes: artifact.size_bytes as i64,
                             kind: artifact.kind,
@@ -151,26 +155,9 @@ pub(super) async fn finish_job(
                         .execute(conn)?;
                 }
 
-                if let Some(logs_path) = &logs_path {
-                    let log_path = logs_path.to_string_lossy().to_string();
-                    let log_row = NewBuildLogRecord {
-                        job_id: job_id.as_str(),
-                        log_path: log_path.as_str(),
-                        updated_at: now.as_str(),
-                    };
-                    diesel::insert_into(build_logs::table)
-                        .values(&log_row)
-                        .on_conflict(build_logs::job_id)
-                        .do_update()
-                        .set((
-                            build_logs::log_path.eq(log_path.as_str()),
-                            build_logs::updated_at.eq(now.as_str()),
-                        ))
-                        .execute(conn)?;
-                }
-
                 diesel::delete(
-                    published_repo_files::table.filter(published_repo_files::job_id.eq(job_id.as_str())),
+                    published_repo_files::table
+                        .filter(published_repo_files::job_id.eq(job_id.as_str())),
                 )
                 .execute(conn)?;
 
@@ -181,7 +168,6 @@ pub(super) async fn finish_job(
                             job_id: job_id.clone(),
                             package_name: file.package_name.clone(),
                             mock_chroot: file.mock_chroot.clone(),
-                            arch: file.arch.clone(),
                             repo_path: file.repo_path.to_string_lossy().to_string(),
                             sha256: file.sha256.clone(),
                             size_bytes: file.size_bytes as i64,
@@ -197,6 +183,81 @@ pub(super) async fn finish_job(
                 Ok(())
             })?;
             Ok(())
+        })
+        .await
+}
+
+pub(super) async fn upsert_build_log(
+    store: &DieselStore,
+    job_id: Uuid,
+    source_path: &str,
+    log_path: &Path,
+) -> anyhow::Result<()> {
+    let job_id = job_id.to_string();
+    let source_path = source_path.to_string();
+    let log_path = log_path.to_string_lossy().to_string();
+    let updated_at = format_timestamp(now_utc());
+    store
+        .with_connection(move |conn| {
+            let existing = build_logs::table
+                .find((job_id.as_str(), source_path.as_str()))
+                .select(BuildLogRecord::as_select())
+                .first(conn)
+                .optional()?;
+
+            if existing.is_some() {
+                diesel::update(build_logs::table.find((job_id.as_str(), source_path.as_str())))
+                    .set((
+                        build_logs::log_path.eq(log_path.as_str()),
+                        build_logs::updated_at.eq(updated_at.as_str()),
+                    ))
+                    .execute(conn)?;
+            } else {
+                let row = NewBuildLogRecord {
+                    job_id: job_id.as_str(),
+                    source_path: source_path.as_str(),
+                    log_path: log_path.as_str(),
+                    updated_at: updated_at.as_str(),
+                };
+                diesel::insert_into(build_logs::table)
+                    .values(&row)
+                    .execute(conn)?;
+            }
+            Ok(())
+        })
+        .await
+}
+
+pub(super) async fn list_build_logs_for_job(
+    store: &DieselStore,
+    job_id: Uuid,
+) -> anyhow::Result<Vec<BuildLogRecord>> {
+    let job_id = job_id.to_string();
+    store
+        .with_connection(move |conn| {
+            Ok(build_logs::table
+                .filter(build_logs::job_id.eq(job_id.as_str()))
+                .order(build_logs::source_path.asc())
+                .select(BuildLogRecord::as_select())
+                .load(conn)?)
+        })
+        .await
+}
+
+pub(super) async fn get_build_log_for_job_source(
+    store: &DieselStore,
+    job_id: Uuid,
+    source_path: &str,
+) -> anyhow::Result<Option<BuildLogRecord>> {
+    let job_id = job_id.to_string();
+    let source_path = source_path.to_string();
+    store
+        .with_connection(move |conn| {
+            Ok(build_logs::table
+                .find((job_id.as_str(), source_path.as_str()))
+                .select(BuildLogRecord::as_select())
+                .first(conn)
+                .optional()?)
         })
         .await
 }
@@ -319,17 +380,23 @@ pub(super) async fn delete_job(
                 return Ok(None);
             };
             let response = build_job_response_from_row(row, &artifacts)?;
-            if matches!(response.job.status, BuildStatus::Pending | BuildStatus::Running) {
+            if matches!(
+                response.job.status,
+                BuildStatus::Pending | BuildStatus::Running
+            ) {
                 return Err(anyhow::anyhow!("cannot delete a pending or running job"));
             }
 
             conn.transaction::<(), anyhow::Error, _>(|conn| {
-                diesel::delete(build_artifacts::table.filter(build_artifacts::job_id.eq(job_id.as_str())))
-                    .execute(conn)?;
+                diesel::delete(
+                    build_artifacts::table.filter(build_artifacts::job_id.eq(job_id.as_str())),
+                )
+                .execute(conn)?;
                 diesel::delete(build_logs::table.filter(build_logs::job_id.eq(job_id.as_str())))
                     .execute(conn)?;
                 diesel::delete(
-                    published_repo_files::table.filter(published_repo_files::job_id.eq(job_id.as_str())),
+                    published_repo_files::table
+                        .filter(published_repo_files::job_id.eq(job_id.as_str())),
                 )
                 .execute(conn)?;
                 diesel::delete(build_jobs::table.find(job_id.as_str())).execute(conn)?;
@@ -377,16 +444,19 @@ pub(super) async fn list_prunable_successful_job_ids(
                 .filter(build_jobs::mock_chroot.eq(mock_chroot.as_str()))
                 .filter(build_jobs::status.eq(BuildStatus::Succeeded))
                 .order(build_jobs::finished_at.desc())
+                .limit(i64::MAX)
                 .offset(keep as i64)
                 .select(build_jobs::id)
                 .load::<String>(conn)?;
-            rows.into_iter().map(|id| Ok(Uuid::parse_str(&id)?)).collect()
+            rows.into_iter()
+                .map(|id| Ok(Uuid::parse_str(&id)?))
+                .collect()
         })
         .await
 }
 
 pub(super) fn load_artifacts_map_for_rows<'a>(
-    conn: &mut SqliteConnection,
+    conn: &mut MysqlConnection,
     rows: impl IntoIterator<Item = &'a JobRecord>,
 ) -> anyhow::Result<HashMap<Uuid, Vec<BuildArtifact>>> {
     let job_ids = rows
@@ -397,7 +467,7 @@ pub(super) fn load_artifacts_map_for_rows<'a>(
 }
 
 fn load_artifacts_map_for_job_ids(
-    conn: &mut SqliteConnection,
+    conn: &mut MysqlConnection,
     job_ids: &[Uuid],
 ) -> anyhow::Result<HashMap<Uuid, Vec<BuildArtifact>>> {
     if job_ids.is_empty() {

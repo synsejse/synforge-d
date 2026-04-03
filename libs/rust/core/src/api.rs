@@ -1,13 +1,13 @@
 use std::collections::BTreeMap;
 
-use serde_json::Value;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     model::{
-        BuildArtifact, BuildJob, PackageRuntimeState, PublishedRepoFile, UserAccount, UserPermission,
-        UserRepoMetrics,
+        BuildArtifact, BuildJob, PackageRuntimeState, PublishedRepoFile, UserAccount,
+        UserPermission, UserRepoMetrics,
     },
     package::{BuildEnvVar, PackageDefinition, SpecSource},
 };
@@ -293,8 +293,7 @@ pub struct EffectiveConfigView {
     pub listen_addr: String,
     #[schema(value_type = String)]
     pub runtime_root: std::path::PathBuf,
-    #[schema(value_type = String)]
-    pub database_path: std::path::PathBuf,
+    pub database_url: String,
     #[schema(value_type = String)]
     pub packages_dir: std::path::PathBuf,
     #[schema(value_type = String)]

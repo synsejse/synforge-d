@@ -1,19 +1,21 @@
 use anyhow::Context;
 use bytes::Bytes;
 use futures_util::{SinkExt, StreamExt};
+use std::collections::HashMap;
 use synforge_core::{model::ArtifactKind, protocol::WorkerWireMessage};
 use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
-use std::collections::HashMap;
 use tokio::sync::watch;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 use tokio_util::task::TaskTracker;
 use tracing::{error, warn};
 
+use crate::db::{DieselStore, JobStore};
 use crate::sessions::WorkerSessionBroker;
 
 pub fn start_worker_listener(
     listen_addr: String,
+    store: DieselStore,
     sessions: WorkerSessionBroker,
     task_tracker: TaskTracker,
     mut shutdown_rx: watch::Receiver<bool>,
@@ -34,10 +36,11 @@ pub fn start_worker_listener(
                 }
                 accepted = listener.accept() => match accepted {
                 Ok((stream, peer)) => {
+                    let store = store.clone();
                     let sessions = sessions.clone();
                     let task_tracker = task_tracker.clone();
                     task_tracker.spawn(async move {
-                        if let Err(error) = handle_connection(stream, sessions).await {
+                        if let Err(error) = handle_connection(stream, store, sessions).await {
                             warn!("worker socket {} failed: {}", peer, error);
                         }
                     });
@@ -49,7 +52,11 @@ pub fn start_worker_listener(
     });
 }
 
-async fn handle_connection(stream: TcpStream, sessions: WorkerSessionBroker) -> anyhow::Result<()> {
+async fn handle_connection(
+    stream: TcpStream,
+    store: DieselStore,
+    sessions: WorkerSessionBroker,
+) -> anyhow::Result<()> {
     let mut framed = Framed::new(stream, LengthDelimitedCodec::new());
     let hello = read_message(&mut framed).await?;
     let WorkerWireMessage::Hello { worker_id } = hello else {
@@ -58,11 +65,7 @@ async fn handle_connection(stream: TcpStream, sessions: WorkerSessionBroker) -> 
 
     let (job_id, payload) = sessions.connect_worker(&worker_id).await?;
 
-    write_message(
-        &mut framed,
-        &WorkerWireMessage::JobAssignment { payload },
-    )
-    .await?;
+    write_message(&mut framed, &WorkerWireMessage::JobAssignment { payload }).await?;
 
     let mut current_artifact: Option<ActiveArtifactUpload> = None;
     let mut log_files: HashMap<String, tokio::fs::File> = HashMap::new();
@@ -75,8 +78,8 @@ async fn handle_connection(stream: TcpStream, sessions: WorkerSessionBroker) -> 
                 if let Some(parent) = upload_path.parent() {
                     tokio::fs::create_dir_all(parent).await?;
                 }
-                let file = if let Some(file) = log_files.get_mut(&path) {
-                    file
+                let created = if log_files.contains_key(&path) {
+                    false
                 } else {
                     let file = tokio::fs::OpenOptions::new()
                         .create(true)
@@ -84,8 +87,23 @@ async fn handle_connection(stream: TcpStream, sessions: WorkerSessionBroker) -> 
                         .open(&upload_path)
                         .await
                         .with_context(|| format!("failed to open {}", upload_path.display()))?;
-                    log_files.entry(path.clone()).or_insert(file)
+                    log_files.insert(path.clone(), file);
+                    true
                 };
+                if created {
+                    store
+                        .upsert_build_log(job_id, &path, &upload_path)
+                        .await
+                        .with_context(|| {
+                            format!(
+                                "failed to register log source {} for job {}",
+                                path, job_id
+                            )
+                        })?;
+                }
+                let file = log_files
+                    .get_mut(&path)
+                    .ok_or_else(|| anyhow::anyhow!("log file handle disappeared for {}", path))?;
                 file.write_all(&bytes).await?;
                 file.flush().await?;
             }
@@ -127,8 +145,7 @@ async fn handle_connection(stream: TcpStream, sessions: WorkerSessionBroker) -> 
             WorkerWireMessage::Error { message } => {
                 anyhow::bail!("worker reported error: {}", message);
             }
-            WorkerWireMessage::Hello { .. }
-            | WorkerWireMessage::JobAssignment { .. } => {
+            WorkerWireMessage::Hello { .. } | WorkerWireMessage::JobAssignment { .. } => {
                 anyhow::bail!("unexpected worker message");
             }
         }

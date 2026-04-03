@@ -6,15 +6,17 @@ use async_trait::async_trait;
 use glob::glob;
 use sha2::{Digest, Sha256};
 use synforge_core::{
-    model::{ArtifactKind, BuildArtifact, BuildStatus, WorkerBuildPayload, WorkerBuildResult, WorkerJobPayload},
+    model::{
+        ArtifactKind, BuildArtifact, BuildStatus, WorkerBuildPayload, WorkerBuildResult,
+        WorkerJobPayload,
+    },
     package::{BuildEnvVar, PackageDefinition},
 };
 use tokio::process::Command;
 
 use crate::git::clone_repository;
 use crate::logging::{
-    command_exists, log_best_effort, run_logged_command, run_mock_command,
-    BuildLogger,
+    BuildLogger, command_exists, log_best_effort, run_logged_command, run_mock_command,
 };
 use crate::meson::{apply_spec_compat_fixes, rewrite_meson_rust_wraps};
 use crate::protocol::WorkerTransportHandle;
@@ -63,14 +65,15 @@ async fn execute_spec_build(
     )
     .await?;
     let spec_path = repo_dir.join(&package.source.spec_path);
-    let package_dir = spec_path
-        .parent()
-        .map(Path::to_path_buf)
-        .ok_or_else(|| anyhow::anyhow!("spec path {} has no parent directory", spec_path.display()))?;
+    let package_dir = spec_path.parent().map(Path::to_path_buf).ok_or_else(|| {
+        anyhow::anyhow!("spec path {} has no parent directory", spec_path.display())
+    })?;
     let build = async {
         logger.section("Prepare build workspace").await?;
         logger.line(format!("Package: {}", package.name)).await?;
-        logger.line(format!("Spec path: {}", spec_path.display())).await?;
+        logger
+            .line(format!("Spec path: {}", spec_path.display()))
+            .await?;
         logger
             .line(format!("Repository: {}", package.source.repo_url))
             .await?;
@@ -120,7 +123,12 @@ async fn execute_spec_build(
         anyhow::Ok(artifacts)
     };
 
-    match tokio::time::timeout(std::time::Duration::from_secs(payload.timeout_seconds), build).await {
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(payload.timeout_seconds),
+        build,
+    )
+    .await
+    {
         Ok(Ok(artifacts)) => {
             logger.section("Build completed").await?;
             logger.line("Build finished successfully").await?;
@@ -136,8 +144,13 @@ async fn execute_spec_build(
         Ok(Err(error)) => {
             let message = error.to_string();
             log_best_effort(&logger, "Build failed", &message).await;
-            let (artifacts, artifact_message) =
-                collect_artifacts_after_failure(package, &topdir, &build_payload.mock_chroot, &logger).await;
+            let (artifacts, artifact_message) = collect_artifacts_after_failure(
+                package,
+                &topdir,
+                &build_payload.mock_chroot,
+                &logger,
+            )
+            .await;
             Ok(WorkerBuildResult {
                 job_id: payload.job_id,
                 package_name: package.name.clone(),
@@ -149,15 +162,23 @@ async fn execute_spec_build(
         }
         Err(_) => {
             log_best_effort(&logger, "Build timed out", "build timed out").await;
-            let (artifacts, artifact_message) =
-                collect_artifacts_after_failure(package, &topdir, &build_payload.mock_chroot, &logger).await;
+            let (artifacts, artifact_message) = collect_artifacts_after_failure(
+                package,
+                &topdir,
+                &build_payload.mock_chroot,
+                &logger,
+            )
+            .await;
             Ok(WorkerBuildResult {
                 job_id: payload.job_id,
                 package_name: package.name.clone(),
                 status: BuildStatus::TimedOut,
                 artifacts,
                 logs_path: None,
-                message: Some(combine_messages("build timed out".to_string(), artifact_message)),
+                message: Some(combine_messages(
+                    "build timed out".to_string(),
+                    artifact_message,
+                )),
             })
         }
     }
@@ -165,7 +186,9 @@ async fn execute_spec_build(
 
 async fn prepare_build_tooling(logger: &BuildLogger) -> anyhow::Result<()> {
     if !command_exists("mock").await {
-        logger.line("mock is not available in this worker image").await?;
+        logger
+            .line("mock is not available in this worker image")
+            .await?;
         return Ok(());
     }
     logger.line("mock is available").await?;
@@ -178,7 +201,9 @@ async fn fetch_spec_sources(
     logger: &BuildLogger,
 ) -> anyhow::Result<()> {
     if !command_exists("spectool").await {
-        logger.line("Skipping source fetch: spectool not available").await?;
+        logger
+            .line("Skipping source fetch: spectool not available")
+            .await?;
         return Ok(());
     }
 
@@ -324,7 +349,9 @@ async fn collect_success_artifacts(
     mock_chroot: &str,
 ) -> anyhow::Result<Vec<BuildArtifact>> {
     let mut artifacts = collect_artifacts(package, mock_topdir, mock_chroot).await?;
-    let has_srpm = artifacts.iter().any(|artifact| artifact.kind == ArtifactKind::Srpm);
+    let has_srpm = artifacts
+        .iter()
+        .any(|artifact| artifact.kind == ArtifactKind::Srpm);
     if !has_srpm {
         let mut source_artifacts = collect_artifacts(package, source_topdir, mock_chroot)
             .await

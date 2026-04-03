@@ -5,7 +5,6 @@ use uuid::Uuid;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuntimePaths {
     metadata_root: PathBuf,
-    database_path: PathBuf,
     packages_dir: PathBuf,
     repo_dir: PathBuf,
     jobs_root: PathBuf,
@@ -13,20 +12,13 @@ pub struct RuntimePaths {
 
 impl RuntimePaths {
     pub fn new(
-        database_path: PathBuf,
+        metadata_root: PathBuf,
         packages_dir: PathBuf,
         repo_dir: PathBuf,
         jobs_root: PathBuf,
     ) -> Self {
-        let metadata_root = database_path
-            .parent()
-            .and_then(Path::parent)
-            .map(Path::to_path_buf)
-            .unwrap_or_else(|| PathBuf::from("/var/lib/synforge/metadata"));
-
         Self {
             metadata_root,
-            database_path,
             packages_dir,
             repo_dir,
             jobs_root,
@@ -35,10 +27,6 @@ impl RuntimePaths {
 
     pub fn metadata_root(&self) -> &Path {
         &self.metadata_root
-    }
-
-    pub fn database_path(&self) -> &Path {
-        &self.database_path
     }
 
     pub fn packages_dir(&self) -> &Path {

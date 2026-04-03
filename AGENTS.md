@@ -5,7 +5,7 @@
 This repository is a mixed Rust and web workspace for `synforge-d`, a Docker-backed Fedora package build orchestrator.
 
 - `libs/rust/core`: shared models, config, API types, runtime paths, and worker protocol
-- `libs/rust/orchestrator`: SQLite-backed orchestration, scheduling, repo publication, and migrations
+- `libs/rust/orchestrator`: MariaDB-backed orchestration, scheduling, repo publication, and migrations
 - `libs/rust/serve`: Axum API and static repository serving
 - `libs/rust/worker`: reusable worker runtime code
 - `apps/rust/daemon`, `apps/rust/worker`, `apps/rust/webui`: binary entry points

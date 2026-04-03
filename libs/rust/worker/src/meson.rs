@@ -92,7 +92,10 @@ pub(crate) async fn rewrite_meson_rust_wraps(
     Ok(())
 }
 
-pub(crate) fn rewrite_wrap_contents(contents: &str, directory_name: &str) -> anyhow::Result<String> {
+pub(crate) fn rewrite_wrap_contents(
+    contents: &str,
+    directory_name: &str,
+) -> anyhow::Result<String> {
     let mut ini = Ini::load_from_str(contents)
         .map_err(|error| anyhow::anyhow!("failed to parse Meson wrap file: {}", error))?;
     let sections = ini
@@ -119,7 +122,10 @@ pub(crate) fn rewrite_wrap_contents(contents: &str, directory_name: &str) -> any
     Ok(String::from_utf8(rendered)?)
 }
 
-fn find_registry_directory<'a>(registry_entries: &'a [String], crate_prefix: &str) -> Option<&'a str> {
+fn find_registry_directory<'a>(
+    registry_entries: &'a [String],
+    crate_prefix: &str,
+) -> Option<&'a str> {
     let prefix = format!("{crate_prefix}.");
     registry_entries
         .iter()

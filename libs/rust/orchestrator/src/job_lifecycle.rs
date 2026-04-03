@@ -1,7 +1,11 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use synforge_core::{config::DaemonConfig, model::{BuildStatus, PublishedRepoFile, WorkerResult}, package::PackageDefinition};
+use synforge_core::{
+    config::DaemonConfig,
+    model::{BuildStatus, PublishedRepoFile, WorkerResult},
+    package::PackageDefinition,
+};
 use tracing::warn;
 use uuid::Uuid;
 
@@ -37,7 +41,12 @@ impl JobLifecycle {
             .with_context(|| format!("failed to persist running state for {}", job_id))
     }
 
-    pub async fn fail_launch(&self, build: &QueuedBuild, error_message: &str) -> anyhow::Result<()> {
+    pub async fn fail_launch(
+        &self,
+        build: &QueuedBuild,
+        error_message: &str,
+    ) -> anyhow::Result<()> {
+        let logs_dir = self.config.runtime_paths().job_logs_dir(build.job_id);
         self.store
             .finish_job(
                 build.job_id,
@@ -45,7 +54,7 @@ impl JobLifecycle {
                 Some(error_message),
                 &[],
                 &[],
-                None,
+                Some(&logs_dir),
             )
             .await
             .context("failed to persist failed build result")
@@ -57,7 +66,10 @@ impl JobLifecycle {
         execution: WorkerExecution,
     ) -> anyhow::Result<()> {
         let WorkerResult::Build(build_result) = execution.result else {
-            anyhow::bail!("worker returned parse result for build job {}", build.job_id);
+            anyhow::bail!(
+                "worker returned parse result for build job {}",
+                build.job_id
+            );
         };
 
         let mut status = build_result.status;
@@ -85,12 +97,19 @@ impl JobLifecycle {
                 error_message.as_deref(),
                 &build_result.artifacts,
                 &published_files,
-                build_result.logs_path.as_deref().or(execution.logs_path.as_deref()),
+                build_result
+                    .logs_path
+                    .as_deref()
+                    .or(execution.logs_path.as_deref())
+                    .and_then(|path| path.parent()),
             )
             .await?;
 
         if status == BuildStatus::Succeeded {
-            if let Err(error) = self.prune_old_build_history(&build.package, &build.mock_chroot).await {
+            if let Err(error) = self
+                .prune_old_build_history(&build.package, &build.mock_chroot)
+                .await
+            {
                 warn!(
                     "failed to prune old build history for {} {}: {}",
                     build.package.name, build.mock_chroot, error
@@ -105,7 +124,9 @@ impl JobLifecycle {
         if files.is_empty() {
             return Ok(());
         }
-        self.repo_manager.remove_build_files(files, &self.config).await
+        self.repo_manager
+            .remove_build_files(files, &self.config)
+            .await
     }
 
     pub async fn remove_job_runtime(&self, job_id: Uuid) -> anyhow::Result<()> {

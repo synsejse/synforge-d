@@ -113,7 +113,6 @@ export interface PublishedRepoFile {
   job_id: string;
   package_name: string;
   mock_chroot: string;
-  arch: string;
   repo_path: string;
   sha256: string;
   size_bytes: number;
@@ -218,7 +217,7 @@ export interface DaemonConfig {
   bootstrap_completed: boolean;
   listen_addr: string;
   runtime_root: string;
-  database_path: string;
+  database_url: string;
   packages_dir: string;
   repo_dir: string;
   jobs_root: string;

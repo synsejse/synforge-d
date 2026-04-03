@@ -1,3 +1,2 @@
--- SQLite does not support dropping columns directly.
--- This migration is intentionally irreversible.
-select 1;
+alter table packages
+    drop column network_access;

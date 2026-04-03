@@ -3,11 +3,14 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
+use bollard::Docker;
 use bollard::models::{ContainerCreateBody, HostConfig};
 use bollard::query_parameters::CreateContainerOptionsBuilder;
-use bollard::Docker;
 use futures_util::StreamExt;
-use synforge_core::{config::DaemonConfig, model::{WorkerJobPayload, WorkerResult}};
+use synforge_core::{
+    config::DaemonConfig,
+    model::{WorkerJobPayload, WorkerResult},
+};
 use tracing::warn;
 
 use crate::job_lifecycle::JobLifecycle;
@@ -28,7 +31,10 @@ pub struct DockerWorkerLauncher {
 }
 
 impl DockerWorkerLauncher {
-    pub async fn new(sessions: WorkerSessionBroker, lifecycle: Arc<JobLifecycle>) -> anyhow::Result<Self> {
+    pub async fn new(
+        sessions: WorkerSessionBroker,
+        lifecycle: Arc<JobLifecycle>,
+    ) -> anyhow::Result<Self> {
         let docker = Docker::connect_with_local_defaults()?;
         let network_mode = detect_daemon_network(&docker).await;
         Ok(Self {
@@ -63,11 +69,7 @@ impl DockerWorkerLauncher {
                 ),
                 ContainerCreateBody {
                     image: Some(config.worker_image.clone()),
-                    env: Some(worker_env(
-                        payload,
-                        config,
-                        &session.worker_id,
-                    )),
+                    env: Some(worker_env(payload, config, &session.worker_id)),
                     host_config: Some(HostConfig {
                         auto_remove: Some(true),
                         privileged: Some(true),
@@ -87,14 +89,20 @@ impl DockerWorkerLauncher {
             .set_container_id(payload.job_id, container_id.clone())
             .await;
         self.docker
-            .start_container(&container_id, None::<bollard::query_parameters::StartContainerOptions>)
+            .start_container(
+                &container_id,
+                None::<bollard::query_parameters::StartContainerOptions>,
+            )
             .await
             .with_context(|| format!("failed to start worker container {}", container_id))?;
-        self.lifecycle.mark_running(payload.job_id, &container_id).await?;
+        self.lifecycle
+            .mark_running(payload.job_id, &container_id)
+            .await?;
 
-        let mut wait = self
-            .docker
-            .wait_container(&container_id, None::<bollard::query_parameters::WaitContainerOptions>);
+        let mut wait = self.docker.wait_container(
+            &container_id,
+            None::<bollard::query_parameters::WaitContainerOptions>,
+        );
         while let Some(next) = wait.next().await {
             next?;
         }
@@ -106,7 +114,12 @@ impl DockerWorkerLauncher {
                 Duration::from_secs(config.worker_result_timeout_seconds),
             )
             .await?
-            .ok_or_else(|| anyhow::anyhow!("worker {} exited without uploading a result", payload.job_id))?;
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "worker {} exited without uploading a result",
+                    payload.job_id
+                )
+            })?;
 
         self.sessions.remove_session(payload.job_id);
 
@@ -138,11 +151,7 @@ impl DockerWorkerLauncher {
     }
 }
 
-fn worker_env(
-    payload: &WorkerJobPayload,
-    config: &DaemonConfig,
-    worker_id: &str,
-) -> Vec<String> {
+fn worker_env(payload: &WorkerJobPayload, config: &DaemonConfig, worker_id: &str) -> Vec<String> {
     vec![
         format!("SYNFORGE_WORKER_ID={worker_id}"),
         format!("SYNFORGE_WORKER_CONNECT_ADDR={}:8090", daemon_hostname()),
@@ -174,7 +183,9 @@ async fn detect_daemon_network(docker: &Docker) -> Option<String> {
     let networks = inspect.network_settings?.networks?;
     networks
         .keys()
-        .find(|name| name.as_str() != "bridge" && name.as_str() != "host" && name.as_str() != "none")
+        .find(|name| {
+            name.as_str() != "bridge" && name.as_str() != "host" && name.as_str() != "none"
+        })
         .cloned()
         .or_else(|| networks.keys().next().cloned())
 }

@@ -969,6 +969,8 @@ impl SynforgeService {
 fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
     vec![
         config_string_field(
+            "server",
+            "Server",
             "listen_addr",
             "Listen address",
             "Daemon HTTP listen address.",
@@ -977,6 +979,8 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
             false,
         ),
         config_string_field(
+            "storage",
+            "Storage",
             "runtime_root",
             "Runtime root",
             "Root directory for database, package metadata, repo files, and jobs.",
@@ -985,6 +989,8 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
             false,
         ),
         config_string_field(
+            "server",
+            "Server",
             "public_base_url",
             "Public base URL",
             "Base URL used in generated links and repo setup.",
@@ -993,6 +999,8 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
             true,
         ),
         config_string_field(
+            "worker",
+            "Worker",
             "worker_image",
             "Worker image",
             "Docker image used for spawned worker containers.",
@@ -1001,6 +1009,8 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
             true,
         ),
         config_number_field(
+            "build",
+            "Build",
             "max_concurrent_builds",
             "Max concurrent builds",
             "Maximum number of active builds at once.",
@@ -1009,6 +1019,8 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
             true,
         ),
         config_number_field(
+            "database",
+            "Database",
             "db_pool_size",
             "DB pool size",
             "Number of SQLite connection pool slots.",
@@ -1017,6 +1029,8 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
             false,
         ),
         config_number_field(
+            "scheduler",
+            "Scheduler",
             "queue_buffer_size",
             "Queue buffer size",
             "In-memory queued build channel capacity.",
@@ -1025,6 +1039,8 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
             true,
         ),
         config_number_field(
+            "scheduler",
+            "Scheduler",
             "poller_tick_seconds",
             "Poller tick seconds",
             "How often package polling wakes up.",
@@ -1033,6 +1049,8 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
             true,
         ),
         config_number_field(
+            "worker",
+            "Worker",
             "worker_result_timeout_seconds",
             "Worker result timeout seconds",
             "Timeout while waiting for worker completion after request dispatch.",
@@ -1041,6 +1059,8 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
             true,
         ),
         config_number_field(
+            "worker",
+            "Worker",
             "worker_socket_timeout_seconds",
             "Worker socket timeout seconds",
             "Socket timeout used for worker protocol I/O.",
@@ -1049,6 +1069,8 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
             true,
         ),
         config_number_field(
+            "git",
+            "Git",
             "git_operation_timeout_seconds",
             "Git operation timeout seconds",
             "Timeout applied to git inspection and sync commands.",
@@ -1060,6 +1082,8 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
 }
 
 fn config_string_field(
+    section_key: &str,
+    section_label: &str,
     key: &str,
     label: &str,
     description: &str,
@@ -1071,6 +1095,8 @@ fn config_string_field(
         key: key.to_string(),
         label: label.to_string(),
         description: description.to_string(),
+        section_key: section_key.to_string(),
+        section_label: section_label.to_string(),
         field_type: ConfigFieldType::String,
         required: true,
         min_value: None,
@@ -1081,6 +1107,8 @@ fn config_string_field(
 }
 
 fn config_number_field(
+    section_key: &str,
+    section_label: &str,
     key: &str,
     label: &str,
     description: &str,
@@ -1092,6 +1120,8 @@ fn config_number_field(
         key: key.to_string(),
         label: label.to_string(),
         description: description.to_string(),
+        section_key: section_key.to_string(),
+        section_label: section_label.to_string(),
         field_type: ConfigFieldType::Number,
         required: true,
         min_value: Some(1),

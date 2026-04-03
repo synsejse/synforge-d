@@ -23,7 +23,7 @@ export default function Settings() {
         ]);
         setConfig(configRes.config);
         setSchema(schemaRes.fields);
-        setValues(buildFieldValues(configRes.config, schemaRes.fields, true));
+        setValues(buildFieldValues(configRes.config, schemaRes.fields, false));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load config");
       } finally {
@@ -43,7 +43,7 @@ export default function Settings() {
         settings: buildSettingsPayload(runtimeFields, values),
       });
       setConfig(res.config);
-      setValues(buildFieldValues(res.config, schema, true));
+      setValues(buildFieldValues(res.config, schema, false));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update settings");
@@ -64,44 +64,7 @@ export default function Settings() {
     );
   }
 
-  const sections = [
-    {
-      title: "File-backed Server",
-      items: [
-        { label: "Config path", value: config.config_path },
-        {
-          label: "Bootstrap complete",
-          value: config.bootstrap_completed ? "Yes" : "No",
-        },
-        { label: "Listen address", value: config.listen_addr },
-      ],
-    },
-    {
-      title: "Storage",
-      items: [
-        { label: "Runtime root", value: config.runtime_root },
-        { label: "Database path", value: config.database_path },
-        { label: "Package metadata", value: config.packages_dir },
-        { label: "Fedora repo root", value: config.repo_dir },
-        { label: "Jobs root", value: config.jobs_root },
-      ],
-    },
-    {
-      title: "Worker",
-      items: [{ label: "Worker image", value: config.worker_image }],
-    },
-    {
-      title: "Build settings",
-      items: [
-        {
-          label: "Max concurrent builds",
-          value: String(config.max_concurrent_builds),
-        },
-        { label: "Package polling", value: "Configured per package" },
-        { label: "Build timeout", value: "Configured per package" },
-      ],
-    },
-  ];
+  const groupedFields = groupConfigFields(schema);
 
   return (
     <div className="space-y-8">
@@ -123,32 +86,54 @@ export default function Settings() {
           </p>
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-2">
-          {schema
-            .filter((field) => field.editable_in_runtime)
-            .map((field) => (
-              <label key={field.key} className="block">
-                <span className="mb-2 block text-sm font-medium text-zinc-300">
-                  {field.label}
-                </span>
-                <input
-                  type={field.type === "number" ? "number" : "text"}
-                  min={field.min_value}
-                  value={values[field.key] || ""}
-                  onChange={(event) =>
-                    setValues((current) => ({
-                      ...current,
-                      [field.key]: event.target.value,
-                    }))
-                  }
-                  className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
-                  required={field.required}
-                />
-                <span className="mt-2 block text-xs text-zinc-500">
-                  {field.description}
-                </span>
-              </label>
-            ))}
+        <div className="space-y-6">
+          {groupedFields.map((section) => {
+            const runtimeFields = section.fields.filter(
+              (field) => field.editable_in_runtime,
+            );
+            const readOnlyFields = section.fields.filter(
+              (field) => !field.editable_in_runtime,
+            );
+
+            if (runtimeFields.length === 0 && readOnlyFields.length === 0) {
+              return null;
+            }
+
+            return (
+              <section
+                key={section.key}
+                className="border border-zinc-800 bg-black p-5"
+              >
+                <h3 className="text-lg font-semibold text-white">
+                  {section.label}
+                </h3>
+                <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                  {runtimeFields.map((field) => (
+                    <ConfigFieldInput
+                      key={field.key}
+                      field={field}
+                      value={values[field.key] || ""}
+                      onChange={(next) =>
+                        setValues((current) => ({
+                          ...current,
+                          [field.key]: next,
+                        }))
+                      }
+                    />
+                  ))}
+                  {readOnlyFields.map((field) => (
+                    <ConfigFieldInput
+                      key={field.key}
+                      field={field}
+                      value={values[field.key] || ""}
+                      onChange={() => undefined}
+                      disabled
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
           <div className="flex items-end xl:col-span-2">
             <button
               type="submit"
@@ -161,36 +146,58 @@ export default function Settings() {
           </div>
         </div>
       </form>
-
-      <div className="grid gap-5 xl:grid-cols-2">
-        {sections.map((section) => (
-          <section
-            key={section.title}
-            className="border border-zinc-800 bg-black p-6"
-          >
-            <h2 className="text-xl font-semibold text-white">
-              {section.title}
-            </h2>
-            <dl className="mt-5 space-y-3">
-              {section.items.map((item) => (
-                <div
-                  key={item.label}
-                  className="flex flex-col gap-2 border border-zinc-800 bg-black px-4 py-3"
-                >
-                  <dt className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-                    {item.label}
-                  </dt>
-                  <dd className="break-all font-mono text-sm text-zinc-200">
-                    {item.value}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-        ))}
-      </div>
     </div>
   );
+}
+
+function ConfigFieldInput({
+  field,
+  value,
+  onChange,
+  disabled = false,
+}: {
+  field: ConfigFieldDescriptor;
+  value: string;
+  onChange: (next: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-medium text-zinc-300">
+        {field.label}
+      </span>
+      <input
+        type={field.type === "number" ? "number" : "text"}
+        min={field.min_value}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600 disabled:text-zinc-500 disabled:opacity-80"
+        required={field.required}
+        disabled={disabled}
+      />
+      <span className="mt-2 block text-xs text-zinc-500">
+        {field.description}
+      </span>
+    </label>
+  );
+}
+
+function groupConfigFields(schema: ConfigFieldDescriptor[]) {
+  const groups = new Map<
+    string,
+    { key: string; label: string; fields: ConfigFieldDescriptor[] }
+  >();
+  for (const field of schema) {
+    if (!groups.has(field.section_key)) {
+      groups.set(field.section_key, {
+        key: field.section_key,
+        label: field.section_label,
+        fields: [],
+      });
+    }
+    groups.get(field.section_key)?.fields.push(field);
+  }
+  return Array.from(groups.values());
 }
 
 function buildFieldValues(

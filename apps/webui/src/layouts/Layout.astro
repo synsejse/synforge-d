@@ -485,9 +485,22 @@ const themes = [
                     return;
                 }
                 setupConfigFields.innerHTML = "";
-                fields
-                    .filter((field) => field.editable_in_setup)
-                    .forEach((field) => {
+                const sections = groupConfigFields(
+                    fields.filter((field) => field.editable_in_setup),
+                );
+                sections.forEach((section) => {
+                    const container = document.createElement("section");
+                    container.className =
+                        "xl:col-span-2 border border-zinc-800 bg-black p-5";
+
+                    const heading = document.createElement("h2");
+                    heading.className = "text-lg font-semibold text-white";
+                    heading.textContent = section.label;
+
+                    const grid = document.createElement("div");
+                    grid.className = "mt-4 grid gap-4 xl:grid-cols-2";
+
+                    section.fields.forEach((field) => {
                         const label = document.createElement("label");
                         label.className = "block";
 
@@ -515,8 +528,28 @@ const themes = [
                         label.appendChild(title);
                         label.appendChild(input);
                         label.appendChild(help);
-                        setupConfigFields.appendChild(label);
+                        grid.appendChild(label);
                     });
+
+                    container.appendChild(heading);
+                    container.appendChild(grid);
+                    setupConfigFields.appendChild(container);
+                });
+            }
+
+            function groupConfigFields(fields) {
+                const groups = new Map();
+                fields.forEach((field) => {
+                    if (!groups.has(field.section_key)) {
+                        groups.set(field.section_key, {
+                            key: field.section_key,
+                            label: field.section_label,
+                            fields: [],
+                        });
+                    }
+                    groups.get(field.section_key).fields.push(field);
+                });
+                return Array.from(groups.values());
             }
 
             async function restoreSession() {

@@ -243,6 +243,8 @@ export interface ConfigFieldDescriptor {
   key: string;
   label: string;
   description: string;
+  section_key: string;
+  section_label: string;
   type: ConfigFieldType;
   required: boolean;
   min_value?: number;

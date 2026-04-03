@@ -335,6 +335,8 @@ pub struct ConfigFieldDescriptor {
     pub key: String,
     pub label: String,
     pub description: String,
+    pub section_key: String,
+    pub section_label: String,
     #[serde(rename = "type")]
     pub field_type: ConfigFieldType,
     pub required: bool,

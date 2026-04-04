@@ -750,6 +750,34 @@ export default function PackageDetail({ packageName }: Props) {
             value={pkg.state.active_job_id || "None"}
           />
           <DetailStat label="Spec Path" value={pkg.package.spec_path} mono />
+          <div className="border border-zinc-800 bg-black px-4 py-3">
+            <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+              Target State
+            </div>
+            <div className="mt-3 space-y-3">
+              {pkg.state.targets.map((target) => (
+                <div
+                  key={target.mock_chroot}
+                  className="flex flex-col gap-2 border border-zinc-800 bg-zinc-950/60 px-3 py-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-mono text-sm text-zinc-100">
+                      {target.mock_chroot}
+                    </span>
+                    <StatusPill
+                      status={
+                        target.active_status ||
+                        (target.last_successful_build_id ? "succeeded" : "idle")
+                      }
+                    />
+                  </div>
+                  <div className="text-xs text-zinc-500">
+                    {target.last_revision || "No successful revision yet"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </aside>
       </section>
 

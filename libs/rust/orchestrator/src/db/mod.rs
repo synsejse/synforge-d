@@ -16,7 +16,8 @@ use synforge_core::{
     api::{BuildJobResponse, PackageResponse, RepoTargetSummary},
     model::{
         ArtifactKind, BuildArtifact, BuildJob, BuildStatus, BuildTrigger, PackageRuntimeState,
-        PublishedRepoFile, UserAccount, UserPermission, UserRepoMetrics, UserSummary,
+        PackageTargetRuntimeState, PublishedRepoFile, UserAccount, UserPermission,
+        UserRepoMetrics, UserSummary,
         format_timestamp, now_utc,
     },
     package::{BuildEnvVar, PackageDefinition, SpecSource},
@@ -700,13 +701,14 @@ pub(crate) fn package_response_from_record(
         version: record.version,
         release: record.release,
     };
-    let state = derive_package_state(conn, &record.name)?;
+    let state = derive_package_state(conn, &record.name, &package.mock_chroots)?;
     Ok(PackageResponse { package, state })
 }
 
 pub(crate) fn derive_package_state(
     conn: &mut MysqlConnection,
     package_name: &str,
+    mock_chroots: &[String],
 ) -> anyhow::Result<PackageRuntimeState> {
     let last_success = build_jobs::table
         .filter(build_jobs::package_name.eq(package_name))
@@ -728,6 +730,45 @@ pub(crate) fn derive_package_state(
         .first::<String>(conn)
         .optional()?;
 
+    let mut targets = Vec::with_capacity(mock_chroots.len());
+    for mock_chroot in mock_chroots {
+        let last_success = build_jobs::table
+            .filter(build_jobs::package_name.eq(package_name))
+            .filter(build_jobs::mock_chroot.eq(mock_chroot))
+            .filter(build_jobs::status.eq(BuildStatus::Succeeded))
+            .order(build_jobs::finished_at.desc())
+            .select((build_jobs::id, build_jobs::revision))
+            .first::<(String, String)>(conn)
+            .optional()?;
+
+        let active_job = build_jobs::table
+            .filter(build_jobs::package_name.eq(package_name))
+            .filter(build_jobs::mock_chroot.eq(mock_chroot))
+            .filter(
+                build_jobs::status
+                    .eq(BuildStatus::Pending)
+                    .or(build_jobs::status.eq(BuildStatus::Running)),
+            )
+            .order(build_jobs::created_at.desc())
+            .select((build_jobs::id, build_jobs::status))
+            .first::<(String, BuildStatus)>(conn)
+            .optional()?;
+
+        targets.push(PackageTargetRuntimeState {
+            mock_chroot: mock_chroot.clone(),
+            last_revision: last_success.as_ref().map(|(_, revision)| revision.clone()),
+            last_successful_build_id: last_success
+                .as_ref()
+                .map(|(id, _)| Uuid::parse_str(id))
+                .transpose()?,
+            active_job_id: active_job
+                .as_ref()
+                .map(|(id, _)| Uuid::parse_str(id))
+                .transpose()?,
+            active_status: active_job.as_ref().map(|(_, status)| *status),
+        });
+    }
+
     Ok(PackageRuntimeState {
         last_revision: last_success.as_ref().map(|(_, revision)| revision.clone()),
         last_successful_build_id: last_success
@@ -735,6 +776,7 @@ pub(crate) fn derive_package_state(
             .map(|(id, _)| Uuid::parse_str(id))
             .transpose()?,
         active_job_id: active_job.as_deref().map(Uuid::parse_str).transpose()?,
+        targets,
     })
 }
 

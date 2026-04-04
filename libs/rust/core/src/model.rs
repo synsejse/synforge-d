@@ -214,10 +214,20 @@ pub struct UserSummary {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct PackageTargetRuntimeState {
+    pub mock_chroot: String,
+    pub last_revision: Option<String>,
+    pub last_successful_build_id: Option<Uuid>,
+    pub active_job_id: Option<Uuid>,
+    pub active_status: Option<BuildStatus>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct PackageRuntimeState {
     pub last_revision: Option<String>,
     pub last_successful_build_id: Option<Uuid>,
     pub active_job_id: Option<Uuid>,
+    pub targets: Vec<PackageTargetRuntimeState>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

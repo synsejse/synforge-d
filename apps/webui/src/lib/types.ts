@@ -33,6 +33,15 @@ export interface PackageState {
   last_revision: string | null;
   last_successful_build_id: string | null;
   active_job_id: string | null;
+  targets: PackageTargetState[];
+}
+
+export interface PackageTargetState {
+  mock_chroot: string;
+  last_revision: string | null;
+  last_successful_build_id: string | null;
+  active_job_id: string | null;
+  active_status: BuildStatus | null;
 }
 
 export interface PackageResponse {

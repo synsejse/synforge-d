@@ -50,6 +50,16 @@ function targetStatus(target: PackageTargetState) {
   return target.last_successful_build_id ? "succeeded" : "disabled";
 }
 
+function compactRevision(revision: string | null) {
+  if (!revision) {
+    return "No successful revision";
+  }
+  if (revision.length <= 44) {
+    return revision;
+  }
+  return `${revision.slice(0, 20)}...${revision.slice(-16)}`;
+}
+
 export default function PackageList() {
   const [packages, setPackages] = useState<PackageResponse[]>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -220,152 +230,150 @@ export default function PackageList() {
           No packages configured yet. Add a spec source to start building.
         </EmptyState>
       ) : (
-        <div className="overflow-x-auto border border-zinc-800 bg-black">
-          <table className="min-w-[1220px] w-full">
-            <caption className="sr-only">
-              Configured packages with version, target, repository source,
-              current state, and available actions.
-            </caption>
-            <thead className="bg-zinc-950 text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
-              <tr>
-                <th scope="col" className="px-4 py-3">
-                  Package
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Version
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Target
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Repository
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Spec file
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Last revision
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Status
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/8">
-              {packages.map((entry) => {
-                const status = summarizePackageStatus(entry);
-                return (
-                  <tr key={entry.package.name} className="hover:bg-zinc-950">
-                    <td className="px-4 py-3">
-                      <div className="min-w-[180px] space-y-1">
+        <div className="space-y-4">
+          {packages.map((entry) => {
+            const status = summarizePackageStatus(entry);
+            return (
+              <article
+                key={entry.package.name}
+                className="border border-zinc-800 bg-black"
+              >
+                <div className="flex flex-col gap-5 border-b border-zinc-800 px-5 py-5 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="min-w-0 flex-1 space-y-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0">
                         <a
                           href={`/packages/view/?name=${encodeURIComponent(entry.package.name)}`}
-                          className="font-medium text-white transition hover:text-zinc-300"
+                          className="text-lg font-semibold text-white transition hover:text-zinc-300"
                         >
                           {entry.package.name}
                         </a>
-                        <div className="max-w-[260px] text-xs text-zinc-500">
+                        <div className="mt-1 max-w-3xl text-sm text-zinc-500">
                           {entry.package.description || "No description"}
                         </div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-zinc-300">
-                      {entry.package.version}-{entry.package.release}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-zinc-400">
-                      {formatMockChroots(entry.package.mock_chroots)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="max-w-[280px] break-all font-mono text-sm text-zinc-300">
-                        {entry.package.source.repo_url}
+                      <div className="flex items-center gap-3">
+                        <StatusPill status={status} />
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="max-w-[220px] break-all font-mono text-sm text-zinc-300">
-                        {entry.package.source.spec_path}
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                      <div className="border border-zinc-800 bg-zinc-950/40 px-4 py-3">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                          Version
+                        </div>
+                        <div className="mt-2 text-sm text-zinc-200">
+                          {entry.package.version}-{entry.package.release}
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="space-y-2">
-                        <div className="max-w-[220px] break-all font-mono text-sm text-zinc-400">
+                      <div className="border border-zinc-800 bg-zinc-950/40 px-4 py-3">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                          Targets
+                        </div>
+                        <div className="mt-2 text-sm text-zinc-300">
+                          {formatMockChroots(entry.package.mock_chroots)}
+                        </div>
+                      </div>
+                      <div className="border border-zinc-800 bg-zinc-950/40 px-4 py-3 md:col-span-2">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                          Repository
+                        </div>
+                        <div className="mt-2 break-all font-mono text-sm text-zinc-300">
+                          {entry.package.source.repo_url}
+                        </div>
+                      </div>
+                      <div className="border border-zinc-800 bg-zinc-950/40 px-4 py-3 md:col-span-2">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                          Spec File
+                        </div>
+                        <div className="mt-2 break-all font-mono text-sm text-zinc-300">
+                          {entry.package.source.spec_path}
+                        </div>
+                      </div>
+                      <div className="border border-zinc-800 bg-zinc-950/40 px-4 py-3 md:col-span-2">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                          Last Revision
+                        </div>
+                        <div className="mt-2 break-all font-mono text-sm text-zinc-400">
                           {entry.state.last_revision || "None yet"}
                         </div>
-                        <div className="space-y-1">
-                          {entry.state.targets.map((target) => (
-                            <div
-                              key={`${entry.package.name}:${target.mock_chroot}:revision`}
-                              className="flex items-start justify-between gap-3 text-xs"
-                            >
-                              <span className="font-mono text-zinc-500">
-                                {target.mock_chroot}
-                              </span>
-                              <span className="max-w-[180px] break-all font-mono text-right text-zinc-600">
-                                {target.last_revision || "No successful revision"}
-                              </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex shrink-0 flex-wrap justify-end gap-2 xl:max-w-[460px]">
+                    <ActionButton
+                      href={`/packages/view/?name=${encodeURIComponent(entry.package.name)}`}
+                      icon={faFolderOpen}
+                      aria-label={`Open package ${entry.package.name}`}
+                    >
+                      Open
+                    </ActionButton>
+                    <ActionButton
+                      onClick={() => trigger(entry.package.name, "refresh")}
+                      icon={faRotate}
+                      aria-label={`Refresh package ${entry.package.name}`}
+                    >
+                      Refresh
+                    </ActionButton>
+                    <ActionButton
+                      onClick={() => trigger(entry.package.name, "rebuild")}
+                      icon={faHammer}
+                      aria-label={`Rebuild package ${entry.package.name}`}
+                    >
+                      Rebuild
+                    </ActionButton>
+                    <ActionButton
+                      onClick={() => handleDelete(entry.package.name)}
+                      icon={faTrash}
+                      aria-label={`Delete package ${entry.package.name}`}
+                      className="text-zinc-300"
+                    >
+                      Delete
+                    </ActionButton>
+                  </div>
+                </div>
+
+                <div className="px-5 py-4">
+                  <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                    Target State
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {entry.state.targets.map((target) => (
+                      <div
+                        key={`${entry.package.name}:${target.mock_chroot}`}
+                        className="border border-zinc-800 bg-zinc-950/40 px-4 py-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="font-mono text-sm text-zinc-100">
+                              {target.mock_chroot}
                             </div>
-                          ))}
+                            <div className="mt-1 text-xs text-zinc-500">
+                              {target.active_job_id
+                                ? `Active job ${target.active_job_id}`
+                                : target.last_successful_build_id
+                                  ? `Last success ${target.last_successful_build_id}`
+                                  : "No successful build yet"}
+                            </div>
+                          </div>
+                          <StatusPill status={targetStatus(target)} />
+                        </div>
+                        <div className="mt-3 border-t border-zinc-800 pt-3">
+                          <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                            Revision
+                          </div>
+                          <div className="mt-2 break-all font-mono text-sm text-zinc-400">
+                            {compactRevision(target.last_revision)}
+                          </div>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="space-y-2">
-                        <StatusPill status={status} />
-                        <div className="space-y-1">
-                          {entry.state.targets.map((target) => (
-                            <div
-                              key={`${entry.package.name}:${target.mock_chroot}:status`}
-                              className="flex items-center justify-between gap-3"
-                            >
-                              <span className="font-mono text-xs text-zinc-500">
-                                {target.mock_chroot}
-                              </span>
-                              <StatusPill status={targetStatus(target)} />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        <ActionButton
-                          href={`/packages/view/?name=${encodeURIComponent(entry.package.name)}`}
-                          icon={faFolderOpen}
-                          aria-label={`Open package ${entry.package.name}`}
-                        >
-                          Open
-                        </ActionButton>
-                        <ActionButton
-                          onClick={() => trigger(entry.package.name, "refresh")}
-                          icon={faRotate}
-                          aria-label={`Refresh package ${entry.package.name}`}
-                        >
-                          Refresh
-                        </ActionButton>
-                        <ActionButton
-                          onClick={() => trigger(entry.package.name, "rebuild")}
-                          icon={faHammer}
-                          aria-label={`Rebuild package ${entry.package.name}`}
-                        >
-                          Rebuild
-                        </ActionButton>
-                        <ActionButton
-                          onClick={() => handleDelete(entry.package.name)}
-                          icon={faTrash}
-                          aria-label={`Delete package ${entry.package.name}`}
-                          className="text-zinc-300"
-                        >
-                          Delete
-                        </ActionButton>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    ))}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
       )}
 

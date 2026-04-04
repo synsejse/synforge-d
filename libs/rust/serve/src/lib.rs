@@ -1,5 +1,5 @@
 mod api;
-mod openapi;
+pub mod openapi;
 
 use std::path::PathBuf;
 use std::sync::Arc;

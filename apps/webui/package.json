@@ -7,7 +7,13 @@
   },
   "scripts": {
     "dev": "astro dev",
+    "predev": "npm run generate:api",
+    "generate:openapi": "cargo run -q -p synforge-daemon --bin openapi-export > openapi.json",
+    "generate:types": "openapi-typescript openapi.json -o src/lib/generated/api-schema.ts",
+    "generate:api": "npm run generate:openapi && npm run generate:types",
     "build": "astro build",
+    "prebuild": "npm run generate:types:fromfile",
+    "generate:types:fromfile": "openapi-typescript src/lib/generated/openapi.json -o src/lib/generated/api-schema.ts",
     "preview": "astro preview",
     "astro": "astro"
   },
@@ -25,5 +31,9 @@
     "react-dom": "^19.2.4",
     "react-syntax-highlighter": "^16.1.1",
     "tailwindcss": "^4.2.2"
+  },
+  "devDependencies": {
+    "openapi-fetch": "^0.14.0",
+    "openapi-typescript": "^7.10.1"
   }
 }

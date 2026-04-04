@@ -35,13 +35,15 @@ RUN --mount=type=cache,id=synforge-cargo-registry,target=/usr/local/cargo/regist
     && mkdir -p /out \
     && cp /app/target/release/daemon /out/daemon \
     && cp /app/target/release/worker /out/worker \
-    && cp /app/target/release/synforge-webui /out/synforge-webui
+    && cp /app/target/release/synforge-webui /out/synforge-webui \
+    && cargo run --release --bin openapi-export > /out/openapi.json
 
 FROM node:22-alpine AS webui-builder
 WORKDIR /app/apps/webui
 COPY apps/webui/package*.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 COPY apps/webui ./
+COPY --from=rust-builder /out/openapi.json ./src/lib/generated/openapi.json
 RUN npm run build
 
 FROM fedora:44 AS daemon-runtime

@@ -430,7 +430,8 @@ pub(crate) async fn list_completed_jobs(
     path = "/api/v1/jobs/active",
     tag = "Jobs",
     params(
-        PaginationQuery,
+        ("limit" = Option<usize>, Query, description = "Maximum number of jobs to return"),
+        ("offset" = Option<usize>, Query, description = "Offset for pagination"),
         ("package_name" = Option<String>, Query, description = "Filter by package name"),
         ("mock_chroot" = Option<String>, Query, description = "Filter by target")
     ),

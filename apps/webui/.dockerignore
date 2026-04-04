@@ -1,0 +1,10 @@
+# Never copy generated files into Docker build context
+openapi.json
+src/lib/generated/
+
+# Build output
+dist/
+.astro/
+
+# Dependencies (will be installed fresh)
+node_modules/

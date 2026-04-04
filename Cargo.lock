@@ -2074,12 +2074,14 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "serde_json",
  "synforge-core",
  "synforge-orchestrator",
  "synforge-serve",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "utoipa",
 ]
 
 [[package]]

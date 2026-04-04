@@ -141,6 +141,23 @@ export interface BuildJobResponse {
   artifacts: BuildArtifact[];
 }
 
+export type PackageActionDisposition = "queued" | "skipped" | "blocked";
+
+export interface PackageActionTargetResult {
+  package_name: string;
+  mock_chroot: string;
+  disposition: PackageActionDisposition;
+  reason: string | null;
+  job_id: string | null;
+  revision: string | null;
+}
+
+export interface PackageActionResponse {
+  package_name: string;
+  trigger: BuildTrigger;
+  results: PackageActionTargetResult[];
+}
+
 export interface BuildJobListResponse {
   jobs: BuildJobResponse[];
   page: PageInfo;

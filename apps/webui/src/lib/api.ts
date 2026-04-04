@@ -13,6 +13,7 @@ import type {
   RepoSummaryResponse,
   BuildJobListResponse,
   BuildJobResponse,
+  PackageActionResponse,
   LogChunkResponse,
   LogManifestResponse,
   LogMetaResponse,
@@ -202,7 +203,7 @@ class ApiClient {
     return this.request("GET", "/api/v1/repo/summary");
   }
 
-  async rebuildPackage(name: string): Promise<BuildJobResponse> {
+  async rebuildPackage(name: string): Promise<PackageActionResponse> {
     return this.request(
       "POST",
       `/api/v1/packages/${encodeURIComponent(name)}/rebuild`,
@@ -210,7 +211,7 @@ class ApiClient {
     );
   }
 
-  async refreshPackage(name: string): Promise<BuildJobResponse> {
+  async refreshPackage(name: string): Promise<PackageActionResponse> {
     return this.request(
       "POST",
       `/api/v1/packages/${encodeURIComponent(name)}/refresh`,

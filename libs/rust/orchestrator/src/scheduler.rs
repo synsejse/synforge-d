@@ -7,7 +7,10 @@ use tracing::warn;
 use uuid::Uuid;
 
 use synforge_core::{
-    api::{BuildJobResponse, PackageActionDisposition, PackageActionTargetResult},
+    api::{
+        BuildJobResponse, PackageActionDisposition, PackageActionResponse,
+        PackageActionTargetResult,
+    },
     error::SynforgeError,
     model::{BuildJob, BuildStatus, BuildTrigger, now_utc},
     package::{PackageDefinition, SpecRevision, parse_mock_chroot},
@@ -37,9 +40,10 @@ pub enum SchedulerError {
 }
 
 struct PackageActionPlan {
+    package_name: String,
+    trigger: BuildTrigger,
     jobs: Vec<BuildJob>,
     queued_builds: Vec<QueuedBuild>,
-    #[allow(dead_code)]
     results: Vec<PackageActionTargetResult>,
 }
 
@@ -132,6 +136,33 @@ impl BuildScheduler {
             }
             Err(error) => Err(error),
         }
+    }
+
+    pub async fn enqueue_package_action(
+        &self,
+        package_name: &str,
+        trigger: BuildTrigger,
+        force: bool,
+        queue_tx: &tokio::sync::mpsc::Sender<QueuedBuild>,
+    ) -> anyhow::Result<PackageActionResponse> {
+        let package = self.registry.get_definition(package_name).await?;
+        let plan = self.prepare_package_action(package, trigger, force).await?;
+
+        for job in &plan.jobs {
+            self.store.insert_job(job).await?;
+        }
+        for queued in &plan.queued_builds {
+            queue_tx
+                .send(queued.clone())
+                .await
+                .map_err(|error| anyhow::anyhow!("failed to queue build: {}", error))?;
+        }
+
+        Ok(PackageActionResponse {
+            package_name: plan.package_name,
+            trigger: plan.trigger,
+            results: plan.results,
+        })
     }
 
     async fn prepare_package_action(
@@ -255,6 +286,8 @@ impl BuildScheduler {
             jobs.push(job);
         }
         Ok(PackageActionPlan {
+            package_name: updated_package.name.clone(),
+            trigger,
             jobs,
             queued_builds: queued,
             results,

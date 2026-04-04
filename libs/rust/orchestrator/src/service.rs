@@ -14,9 +14,10 @@ use synforge_core::{
         ChangePasswordRequest, ConfigFieldDescriptor, ConfigFieldType, ConfigSchemaResponse,
         CreatePackageRequest, CreateUserRequest, EffectiveConfigDto, EffectiveConfigView,
         LogChunkResponse, LogManifestResponse, LogMetaResponse, LogSource, LogSourceType,
-        MockChrootListResponse, PackageBuildHistoryResponse, PackageBuildInventoryEntry,
-        PackageListResponse, PackageRepoFilesResponse, PackageResponse, PageInfo,
-        PruneJobsResponse, RebuildRequest, RefreshRequest, RepoInventoryResponse,
+        MockChrootListResponse, PackageActionResponse, PackageBuildHistoryResponse,
+        PackageBuildInventoryEntry, PackageListResponse, PackageRepoFilesResponse,
+        PackageResponse, PageInfo, PruneJobsResponse, RebuildRequest, RefreshRequest,
+        RepoInventoryResponse,
         RepoSummaryResponse, SessionResponse, SetupInitializeRequest, UpdatePackageRequest,
         UpdateRuntimeSettingsRequest, UpdateUserRequest, UserListResponse, UserMetricsResponse,
         UserResponse,
@@ -765,9 +766,9 @@ impl SynforgeService {
         &self,
         package_name: &str,
         _request: RefreshRequest,
-    ) -> anyhow::Result<BuildJobResponse> {
+    ) -> anyhow::Result<PackageActionResponse> {
         self.scheduler
-            .enqueue_package(
+            .enqueue_package_action(
                 package_name,
                 BuildTrigger::ManualRefresh,
                 false,
@@ -780,9 +781,9 @@ impl SynforgeService {
         &self,
         package_name: &str,
         _request: RebuildRequest,
-    ) -> anyhow::Result<BuildJobResponse> {
+    ) -> anyhow::Result<PackageActionResponse> {
         self.scheduler
-            .enqueue_package(
+            .enqueue_package_action(
                 package_name,
                 BuildTrigger::ManualRebuild,
                 true,

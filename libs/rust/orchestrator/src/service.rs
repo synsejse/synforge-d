@@ -384,14 +384,30 @@ impl SynforgeService {
     pub async fn get_package_repo_files(
         &self,
         package_name: &str,
+        limit: Option<usize>,
+        offset: Option<usize>,
     ) -> anyhow::Result<PackageRepoFilesResponse> {
         self.registry.get_package(package_name).await?;
+        let (limit, offset) = normalize_pagination(limit, offset);
+        let total = self
+            .store
+            .count_published_repo_files(Some(package_name.to_string()), None, None)
+            .await?;
+        let repo_files = self
+            .store
+            .list_published_repo_files(
+                limit,
+                offset,
+                Some(package_name.to_string()),
+                None,
+                None,
+            )
+            .await?;
+        let returned = repo_files.len();
         Ok(PackageRepoFilesResponse {
             package_name: package_name.to_string(),
-            repo_files: self
-                .store
-                .list_published_repo_files_for_package(package_name)
-                .await?,
+            repo_files,
+            page: build_page_info(limit, offset, total, returned),
         })
     }
 

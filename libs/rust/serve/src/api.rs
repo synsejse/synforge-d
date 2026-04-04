@@ -59,9 +59,9 @@ pub fn router(_state: AppState) -> Router<AppState> {
         .route("/users/{id}/password", post(change_user_password))
         .route("/jobs/{id}", get(get_job).delete(delete_job))
         .route("/jobs/{id}/logs", get(get_job_log_manifest))
-        .route("/jobs/{id}/logs/{*source}/meta", get(get_job_log_meta_by_source))
+        .route("/jobs/{id}/logs/{source}/meta", get(get_job_log_meta_by_source))
         .route(
-            "/jobs/{id}/logs/{*source}/stream",
+            "/jobs/{id}/logs/{source}/stream",
             get(get_job_log_chunk_by_source),
         )
         .route("/jobs/{id}/logs/meta", get(get_job_log_meta))
@@ -253,7 +253,8 @@ pub(crate) async fn get_package_builds(
     path = "/api/v1/packages/{name}/repo-files",
     tag = "Repository",
     params(
-        ("name" = String, Path, description = "Package name")
+        ("name" = String, Path, description = "Package name"),
+        PaginationQuery
     ),
     security(("session_auth" = [])),
     responses(
@@ -265,8 +266,14 @@ pub(crate) async fn get_package_builds(
 pub(crate) async fn get_package_repo_files(
     State(state): State<AppState>,
     Path(name): Path<String>,
+    Query(query): Query<PaginationQuery>,
 ) -> Result<Json<PackageRepoFilesResponse>, AppError> {
-    Ok(Json(state.service.get_package_repo_files(&name).await?))
+    Ok(Json(
+        state
+            .service
+            .get_package_repo_files(&name, query.limit, query.offset)
+            .await?,
+    ))
 }
 
 #[utoipa::path(

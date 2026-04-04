@@ -60,12 +60,16 @@ function parseBuildEnv(input: string): BuildEnvVar[] {
 
 export default function PackageDetail({ packageName }: Props) {
   const BUILD_HISTORY_PAGE_SIZE = 12;
+  const REPO_FILES_PAGE_SIZE = 20;
   const [pkg, setPkg] = useState<PackageResponse | null>(null);
   const [builds, setBuilds] = useState<PackageBuildInventoryEntry[]>([]);
   const [buildsOffset, setBuildsOffset] = useState(0);
   const [buildsHasMore, setBuildsHasMore] = useState(false);
   const [buildsTotal, setBuildsTotal] = useState<number | null>(null);
   const [repoFiles, setRepoFiles] = useState<PublishedRepoFile[]>([]);
+  const [repoFilesOffset, setRepoFilesOffset] = useState(0);
+  const [repoFilesHasMore, setRepoFilesHasMore] = useState(false);
+  const [repoFilesTotal, setRepoFilesTotal] = useState<number | null>(null);
   const [buildsOpen, setBuildsOpen] = useState(false);
   const [repoFilesOpen, setRepoFilesOpen] = useState(false);
   const [buildsLoaded, setBuildsLoaded] = useState(false);
@@ -162,14 +166,21 @@ export default function PackageDetail({ packageName }: Props) {
     }
   }
 
-  async function loadPackageRepoFiles(force = false) {
-    if (repoFilesLoading || (repoFilesLoaded && !force)) {
+  async function loadPackageRepoFiles(force = false, offset = repoFilesOffset) {
+    if (repoFilesLoading || (repoFilesLoaded && !force && offset === repoFilesOffset)) {
       return;
     }
     try {
       setRepoFilesLoading(true);
-      const repoFilesRes = await api.getPackageRepoFiles(packageName);
+      const repoFilesRes = await api.getPackageRepoFiles(
+        packageName,
+        REPO_FILES_PAGE_SIZE,
+        offset,
+      );
       setRepoFiles(repoFilesRes.repo_files);
+      setRepoFilesOffset(repoFilesRes.page.offset);
+      setRepoFilesHasMore(repoFilesRes.page.has_more);
+      setRepoFilesTotal(repoFilesRes.page.total ?? null);
       setRepoFilesLoaded(true);
       setError(null);
     } catch (e) {
@@ -199,6 +210,9 @@ export default function PackageDetail({ packageName }: Props) {
     setBuildsHasMore(false);
     setBuildsTotal(null);
     setRepoFiles([]);
+    setRepoFilesOffset(0);
+    setRepoFilesHasMore(false);
+    setRepoFilesTotal(null);
     setBuildsOpen(false);
     setRepoFilesOpen(false);
     setBuildsLoaded(false);
@@ -963,7 +977,7 @@ export default function PackageDetail({ packageName }: Props) {
           <div className="flex items-center gap-3">
             {repoFilesLoaded ? (
               <div className="border border-zinc-800 bg-black px-4 py-2 text-xs uppercase tracking-[0.2em] text-zinc-400">
-                {repoFiles.length} tracked files
+                {repoFilesTotal ?? repoFiles.length} tracked files
               </div>
             ) : null}
             <button
@@ -988,7 +1002,8 @@ export default function PackageDetail({ packageName }: Props) {
             No repo files are currently tracked for this package.
           </EmptyState>
         ) : (
-          <div className="overflow-x-auto border border-zinc-800">
+          <div className="space-y-4">
+            <div className="overflow-x-auto border border-zinc-800">
             <table className="min-w-[980px] w-full">
               <thead className="bg-zinc-950 text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
                 <tr>
@@ -1030,6 +1045,41 @@ export default function PackageDetail({ packageName }: Props) {
                 ))}
               </tbody>
             </table>
+            </div>
+            <div className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-400">
+              <span>
+                Showing {repoFilesOffset + 1}-{repoFilesOffset + repoFiles.length}
+                {repoFilesTotal !== null ? ` of ${repoFilesTotal}` : ""}
+              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    void loadPackageRepoFiles(
+                      true,
+                      Math.max(0, repoFilesOffset - REPO_FILES_PAGE_SIZE),
+                    )
+                  }
+                  disabled={repoFilesLoading || repoFilesOffset === 0}
+                  className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    void loadPackageRepoFiles(
+                      true,
+                      repoFilesOffset + REPO_FILES_PAGE_SIZE,
+                    )
+                  }
+                  disabled={repoFilesLoading || !repoFilesHasMore}
+                  className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </section>

@@ -180,6 +180,7 @@ pub struct PackageBuildHistoryResponse {
 pub struct PackageRepoFilesResponse {
     pub package_name: String,
     pub repo_files: Vec<PublishedRepoFile>,
+    pub page: PageInfo,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

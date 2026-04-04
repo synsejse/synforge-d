@@ -176,10 +176,18 @@ class ApiClient {
     );
   }
 
-  async getPackageRepoFiles(name: string): Promise<PackageRepoFilesResponse> {
+  async getPackageRepoFiles(
+    name: string,
+    limit = 20,
+    offset = 0,
+  ): Promise<PackageRepoFilesResponse> {
+    const params = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
     return this.request(
       "GET",
-      `/api/v1/packages/${encodeURIComponent(name)}/repo-files`,
+      `/api/v1/packages/${encodeURIComponent(name)}/repo-files?${params.toString()}`,
     );
   }
 

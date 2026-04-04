@@ -186,6 +186,7 @@ export interface PackageBuildHistoryResponse {
 export interface PackageRepoFilesResponse {
   package_name: string;
   repo_files: PublishedRepoFile[];
+  page: PageInfo;
 }
 
 export interface RepoInventoryResponse {

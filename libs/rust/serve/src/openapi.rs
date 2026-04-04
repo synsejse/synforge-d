@@ -41,6 +41,7 @@ impl Modify for SecurityAddon {
         api::trigger_target_rebuild,
         api::trigger_target_refresh,
         api::list_jobs,
+        api::list_active_jobs,
         api::get_job,
         api::delete_job,
         api::prune_failed_jobs,

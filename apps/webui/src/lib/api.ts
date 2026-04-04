@@ -298,6 +298,33 @@ class ApiClient {
     );
   }
 
+  async listActiveJobs(
+    options: {
+      limit?: number;
+      offset?: number;
+      packageName?: string;
+      mockChroot?: string;
+    } = {},
+  ): Promise<BuildJobListResponse> {
+    const params = new URLSearchParams();
+    if (options.limit !== undefined) {
+      params.set("limit", String(options.limit));
+    }
+    if (options.offset !== undefined) {
+      params.set("offset", String(options.offset));
+    }
+    if (options.packageName?.trim()) {
+      params.set("package_name", options.packageName.trim());
+    }
+    if (options.mockChroot?.trim()) {
+      params.set("mock_chroot", options.mockChroot.trim());
+    }
+    return this.request(
+      "GET",
+      `/api/v1/jobs/active${params.toString() ? `?${params.toString()}` : ""}`,
+    );
+  }
+
   async getJob(id: string): Promise<BuildJobResponse> {
     return this.request("GET", `/api/v1/jobs/${encodeURIComponent(id)}`);
   }

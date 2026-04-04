@@ -45,6 +45,7 @@ pub fn router(_state: AppState) -> Router<AppState> {
             post(trigger_target_refresh),
         )
         .route("/jobs", get(list_jobs))
+        .route("/jobs/active", get(list_active_jobs))
         .route("/jobs/prune-failed", post(prune_failed_jobs))
         .route("/session", get(get_session))
         .route("/session/login", post(login_session))
@@ -414,6 +415,38 @@ pub(crate) async fn list_jobs(
                 query.mock_chroot,
                 query.active_only.unwrap_or(false),
                 query.terminal_only.unwrap_or(false),
+            )
+            .await?,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/jobs/active",
+    tag = "Jobs",
+    params(
+        PaginationQuery,
+        ("package_name" = Option<String>, Query, description = "Filter by package name"),
+        ("mock_chroot" = Option<String>, Query, description = "Filter by target")
+    ),
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "List active jobs", body = BuildJobListResponse),
+        (status = 401, body = synforge_core::api::ApiError)
+    )
+)]
+pub(crate) async fn list_active_jobs(
+    State(state): State<AppState>,
+    Query(query): Query<JobListQuery>,
+) -> Result<Json<BuildJobListResponse>, AppError> {
+    Ok(Json(
+        state
+            .service
+            .list_active_jobs(
+                query.limit,
+                query.offset,
+                query.package_name,
+                query.mock_chroot,
             )
             .await?,
     ))

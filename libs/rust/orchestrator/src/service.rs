@@ -901,6 +901,25 @@ impl SynforgeService {
         })
     }
 
+    pub async fn list_active_jobs(
+        &self,
+        limit: Option<usize>,
+        offset: Option<usize>,
+        package_name: Option<String>,
+        mock_chroot: Option<String>,
+    ) -> anyhow::Result<BuildJobListResponse> {
+        self.list_jobs(
+            limit,
+            offset,
+            None,
+            package_name,
+            mock_chroot,
+            true,
+            false,
+        )
+        .await
+    }
+
     pub async fn get_job(&self, job_id: Uuid) -> anyhow::Result<BuildJobResponse> {
         self.store
             .get_job(job_id)

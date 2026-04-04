@@ -7,6 +7,7 @@ import {
   type FormEvent,
 } from "react";
 import api from "../lib/api";
+import { summarizePackageAction } from "../lib/package-actions";
 import FaIcon from "./FaIcon";
 import ActionButton from "./ActionButton";
 import EmptyState from "./EmptyState";
@@ -119,11 +120,11 @@ export default function PackageList() {
 
   async function trigger(name: string, action: "refresh" | "rebuild") {
     try {
-      if (action === "refresh") {
-        await api.refreshPackage(name);
-      } else {
-        await api.rebuildPackage(name);
-      }
+      const response =
+        action === "refresh"
+          ? await api.refreshPackage(name)
+          : await api.rebuildPackage(name);
+      alert(summarizePackageAction(response));
       await load();
     } catch (e) {
       alert(e instanceof Error ? e.message : `Failed to ${action} package`);

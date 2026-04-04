@@ -1,6 +1,7 @@
 /target
 /.idea
 /.vscode
+.codex
 .env
 runtime/
 **/node_modules/

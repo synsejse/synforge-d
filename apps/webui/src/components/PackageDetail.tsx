@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import api from "../lib/api";
+import { summarizePackageAction } from "../lib/package-actions";
 import DetailStat from "./DetailStat";
 import EmptyState from "./EmptyState";
 import FaIcon from "./FaIcon";
@@ -249,11 +250,11 @@ export default function PackageDetail({ packageName }: Props) {
 
   async function trigger(action: "rebuild" | "refresh") {
     try {
-      if (action === "rebuild") {
-        await api.rebuildPackage(packageName);
-      } else {
-        await api.refreshPackage(packageName);
-      }
+      const response =
+        action === "rebuild"
+          ? await api.rebuildPackage(packageName)
+          : await api.refreshPackage(packageName);
+      alert(summarizePackageAction(response));
       await refreshVisibleData();
     } catch (e) {
       setError(e instanceof Error ? e.message : `Failed to ${action}`);

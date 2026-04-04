@@ -21,6 +21,17 @@ pub struct InspectedPackageSource {
     pub revision: SpecRevision,
 }
 
+#[derive(Debug, Clone)]
+pub struct MaterializePackageOptions {
+    pub enabled: bool,
+    pub network_access: bool,
+    pub mock_chroots: Vec<String>,
+    pub poll_interval_seconds: u64,
+    pub build_timeout_seconds: u64,
+    pub package_history_count: u64,
+    pub build_env: Vec<BuildEnvVar>,
+}
+
 #[derive(Clone)]
 pub struct PackageSyncStore {
     root: PathBuf,
@@ -76,30 +87,12 @@ impl PackageSyncStore {
         &self,
         package_name: &str,
         source: &SpecSource,
-        enabled: bool,
-        network_access: bool,
-        mock_chroots: Vec<String>,
-        poll_interval_seconds: u64,
-        build_timeout_seconds: u64,
-        package_history_count: u64,
-        build_env: Vec<BuildEnvVar>,
+        options: MaterializePackageOptions,
     ) -> anyhow::Result<(PackageDefinition, SpecRevision)> {
         let inspected = self
-            .inspect_source(package_name, source, build_timeout_seconds)
+            .inspect_source(package_name, source, options.build_timeout_seconds)
             .await?;
-        let package = self
-            .materialize(
-                source,
-                &inspected,
-                enabled,
-                network_access,
-                mock_chroots,
-                poll_interval_seconds,
-                build_timeout_seconds,
-                package_history_count,
-                build_env,
-            )
-            .await?;
+        let package = self.materialize(source, &inspected, options).await?;
         Ok((package, inspected.revision.clone()))
     }
 
@@ -107,27 +100,21 @@ impl PackageSyncStore {
         &self,
         source: &SpecSource,
         inspected: &InspectedPackageSource,
-        enabled: bool,
-        network_access: bool,
-        mock_chroots: Vec<String>,
-        poll_interval_seconds: u64,
-        build_timeout_seconds: u64,
-        package_history_count: u64,
-        build_env: Vec<BuildEnvVar>,
+        options: MaterializePackageOptions,
     ) -> anyhow::Result<PackageDefinition> {
         let package = PackageDefinition {
             name: inspected.package_name.clone(),
             description: inspected.description.clone(),
-            enabled,
+            enabled: options.enabled,
             repo_subdir: inspected.package_name.clone(),
             publish_srpm: true,
-            network_access,
-            mock_chroots,
+            network_access: options.network_access,
+            mock_chroots: options.mock_chroots,
             source: source.clone(),
-            poll_interval_seconds,
-            build_timeout_seconds,
-            package_history_count,
-            build_env,
+            poll_interval_seconds: options.poll_interval_seconds,
+            build_timeout_seconds: options.build_timeout_seconds,
+            package_history_count: options.package_history_count,
+            build_env: options.build_env,
             spec_path: PathBuf::from(&source.spec_path),
             version: inspected.revision.version.clone(),
             release: inspected.revision.release.clone(),

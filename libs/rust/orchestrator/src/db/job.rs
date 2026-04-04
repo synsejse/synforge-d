@@ -151,12 +151,13 @@ pub(super) async fn finish_job(
                 }
 
                 diesel::delete(
-                    published_repo_files::table
-                        .filter(published_repo_files::artifact_id.eq_any(
+                    published_repo_files::table.filter(
+                        published_repo_files::artifact_id.eq_any(
                             build_artifacts::table
                                 .filter(build_artifacts::job_id.eq(job_id.as_str()))
                                 .select(build_artifacts::id),
-                        )),
+                        ),
+                    ),
                 )
                 .execute(conn)?;
 
@@ -193,9 +194,9 @@ pub(super) async fn upsert_build_log(
     let updated_at = format_timestamp(now_utc());
     store
         .with_connection(move |conn| {
-            let existing = build_logs::table
+            let existing: Option<String> = build_logs::table
                 .find((job_id.as_str(), source_path.as_str()))
-                .select(BuildLogRecord::as_select())
+                .select(build_logs::log_path)
                 .first(conn)
                 .optional()?;
 
@@ -232,7 +233,7 @@ pub(super) async fn list_build_logs_for_job(
             Ok(build_logs::table
                 .filter(build_logs::job_id.eq(job_id.as_str()))
                 .order(build_logs::source_path.asc())
-                .select(BuildLogRecord::as_select())
+                .select((build_logs::source_path, build_logs::log_path))
                 .load(conn)?)
         })
         .await
@@ -249,7 +250,7 @@ pub(super) async fn get_build_log_for_job_source(
         .with_connection(move |conn| {
             Ok(build_logs::table
                 .find((job_id.as_str(), source_path.as_str()))
-                .select(BuildLogRecord::as_select())
+                .select((build_logs::source_path, build_logs::log_path))
                 .first(conn)
                 .optional()?)
         })
@@ -264,9 +265,6 @@ pub(super) async fn list_jobs(
     package_name: Option<String>,
     mock_chroot: Option<String>,
 ) -> anyhow::Result<Vec<BuildJobResponse>> {
-    let status = status;
-    let package_name = package_name;
-    let mock_chroot = mock_chroot;
     store
         .with_connection(move |conn| {
             let mut query = build_jobs::table.into_boxed();
@@ -298,9 +296,6 @@ pub(super) async fn count_jobs(
     package_name: Option<String>,
     mock_chroot: Option<String>,
 ) -> anyhow::Result<u64> {
-    let status = status;
-    let package_name = package_name;
-    let mock_chroot = mock_chroot;
     store
         .with_connection(move |conn| {
             let mut query = build_jobs::table.into_boxed();
@@ -389,12 +384,13 @@ pub(super) async fn delete_job(
                 diesel::delete(build_logs::table.filter(build_logs::job_id.eq(job_id.as_str())))
                     .execute(conn)?;
                 diesel::delete(
-                    published_repo_files::table
-                        .filter(published_repo_files::artifact_id.eq_any(
+                    published_repo_files::table.filter(
+                        published_repo_files::artifact_id.eq_any(
                             build_artifacts::table
                                 .filter(build_artifacts::job_id.eq(job_id.as_str()))
                                 .select(build_artifacts::id),
-                        )),
+                        ),
+                    ),
                 )
                 .execute(conn)?;
                 diesel::delete(build_jobs::table.find(job_id.as_str())).execute(conn)?;

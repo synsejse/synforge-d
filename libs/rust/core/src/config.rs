@@ -117,8 +117,10 @@ impl DaemonConfig {
         let mut config = if path.exists() {
             Self::load_from_file(&path)?
         } else {
-            let mut config = Self::default();
-            config.session_secret = generate_session_secret();
+            let config = Self {
+                session_secret: generate_session_secret(),
+                ..Self::default()
+            };
             config.save_to_file(&path)?;
             config
         };

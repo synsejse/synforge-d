@@ -6,7 +6,10 @@ use bollard::Docker;
 use bollard::models::{ContainerCreateBody, HostConfig};
 use bollard::query_parameters::CreateContainerOptionsBuilder;
 use futures_util::StreamExt;
-use synforge_core::{config::DaemonConfig, model::{WorkerJobPayload, WorkerResult}};
+use synforge_core::{
+    config::DaemonConfig,
+    model::{WorkerJobPayload, WorkerResult},
+};
 use tracing::warn;
 
 use crate::job_lifecycle::JobLifecycle;
@@ -94,7 +97,7 @@ impl DockerWorkerLauncher {
         );
         while let Some(next) = wait.next().await {
             next?;
-        };
+        }
         let result = self
             .sessions
             .wait_for_result(

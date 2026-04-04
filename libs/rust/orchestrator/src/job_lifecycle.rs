@@ -96,16 +96,15 @@ impl JobLifecycle {
             )
             .await?;
 
-        if status == BuildStatus::Succeeded {
-            if let Err(error) = self
+        if status == BuildStatus::Succeeded
+            && let Err(error) = self
                 .prune_old_build_history(&build.package, &build.mock_chroot)
                 .await
-            {
-                warn!(
-                    "failed to prune old build history for {} {}: {}",
-                    build.package.name, build.mock_chroot, error
-                );
-            }
+        {
+            warn!(
+                "failed to prune old build history for {} {}: {}",
+                build.package.name, build.mock_chroot, error
+            );
         }
 
         Ok(())

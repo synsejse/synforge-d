@@ -187,11 +187,11 @@ async fn authenticate_basic_headers(
         .and_then(parse_basic_authorization)
         .ok_or_else(|| AppError::auth("invalid credentials"))?;
     let (handle, password) = decode_basic_credentials(encoded)?;
-    Ok(state
+    state
         .service
         .authenticate_user(&handle, &password, required)
         .await
-        .map_err(AppError::from)?)
+        .map_err(AppError::from)
 }
 
 fn parse_basic_authorization(value: &str) -> Option<&str> {

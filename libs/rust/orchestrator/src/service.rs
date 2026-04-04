@@ -118,7 +118,7 @@ impl SynforgeService {
         let artifact = job
             .artifacts
             .into_iter()
-            .find(|artifact| artifact.path == PathBuf::from(relative_artifact_path))
+            .find(|artifact| artifact.path == std::path::Path::new(relative_artifact_path))
             .ok_or_else(|| {
                 anyhow::anyhow!(SynforgeError::NotFound(relative_artifact_path.to_string()))
             })?;
@@ -1020,167 +1020,219 @@ impl SynforgeService {
     }
 }
 
+#[derive(Copy, Clone)]
+struct ConfigSection<'a> {
+    key: &'a str,
+    label: &'a str,
+}
+
+#[derive(Copy, Clone)]
+struct ConfigEditability {
+    in_setup: bool,
+    in_runtime: bool,
+}
+
 fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
     vec![
         config_string_field(
-            "server",
-            "Server",
+            ConfigSection {
+                key: "server",
+                label: "Server",
+            },
             "listen_addr",
             "Listen address",
             "Daemon HTTP listen address.",
             "0.0.0.0:8080",
-            true,
-            false,
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: false,
+            },
         ),
         config_string_field(
-            "storage",
-            "Storage",
+            ConfigSection {
+                key: "storage",
+                label: "Storage",
+            },
             "runtime_root",
             "Runtime root",
             "Root directory for database, package metadata, repo files, and jobs.",
             "/var/lib/synforge",
-            true,
-            false,
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: false,
+            },
         ),
         config_string_field(
-            "server",
-            "Server",
+            ConfigSection {
+                key: "server",
+                label: "Server",
+            },
             "public_base_url",
             "Public base URL",
             "Base URL used in generated links and repo setup.",
             "http://localhost:8080",
-            true,
-            true,
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: true,
+            },
         ),
         config_string_field(
-            "worker",
-            "Worker",
+            ConfigSection {
+                key: "worker",
+                label: "Worker",
+            },
             "worker_image",
             "Worker image",
             "Docker image used for spawned worker containers.",
             "synforge-worker-fedora:latest",
-            true,
-            true,
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: true,
+            },
         ),
         config_number_field(
-            "build",
-            "Build",
+            ConfigSection {
+                key: "build",
+                label: "Build",
+            },
             "max_concurrent_builds",
             "Max concurrent builds",
             "Maximum number of active builds at once.",
             2,
-            true,
-            true,
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: true,
+            },
         ),
         config_number_field(
-            "database",
-            "Database",
+            ConfigSection {
+                key: "database",
+                label: "Database",
+            },
             "db_pool_size",
             "DB pool size",
             "Number of database connection pool slots.",
             5,
-            true,
-            false,
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: false,
+            },
         ),
         config_number_field(
-            "scheduler",
-            "Scheduler",
+            ConfigSection {
+                key: "scheduler",
+                label: "Scheduler",
+            },
             "queue_buffer_size",
             "Queue buffer size",
             "In-memory queued build channel capacity.",
             128,
-            true,
-            true,
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: true,
+            },
         ),
         config_number_field(
-            "scheduler",
-            "Scheduler",
+            ConfigSection {
+                key: "scheduler",
+                label: "Scheduler",
+            },
             "poller_tick_seconds",
             "Poller tick seconds",
             "How often package polling wakes up.",
             30,
-            true,
-            true,
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: true,
+            },
         ),
         config_number_field(
-            "worker",
-            "Worker",
+            ConfigSection {
+                key: "worker",
+                label: "Worker",
+            },
             "worker_result_timeout_seconds",
             "Worker result timeout seconds",
             "Timeout while waiting for worker completion after request dispatch.",
             10,
-            true,
-            true,
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: true,
+            },
         ),
         config_number_field(
-            "worker",
-            "Worker",
+            ConfigSection {
+                key: "worker",
+                label: "Worker",
+            },
             "worker_socket_timeout_seconds",
             "Worker socket timeout seconds",
             "Socket timeout used for worker protocol I/O.",
             30,
-            true,
-            true,
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: true,
+            },
         ),
         config_number_field(
-            "git",
-            "Git",
+            ConfigSection {
+                key: "git",
+                label: "Git",
+            },
             "git_operation_timeout_seconds",
             "Git operation timeout seconds",
             "Timeout applied to git inspection and sync commands.",
             600,
-            true,
-            true,
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: true,
+            },
         ),
     ]
 }
 
 fn config_string_field(
-    section_key: &str,
-    section_label: &str,
+    section: ConfigSection<'_>,
     key: &str,
     label: &str,
     description: &str,
     default_value: &str,
-    editable_in_setup: bool,
-    editable_in_runtime: bool,
+    editability: ConfigEditability,
 ) -> ConfigFieldDescriptor {
     ConfigFieldDescriptor {
         key: key.to_string(),
         label: label.to_string(),
         description: description.to_string(),
-        section_key: section_key.to_string(),
-        section_label: section_label.to_string(),
+        section_key: section.key.to_string(),
+        section_label: section.label.to_string(),
         field_type: ConfigFieldType::String,
         required: true,
         min_value: None,
-        editable_in_setup,
-        editable_in_runtime,
+        editable_in_setup: editability.in_setup,
+        editable_in_runtime: editability.in_runtime,
         default_value: Value::String(default_value.to_string()),
     }
 }
 
 fn config_number_field(
-    section_key: &str,
-    section_label: &str,
+    section: ConfigSection<'_>,
     key: &str,
     label: &str,
     description: &str,
     default_value: u64,
-    editable_in_setup: bool,
-    editable_in_runtime: bool,
+    editability: ConfigEditability,
 ) -> ConfigFieldDescriptor {
     ConfigFieldDescriptor {
         key: key.to_string(),
         label: label.to_string(),
         description: description.to_string(),
-        section_key: section_key.to_string(),
-        section_label: section_label.to_string(),
+        section_key: section.key.to_string(),
+        section_label: section.label.to_string(),
         field_type: ConfigFieldType::Number,
         required: true,
         min_value: Some(1),
-        editable_in_setup,
-        editable_in_runtime,
+        editable_in_setup: editability.in_setup,
+        editable_in_runtime: editability.in_runtime,
         default_value: Value::Number(default_value.into()),
     }
 }
@@ -1272,8 +1324,8 @@ fn parse_usize_setting(value: &Value, key: &str) -> anyhow::Result<usize> {
 }
 
 fn parse_u32_setting(value: &Value, key: &str) -> anyhow::Result<u32> {
-    Ok(u32::try_from(parse_u64_setting(value, key)?)
-        .map_err(|_| anyhow::anyhow!("config setting is out of range: {key}"))?)
+    u32::try_from(parse_u64_setting(value, key)?)
+        .map_err(|_| anyhow::anyhow!("config setting is out of range: {key}"))
 }
 
 fn normalize_pagination(limit: Option<usize>, offset: Option<usize>) -> (usize, usize) {

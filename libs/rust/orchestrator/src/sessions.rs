@@ -222,9 +222,7 @@ impl WorkerSessionBroker {
     }
 }
 
-fn build_metadata_from_payload(
-    payload: &WorkerJobPayload,
-) -> anyhow::Result<(String, String)> {
+fn build_metadata_from_payload(payload: &WorkerJobPayload) -> anyhow::Result<(String, String)> {
     match &payload.action {
         WorkerAction::Build(build) => {
             parse_mock_chroot(&build.mock_chroot)

@@ -65,7 +65,13 @@ async fn handle_connection(
 
     let (job_id, payload) = sessions.connect_worker(&worker_id).await?;
 
-    write_message(&mut framed, &WorkerWireMessage::JobAssignment { payload }).await?;
+    write_message(
+        &mut framed,
+        &WorkerWireMessage::JobAssignment {
+            payload: Box::new(payload),
+        },
+    )
+    .await?;
 
     let mut current_artifact: Option<ActiveArtifactUpload> = None;
     let mut log_files: HashMap<String, tokio::fs::File> = HashMap::new();
@@ -95,10 +101,7 @@ async fn handle_connection(
                         .upsert_build_log(job_id, &path, &upload_path)
                         .await
                         .with_context(|| {
-                            format!(
-                                "failed to register log source {} for job {}",
-                                path, job_id
-                            )
+                            format!("failed to register log source {} for job {}", path, job_id)
                         })?;
                 }
                 let file = log_files

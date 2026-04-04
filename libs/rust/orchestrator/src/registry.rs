@@ -2,11 +2,11 @@ use anyhow::Context;
 use synforge_core::{
     api::{BrowseRepositoryResponse, CreatePackageRequest, PackageResponse, UpdatePackageRequest},
     error::SynforgeError,
-    package::{BuildEnvVar, PackageDefinition, SpecRevision, SpecSource},
+    package::{PackageDefinition, SpecRevision, SpecSource},
 };
 
 use crate::db::{DieselStore, JobStore};
-use crate::packages::{InspectedPackageSource, PackageSyncStore};
+use crate::packages::{InspectedPackageSource, MaterializePackageOptions, PackageSyncStore};
 
 #[derive(Clone)]
 pub struct PackageRegistry {
@@ -60,13 +60,15 @@ impl PackageRegistry {
             .sync_source(
                 &request.name,
                 &request.source,
-                true,
-                request.network_access,
-                request.mock_chroots,
-                request.poll_interval_seconds,
-                request.build_timeout_seconds,
-                request.package_history_count,
-                request.build_env,
+                MaterializePackageOptions {
+                    enabled: true,
+                    network_access: request.network_access,
+                    mock_chroots: request.mock_chroots,
+                    poll_interval_seconds: request.poll_interval_seconds,
+                    build_timeout_seconds: request.build_timeout_seconds,
+                    package_history_count: request.package_history_count,
+                    build_env: request.build_env,
+                },
             )
             .await?;
         if self.store.get_package(&request.name).await?.is_some() {
@@ -109,13 +111,15 @@ impl PackageRegistry {
             .sync_source(
                 package_name,
                 &request.source,
-                enabled,
-                network_access,
-                mock_chroots,
-                poll_interval_seconds,
-                build_timeout_seconds,
-                package_history_count,
-                build_env,
+                MaterializePackageOptions {
+                    enabled,
+                    network_access,
+                    mock_chroots,
+                    poll_interval_seconds,
+                    build_timeout_seconds,
+                    package_history_count,
+                    build_env,
+                },
             )
             .await?;
         if package.name != package_name {
@@ -153,26 +157,10 @@ impl PackageRegistry {
         &self,
         source: &SpecSource,
         inspected: &InspectedPackageSource,
-        enabled: bool,
-        network_access: bool,
-        mock_chroots: Vec<String>,
-        poll_interval_seconds: u64,
-        build_timeout_seconds: u64,
-        package_history_count: u64,
-        build_env: Vec<BuildEnvVar>,
+        options: MaterializePackageOptions,
     ) -> anyhow::Result<PackageDefinition> {
         self.package_store
-            .materialize(
-                source,
-                inspected,
-                enabled,
-                network_access,
-                mock_chroots,
-                poll_interval_seconds,
-                build_timeout_seconds,
-                package_history_count,
-                build_env,
-            )
+            .materialize(source, inspected, options)
             .await
             .with_context(|| format!("failed to materialize package {}", inspected.package_name))
     }
@@ -185,13 +173,15 @@ impl PackageRegistry {
             .sync_source(
                 &package.name,
                 &package.source,
-                package.enabled,
-                package.network_access,
-                package.mock_chroots.clone(),
-                package.poll_interval_seconds,
-                package.build_timeout_seconds,
-                package.package_history_count,
-                package.build_env.clone(),
+                MaterializePackageOptions {
+                    enabled: package.enabled,
+                    network_access: package.network_access,
+                    mock_chroots: package.mock_chroots.clone(),
+                    poll_interval_seconds: package.poll_interval_seconds,
+                    build_timeout_seconds: package.build_timeout_seconds,
+                    package_history_count: package.package_history_count,
+                    build_env: package.build_env.clone(),
+                },
             )
             .await
     }

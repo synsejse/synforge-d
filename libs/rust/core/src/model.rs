@@ -237,7 +237,7 @@ pub struct WorkerJobPayload {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum WorkerAction {
     Parse(WorkerParsePayload),
-    Build(WorkerBuildPayload),
+    Build(Box<WorkerBuildPayload>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

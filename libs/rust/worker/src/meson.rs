@@ -43,10 +43,10 @@ pub(crate) async fn rewrite_meson_rust_wraps(
     let mut registry_entries = Vec::new();
     let mut registry_read_dir = tokio::fs::read_dir(registry_dir).await?;
     while let Some(entry) = registry_read_dir.next_entry().await? {
-        if entry.file_type().await?.is_dir() {
-            if let Some(name) = entry.file_name().to_str() {
-                registry_entries.push(name.to_string());
-            }
+        if entry.file_type().await?.is_dir()
+            && let Some(name) = entry.file_name().to_str()
+        {
+            registry_entries.push(name.to_string());
         }
     }
     registry_entries.sort();

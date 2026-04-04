@@ -45,7 +45,9 @@ impl FileRepoManager {
             tokio::fs::create_dir_all(&build_root)
                 .await
                 .with_context(|| format!("failed to create {}", build_root.display()))?;
-            let source_path = paths.job_artifacts_dir(worker_result.job_id).join(&artifact.path);
+            let source_path = paths
+                .job_artifacts_dir(worker_result.job_id)
+                .join(&artifact.path);
             let file_name = artifact.path.file_name().ok_or_else(|| {
                 anyhow::anyhow!("artifact path {} has no filename", artifact.path.display())
             })?;

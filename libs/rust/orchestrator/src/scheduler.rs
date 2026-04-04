@@ -1,4 +1,5 @@
 use std::hash::{Hash, Hasher};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use dashmap::{DashMap, DashSet};
@@ -14,6 +15,7 @@ use synforge_core::{
 };
 
 use crate::db::{DieselStore, JobStore};
+use crate::packages::MaterializePackageOptions;
 use crate::registry::PackageRegistry;
 
 #[derive(Clone)]
@@ -67,8 +69,8 @@ impl Hash for TargetKey {
 pub struct BuildScheduler {
     store: DieselStore,
     registry: PackageRegistry,
-    active_targets: DashSet<TargetKey>,
-    last_polled_at: DashMap<String, Instant>,
+    active_targets: Arc<DashSet<TargetKey>>,
+    last_polled_at: Arc<DashMap<String, Instant>>,
 }
 
 impl BuildScheduler {
@@ -76,8 +78,8 @@ impl BuildScheduler {
         Self {
             store,
             registry,
-            active_targets: DashSet::new(),
-            last_polled_at: DashMap::new(),
+            active_targets: Arc::new(DashSet::new()),
+            last_polled_at: Arc::new(DashMap::new()),
         }
     }
 
@@ -111,10 +113,10 @@ impl BuildScheduler {
     fn package_is_due(&self, package_name: &str, poll_interval_seconds: u64) -> bool {
         let now = Instant::now();
         let interval = Duration::from_secs(poll_interval_seconds.max(1));
-        if let Some(last_polled_at) = self.last_polled_at.get(package_name) {
-            if now.duration_since(*last_polled_at) < interval {
-                return false;
-            }
+        if let Some(last_polled_at) = self.last_polled_at.get(package_name)
+            && now.duration_since(*last_polled_at) < interval
+        {
+            return false;
         }
         self.last_polled_at.insert(package_name.to_string(), now);
         true
@@ -226,13 +228,15 @@ impl BuildScheduler {
             .materialize_inspected_source(
                 &package.source,
                 &inspected,
-                package.enabled,
-                package.network_access,
-                package.mock_chroots.clone(),
-                package.poll_interval_seconds,
-                package.build_timeout_seconds,
-                package.package_history_count,
-                package.build_env.clone(),
+                MaterializePackageOptions {
+                    enabled: package.enabled,
+                    network_access: package.network_access,
+                    mock_chroots: package.mock_chroots.clone(),
+                    poll_interval_seconds: package.poll_interval_seconds,
+                    build_timeout_seconds: package.build_timeout_seconds,
+                    package_history_count: package.package_history_count,
+                    build_env: package.build_env.clone(),
+                },
             )
             .await?;
         if updated_package.name != package.name {

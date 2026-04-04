@@ -5,17 +5,30 @@ use crate::model::{ArtifactKind, WorkerJobPayload, WorkerResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum WorkerWireMessage {
-    Hello { worker_id: String },
-    JobAssignment { payload: WorkerJobPayload },
+    Hello {
+        worker_id: String,
+    },
+    JobAssignment {
+        payload: Box<WorkerJobPayload>,
+    },
     Heartbeat,
-    LogChunk { path: String, bytes: Vec<u8> },
+    LogChunk {
+        path: String,
+        bytes: Vec<u8>,
+    },
     ArtifactStart {
         artifact_id: Uuid,
         path: String,
         kind: ArtifactKind,
     },
-    ArtifactChunk { bytes: Vec<u8> },
+    ArtifactChunk {
+        bytes: Vec<u8>,
+    },
     ArtifactComplete,
-    Result { result: WorkerResult },
-    Error { message: String },
+    Result {
+        result: WorkerResult,
+    },
+    Error {
+        message: String,
+    },
 }

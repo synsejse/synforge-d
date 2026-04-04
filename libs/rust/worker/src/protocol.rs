@@ -44,7 +44,7 @@ impl WorkerTransportHandle {
 
     pub(crate) async fn receive_assignment(&self) -> anyhow::Result<WorkerJobPayload> {
         match self.read_message().await? {
-            WorkerWireMessage::JobAssignment { payload } => Ok(payload),
+            WorkerWireMessage::JobAssignment { payload } => Ok(*payload),
             WorkerWireMessage::Error { message } => Err(anyhow::anyhow!(message)),
             other => Err(anyhow::anyhow!(
                 "unexpected worker assignment message: {:?}",

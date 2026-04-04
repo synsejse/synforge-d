@@ -25,7 +25,8 @@ pub(super) async fn list_published_repo_files(
         .with_connection(move |conn| {
             let mut query = published_repo_files::table
                 .inner_join(
-                    build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
+                    build_artifacts::table
+                        .on(published_repo_files::artifact_id.eq(build_artifacts::id)),
                 )
                 .into_boxed();
             if let Some(package_name) = package_name.as_deref() {
@@ -83,7 +84,8 @@ pub(super) async fn list_published_repo_files_for_package(
         .with_connection(move |conn| {
             let rows = published_repo_files::table
                 .inner_join(
-                    build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
+                    build_artifacts::table
+                        .on(published_repo_files::artifact_id.eq(build_artifacts::id)),
                 )
                 .filter(build_artifacts::package_name.eq(package_name.as_str()))
                 .order((
@@ -119,7 +121,8 @@ pub(super) async fn count_published_repo_files(
         .with_connection(move |conn| {
             let mut query = published_repo_files::table
                 .inner_join(
-                    build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
+                    build_artifacts::table
+                        .on(published_repo_files::artifact_id.eq(build_artifacts::id)),
                 )
                 .into_boxed();
             if let Some(package_name) = package_name.as_deref() {
@@ -145,7 +148,8 @@ pub(super) async fn list_recent_published_repo_files(
         .with_connection(move |conn| {
             let rows = published_repo_files::table
                 .inner_join(
-                    build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
+                    build_artifacts::table
+                        .on(published_repo_files::artifact_id.eq(build_artifacts::id)),
                 )
                 .order((
                     published_repo_files::published_at.desc(),
@@ -178,7 +182,8 @@ pub(super) async fn list_repo_target_summaries(
         .with_connection(move |conn| {
             let rows = published_repo_files::table
                 .inner_join(
-                    build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
+                    build_artifacts::table
+                        .on(published_repo_files::artifact_id.eq(build_artifacts::id)),
                 )
                 .select((
                     build_artifacts::package_name,
@@ -221,7 +226,8 @@ pub(super) async fn get_repo_distinct_counts(
         .with_connection(|conn| {
             let rows = published_repo_files::table
                 .inner_join(
-                    build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
+                    build_artifacts::table
+                        .on(published_repo_files::artifact_id.eq(build_artifacts::id)),
                 )
                 .select((
                     build_artifacts::package_name,
@@ -254,7 +260,8 @@ pub(super) async fn sum_published_repo_file_bytes(store: &DieselStore) -> anyhow
         .with_connection(|conn| {
             let sizes = published_repo_files::table
                 .inner_join(
-                    build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
+                    build_artifacts::table
+                        .on(published_repo_files::artifact_id.eq(build_artifacts::id)),
                 )
                 .select(build_artifacts::size_bytes)
                 .load::<i64>(conn)?;

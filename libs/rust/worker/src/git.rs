@@ -10,14 +10,14 @@ pub(crate) async fn clone_repository(
     destination: &Path,
     commit: Option<&str>,
 ) -> anyhow::Result<()> {
-    if tokio::fs::try_exists(destination).await? {
-        if let Err(error) = tokio::fs::remove_dir_all(destination).await {
-            warn!(
-                "failed to remove existing checkout {}: {}",
-                destination.display(),
-                error
-            );
-        }
+    if tokio::fs::try_exists(destination).await?
+        && let Err(error) = tokio::fs::remove_dir_all(destination).await
+    {
+        warn!(
+            "failed to remove existing checkout {}: {}",
+            destination.display(),
+            error
+        );
     }
     if let Some(parent) = destination.parent() {
         tokio::fs::create_dir_all(parent).await?;
@@ -79,10 +79,7 @@ pub(crate) async fn git_rev_parse(repo_dir: &Path, rev: &str) -> anyhow::Result<
 pub(crate) async fn run_command(command: &mut Command) -> anyhow::Result<()> {
     let output = command.output().await?;
     if !output.status.success() {
-        anyhow::bail!(
-            "{}",
-            String::from_utf8_lossy(&output.stderr).trim().to_string()
-        );
+        anyhow::bail!("{}", String::from_utf8_lossy(&output.stderr).trim());
     }
     Ok(())
 }

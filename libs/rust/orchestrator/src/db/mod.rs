@@ -599,13 +599,10 @@ pub(crate) struct NewBuildLogRecord<'a> {
     pub(crate) updated_at: &'a str,
 }
 
-#[derive(Debug, Queryable, Selectable)]
-#[diesel(table_name = build_logs)]
-pub(crate) struct BuildLogRecord {
-    pub(crate) job_id: String,
-    pub(crate) source_path: String,
-    pub(crate) log_path: String,
-    pub(crate) updated_at: String,
+#[derive(Debug, Queryable)]
+pub struct BuildLogRecord {
+    pub source_path: String,
+    pub log_path: String,
 }
 
 #[derive(Insertable)]
@@ -792,7 +789,9 @@ pub(crate) fn load_published_repo_files_for_job(
     job_id: &str,
 ) -> anyhow::Result<Vec<PublishedRepoFile>> {
     let rows = published_repo_files::table
-        .inner_join(build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)))
+        .inner_join(
+            build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
+        )
         .filter(build_artifacts::job_id.eq(job_id))
         .order(published_repo_files::repo_path.asc())
         .select((
@@ -806,16 +805,46 @@ pub(crate) fn load_published_repo_files_for_job(
             build_artifacts::kind,
             published_repo_files::published_at,
         ))
-        .load::<(String, String, String, String, String, String, i64, ArtifactKind, String)>(conn)?;
+        .load::<(
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            i64,
+            ArtifactKind,
+            String,
+        )>(conn)?;
     rows.into_iter()
         .map(published_repo_file_from_record)
         .collect()
 }
 
 pub(crate) fn published_repo_file_from_record(
-    row: (String, String, String, String, String, String, i64, ArtifactKind, String),
+    row: (
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        i64,
+        ArtifactKind,
+        String,
+    ),
 ) -> anyhow::Result<PublishedRepoFile> {
-    let (artifact_id, job_id, package_name, mock_chroot, repo_path, sha256, size_bytes, kind, published_at) = row;
+    let (
+        artifact_id,
+        job_id,
+        package_name,
+        mock_chroot,
+        repo_path,
+        sha256,
+        size_bytes,
+        kind,
+        published_at,
+    ) = row;
     Ok(PublishedRepoFile {
         artifact_id: Uuid::parse_str(&artifact_id)?,
         job_id: Uuid::parse_str(&job_id)?,

@@ -51,14 +51,14 @@ impl BuildRunner {
             job_id: build.job_id,
             workspace_dir: job_root,
             timeout_seconds: build.package.build_timeout_seconds,
-            action: WorkerAction::Build(WorkerBuildPayload {
+            action: WorkerAction::Build(Box::new(WorkerBuildPayload {
                 package_name: build.package.name.clone(),
                 package: build.package.clone(),
                 mock_chroot: build.mock_chroot.clone(),
                 trigger: build.trigger,
                 revision: build.revision.comparison_key(),
                 source_commit: build.revision.content_digest.clone(),
-            }),
+            })),
         };
         let execution = self.worker_launcher.run_job(&payload, &self.config).await;
         match execution {

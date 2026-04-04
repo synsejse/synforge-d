@@ -9,7 +9,7 @@ use synforge_core::api::{
     BrowseRepositoryRequest, BrowseRepositoryResponse, BuildJobListResponse, BuildJobResponse,
     ChangePasswordRequest, ConfigSchemaResponse, CreatePackageRequest, CreateUserRequest,
     EffectiveConfigDto, JobListQuery, LogChunkQuery, LogChunkResponse, LogManifestResponse,
-    LogMetaResponse, MockChrootListResponse, PackageActionResponse,
+    LogMetaResponse, MockChrootListResponse, PackageActionResponse, PackageActionTargetResult,
     PackageBuildHistoryResponse, PackageListQuery, PackageListResponse, PackageRepoFilesResponse,
     PackageResponse, PruneJobsResponse, RebuildRequest, RefreshRequest, RepoInventoryQuery,
     RepoInventoryResponse, RepoSummaryResponse, SessionLoginRequest, SessionResponse,
@@ -36,6 +36,14 @@ pub fn router(_state: AppState) -> Router<AppState> {
         .route("/packages/{name}/repo-files", get(get_package_repo_files))
         .route("/packages/{name}/rebuild", post(trigger_rebuild))
         .route("/packages/{name}/refresh", post(trigger_refresh))
+        .route(
+            "/packages/{name}/targets/{mock_chroot}/rebuild",
+            post(trigger_target_rebuild),
+        )
+        .route(
+            "/packages/{name}/targets/{mock_chroot}/refresh",
+            post(trigger_target_refresh),
+        )
         .route("/jobs", get(list_jobs))
         .route("/jobs/prune-failed", post(prune_failed_jobs))
         .route("/session", get(get_session))
@@ -296,6 +304,68 @@ pub(crate) async fn trigger_refresh(
     Json(request): Json<RefreshRequest>,
 ) -> Result<Json<PackageActionResponse>, AppError> {
     Ok(Json(state.service.trigger_refresh(&name, request).await?))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/packages/{name}/targets/{mock_chroot}/rebuild",
+    tag = "Packages",
+    params(
+        ("name" = String, Path, description = "Package name"),
+        ("mock_chroot" = String, Path, description = "Mock chroot target")
+    ),
+    request_body = RebuildRequest,
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "Queue rebuild for one target", body = PackageActionTargetResult),
+        (status = 400, body = synforge_core::api::ApiError),
+        (status = 401, body = synforge_core::api::ApiError),
+        (status = 404, body = synforge_core::api::ApiError),
+        (status = 409, body = synforge_core::api::ApiError)
+    )
+)]
+pub(crate) async fn trigger_target_rebuild(
+    State(state): State<AppState>,
+    Path((name, mock_chroot)): Path<(String, String)>,
+    Json(request): Json<RebuildRequest>,
+) -> Result<Json<PackageActionTargetResult>, AppError> {
+    Ok(Json(
+        state
+            .service
+            .trigger_target_rebuild(&name, &mock_chroot, request)
+            .await?,
+    ))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/packages/{name}/targets/{mock_chroot}/refresh",
+    tag = "Packages",
+    params(
+        ("name" = String, Path, description = "Package name"),
+        ("mock_chroot" = String, Path, description = "Mock chroot target")
+    ),
+    request_body = RefreshRequest,
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "Queue refresh for one target", body = PackageActionTargetResult),
+        (status = 400, body = synforge_core::api::ApiError),
+        (status = 401, body = synforge_core::api::ApiError),
+        (status = 404, body = synforge_core::api::ApiError),
+        (status = 409, body = synforge_core::api::ApiError)
+    )
+)]
+pub(crate) async fn trigger_target_refresh(
+    State(state): State<AppState>,
+    Path((name, mock_chroot)): Path<(String, String)>,
+    Json(request): Json<RefreshRequest>,
+) -> Result<Json<PackageActionTargetResult>, AppError> {
+    Ok(Json(
+        state
+            .service
+            .trigger_target_refresh(&name, &mock_chroot, request)
+            .await?,
+    ))
 }
 
 #[utoipa::path(

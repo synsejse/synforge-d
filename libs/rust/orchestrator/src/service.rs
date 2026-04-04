@@ -14,10 +14,10 @@ use synforge_core::{
         ChangePasswordRequest, ConfigFieldDescriptor, ConfigFieldType, ConfigSchemaResponse,
         CreatePackageRequest, CreateUserRequest, EffectiveConfigDto, EffectiveConfigView,
         LogChunkResponse, LogManifestResponse, LogMetaResponse, LogSource, LogSourceType,
-        MockChrootListResponse, PackageActionResponse, PackageBuildHistoryResponse,
-        PackageBuildInventoryEntry, PackageListResponse, PackageRepoFilesResponse,
-        PackageResponse, PageInfo, PruneJobsResponse, RebuildRequest, RefreshRequest,
-        RepoInventoryResponse,
+        MockChrootListResponse, PackageActionResponse, PackageActionTargetResult,
+        PackageBuildHistoryResponse, PackageBuildInventoryEntry, PackageListResponse,
+        PackageRepoFilesResponse, PackageResponse, PageInfo, PruneJobsResponse, RebuildRequest,
+        RefreshRequest, RepoInventoryResponse,
         RepoSummaryResponse, SessionResponse, SetupInitializeRequest, UpdatePackageRequest,
         UpdateRuntimeSettingsRequest, UpdateUserRequest, UserListResponse, UserMetricsResponse,
         UserResponse,
@@ -785,6 +785,40 @@ impl SynforgeService {
         self.scheduler
             .enqueue_package_action(
                 package_name,
+                BuildTrigger::ManualRebuild,
+                true,
+                &self.queue_tx,
+            )
+            .await
+    }
+
+    pub async fn trigger_target_refresh(
+        &self,
+        package_name: &str,
+        mock_chroot: &str,
+        _request: RefreshRequest,
+    ) -> anyhow::Result<PackageActionTargetResult> {
+        self.scheduler
+            .enqueue_target_action(
+                package_name,
+                mock_chroot,
+                BuildTrigger::ManualRefresh,
+                false,
+                &self.queue_tx,
+            )
+            .await
+    }
+
+    pub async fn trigger_target_rebuild(
+        &self,
+        package_name: &str,
+        mock_chroot: &str,
+        _request: RebuildRequest,
+    ) -> anyhow::Result<PackageActionTargetResult> {
+        self.scheduler
+            .enqueue_target_action(
+                package_name,
+                mock_chroot,
                 BuildTrigger::ManualRebuild,
                 true,
                 &self.queue_tx,

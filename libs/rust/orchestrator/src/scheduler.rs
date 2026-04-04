@@ -111,7 +111,9 @@ impl BuildScheduler {
     ) -> anyhow::Result<BuildJobResponse> {
         let package = self.registry.get_definition(package_name).await?;
 
-        let result = self.prepare_package_action(package, trigger, force).await;
+        let result = self
+            .prepare_package_action(package, None, trigger, force)
+            .await;
 
         match result {
             Ok(plan) => {
@@ -146,7 +148,9 @@ impl BuildScheduler {
         queue_tx: &tokio::sync::mpsc::Sender<QueuedBuild>,
     ) -> anyhow::Result<PackageActionResponse> {
         let package = self.registry.get_definition(package_name).await?;
-        let plan = self.prepare_package_action(package, trigger, force).await?;
+        let plan = self
+            .prepare_package_action(package, None, trigger, force)
+            .await?;
 
         for job in &plan.jobs {
             self.store.insert_job(job).await?;
@@ -165,9 +169,42 @@ impl BuildScheduler {
         })
     }
 
+    pub async fn enqueue_target_action(
+        &self,
+        package_name: &str,
+        mock_chroot: &str,
+        trigger: BuildTrigger,
+        force: bool,
+        queue_tx: &tokio::sync::mpsc::Sender<QueuedBuild>,
+    ) -> anyhow::Result<PackageActionTargetResult> {
+        let package = self.registry.get_definition(package_name).await?;
+        let plan = self
+            .prepare_package_action(package, Some(mock_chroot), trigger, force)
+            .await?;
+        for job in &plan.jobs {
+            self.store.insert_job(job).await?;
+        }
+        for queued in &plan.queued_builds {
+            queue_tx
+                .send(queued.clone())
+                .await
+                .map_err(|error| anyhow::anyhow!("failed to queue build: {}", error))?;
+        }
+        plan.results
+            .into_iter()
+            .find(|result| result.mock_chroot == mock_chroot)
+            .ok_or_else(|| {
+                anyhow::anyhow!(SynforgeError::NotFound(format!(
+                    "target {} for package {}",
+                    mock_chroot, package_name
+                )))
+            })
+    }
+
     async fn prepare_package_action(
         &self,
         package: PackageDefinition,
+        target_mock_chroot: Option<&str>,
         trigger: BuildTrigger,
         force: bool,
     ) -> anyhow::Result<PackageActionPlan> {
@@ -181,7 +218,19 @@ impl BuildScheduler {
             .await?;
         let revision_key = inspected.revision.comparison_key();
 
-        let build_chroots = package.mock_chroots.clone();
+        let build_chroots = match target_mock_chroot {
+            Some(mock_chroot) => {
+                if package.mock_chroots.iter().any(|value| value == mock_chroot) {
+                    vec![mock_chroot.to_string()]
+                } else {
+                    return Err(anyhow::anyhow!(SynforgeError::NotFound(format!(
+                        "target {} for package {}",
+                        mock_chroot, package.name
+                    ))));
+                }
+            }
+            None => package.mock_chroots.clone(),
+        };
         let mut queued_chroots = Vec::new();
         let mut blocked_by_active_job = false;
         let mut results = Vec::new();

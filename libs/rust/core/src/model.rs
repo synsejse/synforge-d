@@ -76,6 +76,8 @@ pub struct PublishedRepoFile {
 pub enum ArtifactKind {
     Rpm,
     Srpm,
+    Debuginfo,
+    Debugsource,
     Log,
     Other,
 }
@@ -162,6 +164,8 @@ impl_text_enum!(BuildStatus {
 impl_text_enum!(ArtifactKind {
     Rpm => ["rpm"],
     Srpm => ["srpm"],
+    Debuginfo => ["debuginfo"],
+    Debugsource => ["debugsource"],
     Log => ["log"],
     Other => ["other"],
 });

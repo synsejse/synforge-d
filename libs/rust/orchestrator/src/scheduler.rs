@@ -286,6 +286,8 @@ impl BuildScheduler {
                 &inspected,
                 MaterializePackageOptions {
                     enabled: package.enabled,
+                    publish_srpm: package.publish_srpm,
+                    publish_debuginfo: package.publish_debuginfo,
                     network_access: package.network_access,
                     mock_chroots: package.mock_chroots.clone(),
                     poll_interval_seconds: package.poll_interval_seconds,

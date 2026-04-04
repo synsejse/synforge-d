@@ -5,6 +5,7 @@ diesel::table! {
         enabled -> Bool,
         repo_subdir -> Text,
         publish_srpm -> Bool,
+        publish_debuginfo -> Bool,
         network_access -> Bool,
         mock_chroots_json -> Text,
         source_repo_url -> Text,

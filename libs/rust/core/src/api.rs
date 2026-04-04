@@ -26,6 +26,12 @@ pub struct PageInfo {
 pub struct CreatePackageRequest {
     pub name: String,
     pub source: SpecSource,
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+    #[serde(default = "default_publish_srpm")]
+    pub publish_srpm: bool,
+    #[serde(default = "default_publish_debuginfo")]
+    pub publish_debuginfo: bool,
     #[serde(default)]
     pub network_access: bool,
     pub mock_chroots: Vec<String>,
@@ -45,6 +51,8 @@ pub struct UpdatePackageRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub publish_srpm: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub publish_debuginfo: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub network_access: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mock_chroots: Option<Vec<String>>,
@@ -60,6 +68,18 @@ pub struct UpdatePackageRequest {
 
 fn default_package_history_count() -> u64 {
     3
+}
+
+fn default_enabled() -> bool {
+    true
+}
+
+fn default_publish_srpm() -> bool {
+    true
+}
+
+fn default_publish_debuginfo() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

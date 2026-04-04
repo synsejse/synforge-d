@@ -376,6 +376,24 @@ async fn prepare_topdir(topdir: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn classify_rpm_artifact(path: &Path) -> ArtifactKind {
+    let Some(filename) = path.file_name().and_then(|n| n.to_str()) else {
+        return ArtifactKind::Other;
+    };
+
+    if filename.ends_with(".src.rpm") {
+        ArtifactKind::Srpm
+    } else if filename.ends_with("-debuginfo.rpm") {
+        ArtifactKind::Debuginfo
+    } else if filename.ends_with("-debugsource.rpm") {
+        ArtifactKind::Debugsource
+    } else if filename.ends_with(".rpm") {
+        ArtifactKind::Rpm
+    } else {
+        ArtifactKind::Other
+    }
+}
+
 async fn build_artifact(
     package: &PackageDefinition,
     topdir: &Path,
@@ -386,15 +404,7 @@ async fn build_artifact(
         .await
         .with_context(|| format!("failed to read artifact {}", path.display()))?;
     let sha256 = format!("{:x}", Sha256::digest(&bytes));
-    let kind = if path
-        .file_name()
-        .and_then(|value| value.to_str())
-        .is_some_and(|value| value.ends_with(".src.rpm"))
-    {
-        ArtifactKind::Srpm
-    } else {
-        ArtifactKind::Rpm
-    };
+    let kind = classify_rpm_artifact(&path);
     let artifact_root = topdir.parent().unwrap_or(topdir);
     Ok(BuildArtifact {
         id: Uuid::now_v7(),

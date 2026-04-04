@@ -446,7 +446,10 @@ function AddPackageModal({
   const [name, setName] = useState("");
   const [repoUrl, setRepoUrl] = useState("");
   const [specPath, setSpecPath] = useState("");
+  const [enabled, setEnabled] = useState(true);
   const [poll, setPoll] = useState(true);
+  const [publishSrpm, setPublishSrpm] = useState(true);
+  const [publishDebuginfo, setPublishDebuginfo] = useState(true);
   const [networkAccess, setNetworkAccess] = useState(false);
   const [mockChroots, setMockChroots] = useState<string[]>([
     "fedora-44-x86_64",
@@ -541,6 +544,9 @@ function AddPackageModal({
     const request: CreatePackageRequest = {
       name: name.trim(),
       source,
+      enabled,
+      publish_srpm: publishSrpm,
+      publish_debuginfo: publishDebuginfo,
       network_access: networkAccess,
       mock_chroots: mockChroots,
       poll_interval_seconds: Number(pollIntervalSeconds),
@@ -570,7 +576,7 @@ function AddPackageModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 overflow-y-auto bg-black/70 px-4 py-6"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden overscroll-none bg-black/70 px-4 py-6"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
@@ -582,7 +588,7 @@ function AddPackageModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="mx-auto w-full max-w-3xl border border-zinc-800 bg-black"
+        className="flex max-h-[calc(100dvh-3rem)] w-full max-w-3xl flex-col border border-zinc-800 bg-black"
       >
         <div className="border-b border-zinc-800 px-6 py-5">
           <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">
@@ -595,7 +601,7 @@ function AddPackageModal({
 
         <form
           onSubmit={handleSubmit}
-          className="max-h-[calc(100vh-8rem)] space-y-5 overflow-y-auto px-6 py-6"
+          className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-6 py-6"
         >
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-zinc-300">
@@ -625,40 +631,93 @@ function AddPackageModal({
             />
           </label>
 
-          <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
-            <span>
-              <span className="block text-sm font-medium text-white">
-                Enable polling
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+              <span>
+                <span className="block text-sm font-medium text-white">
+                  Enabled
+                </span>
+                <span className="mt-1 block text-xs text-zinc-400">
+                  Allow new builds for this package.
+                </span>
               </span>
-              <span className="mt-1 block text-xs text-zinc-400">
-                Automatically watch the source for updates.
-              </span>
-            </span>
-            <input
-              type="checkbox"
-              checked={poll}
-              onChange={(event) => setPoll(event.target.checked)}
-              className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
-            />
-          </label>
+              <input
+                type="checkbox"
+                checked={enabled}
+                onChange={(event) => setEnabled(event.target.checked)}
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+              />
+            </label>
 
-          <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
-            <span>
-              <span className="block text-sm font-medium text-white">
-                Network access
+            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+              <span>
+                <span className="block text-sm font-medium text-white">
+                  Enable polling
+                </span>
+                <span className="mt-1 block text-xs text-zinc-400">
+                  Automatically watch the source for updates.
+                </span>
               </span>
-              <span className="mt-1 block text-xs text-zinc-400">
-                Allow mock builds to access the network for packages that cannot
-                build fully offline.
+              <input
+                type="checkbox"
+                checked={poll}
+                onChange={(event) => setPoll(event.target.checked)}
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+              />
+            </label>
+
+            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+              <span>
+                <span className="block text-sm font-medium text-white">
+                  Publish SRPM
+                </span>
+                <span className="mt-1 block text-xs text-zinc-400">
+                  Keep source RPM publication enabled for this package.
+                </span>
               </span>
-            </span>
-            <input
-              type="checkbox"
-              checked={networkAccess}
-              onChange={(event) => setNetworkAccess(event.target.checked)}
-              className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
-            />
-          </label>
+              <input
+                type="checkbox"
+                checked={publishSrpm}
+                onChange={(event) => setPublishSrpm(event.target.checked)}
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+              />
+            </label>
+
+            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+              <span>
+                <span className="block text-sm font-medium text-white">
+                  Publish debug packages
+                </span>
+                <span className="mt-1 block text-xs text-zinc-400">
+                  Include debuginfo and debugsource RPMs in repository.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={publishDebuginfo}
+                onChange={(event) => setPublishDebuginfo(event.target.checked)}
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+              />
+            </label>
+
+            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3 md:col-span-2">
+              <span>
+                <span className="block text-sm font-medium text-white">
+                  Network access
+                </span>
+                <span className="mt-1 block text-xs text-zinc-400">
+                  Allow mock builds to access the network for packages that cannot
+                  build fully offline.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={networkAccess}
+                onChange={(event) => setNetworkAccess(event.target.checked)}
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+              />
+            </label>
+          </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="border border-zinc-800 bg-black p-4 lg:col-span-2">

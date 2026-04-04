@@ -24,6 +24,8 @@ pub struct InspectedPackageSource {
 #[derive(Debug, Clone)]
 pub struct MaterializePackageOptions {
     pub enabled: bool,
+    pub publish_srpm: bool,
+    pub publish_debuginfo: bool,
     pub network_access: bool,
     pub mock_chroots: Vec<String>,
     pub poll_interval_seconds: u64,
@@ -107,7 +109,8 @@ impl PackageSyncStore {
             description: inspected.description.clone(),
             enabled: options.enabled,
             repo_subdir: inspected.package_name.clone(),
-            publish_srpm: true,
+            publish_srpm: options.publish_srpm,
+            publish_debuginfo: options.publish_debuginfo,
             network_access: options.network_access,
             mock_chroots: options.mock_chroots,
             source: source.clone(),

@@ -61,7 +61,9 @@ impl PackageRegistry {
                 &request.name,
                 &request.source,
                 MaterializePackageOptions {
-                    enabled: true,
+                    enabled: request.enabled,
+                    publish_srpm: request.publish_srpm,
+                    publish_debuginfo: request.publish_debuginfo,
                     network_access: request.network_access,
                     mock_chroots: request.mock_chroots,
                     poll_interval_seconds: request.poll_interval_seconds,
@@ -106,6 +108,12 @@ impl PackageRegistry {
         let network_access = request
             .network_access
             .unwrap_or(existing.package.network_access);
+        let publish_srpm = request
+            .publish_srpm
+            .unwrap_or(existing.package.publish_srpm);
+        let publish_debuginfo = request
+            .publish_debuginfo
+            .unwrap_or(existing.package.publish_debuginfo);
         let (package, _) = self
             .package_store
             .sync_source(
@@ -113,6 +121,8 @@ impl PackageRegistry {
                 &request.source,
                 MaterializePackageOptions {
                     enabled,
+                    publish_srpm,
+                    publish_debuginfo,
                     network_access,
                     mock_chroots,
                     poll_interval_seconds,
@@ -127,11 +137,6 @@ impl PackageRegistry {
                 "updated package name must match existing package".to_string(),
             )));
         }
-        let mut package = package;
-        package.publish_srpm = request
-            .publish_srpm
-            .unwrap_or(existing.package.publish_srpm);
-        package.network_access = network_access;
         self.store.upsert_package(&package).await?;
         self.get_package(package_name).await
     }
@@ -175,6 +180,8 @@ impl PackageRegistry {
                 &package.source,
                 MaterializePackageOptions {
                     enabled: package.enabled,
+                    publish_srpm: package.publish_srpm,
+                    publish_debuginfo: package.publish_debuginfo,
                     network_access: package.network_access,
                     mock_chroots: package.mock_chroots.clone(),
                     poll_interval_seconds: package.poll_interval_seconds,

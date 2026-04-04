@@ -527,6 +527,7 @@ pub(crate) struct PackageRecord {
     pub(crate) enabled: bool,
     pub(crate) repo_subdir: String,
     pub(crate) publish_srpm: bool,
+    pub(crate) publish_debuginfo: bool,
     pub(crate) network_access: bool,
     pub(crate) mock_chroots_json: String,
     pub(crate) source_repo_url: String,
@@ -549,6 +550,7 @@ pub(crate) struct NewPackageRecord<'a> {
     pub(crate) enabled: bool,
     pub(crate) repo_subdir: &'a str,
     pub(crate) publish_srpm: bool,
+    pub(crate) publish_debuginfo: bool,
     pub(crate) network_access: bool,
     pub(crate) mock_chroots_json: &'a str,
     pub(crate) source_repo_url: &'a str,
@@ -713,6 +715,7 @@ pub(crate) fn package_response_from_record(
         enabled: record.enabled,
         repo_subdir: record.repo_subdir,
         publish_srpm: record.publish_srpm,
+        publish_debuginfo: record.publish_debuginfo,
         network_access: record.network_access,
         mock_chroots: serde_json::from_str::<Vec<String>>(&record.mock_chroots_json)
             .unwrap_or_default(),

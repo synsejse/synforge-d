@@ -98,6 +98,7 @@ export default function PackageDetail({ packageName }: Props) {
     buildEnv: "",
     enabled: true,
     publish_srpm: true,
+    publish_debuginfo: true,
     network_access: false,
   });
 
@@ -119,6 +120,7 @@ export default function PackageDetail({ packageName }: Props) {
       buildEnv: encodeBuildEnv(packageRes.package.build_env),
       enabled: packageRes.package.enabled,
       publish_srpm: packageRes.package.publish_srpm,
+      publish_debuginfo: packageRes.package.publish_debuginfo,
       network_access: packageRes.package.network_access,
     });
   }
@@ -247,6 +249,7 @@ export default function PackageDetail({ packageName }: Props) {
         source,
         enabled: form.enabled,
         publish_srpm: form.publish_srpm,
+        publish_debuginfo: form.publish_debuginfo,
         network_access: form.network_access,
         mock_chroots: form.mockChroots,
         poll_interval_seconds: Number(form.pollIntervalSeconds),
@@ -629,7 +632,7 @@ export default function PackageDetail({ packageName }: Props) {
                 />
               </label>
 
-              <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3 md:col-span-2">
+              <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
                 <span>
                   <span className="block text-sm font-medium text-white">
                     Publish SRPM
@@ -645,6 +648,28 @@ export default function PackageDetail({ packageName }: Props) {
                     setForm((current) => ({
                       ...current,
                       publish_srpm: event.target.checked,
+                    }))
+                  }
+                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                />
+              </label>
+
+              <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+                <span>
+                  <span className="block text-sm font-medium text-white">
+                    Publish debug packages
+                  </span>
+                  <span className="mt-1 block text-xs text-zinc-400">
+                    Include debuginfo and debugsource RPMs in repository.
+                  </span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={form.publish_debuginfo}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      publish_debuginfo: event.target.checked,
                     }))
                   }
                   className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"

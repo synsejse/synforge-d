@@ -19,6 +19,8 @@ pub struct PackageDefinition {
     pub repo_subdir: String,
     #[serde(default = "default_publish_srpm")]
     pub publish_srpm: bool,
+    #[serde(default = "default_publish_debuginfo")]
+    pub publish_debuginfo: bool,
     #[serde(default)]
     pub network_access: bool,
     #[serde(default)]
@@ -49,6 +51,10 @@ fn default_enabled() -> bool {
 }
 
 fn default_publish_srpm() -> bool {
+    true
+}
+
+fn default_publish_debuginfo() -> bool {
     true
 }
 

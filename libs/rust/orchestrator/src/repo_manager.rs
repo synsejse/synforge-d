@@ -14,6 +14,14 @@ use synforge_core::{
 use tokio::process::Command;
 use uuid::Uuid;
 
+fn should_skip_artifact(artifact: &BuildArtifact, package: &PackageDefinition) -> bool {
+    match artifact.kind {
+        ArtifactKind::Srpm => !package.publish_srpm,
+        ArtifactKind::Debuginfo | ArtifactKind::Debugsource => !package.publish_debuginfo,
+        ArtifactKind::Rpm | ArtifactKind::Log | ArtifactKind::Other => false,
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct FileRepoManager;
 
@@ -38,7 +46,7 @@ impl FileRepoManager {
         let mut files = Vec::new();
         let mut seen_paths = HashSet::new();
         for artifact in &worker_result.artifacts {
-            if artifact.kind == ArtifactKind::Srpm && !package.publish_srpm {
+            if should_skip_artifact(artifact, package) {
                 continue;
             }
             let build_root = build_repo_build_dir(config, package, worker_result.job_id, artifact);

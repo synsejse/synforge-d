@@ -5,6 +5,9 @@ use synforge_core::package::SpecSource;
 use tokio::process::Command;
 use tracing::warn;
 
+const SHALLOW_CLONE_DEPTH: &str = "1";
+const HEAD_REVISION: &str = "HEAD";
+
 pub(crate) async fn clone_repository(
     source: &SpecSource,
     destination: &Path,
@@ -27,7 +30,7 @@ pub(crate) async fn clone_repository(
         Command::new("git")
             .arg("clone")
             .arg("--depth")
-            .arg("1")
+            .arg(SHALLOW_CLONE_DEPTH)
             .arg(&source.repo_url)
             .arg(destination),
     )
@@ -40,7 +43,7 @@ pub(crate) async fn clone_repository(
                 .current_dir(destination)
                 .arg("fetch")
                 .arg("--depth")
-                .arg("1")
+                .arg(SHALLOW_CLONE_DEPTH)
                 .arg("origin")
                 .arg(commit),
         )
@@ -74,6 +77,10 @@ pub(crate) async fn git_rev_parse(repo_dir: &Path, rev: &str) -> anyhow::Result<
         );
     }
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+pub(crate) async fn git_head_commit(repo_dir: &Path) -> anyhow::Result<String> {
+    git_rev_parse(repo_dir, HEAD_REVISION).await
 }
 
 pub(crate) async fn run_command(command: &mut Command) -> anyhow::Result<()> {

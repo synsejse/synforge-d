@@ -18,7 +18,6 @@
 - Compose stack: `docker-compose.yml`
 - Compose data volume: `synforge-runtime`
 - Runtime configuration: `/var/lib/synforge/config/config.yaml`
-- Example config: `config/config.yaml.example`
 
 ## Runtime Model
 

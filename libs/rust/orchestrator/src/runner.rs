@@ -57,7 +57,7 @@ impl BuildRunner {
                 mock_chroot: build.mock_chroot.clone(),
                 trigger: build.trigger,
                 revision: build.revision.comparison_key(),
-                source_commit: build.revision.content_digest.clone(),
+                checkout_commit: build.revision.source_commit.clone(),
             })),
         };
         let execution = self.worker_launcher.run_job(&payload, &self.config).await;

@@ -93,6 +93,8 @@ pub struct SpecRevision {
     pub release: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub content_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_commit: Option<String>,
 }
 
 fn default_true() -> bool {
@@ -109,6 +111,7 @@ impl PackageDefinition {
             version: self.version.clone(),
             release: self.release.clone(),
             content_digest: None,
+            source_commit: None,
         }
     }
 }
@@ -135,6 +138,7 @@ impl ParsedSpec {
             version: self.version.clone(),
             release: self.release.clone(),
             content_digest: None,
+            source_commit: None,
         }
     }
 }
@@ -144,11 +148,13 @@ impl SpecRevision {
         version: impl Into<String>,
         release: impl Into<String>,
         content_digest: Option<String>,
+        source_commit: Option<String>,
     ) -> Self {
         Self {
             version: version.into(),
             release: release.into(),
             content_digest,
+            source_commit,
         }
     }
 

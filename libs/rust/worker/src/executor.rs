@@ -62,7 +62,7 @@ async fn execute_spec_build(
     clone_repository(
         &package.source,
         &repo_dir,
-        build_payload.source_commit.as_deref(),
+        build_payload.checkout_commit.as_deref(),
     )
     .await?;
     let spec_path = repo_dir.join(&package.source.spec_path);
@@ -78,8 +78,8 @@ async fn execute_spec_build(
         logger
             .line(format!("Repository: {}", package.source.repo_url))
             .await?;
-        if let Some(source_commit) = &build_payload.source_commit {
-            logger.line(format!("Commit: {}", source_commit)).await?;
+        if let Some(checkout_commit) = &build_payload.checkout_commit {
+            logger.line(format!("Commit: {}", checkout_commit)).await?;
         }
         logger
             .line(format!("Workspace: {}", payload.workspace_dir.display()))

@@ -254,7 +254,7 @@ pub struct WorkerBuildPayload {
     pub trigger: BuildTrigger,
     pub revision: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub source_commit: Option<String>,
+    pub checkout_commit: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

@@ -18,6 +18,7 @@ import type {
   BuildEnvVar,
   CreatePackageRequest,
   PackageResponse,
+  PackageTargetState,
   SpecSource,
 } from "../lib/types";
 import {
@@ -28,6 +29,26 @@ import {
   faTrash,
   faMagnifyingGlass,
 } from "@fortawesome/free-solid-svg-icons";
+
+function summarizePackageStatus(entry: PackageResponse) {
+  if (!entry.package.enabled) {
+    return "disabled";
+  }
+  if (entry.state.targets.some((target) => target.active_status === "running")) {
+    return "running";
+  }
+  if (entry.state.targets.some((target) => target.active_status === "pending")) {
+    return "pending";
+  }
+  return "enabled";
+}
+
+function targetStatus(target: PackageTargetState) {
+  if (target.active_status) {
+    return target.active_status;
+  }
+  return target.last_successful_build_id ? "succeeded" : "disabled";
+}
 
 export default function PackageList() {
   const [packages, setPackages] = useState<PackageResponse[]>([]);
@@ -235,12 +256,7 @@ export default function PackageList() {
             </thead>
             <tbody className="divide-y divide-white/8">
               {packages.map((entry) => {
-                const active = Boolean(entry.state.active_job_id);
-                const status = active
-                  ? "running"
-                  : entry.package.enabled
-                    ? "enabled"
-                    : "disabled";
+                const status = summarizePackageStatus(entry);
                 return (
                   <tr key={entry.package.name} className="hover:bg-zinc-950">
                     <td className="px-4 py-3">
@@ -273,12 +289,44 @@ export default function PackageList() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="max-w-[220px] break-all font-mono text-sm text-zinc-400">
-                        {entry.state.last_revision || "None yet"}
+                      <div className="space-y-2">
+                        <div className="max-w-[220px] break-all font-mono text-sm text-zinc-400">
+                          {entry.state.last_revision || "None yet"}
+                        </div>
+                        <div className="space-y-1">
+                          {entry.state.targets.map((target) => (
+                            <div
+                              key={`${entry.package.name}:${target.mock_chroot}:revision`}
+                              className="flex items-start justify-between gap-3 text-xs"
+                            >
+                              <span className="font-mono text-zinc-500">
+                                {target.mock_chroot}
+                              </span>
+                              <span className="max-w-[180px] break-all font-mono text-right text-zinc-600">
+                                {target.last_revision || "No successful revision"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <StatusPill status={status} />
+                      <div className="space-y-2">
+                        <StatusPill status={status} />
+                        <div className="space-y-1">
+                          {entry.state.targets.map((target) => (
+                            <div
+                              key={`${entry.package.name}:${target.mock_chroot}:status`}
+                              className="flex items-center justify-between gap-3"
+                            >
+                              <span className="font-mono text-xs text-zinc-500">
+                                {target.mock_chroot}
+                              </span>
+                              <StatusPill status={targetStatus(target)} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">

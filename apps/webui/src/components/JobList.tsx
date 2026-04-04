@@ -24,11 +24,20 @@ const FILTERS: Array<"all" | BuildStatus> = [
   "timed_out",
 ];
 
+type JobViewMode = "history" | "active";
+
 export default function JobList() {
   const [jobs, setJobs] = useState<BuildJobResponse[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<JobViewMode>(() => {
+    if (typeof window === "undefined") {
+      return "history";
+    }
+    const value = new URLSearchParams(window.location.search).get("mode");
+    return value === "active" ? "active" : "history";
+  });
   const [filter, setFilter] = useState<string>(() => {
     if (typeof window === "undefined") {
       return "all";
@@ -59,6 +68,7 @@ export default function JobList() {
   const pageSize = 50;
 
   async function load(
+    nextMode = mode,
     nextFilter = filter,
     nextOffset = offset,
     nextPackageFilter = packageFilter,
@@ -66,15 +76,25 @@ export default function JobList() {
   ) {
     try {
       setLoading(true);
-      const res = await api.listJobs({
-        limit: pageSize,
-        offset: nextOffset,
-        status: nextFilter,
-        packageName: nextPackageFilter,
-        mockChroot: nextTargetFilter,
-      });
+      const res =
+        nextMode === "active"
+          ? await api.listActiveJobs({
+              limit: pageSize,
+              offset: nextOffset,
+              packageName: nextPackageFilter,
+              mockChroot: nextTargetFilter,
+            })
+          : await api.listJobs({
+              limit: pageSize,
+              offset: nextOffset,
+              status: nextFilter,
+              packageName: nextPackageFilter,
+              mockChroot: nextTargetFilter,
+              terminalOnly: true,
+            });
       setJobs(res.jobs);
       setHasMore(res.page.has_more);
+      setMode(nextMode);
       setOffset(nextOffset);
       setFilter(nextFilter);
       setPackageFilter(nextPackageFilter);
@@ -82,7 +102,12 @@ export default function JobList() {
       setError(null);
       if (typeof window !== "undefined") {
         const params = new URLSearchParams(window.location.search);
-        if (nextFilter === "all") {
+        if (nextMode === "history") {
+          params.delete("mode");
+        } else {
+          params.set("mode", nextMode);
+        }
+        if (nextMode === "active" || nextFilter === "all") {
           params.delete("status");
         } else {
           params.set("status", nextFilter);
@@ -170,41 +195,63 @@ export default function JobList() {
     <div className="space-y-8">
       <PageHeader
         eyebrow="Job Activity"
-        title="Build Timeline"
-        description="Queued, running, and finished jobs."
+        title={mode === "active" ? "Active Builds" : "Build Timeline"}
+        description={
+          mode === "active"
+            ? "Pending and running jobs currently in flight."
+            : "Finished job history across all packages and targets."
+        }
         actions={[{ href: "/", label: "Overview", icon: faChartLine }]}
       />
 
       <section className="flex flex-wrap gap-2 border border-zinc-800 bg-black p-4">
-        <ActionButton
-          onClick={handlePruneFailed}
-          disabled={
-            pruning ||
-            !jobs.some(
-              (entry) =>
-                entry.job.status === "failed" ||
-                entry.job.status === "timed_out",
-            )
-          }
-          icon={faTrash}
-          className="text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {pruning ? "Pruning…" : "Prune Failed"}
-        </ActionButton>
-        {FILTERS.map((value) => (
+        {(["history", "active"] as JobViewMode[]).map((value) => (
           <button
             key={value}
-            onClick={() => load(value, 0)}
-            aria-pressed={filter === value}
+            onClick={() => load(value, "all", 0, packageFilter, targetFilter)}
+            aria-pressed={mode === value}
             className={`border px-4 py-2 text-sm transition ${
-              filter === value
+              mode === value
                 ? "border-zinc-200 bg-zinc-100 text-black"
                 : "border-zinc-800 bg-black text-zinc-300 hover:border-zinc-600 hover:bg-zinc-950"
             }`}
           >
-            {value}
+            {value === "history" ? "History" : "Active"}
           </button>
         ))}
+        {mode === "history" ? (
+          <>
+            <ActionButton
+              onClick={handlePruneFailed}
+              disabled={
+                pruning ||
+                !jobs.some(
+                  (entry) =>
+                    entry.job.status === "failed" ||
+                    entry.job.status === "timed_out",
+                )
+              }
+              icon={faTrash}
+              className="text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {pruning ? "Pruning…" : "Prune Failed"}
+            </ActionButton>
+            {FILTERS.map((value) => (
+              <button
+                key={value}
+                onClick={() => load(mode, value, 0, packageFilter, targetFilter)}
+                aria-pressed={filter === value}
+                className={`border px-4 py-2 text-sm transition ${
+                  filter === value
+                    ? "border-zinc-200 bg-zinc-100 text-black"
+                    : "border-zinc-800 bg-black text-zinc-300 hover:border-zinc-600 hover:bg-zinc-950"
+                }`}
+              >
+                {value}
+              </button>
+            ))}
+          </>
+        ) : null}
       </section>
 
       <section className="grid gap-3 border border-zinc-800 bg-black p-4 md:grid-cols-[minmax(0,1fr)_240px_auto]">
@@ -230,7 +277,7 @@ export default function JobList() {
         </label>
         <button
           type="button"
-          onClick={() => load(filter, 0, packageFilter, targetFilter)}
+          onClick={() => load(mode, filter, 0, packageFilter, targetFilter)}
           className="border border-zinc-800 bg-black px-4 py-2.5 text-sm text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
         >
           <FaIcon icon={faMagnifyingGlass} className="mr-2" />
@@ -239,7 +286,11 @@ export default function JobList() {
       </section>
 
       {jobs.length === 0 ? (
-        <EmptyState>No jobs match the current filter.</EmptyState>
+        <EmptyState>
+          {mode === "active"
+            ? "No active jobs match the current filter."
+            : "No finished jobs match the current filter."}
+        </EmptyState>
       ) : (
         <div className="overflow-x-auto border border-zinc-800 bg-black">
           <table className="min-w-[980px] w-full">
@@ -350,6 +401,7 @@ export default function JobList() {
           <button
             onClick={() =>
               load(
+                mode,
                 filter,
                 Math.max(0, offset - pageSize),
                 packageFilter,
@@ -362,9 +414,7 @@ export default function JobList() {
             Previous
           </button>
           <button
-            onClick={() =>
-              load(filter, offset + pageSize, packageFilter, targetFilter)
-            }
+            onClick={() => load(mode, filter, offset + pageSize, packageFilter, targetFilter)}
             disabled={loading || !hasMore}
             className="border border-zinc-800 px-4 py-2 text-sm text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
           >

@@ -8,7 +8,7 @@ use tracing::warn;
 use uuid::Uuid;
 
 use synforge_core::{
-    api::BuildJobResponse,
+    api::{BuildJobResponse, PackageActionDisposition, PackageActionTargetResult},
     error::SynforgeError,
     model::{BuildJob, BuildStatus, BuildTrigger, now_utc},
     package::{PackageDefinition, SpecRevision, parse_mock_chroot},
@@ -35,6 +35,13 @@ pub enum SchedulerError {
     NoSourceChanges,
     #[error("spec Name changed; remove and re-add the package instead")]
     PackageRenamed,
+}
+
+struct PackageActionPlan {
+    jobs: Vec<BuildJob>,
+    queued_builds: Vec<QueuedBuild>,
+    #[allow(dead_code)]
+    results: Vec<PackageActionTargetResult>,
 }
 
 #[derive(Debug, Clone, Eq)]
@@ -131,10 +138,12 @@ impl BuildScheduler {
     ) -> anyhow::Result<BuildJobResponse> {
         let package = self.registry.get_definition(package_name).await?;
 
-        let result = self.prepare_queued_build(package, trigger, force).await;
+        let result = self.prepare_package_action(package, trigger, force).await;
 
         match result {
-            Ok((jobs, queued_builds)) => {
+            Ok(plan) => {
+                let jobs = plan.jobs;
+                let queued_builds = plan.queued_builds;
                 let response_job_id = jobs
                     .first()
                     .map(|job| job.id)
@@ -178,12 +187,12 @@ impl BuildScheduler {
             .contains(&TargetKey::new(package_name, mock_chroot))
     }
 
-    async fn prepare_queued_build(
+    async fn prepare_package_action(
         &self,
         package: PackageDefinition,
         trigger: BuildTrigger,
         force: bool,
-    ) -> anyhow::Result<(Vec<BuildJob>, Vec<QueuedBuild>)> {
+    ) -> anyhow::Result<PackageActionPlan> {
         let inspected = self
             .registry
             .inspect_source(
@@ -197,6 +206,7 @@ impl BuildScheduler {
         let build_chroots = package.mock_chroots.clone();
         let mut queued_chroots = Vec::new();
         let mut blocked_by_active_job = false;
+        let mut results = Vec::new();
         for mock_chroot in &build_chroots {
             // Check both in-memory (queued but not yet in DB) and DB (running)
             if self.target_is_active(&package.name, mock_chroot)
@@ -206,6 +216,14 @@ impl BuildScheduler {
                     .await?
             {
                 blocked_by_active_job = true;
+                results.push(PackageActionTargetResult {
+                    package_name: package.name.clone(),
+                    mock_chroot: mock_chroot.clone(),
+                    disposition: PackageActionDisposition::Blocked,
+                    reason: Some("pending_or_running".to_string()),
+                    job_id: None,
+                    revision: Some(revision_key.clone()),
+                });
                 continue;
             }
             let previous_revision = self
@@ -214,6 +232,15 @@ impl BuildScheduler {
                 .await?;
             if force || previous_revision.as_deref() != Some(revision_key.as_str()) {
                 queued_chroots.push(mock_chroot.clone());
+            } else {
+                results.push(PackageActionTargetResult {
+                    package_name: package.name.clone(),
+                    mock_chroot: mock_chroot.clone(),
+                    disposition: PackageActionDisposition::Skipped,
+                    reason: Some("no_source_change".to_string()),
+                    job_id: None,
+                    revision: Some(revision_key.clone()),
+                });
             }
         }
         if queued_chroots.is_empty() {
@@ -250,8 +277,9 @@ impl BuildScheduler {
         for mock_chroot in queued_chroots {
             parse_mock_chroot(&mock_chroot)
                 .ok_or_else(|| anyhow::anyhow!("invalid mock chroot {}", mock_chroot))?;
+            let job_id = Uuid::now_v7();
             let job = BuildJob {
-                id: Uuid::now_v7(),
+                id: job_id,
                 package_name: updated_package.name.clone(),
                 mock_chroot: mock_chroot.clone(),
                 revision: revision_key.clone(),
@@ -269,10 +297,22 @@ impl BuildScheduler {
                 mock_chroot,
                 revision: inspected.revision.clone(),
                 trigger,
-                job_id: job.id,
+                job_id,
+            });
+            results.push(PackageActionTargetResult {
+                package_name: updated_package.name.clone(),
+                mock_chroot: job.mock_chroot.clone(),
+                disposition: PackageActionDisposition::Queued,
+                reason: None,
+                job_id: Some(job_id),
+                revision: Some(revision_key.clone()),
             });
             jobs.push(job);
         }
-        Ok((jobs, queued))
+        Ok(PackageActionPlan {
+            jobs,
+            queued_builds: queued,
+            results,
+        })
     }
 }

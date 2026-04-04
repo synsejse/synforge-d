@@ -383,15 +383,23 @@ fn classify_rpm_artifact(path: &Path) -> ArtifactKind {
 
     if filename.ends_with(".src.rpm") {
         ArtifactKind::Srpm
-    } else if filename.ends_with("-debuginfo.rpm") {
-        ArtifactKind::Debuginfo
-    } else if filename.ends_with("-debugsource.rpm") {
-        ArtifactKind::Debugsource
     } else if filename.ends_with(".rpm") {
-        ArtifactKind::Rpm
+        match rpm_name_component(filename) {
+            Some(name) if name.ends_with("-debuginfo") => ArtifactKind::Debuginfo,
+            Some(name) if name.ends_with("-debugsource") => ArtifactKind::Debugsource,
+            _ => ArtifactKind::Rpm,
+        }
     } else {
         ArtifactKind::Other
     }
+}
+
+fn rpm_name_component(filename: &str) -> Option<&str> {
+    let nvra = filename.strip_suffix(".rpm")?;
+    let (name_version_release, _arch) = nvra.rsplit_once('.')?;
+    let (name_version, _release) = name_version_release.rsplit_once('-')?;
+    let (name, _version) = name_version.rsplit_once('-')?;
+    Some(name)
 }
 
 async fn build_artifact(
@@ -442,5 +450,60 @@ fn combine_messages(message: String, extra: Option<String>) -> String {
     match extra {
         Some(extra) => format!("{message}; {extra}"),
         None => message,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use synforge_core::model::ArtifactKind;
+
+    use super::classify_rpm_artifact;
+
+    #[test]
+    fn classifies_debug_packages_using_nevra_name() {
+        assert_eq!(
+            classify_rpm_artifact(Path::new(
+                "amneziawg-tools-debugsource-1.0.20260403git5d6179a-1.fc44.x86_64.rpm"
+            )),
+            ArtifactKind::Debugsource
+        );
+        assert_eq!(
+            classify_rpm_artifact(Path::new(
+                "amneziawg-tools-debuginfo-1.0.20260403git5d6179a-1.fc44.x86_64.rpm"
+            )),
+            ArtifactKind::Debuginfo
+        );
+        assert_eq!(
+            classify_rpm_artifact(Path::new(
+                "mesa-libEGL-debuginfo-26.1.0-0.7.20260404.12.8730c03.fc44.x86_64.rpm"
+            )),
+            ArtifactKind::Debuginfo
+        );
+        assert_eq!(
+            classify_rpm_artifact(Path::new(
+                "mesa-debugsource-26.1.0-0.7.20260404.12.8730c03.fc44.x86_64.rpm"
+            )),
+            ArtifactKind::Debugsource
+        );
+    }
+
+    #[test]
+    fn keeps_standard_rpm_kinds() {
+        assert_eq!(
+            classify_rpm_artifact(Path::new("mesa-26.1.0-1.fc44.x86_64.rpm")),
+            ArtifactKind::Rpm
+        );
+        assert_eq!(
+            classify_rpm_artifact(Path::new(
+                "foo-debuginfo-helper-1.0-1.fc44.x86_64.rpm"
+            )),
+            ArtifactKind::Rpm
+        );
+        assert_eq!(
+            classify_rpm_artifact(Path::new("mesa-26.1.0-1.fc44.src.rpm")),
+            ArtifactKind::Srpm
+        );
     }
 }

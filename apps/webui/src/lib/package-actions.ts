@@ -34,10 +34,20 @@ export function summarizePackageAction(response: PackageActionResponse): string 
   }
 
   const summary = `${capitalizeTrigger(response.trigger)}: ${parts.join(", ")}.`;
-  if (blocked.length === 1) {
-    return `${summary} Blocked target: ${blocked[0].mock_chroot}.`;
+  const detailLines: string[] = [];
+  if (queued.length > 0) {
+    detailLines.push(`Queued: ${queued.map((result) => result.mock_chroot).join(", ")}`);
   }
-  return summary;
+  if (skipped.length > 0) {
+    detailLines.push(`Skipped: ${skipped.map((result) => result.mock_chroot).join(", ")}`);
+  }
+  if (blocked.length > 0) {
+    detailLines.push(`Blocked: ${blocked.map((result) => result.mock_chroot).join(", ")}`);
+  }
+  if (detailLines.length === 0) {
+    return summary;
+  }
+  return `${summary}\n${detailLines.join("\n")}`;
 }
 
 function capitalizeTrigger(trigger: string): string {

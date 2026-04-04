@@ -7,7 +7,7 @@ use synforge_core::{
 use tracing::instrument;
 
 use crate::job_lifecycle::JobLifecycle;
-use crate::scheduler::{BuildScheduler, QueuedBuild};
+use crate::scheduler::QueuedBuild;
 use crate::workers::DockerWorkerLauncher;
 
 #[derive(Clone)]
@@ -15,7 +15,6 @@ pub struct BuildRunner {
     config: DaemonConfig,
     worker_launcher: Arc<DockerWorkerLauncher>,
     lifecycle: Arc<JobLifecycle>,
-    scheduler: BuildScheduler,
 }
 
 impl BuildRunner {
@@ -23,23 +22,17 @@ impl BuildRunner {
         config: DaemonConfig,
         worker_launcher: Arc<DockerWorkerLauncher>,
         lifecycle: Arc<JobLifecycle>,
-        scheduler: BuildScheduler,
     ) -> Self {
         Self {
             config,
             worker_launcher,
             lifecycle,
-            scheduler,
         }
     }
 
     #[instrument(skip(self, build), fields(job_id = %build.job_id, package = %build.package.name, mock_chroot = %build.mock_chroot))]
     pub async fn process_build(&self, build: QueuedBuild) -> anyhow::Result<()> {
-        let package_name = build.package.name.clone();
-        let mock_chroot = build.mock_chroot.clone();
-        let result = self.process_build_inner(build).await;
-        self.scheduler.release_target(&package_name, &mock_chroot);
-        result
+        self.process_build_inner(build).await
     }
 
     async fn process_build_inner(&self, build: QueuedBuild) -> anyhow::Result<()> {

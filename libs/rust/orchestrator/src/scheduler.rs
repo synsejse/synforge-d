@@ -1,8 +1,7 @@
-use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use dashmap::{DashMap, DashSet};
+use dashmap::DashMap;
 use thiserror::Error;
 use tracing::warn;
 use uuid::Uuid;
@@ -44,39 +43,10 @@ struct PackageActionPlan {
     results: Vec<PackageActionTargetResult>,
 }
 
-#[derive(Debug, Clone, Eq)]
-struct TargetKey {
-    package_name: String,
-    mock_chroot: String,
-}
-
-impl TargetKey {
-    fn new(package_name: &str, mock_chroot: &str) -> Self {
-        Self {
-            package_name: package_name.to_string(),
-            mock_chroot: mock_chroot.to_string(),
-        }
-    }
-}
-
-impl PartialEq for TargetKey {
-    fn eq(&self, other: &Self) -> bool {
-        self.package_name == other.package_name && self.mock_chroot == other.mock_chroot
-    }
-}
-
-impl Hash for TargetKey {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.package_name.hash(state);
-        self.mock_chroot.hash(state);
-    }
-}
-
 #[derive(Clone)]
 pub struct BuildScheduler {
     store: DieselStore,
     registry: PackageRegistry,
-    active_targets: Arc<DashSet<TargetKey>>,
     last_polled_at: Arc<DashMap<String, Instant>>,
 }
 
@@ -85,7 +55,6 @@ impl BuildScheduler {
         Self {
             store,
             registry,
-            active_targets: Arc::new(DashSet::new()),
             last_polled_at: Arc::new(DashMap::new()),
         }
     }
@@ -149,23 +118,11 @@ impl BuildScheduler {
                     .map(|job| job.id)
                     .ok_or_else(|| anyhow::anyhow!("no build jobs were created"))?;
 
-                // Mark all targets as active before inserting jobs
-                let mut reserved_targets = Vec::new();
-                for job in &jobs {
-                    let key = TargetKey::new(&job.package_name, &job.mock_chroot);
-                    self.active_targets.insert(key.clone());
-                    reserved_targets.push(key);
-                }
-
                 for job in &jobs {
                     self.store.insert_job(job).await?;
                 }
                 for queued in queued_builds {
                     if let Err(error) = queue_tx.send(queued).await {
-                        // Rollback: release all reserved targets
-                        for key in &reserved_targets {
-                            self.active_targets.remove(key);
-                        }
                         return Err(anyhow::anyhow!("failed to queue build: {}", error));
                     }
                 }
@@ -175,16 +132,6 @@ impl BuildScheduler {
             }
             Err(error) => Err(error),
         }
-    }
-
-    pub fn release_target(&self, package_name: &str, mock_chroot: &str) {
-        self.active_targets
-            .remove(&TargetKey::new(package_name, mock_chroot));
-    }
-
-    fn target_is_active(&self, package_name: &str, mock_chroot: &str) -> bool {
-        self.active_targets
-            .contains(&TargetKey::new(package_name, mock_chroot))
     }
 
     async fn prepare_package_action(
@@ -208,12 +155,10 @@ impl BuildScheduler {
         let mut blocked_by_active_job = false;
         let mut results = Vec::new();
         for mock_chroot in &build_chroots {
-            // Check both in-memory (queued but not yet in DB) and DB (running)
-            if self.target_is_active(&package.name, mock_chroot)
-                || self
-                    .store
-                    .has_active_job_for_target(&package.name, mock_chroot)
-                    .await?
+            if self
+                .store
+                .has_active_job_for_target(&package.name, mock_chroot)
+                .await?
             {
                 blocked_by_active_job = true;
                 results.push(PackageActionTargetResult {

@@ -207,7 +207,6 @@ impl SynforgeService {
             config.clone(),
             worker_launcher.clone(),
             lifecycle.clone(),
-            scheduler.clone(),
         );
 
         let (queue_tx, queue_rx) = mpsc::channel(config.queue_buffer_size);

@@ -338,7 +338,7 @@ impl SynforgeService {
         let (limit, offset) = normalize_pagination(limit, offset);
         let total = self
             .store
-            .count_jobs(None, Some(package_name.to_string()), None, false, false)
+            .count_jobs(None, Some(package_name.to_string()), None, false)
             .await?;
         let jobs = self
             .store
@@ -348,7 +348,6 @@ impl SynforgeService {
                 None,
                 Some(package_name.to_string()),
                 None,
-                false,
                 false,
             )
             .await?;
@@ -864,14 +863,8 @@ impl SynforgeService {
         status: Option<BuildStatus>,
         package_name: Option<String>,
         mock_chroot: Option<String>,
-        active_only: bool,
         terminal_only: bool,
     ) -> anyhow::Result<BuildJobListResponse> {
-        if active_only && terminal_only {
-            return Err(anyhow::anyhow!(SynforgeError::BadRequest(
-                "active_only and terminal_only cannot both be true".to_string(),
-            )));
-        }
         let (limit, offset) = normalize_pagination(limit, offset);
         let total = self
             .store
@@ -879,7 +872,6 @@ impl SynforgeService {
                 status,
                 package_name.clone(),
                 mock_chroot.clone(),
-                active_only,
                 terminal_only,
             )
             .await?;
@@ -891,7 +883,6 @@ impl SynforgeService {
                 status,
                 package_name,
                 mock_chroot,
-                active_only,
                 terminal_only,
             )
             .await?;
@@ -914,7 +905,6 @@ impl SynforgeService {
             None,
             package_name,
             mock_chroot,
-            true,
             false,
         )
         .await
@@ -1037,7 +1027,7 @@ impl SynforgeService {
     pub async fn prune_failed_jobs(&self) -> anyhow::Result<PruneJobsResponse> {
         let jobs = self
             .store
-            .list_jobs(10_000, 0, None, None, None, false, false)
+            .list_jobs(10_000, 0, None, None, None, false)
             .await?;
         let mut deleted_jobs = Vec::new();
         for job in jobs {

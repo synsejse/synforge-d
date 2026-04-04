@@ -258,6 +258,8 @@ class ApiClient {
       status?: string;
       packageName?: string;
       mockChroot?: string;
+      activeOnly?: boolean;
+      terminalOnly?: boolean;
     } = {},
   ): Promise<BuildJobListResponse> {
     const params = new URLSearchParams();
@@ -275,6 +277,12 @@ class ApiClient {
     }
     if (options.mockChroot?.trim()) {
       params.set("mock_chroot", options.mockChroot.trim());
+    }
+    if (options.activeOnly) {
+      params.set("active_only", "true");
+    }
+    if (options.terminalOnly) {
+      params.set("terminal_only", "true");
     }
     return this.request(
       "GET",

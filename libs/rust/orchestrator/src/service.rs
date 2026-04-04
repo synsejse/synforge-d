@@ -338,11 +338,19 @@ impl SynforgeService {
         let (limit, offset) = normalize_pagination(limit, offset);
         let total = self
             .store
-            .count_jobs(None, Some(package_name.to_string()), None)
+            .count_jobs(None, Some(package_name.to_string()), None, false, false)
             .await?;
         let jobs = self
             .store
-            .list_jobs(limit, offset, None, Some(package_name.to_string()), None)
+            .list_jobs(
+                limit,
+                offset,
+                None,
+                Some(package_name.to_string()),
+                None,
+                false,
+                false,
+            )
             .await?;
         let published_files = self
             .store
@@ -840,15 +848,36 @@ impl SynforgeService {
         status: Option<BuildStatus>,
         package_name: Option<String>,
         mock_chroot: Option<String>,
+        active_only: bool,
+        terminal_only: bool,
     ) -> anyhow::Result<BuildJobListResponse> {
+        if active_only && terminal_only {
+            return Err(anyhow::anyhow!(SynforgeError::BadRequest(
+                "active_only and terminal_only cannot both be true".to_string(),
+            )));
+        }
         let (limit, offset) = normalize_pagination(limit, offset);
         let total = self
             .store
-            .count_jobs(status, package_name.clone(), mock_chroot.clone())
+            .count_jobs(
+                status,
+                package_name.clone(),
+                mock_chroot.clone(),
+                active_only,
+                terminal_only,
+            )
             .await?;
         let jobs = self
             .store
-            .list_jobs(limit, offset, status, package_name, mock_chroot)
+            .list_jobs(
+                limit,
+                offset,
+                status,
+                package_name,
+                mock_chroot,
+                active_only,
+                terminal_only,
+            )
             .await?;
         Ok(BuildJobListResponse {
             page: build_page_info(limit, offset, total, jobs.len()),
@@ -971,7 +1000,10 @@ impl SynforgeService {
     }
 
     pub async fn prune_failed_jobs(&self) -> anyhow::Result<PruneJobsResponse> {
-        let jobs = self.store.list_jobs(10_000, 0, None, None, None).await?;
+        let jobs = self
+            .store
+            .list_jobs(10_000, 0, None, None, None, false, false)
+            .await?;
         let mut deleted_jobs = Vec::new();
         for job in jobs {
             if matches!(job.job.status, BuildStatus::Failed | BuildStatus::TimedOut) {

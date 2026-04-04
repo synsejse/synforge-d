@@ -92,12 +92,16 @@ pub trait JobStore: Send + Sync {
         status: Option<BuildStatus>,
         package_name: Option<String>,
         mock_chroot: Option<String>,
+        active_only: bool,
+        terminal_only: bool,
     ) -> anyhow::Result<Vec<BuildJobResponse>>;
     async fn count_jobs(
         &self,
         status: Option<BuildStatus>,
         package_name: Option<String>,
         mock_chroot: Option<String>,
+        active_only: bool,
+        terminal_only: bool,
     ) -> anyhow::Result<u64>;
     async fn list_jobs_for_package(
         &self,
@@ -323,8 +327,20 @@ impl JobStore for DieselStore {
         status: Option<BuildStatus>,
         package_name: Option<String>,
         mock_chroot: Option<String>,
+        active_only: bool,
+        terminal_only: bool,
     ) -> anyhow::Result<Vec<BuildJobResponse>> {
-        job::list_jobs(self, limit, offset, status, package_name, mock_chroot).await
+        job::list_jobs(
+            self,
+            limit,
+            offset,
+            status,
+            package_name,
+            mock_chroot,
+            active_only,
+            terminal_only,
+        )
+        .await
     }
 
     async fn count_jobs(
@@ -332,8 +348,18 @@ impl JobStore for DieselStore {
         status: Option<BuildStatus>,
         package_name: Option<String>,
         mock_chroot: Option<String>,
+        active_only: bool,
+        terminal_only: bool,
     ) -> anyhow::Result<u64> {
-        job::count_jobs(self, status, package_name, mock_chroot).await
+        job::count_jobs(
+            self,
+            status,
+            package_name,
+            mock_chroot,
+            active_only,
+            terminal_only,
+        )
+        .await
     }
 
     async fn list_jobs_for_package(

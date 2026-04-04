@@ -214,6 +214,10 @@ pub struct JobListQuery {
     pub package_name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mock_chroot: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_only: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub terminal_only: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

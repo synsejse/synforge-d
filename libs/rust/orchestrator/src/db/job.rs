@@ -264,10 +264,26 @@ pub(super) async fn list_jobs(
     status: Option<BuildStatus>,
     package_name: Option<String>,
     mock_chroot: Option<String>,
+    active_only: bool,
+    terminal_only: bool,
 ) -> anyhow::Result<Vec<BuildJobResponse>> {
     store
         .with_connection(move |conn| {
             let mut query = build_jobs::table.into_boxed();
+            if active_only {
+                query = query.filter(
+                    build_jobs::status
+                        .eq(BuildStatus::Pending)
+                        .or(build_jobs::status.eq(BuildStatus::Running)),
+                );
+            }
+            if terminal_only {
+                query = query.filter(
+                    build_jobs::status
+                        .ne(BuildStatus::Pending)
+                        .and(build_jobs::status.ne(BuildStatus::Running)),
+                );
+            }
             if let Some(status) = status {
                 query = query.filter(build_jobs::status.eq(status));
             }
@@ -295,10 +311,26 @@ pub(super) async fn count_jobs(
     status: Option<BuildStatus>,
     package_name: Option<String>,
     mock_chroot: Option<String>,
+    active_only: bool,
+    terminal_only: bool,
 ) -> anyhow::Result<u64> {
     store
         .with_connection(move |conn| {
             let mut query = build_jobs::table.into_boxed();
+            if active_only {
+                query = query.filter(
+                    build_jobs::status
+                        .eq(BuildStatus::Pending)
+                        .or(build_jobs::status.eq(BuildStatus::Running)),
+                );
+            }
+            if terminal_only {
+                query = query.filter(
+                    build_jobs::status
+                        .ne(BuildStatus::Pending)
+                        .and(build_jobs::status.ne(BuildStatus::Running)),
+                );
+            }
             if let Some(status) = status {
                 query = query.filter(build_jobs::status.eq(status));
             }

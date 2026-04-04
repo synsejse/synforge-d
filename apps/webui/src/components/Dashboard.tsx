@@ -34,15 +34,13 @@ export default function Dashboard() {
           packagesRes,
           enabledPackagesRes,
           recentJobsRes,
-          pendingJobsRes,
-          runningJobsRes,
+          activeJobsRes,
           repositoryRes,
         ] = await Promise.all([
           api.listPackagesPage(1, 0),
           api.listPackagesPage(1, 0, { enabled: true }),
-          api.listJobs({ limit: 6, offset: 0 }),
-          api.listJobs({ limit: 4, offset: 0, status: "pending" }),
-          api.listJobs({ limit: 4, offset: 0, status: "running" }),
+          api.listJobs({ limit: 6, offset: 0, terminalOnly: true }),
+          api.listJobs({ limit: 6, offset: 0, activeOnly: true }),
           api.getRepoSummary(),
         ]);
         setPackageCount(packagesRes.page.total ?? packagesRes.packages.length);
@@ -51,13 +49,8 @@ export default function Dashboard() {
         );
         setJobs(recentJobsRes.jobs);
         setJobCount(recentJobsRes.page.total ?? recentJobsRes.jobs.length);
-        setActiveJobCount(
-          (pendingJobsRes.page.total ?? pendingJobsRes.jobs.length) +
-            (runningJobsRes.page.total ?? runningJobsRes.jobs.length),
-        );
-        setLiveJobs(
-          [...runningJobsRes.jobs, ...pendingJobsRes.jobs].slice(0, 6),
-        );
+        setActiveJobCount(activeJobsRes.page.total ?? activeJobsRes.jobs.length);
+        setLiveJobs(activeJobsRes.jobs);
         setRepoSummary(repositoryRes);
         setError(null);
       } catch (e) {

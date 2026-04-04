@@ -6,7 +6,7 @@ import FaIcon from "./FaIcon";
 import LoadingBlock from "./LoadingBlock";
 import StatusPill from "./StatusPill";
 import { formatDateTime } from "../lib/datetime";
-import type { BuildJobResponse } from "../lib/types";
+import type { BuildArtifact, BuildJobResponse } from "../lib/types";
 import {
   faArrowLeft,
   faCircle,
@@ -26,6 +26,7 @@ const TabbedLogViewer = lazy(() => import("./TabbedLogViewer"));
 
 export default function JobDetail({ jobId }: Props) {
   const [job, setJob] = useState<BuildJobResponse | null>(null);
+  const [artifacts, setArtifacts] = useState<BuildArtifact[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -42,8 +43,12 @@ export default function JobDetail({ jobId }: Props) {
 
   async function loadJob() {
     try {
-      const jobRes = await api.getJob(jobId);
+      const [jobRes, artifactRes] = await Promise.all([
+        api.getJob(jobId),
+        api.listJobArtifacts(jobId),
+      ]);
       setJob(jobRes);
+      setArtifacts(artifactRes.artifacts);
       setError(null);
       return jobRes;
     } catch (e) {
@@ -114,7 +119,7 @@ export default function JobDetail({ jobId }: Props) {
   }
 
   async function handleArtifactDownload(
-    artifact: BuildJobResponse["artifacts"][number],
+    artifact: BuildArtifact,
   ) {
     try {
       setDownloadingArtifactPath(artifact.file);
@@ -298,11 +303,11 @@ export default function JobDetail({ jobId }: Props) {
                 Published outputs for this job run.
               </p>
             </div>
-            {job.artifacts.length === 0 ? (
+            {artifacts.length === 0 ? (
               <EmptyState>No artifacts were recorded for this job.</EmptyState>
             ) : (
               <div className="grid gap-3">
-                {job.artifacts.map((artifact) => (
+                {artifacts.map((artifact) => (
                   <div
                     key={`${artifact.id}-${artifact.file}`}
                     className="grid gap-3 border border-zinc-800 bg-black px-4 py-4 md:grid-cols-[minmax(0,1fr)_auto_auto_auto]"

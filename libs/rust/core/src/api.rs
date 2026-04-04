@@ -153,6 +153,18 @@ pub struct BuildJobResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct JobArtifactListResponse {
+    pub job_id: uuid::Uuid,
+    pub artifacts: Vec<BuildArtifact>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct JobArtifactMetaResponse {
+    pub job_id: uuid::Uuid,
+    pub artifact: BuildArtifact,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct BuildJobListResponse {
     pub jobs: Vec<BuildJobResponse>,
     pub page: PageInfo,
@@ -173,13 +185,6 @@ pub struct PackageBuildInventoryEntry {
 pub struct PackageBuildHistoryResponse {
     pub package_name: String,
     pub builds: Vec<PackageBuildInventoryEntry>,
-    pub page: PageInfo,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
-pub struct PackageRepoFilesResponse {
-    pub package_name: String,
-    pub repo_files: Vec<PublishedRepoFile>,
     pub page: PageInfo,
 }
 
@@ -215,8 +220,6 @@ pub struct JobListQuery {
     pub package_name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mock_chroot: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub completed_only: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
@@ -395,8 +398,6 @@ pub struct LogChunkResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, IntoParams)]
 pub struct LogChunkQuery {
-    #[serde(default)]
-    pub source: Option<String>,
     #[serde(default)]
     pub cursor: Option<u64>,
     #[serde(default)]

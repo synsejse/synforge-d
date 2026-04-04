@@ -8,14 +8,14 @@ use axum::{Json, Router};
 use synforge_core::api::{
     BrowseRepositoryRequest, BrowseRepositoryResponse, BuildJobListResponse, BuildJobResponse,
     ChangePasswordRequest, ConfigSchemaResponse, CreatePackageRequest, CreateUserRequest,
-    EffectiveConfigDto, JobListQuery, LogChunkQuery, LogChunkResponse, LogManifestResponse,
-    LogMetaResponse, MockChrootListResponse, PackageActionResponse, PackageActionTargetResult,
-    PackageBuildHistoryResponse, PackageListQuery, PackageListResponse, PackageRepoFilesResponse,
-    PackageResponse, PaginationQuery, PruneJobsResponse, RebuildRequest, RefreshRequest,
-    RepoInventoryQuery, RepoInventoryResponse, RepoSummaryResponse, SessionLoginRequest,
-    SessionResponse, SetupInitializeRequest, SetupStatusResponse, UpdatePackageRequest,
-    UpdateRuntimeSettingsRequest, UpdateUserRequest, UserListResponse, UserMetricsResponse,
-    UserResponse,
+    EffectiveConfigDto, JobArtifactListResponse, JobArtifactMetaResponse, JobListQuery,
+    LogChunkQuery, LogChunkResponse, LogManifestResponse, LogMetaResponse, MockChrootListResponse,
+    PackageActionResponse, PackageActionTargetResult, PackageBuildHistoryResponse,
+    PackageListQuery, PackageListResponse, PackageResponse, PaginationQuery, PruneJobsResponse,
+    RebuildRequest, RefreshRequest, RepoInventoryQuery, RepoInventoryResponse, RepoSummaryResponse,
+    SessionLoginRequest, SessionResponse, SetupInitializeRequest, SetupStatusResponse,
+    UpdatePackageRequest, UpdateRuntimeSettingsRequest, UpdateUserRequest, UserListResponse,
+    UserMetricsResponse, UserResponse,
 };
 use synforge_core::model::{UserAccount, UserPermission};
 use tokio_util::io::ReaderStream;
@@ -33,7 +33,6 @@ pub fn router(_state: AppState) -> Router<AppState> {
             get(get_package).put(update_package).delete(delete_package),
         )
         .route("/packages/{name}/builds", get(get_package_builds))
-        .route("/packages/{name}/repo-files", get(get_package_repo_files))
         .route("/packages/{name}/rebuild", post(trigger_rebuild))
         .route("/packages/{name}/refresh", post(trigger_refresh))
         .route(
@@ -46,6 +45,7 @@ pub fn router(_state: AppState) -> Router<AppState> {
         )
         .route("/jobs", get(list_jobs))
         .route("/jobs/active", get(list_active_jobs))
+        .route("/jobs/completed", get(list_completed_jobs))
         .route("/jobs/prune-failed", post(prune_failed_jobs))
         .route("/session", get(get_session))
         .route("/session/login", post(login_session))
@@ -59,15 +59,21 @@ pub fn router(_state: AppState) -> Router<AppState> {
         )
         .route("/users/{id}/password", post(change_user_password))
         .route("/jobs/{id}", get(get_job).delete(delete_job))
+        .route("/jobs/{id}/artifacts", get(list_job_artifacts))
+        .route(
+            "/jobs/{id}/artifacts/{file}/meta",
+            get(get_job_artifact_meta),
+        )
         .route("/jobs/{id}/logs", get(get_job_log_manifest))
-        .route("/jobs/{id}/logs/{source}/meta", get(get_job_log_meta_by_source))
+        .route(
+            "/jobs/{id}/logs/{source}/meta",
+            get(get_job_log_meta_by_source),
+        )
         .route(
             "/jobs/{id}/logs/{source}/stream",
             get(get_job_log_chunk_by_source),
         )
-        .route("/jobs/{id}/logs/meta", get(get_job_log_meta))
-        .route("/jobs/{id}/logs/stream", get(get_job_log_chunk))
-        .route("/jobs/{id}/artifacts/{*path}", get(download_job_artifact))
+        .route("/jobs/{id}/artifacts/{file}", get(download_job_artifact))
         .route("/repo/files", get(get_repo_inventory))
         .route("/repo/summary", get(get_repo_summary))
         .route("/config/schema", get(get_config_schema))
@@ -250,34 +256,6 @@ pub(crate) async fn get_package_builds(
 }
 
 #[utoipa::path(
-    get,
-    path = "/api/v1/packages/{name}/repo-files",
-    tag = "Repository",
-    params(
-        ("name" = String, Path, description = "Package name"),
-        PaginationQuery
-    ),
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "Repository files owned by the package", body = PackageRepoFilesResponse),
-        (status = 401, body = synforge_core::api::ApiError),
-        (status = 404, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn get_package_repo_files(
-    State(state): State<AppState>,
-    Path(name): Path<String>,
-    Query(query): Query<PaginationQuery>,
-) -> Result<Json<PackageRepoFilesResponse>, AppError> {
-    Ok(Json(
-        state
-            .service
-            .get_package_repo_files(&name, query.limit, query.offset)
-            .await?,
-    ))
-}
-
-#[utoipa::path(
     post,
     path = "/api/v1/packages/{name}/rebuild",
     tag = "Packages",
@@ -396,7 +374,7 @@ pub(crate) async fn trigger_target_refresh(
     params(JobListQuery),
     security(("session_auth" = [])),
     responses(
-        (status = 200, description = "List jobs", body = BuildJobListResponse),
+        (status = 200, description = "List all jobs", body = BuildJobListResponse),
         (status = 401, body = synforge_core::api::ApiError)
     )
 )]
@@ -413,7 +391,35 @@ pub(crate) async fn list_jobs(
                 query.status,
                 query.package_name,
                 query.mock_chroot,
-                query.completed_only.unwrap_or(false),
+            )
+            .await?,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/jobs/completed",
+    tag = "Jobs",
+    params(JobListQuery),
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "List completed jobs", body = BuildJobListResponse),
+        (status = 401, body = synforge_core::api::ApiError)
+    )
+)]
+pub(crate) async fn list_completed_jobs(
+    State(state): State<AppState>,
+    Query(query): Query<JobListQuery>,
+) -> Result<Json<BuildJobListResponse>, AppError> {
+    Ok(Json(
+        state
+            .service
+            .list_completed_jobs(
+                query.limit,
+                query.offset,
+                query.status,
+                query.package_name,
+                query.mock_chroot,
             )
             .await?,
     ))
@@ -470,6 +476,49 @@ pub(crate) async fn get_job(
     Path(id): Path<Uuid>,
 ) -> Result<Json<BuildJobResponse>, AppError> {
     Ok(Json(state.service.get_job(id).await?))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/jobs/{id}/artifacts",
+    tag = "Jobs",
+    params(
+        ("id" = Uuid, Path, description = "Job identifier")
+    ),
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "List job artifacts", body = JobArtifactListResponse),
+        (status = 401, body = synforge_core::api::ApiError),
+        (status = 404, body = synforge_core::api::ApiError)
+    )
+)]
+pub(crate) async fn list_job_artifacts(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<JobArtifactListResponse>, AppError> {
+    Ok(Json(state.service.get_job_artifacts(id).await?))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/jobs/{id}/artifacts/{file}/meta",
+    tag = "Jobs",
+    params(
+        ("id" = Uuid, Path, description = "Job identifier"),
+        ("file" = String, Path, description = "Artifact file name")
+    ),
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "Get artifact metadata", body = JobArtifactMetaResponse),
+        (status = 401, body = synforge_core::api::ApiError),
+        (status = 404, body = synforge_core::api::ApiError)
+    )
+)]
+pub(crate) async fn get_job_artifact_meta(
+    State(state): State<AppState>,
+    Path((id, file)): Path<(Uuid, String)>,
+) -> Result<Json<JobArtifactMetaResponse>, AppError> {
+    Ok(Json(state.service.get_job_artifact_meta(id, &file).await?))
 }
 
 #[utoipa::path(
@@ -776,35 +825,6 @@ pub(crate) async fn get_job_log_manifest(
 
 #[utoipa::path(
     get,
-    path = "/api/v1/jobs/{id}/logs/stream",
-    tag = "Logs",
-    params(
-        ("id" = Uuid, Path, description = "Job identifier"),
-        LogChunkQuery
-    ),
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "Read a log chunk", body = LogChunkResponse),
-        (status = 400, body = synforge_core::api::ApiError),
-        (status = 401, body = synforge_core::api::ApiError),
-        (status = 404, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn get_job_log_chunk(
-    State(state): State<AppState>,
-    Path(id): Path<Uuid>,
-    Query(query): Query<LogChunkQuery>,
-) -> Result<Json<LogChunkResponse>, AppError> {
-    Ok(Json(
-        state
-            .service
-            .get_job_log_chunk(id, query.source, query.cursor, query.offset, query.limit)
-            .await?,
-    ))
-}
-
-#[utoipa::path(
-    get,
     path = "/api/v1/jobs/{id}/logs/{source}/stream",
     tag = "Logs",
     params(
@@ -830,34 +850,8 @@ pub(crate) async fn get_job_log_chunk_by_source(
     Ok(Json(
         state
             .service
-            .get_job_log_chunk(id, Some(source), query.cursor, query.offset, query.limit)
+            .get_job_log_chunk(id, source, query.cursor, query.offset, query.limit)
             .await?,
-    ))
-}
-
-#[utoipa::path(
-    get,
-    path = "/api/v1/jobs/{id}/logs/meta",
-    tag = "Logs",
-    params(
-        ("id" = Uuid, Path, description = "Job identifier"),
-        LogChunkQuery
-    ),
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "Get log file metadata", body = LogMetaResponse),
-        (status = 400, body = synforge_core::api::ApiError),
-        (status = 401, body = synforge_core::api::ApiError),
-        (status = 404, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn get_job_log_meta(
-    State(state): State<AppState>,
-    Path(id): Path<Uuid>,
-    Query(query): Query<LogChunkQuery>,
-) -> Result<Json<LogMetaResponse>, AppError> {
-    Ok(Json(
-        state.service.get_job_log_meta(id, query.source).await?,
     ))
 }
 
@@ -881,16 +875,16 @@ pub(crate) async fn get_job_log_meta_by_source(
     State(state): State<AppState>,
     Path((id, source)): Path<(Uuid, String)>,
 ) -> Result<Json<LogMetaResponse>, AppError> {
-    Ok(Json(state.service.get_job_log_meta(id, Some(source)).await?))
+    Ok(Json(state.service.get_job_log_meta(id, source).await?))
 }
 
 #[utoipa::path(
     get,
-    path = "/api/v1/jobs/{id}/artifacts/{path}",
+    path = "/api/v1/jobs/{id}/artifacts/{file}",
     tag = "Jobs",
     params(
         ("id" = Uuid, Path, description = "Job identifier"),
-        ("path" = String, Path, description = "Artifact path relative to the job artifact root")
+        ("file" = String, Path, description = "Artifact file name")
     ),
     security(("session_auth" = [])),
     responses(
@@ -902,9 +896,9 @@ pub(crate) async fn get_job_log_meta_by_source(
 )]
 pub(crate) async fn download_job_artifact(
     State(state): State<AppState>,
-    Path((id, path)): Path<(Uuid, String)>,
+    Path((id, file)): Path<(Uuid, String)>,
 ) -> Result<impl IntoResponse, AppError> {
-    let relative_artifact_path = normalize_artifact_path(&path)?;
+    let relative_artifact_path = normalize_artifact_path(&file)?;
     let artifact_path = state
         .service
         .resolve_job_artifact_path(id, &relative_artifact_path)

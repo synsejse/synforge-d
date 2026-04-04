@@ -401,15 +401,12 @@ async fn build_artifact(
         package_name: package.name.clone(),
         mock_chroot: mock_chroot.to_string(),
         size_bytes: bytes.len() as u64,
-        file: path
-            .file_name()
-            .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                path.strip_prefix(artifact_root)
-                    .ok()
-                    .map(PathBuf::from)
-                    .unwrap_or_else(|| PathBuf::from("artifact.rpm"))
-            }),
+        file: path.file_name().map(PathBuf::from).unwrap_or_else(|| {
+            path.strip_prefix(artifact_root)
+                .ok()
+                .map(PathBuf::from)
+                .unwrap_or_else(|| PathBuf::from("artifact.rpm"))
+        }),
         sha256,
         kind,
     })

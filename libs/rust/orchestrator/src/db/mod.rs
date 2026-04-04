@@ -16,9 +16,8 @@ use synforge_core::{
     api::{BuildJobResponse, PackageResponse, RepoTargetSummary},
     model::{
         ArtifactKind, BuildArtifact, BuildJob, BuildStatus, BuildTrigger, PackageRuntimeState,
-        PackageTargetRuntimeState, PublishedRepoFile, UserAccount, UserPermission,
-        UserRepoMetrics, UserSummary,
-        format_timestamp, now_utc,
+        PackageTargetRuntimeState, PublishedRepoFile, UserAccount, UserPermission, UserRepoMetrics,
+        UserSummary, format_timestamp, now_utc,
     },
     package::{BuildEnvVar, PackageDefinition, SpecSource},
 };
@@ -73,11 +72,7 @@ pub trait JobStore: Send + Sync {
         artifacts: &[BuildArtifact],
         published_files: &[PublishedRepoFile],
     ) -> anyhow::Result<()>;
-    async fn upsert_build_log(
-        &self,
-        job_id: Uuid,
-        file: &str,
-    ) -> anyhow::Result<()>;
+    async fn upsert_build_log(&self, job_id: Uuid, file: &str) -> anyhow::Result<()>;
     async fn list_build_logs_for_job(&self, job_id: Uuid) -> anyhow::Result<Vec<BuildLogRecord>>;
     async fn get_build_log_for_job_source(
         &self,
@@ -312,11 +307,7 @@ impl JobStore for DieselStore {
         job::list_build_logs_for_job(self, job_id).await
     }
 
-    async fn upsert_build_log(
-        &self,
-        job_id: Uuid,
-        file: &str,
-    ) -> anyhow::Result<()> {
+    async fn upsert_build_log(&self, job_id: Uuid, file: &str) -> anyhow::Result<()> {
         job::upsert_build_log(self, job_id, file).await
     }
 

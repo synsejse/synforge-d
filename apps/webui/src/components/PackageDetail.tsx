@@ -172,10 +172,12 @@ export default function PackageDetail({ packageName }: Props) {
     }
     try {
       setRepoFilesLoading(true);
-      const repoFilesRes = await api.getPackageRepoFiles(
-        packageName,
+      const repoFilesRes = await api.getRepoInventory(
         REPO_FILES_PAGE_SIZE,
         offset,
+        {
+          packageName,
+        },
       );
       setRepoFiles(repoFilesRes.repo_files);
       setRepoFilesOffset(repoFilesRes.page.offset);

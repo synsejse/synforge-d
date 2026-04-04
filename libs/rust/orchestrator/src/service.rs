@@ -13,10 +13,10 @@ use synforge_core::{
         BrowseRepositoryRequest, BrowseRepositoryResponse, BuildJobListResponse, BuildJobResponse,
         ChangePasswordRequest, ConfigFieldDescriptor, ConfigFieldType, ConfigSchemaResponse,
         CreatePackageRequest, CreateUserRequest, EffectiveConfigDto, EffectiveConfigView,
-        LogChunkResponse, LogManifestResponse, LogMetaResponse, LogSource, LogSourceType,
-        MockChrootListResponse, PackageActionResponse, PackageActionTargetResult,
-        PackageBuildHistoryResponse, PackageBuildInventoryEntry, PackageListResponse,
-        PackageRepoFilesResponse, PackageResponse, PageInfo, PruneJobsResponse, RebuildRequest,
+        JobArtifactListResponse, JobArtifactMetaResponse, LogChunkResponse, LogManifestResponse,
+        LogMetaResponse, LogSource, LogSourceType, MockChrootListResponse, PackageActionResponse,
+        PackageActionTargetResult, PackageBuildHistoryResponse, PackageBuildInventoryEntry,
+        PackageListResponse, PackageResponse, PageInfo, PruneJobsResponse, RebuildRequest,
         RefreshRequest, RepoInventoryResponse, RepoSummaryResponse, SessionResponse,
         SetupInitializeRequest, UpdatePackageRequest, UpdateRuntimeSettingsRequest,
         UpdateUserRequest, UserListResponse, UserMetricsResponse, UserResponse,
@@ -376,36 +376,6 @@ impl SynforgeService {
         Ok(PackageBuildHistoryResponse {
             package_name: package_name.to_string(),
             builds,
-            page: build_page_info(limit, offset, total, returned),
-        })
-    }
-
-    pub async fn get_package_repo_files(
-        &self,
-        package_name: &str,
-        limit: Option<usize>,
-        offset: Option<usize>,
-    ) -> anyhow::Result<PackageRepoFilesResponse> {
-        self.registry.get_package(package_name).await?;
-        let (limit, offset) = normalize_pagination(limit, offset);
-        let total = self
-            .store
-            .count_published_repo_files(Some(package_name.to_string()), None, None)
-            .await?;
-        let repo_files = self
-            .store
-            .list_published_repo_files(
-                limit,
-                offset,
-                Some(package_name.to_string()),
-                None,
-                None,
-            )
-            .await?;
-        let returned = repo_files.len();
-        Ok(PackageRepoFilesResponse {
-            package_name: package_name.to_string(),
-            repo_files,
             page: build_page_info(limit, offset, total, returned),
         })
     }
@@ -863,28 +833,38 @@ impl SynforgeService {
         status: Option<BuildStatus>,
         package_name: Option<String>,
         mock_chroot: Option<String>,
-        completed_only: bool,
     ) -> anyhow::Result<BuildJobListResponse> {
         let (limit, offset) = normalize_pagination(limit, offset);
         let total = self
             .store
-            .count_jobs(
-                status,
-                package_name.clone(),
-                mock_chroot.clone(),
-                completed_only,
-            )
+            .count_jobs(status, package_name.clone(), mock_chroot.clone(), false)
             .await?;
         let jobs = self
             .store
-            .list_jobs(
-                limit,
-                offset,
-                status,
-                package_name,
-                mock_chroot,
-                completed_only,
-            )
+            .list_jobs(limit, offset, status, package_name, mock_chroot, false)
+            .await?;
+        Ok(BuildJobListResponse {
+            page: build_page_info(limit, offset, total, jobs.len()),
+            jobs,
+        })
+    }
+
+    pub async fn list_completed_jobs(
+        &self,
+        limit: Option<usize>,
+        offset: Option<usize>,
+        status: Option<BuildStatus>,
+        package_name: Option<String>,
+        mock_chroot: Option<String>,
+    ) -> anyhow::Result<BuildJobListResponse> {
+        let (limit, offset) = normalize_pagination(limit, offset);
+        let total = self
+            .store
+            .count_jobs(status, package_name.clone(), mock_chroot.clone(), true)
+            .await?;
+        let jobs = self
+            .store
+            .list_jobs(limit, offset, status, package_name, mock_chroot, true)
             .await?;
         Ok(BuildJobListResponse {
             page: build_page_info(limit, offset, total, jobs.len()),
@@ -921,16 +901,37 @@ impl SynforgeService {
             .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(job_id.to_string())))
     }
 
+    pub async fn get_job_artifacts(&self, job_id: Uuid) -> anyhow::Result<JobArtifactListResponse> {
+        let job = self.get_job(job_id).await?;
+        Ok(JobArtifactListResponse {
+            job_id,
+            artifacts: job.artifacts,
+        })
+    }
+
+    pub async fn get_job_artifact_meta(
+        &self,
+        job_id: Uuid,
+        file: &str,
+    ) -> anyhow::Result<JobArtifactMetaResponse> {
+        let job = self.get_job(job_id).await?;
+        let artifact = job
+            .artifacts
+            .into_iter()
+            .find(|artifact| artifact.file == std::path::Path::new(file))
+            .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(file.to_string())))?;
+        Ok(JobArtifactMetaResponse { job_id, artifact })
+    }
+
     pub async fn get_job_log_chunk(
         &self,
         job_id: Uuid,
-        source: Option<String>,
+        source: String,
         cursor: Option<u64>,
         offset: Option<i64>,
         limit: Option<usize>,
     ) -> anyhow::Result<LogChunkResponse> {
-        let source_name = source.unwrap_or_else(|| "worker.log".to_string());
-        let path = self.resolve_job_log_path(job_id, &source_name).await?;
+        let path = self.resolve_job_log_path(job_id, &source).await?;
 
         let mut file = tokio::fs::File::open(&path)
             .await
@@ -945,7 +946,7 @@ impl SynforgeService {
         if read_len == 0 {
             return Ok(LogChunkResponse {
                 job_id,
-                source: source_name,
+                source,
                 contents: String::new(),
                 start_line: count_lines_before(&path, start).await?,
                 cursor: start,
@@ -969,7 +970,7 @@ impl SynforgeService {
 
         Ok(LogChunkResponse {
             job_id,
-            source: source_name,
+            source,
             contents,
             start_line,
             cursor: new_cursor,
@@ -980,17 +981,16 @@ impl SynforgeService {
     pub async fn get_job_log_meta(
         &self,
         job_id: Uuid,
-        source: Option<String>,
+        source: String,
     ) -> anyhow::Result<LogMetaResponse> {
-        let source_name = source.unwrap_or_else(|| "worker.log".to_string());
-        let path = self.resolve_job_log_path(job_id, &source_name).await?;
+        let path = self.resolve_job_log_path(job_id, &source).await?;
         let file_size = tokio::fs::metadata(&path)
             .await
             .with_context(|| format!("failed to stat {}", path.display()))?
             .len();
         Ok(LogMetaResponse {
             job_id,
-            source: source_name,
+            source,
             file_size,
             max_cursor: file_size,
         })

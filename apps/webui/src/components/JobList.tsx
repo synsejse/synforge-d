@@ -84,13 +84,12 @@ export default function JobList() {
               packageName: nextPackageFilter,
               mockChroot: nextTargetFilter,
             })
-          : await api.listJobs({
+          : await api.listCompletedJobs({
               limit: pageSize,
               offset: nextOffset,
               status: nextFilter,
               packageName: nextPackageFilter,
               mockChroot: nextTargetFilter,
-              completedOnly: true,
             });
       setJobs(res.jobs);
       setHasMore(res.page.has_more);

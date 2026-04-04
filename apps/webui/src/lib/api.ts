@@ -1,5 +1,7 @@
 import type {
   BuildArtifact,
+  JobArtifactListResponse,
+  JobArtifactMetaResponse,
   PackageListResponse,
   PackageResponse,
   CreatePackageRequest,
@@ -8,7 +10,6 @@ import type {
   BrowseRepositoryResponse,
   MockChrootListResponse,
   PackageBuildHistoryResponse,
-  PackageRepoFilesResponse,
   RepoInventoryResponse,
   RepoSummaryResponse,
   BuildJobListResponse,
@@ -39,7 +40,7 @@ interface GetJobLogChunkOptions {
   cursor?: number;
   offset?: number;
   limit?: number;
-  source?: string;
+  source: string;
 }
 
 class ApiClient {
@@ -176,21 +177,6 @@ class ApiClient {
     );
   }
 
-  async getPackageRepoFiles(
-    name: string,
-    limit = 20,
-    offset = 0,
-  ): Promise<PackageRepoFilesResponse> {
-    const params = new URLSearchParams({
-      limit: String(limit),
-      offset: String(offset),
-    });
-    return this.request(
-      "GET",
-      `/api/v1/packages/${encodeURIComponent(name)}/repo-files?${params.toString()}`,
-    );
-  }
-
   async getRepoInventory(
     limit = 50,
     offset = 0,
@@ -259,14 +245,13 @@ class ApiClient {
   }
 
   // Jobs
-  async listJobs(
+  async listCompletedJobs(
     options: {
       limit?: number;
       offset?: number;
       status?: string;
       packageName?: string;
       mockChroot?: string;
-      completedOnly?: boolean;
     } = {},
   ): Promise<BuildJobListResponse> {
     const params = new URLSearchParams();
@@ -285,12 +270,9 @@ class ApiClient {
     if (options.mockChroot?.trim()) {
       params.set("mock_chroot", options.mockChroot.trim());
     }
-    if (options.completedOnly) {
-      params.set("completed_only", "true");
-    }
     return this.request(
       "GET",
-      `/api/v1/jobs${params.toString() ? `?${params.toString()}` : ""}`,
+      `/api/v1/jobs/completed${params.toString() ? `?${params.toString()}` : ""}`,
     );
   }
 
@@ -325,23 +307,37 @@ class ApiClient {
     return this.request("GET", `/api/v1/jobs/${encodeURIComponent(id)}`);
   }
 
+  async listJobArtifacts(id: string): Promise<JobArtifactListResponse> {
+    return this.request("GET", `/api/v1/jobs/${encodeURIComponent(id)}/artifacts`);
+  }
+
+  async getJobArtifactMeta(
+    id: string,
+    file: string,
+  ): Promise<JobArtifactMetaResponse> {
+    return this.request(
+      "GET",
+      `/api/v1/jobs/${encodeURIComponent(id)}/artifacts/${file
+        .split("/")
+        .map(encodeURIComponent)
+        .join("/")}/meta`,
+    );
+  }
+
   async getJobLogManifest(id: string): Promise<LogManifestResponse> {
     return this.request("GET", `/api/v1/jobs/${encodeURIComponent(id)}/logs`);
   }
 
-  async getJobLogMeta(id: string, source?: string): Promise<LogMetaResponse> {
-    if (source) {
-      return this.request(
-        "GET",
-        `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(source)}/meta`,
-      );
-    }
-    return this.request("GET", `/api/v1/jobs/${encodeURIComponent(id)}/logs/meta`);
+  async getJobLogMeta(id: string, source: string): Promise<LogMetaResponse> {
+    return this.request(
+      "GET",
+      `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(source)}/meta`,
+    );
   }
 
   async getJobLogChunk(
     id: string,
-    options: GetJobLogChunkOptions = {},
+    options: GetJobLogChunkOptions,
   ): Promise<LogChunkResponse> {
     const params = new URLSearchParams({
       limit: String(options.limit ?? 65536),
@@ -352,23 +348,14 @@ class ApiClient {
     if (options.offset !== undefined) {
       params.set("offset", String(options.offset));
     }
-    if (options.source) {
-      return this.request(
-        "GET",
-        `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(options.source)}/stream?${params.toString()}`,
-      );
-    }
     return this.request(
       "GET",
-      `/api/v1/jobs/${encodeURIComponent(id)}/logs/stream?${params.toString()}`,
+      `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(options.source)}/stream?${params.toString()}`,
     );
   }
 
-  async downloadJobLog(id: string, source?: string): Promise<void> {
-    const path = source
-      ? `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(source)}/stream`
-      : `/api/v1/jobs/${encodeURIComponent(id)}/logs/stream`;
-
+  async downloadJobLog(id: string, source: string): Promise<void> {
+    const path = `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(source)}/stream`;
     const res = await fetch(`${API_BASE}${path}`, {
       method: "GET",
       headers: this.authHeaders(false),
@@ -402,7 +389,7 @@ class ApiClient {
     // Create blob and download
     const blob = new Blob([fullLog], { type: "text/plain;charset=utf-8" });
     const objectUrl = window.URL.createObjectURL(blob);
-    const fileName = source || "build.log";
+    const fileName = source;
     const anchor = document.createElement("a");
     anchor.href = objectUrl;
     anchor.download = fileName;

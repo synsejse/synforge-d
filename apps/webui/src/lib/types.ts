@@ -150,6 +150,16 @@ export interface BuildJobResponse {
   artifacts: BuildArtifact[];
 }
 
+export interface JobArtifactListResponse {
+  job_id: string;
+  artifacts: BuildArtifact[];
+}
+
+export interface JobArtifactMetaResponse {
+  job_id: string;
+  artifact: BuildArtifact;
+}
+
 export type PackageActionDisposition = "queued" | "skipped" | "blocked";
 
 export interface PackageActionTargetResult {
@@ -180,12 +190,6 @@ export interface PackageBuildInventoryEntry {
 export interface PackageBuildHistoryResponse {
   package_name: string;
   builds: PackageBuildInventoryEntry[];
-  page: PageInfo;
-}
-
-export interface PackageRepoFilesResponse {
-  package_name: string;
-  repo_files: PublishedRepoFile[];
   page: PageInfo;
 }
 

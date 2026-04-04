@@ -186,58 +186,105 @@ const themes = [
                         Create the daemon config file and the initial admin
                         account.
                     </p>
+                    <p
+                        id="setup-step-label"
+                        class="mt-3 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500"
+                    >
+                        Step 1 of 2 · Configuration
+                    </p>
                 </div>
 
                 <div class="min-h-0 flex-1 overflow-y-auto px-8 pb-8 pt-0">
                     <form id="setup-form" class="pb-1">
-                        <div class="grid gap-4 xl:grid-cols-2">
-                            <div id="setup-config-fields" class="contents">
+                        <div id="setup-step-config" class="space-y-4">
+                            <div class="grid gap-4 xl:grid-cols-2">
+                                <div id="setup-config-fields" class="contents">
+                                </div>
                             </div>
-                            <label class="block">
-                                <span
-                                    class="mb-2 block text-sm font-medium text-zinc-300"
-                                    >Admin handle</span
-                                >
-                                <input
-                                    id="setup-admin-handle"
-                                    type="text"
-                                    value="admin"
-                                    class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
-                                />
-                            </label>
-                            <label class="block">
-                                <span
-                                    class="mb-2 block text-sm font-medium text-zinc-300"
-                                    >Admin display name</span
-                                >
-                                <input
-                                    id="setup-admin-display-name"
-                                    type="text"
-                                    value="Administrator"
-                                    class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
-                                />
-                            </label>
-                            <label class="block xl:col-span-2">
-                                <span
-                                    class="mb-2 block text-sm font-medium text-zinc-300"
-                                    >Admin password</span
-                                >
-                                <input
-                                    id="setup-admin-password"
-                                    type="password"
-                                    class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
-                                    placeholder="Choose a strong password"
-                                />
-                            </label>
-                            <p
-                                id="setup-error"
-                                class="hidden xl:col-span-2 border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-300"
+                        </div>
+
+                        <div id="setup-step-admin" class="hidden space-y-4">
+                            <div class="grid gap-4 xl:grid-cols-2">
+                                <label class="block">
+                                    <span
+                                        class="mb-2 block text-sm font-medium text-zinc-300"
+                                        >Admin handle</span
+                                    >
+                                    <input
+                                        id="setup-admin-handle"
+                                        type="text"
+                                        value="admin"
+                                        required
+                                        class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
+                                    />
+                                </label>
+                                <label class="block">
+                                    <span
+                                        class="mb-2 block text-sm font-medium text-zinc-300"
+                                        >Admin display name</span
+                                    >
+                                    <input
+                                        id="setup-admin-display-name"
+                                        type="text"
+                                        value="Administrator"
+                                        required
+                                        class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
+                                    />
+                                </label>
+                                <label class="block xl:col-span-2">
+                                    <span
+                                        class="mb-2 block text-sm font-medium text-zinc-300"
+                                        >Admin password</span
+                                    >
+                                    <input
+                                        id="setup-admin-password"
+                                        type="password"
+                                        required
+                                        class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
+                                        placeholder="Choose a strong password"
+                                    />
+                                </label>
+                                <label class="block xl:col-span-2">
+                                    <span
+                                        class="mb-2 block text-sm font-medium text-zinc-300"
+                                        >Confirm password</span
+                                    >
+                                    <input
+                                        id="setup-admin-password-confirm"
+                                        type="password"
+                                        required
+                                        class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
+                                        placeholder="Re-enter admin password"
+                                    />
+                                </label>
+                            </div>
+                        </div>
+
+                        <p
+                            id="setup-error"
+                            class="mt-4 hidden border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-300"
+                        >
+                        </p>
+                        <div class="mt-4 flex items-center justify-between gap-3">
+                            <button
+                                id="setup-back-button"
+                                type="button"
+                                class="hidden border border-zinc-800 bg-black px-4 py-3 text-sm font-medium text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
                             >
-                            </p>
-                            <div class="xl:col-span-2 flex justify-end">
+                                Back
+                            </button>
+                            <div class="ml-auto flex items-center gap-3">
                                 <button
-                                    type="submit"
+                                    id="setup-next-button"
+                                    type="button"
                                     class="border border-zinc-200 bg-zinc-100 px-4 py-3 text-sm font-semibold text-black transition hover:bg-white"
+                                >
+                                    Continue
+                                </button>
+                                <button
+                                    id="setup-submit-button"
+                                    type="submit"
+                                    class="hidden border border-zinc-200 bg-zinc-100 px-4 py-3 text-sm font-semibold text-black transition hover:bg-white"
                                 >
                                     Initialize Synforge
                                 </button>
@@ -396,13 +443,22 @@ const themes = [
             const authError = document.getElementById("auth-error");
             const authMessage = document.getElementById("auth-message");
             const setupMessage = document.getElementById("setup-message");
+            const setupStepLabel = document.getElementById("setup-step-label");
             const setupError = document.getElementById("setup-error");
             const setupConfigFields = document.getElementById(
                 "setup-config-fields",
             );
+            const setupStepConfig = document.getElementById("setup-step-config");
+            const setupStepAdmin = document.getElementById("setup-step-admin");
+            const setupBackButton = document.getElementById("setup-back-button");
+            const setupNextButton = document.getElementById("setup-next-button");
+            const setupSubmitButton = document.getElementById(
+                "setup-submit-button",
+            );
             const logoutButton = document.getElementById("logout-button");
             const themeSelect = document.getElementById("theme-select");
             let configSchema = [];
+            let setupStep = "config";
 
             function applyTheme(theme) {
                 const normalized = ["black", "dark", "light"].includes(theme)
@@ -417,6 +473,69 @@ const themes = [
 
             function apiPath(path) {
                 return `${publicApiUrl}${path}`;
+            }
+
+            function clearSetupError() {
+                if (setupError) {
+                    setupError.classList.add("hidden");
+                    setupError.textContent = "";
+                }
+            }
+
+            function setSetupError(message) {
+                if (setupError) {
+                    setupError.textContent = message;
+                    setupError.classList.remove("hidden");
+                }
+            }
+
+            function setSetupStep(step) {
+                setupStep = step === "admin" ? "admin" : "config";
+                const inAdminStep = setupStep === "admin";
+                setupStepConfig?.classList.toggle("hidden", inAdminStep);
+                setupStepAdmin?.classList.toggle("hidden", !inAdminStep);
+                setupBackButton?.classList.toggle("hidden", !inAdminStep);
+                setupNextButton?.classList.toggle("hidden", inAdminStep);
+                setupSubmitButton?.classList.toggle("hidden", !inAdminStep);
+                if (setupStepLabel) {
+                    setupStepLabel.textContent = inAdminStep
+                        ? "Step 2 of 2 · First account"
+                        : "Step 1 of 2 · Configuration";
+                }
+                if (setupMessage) {
+                    setupMessage.textContent = inAdminStep
+                        ? "Create the first admin account."
+                        : "Configure daemon settings for first run.";
+                }
+            }
+
+            function validateSetupConfigFields() {
+                const fields =
+                    setupConfigFields?.querySelectorAll(
+                        "[data-setup-config-key]",
+                    ) || [];
+                for (const element of fields) {
+                    if (!(element instanceof HTMLInputElement)) {
+                        continue;
+                    }
+                    const key = element.dataset.setupConfigKey;
+                    const field = configSchema.find((entry) => entry.key === key);
+                    if (!field) {
+                        continue;
+                    }
+                    const value = element.value.trim();
+                    if (field.required && value.length === 0) {
+                        return `${field.label} is required.`;
+                    }
+                    if (
+                        field.type === "number" &&
+                        value.length > 0 &&
+                        Number.isNaN(Number(value))
+                    ) {
+                        return `${field.label} must be a valid number.`;
+                    }
+                }
+                return null;
             }
 
             function showAuthScreen(message) {
@@ -441,18 +560,28 @@ const themes = [
             }
 
             function showSetupScreen(message) {
-                if (setupMessage && message) {
-                    setupMessage.textContent = message;
-                }
-                if (setupError) {
-                    setupError.classList.add("hidden");
-                    setupError.textContent = "";
-                }
+                clearSetupError();
                 authScreen?.classList.add("hidden");
                 authScreen?.classList.remove("flex");
                 setupScreen?.classList.remove("hidden");
                 setupScreen?.classList.add("flex");
                 appShell?.classList.add("hidden");
+                setSetupStep("config");
+                if (setupMessage && message) {
+                    setupMessage.textContent = message;
+                }
+                const adminPassword = document.getElementById(
+                    "setup-admin-password",
+                );
+                if (adminPassword instanceof HTMLInputElement) {
+                    adminPassword.value = "";
+                }
+                const adminPasswordConfirm = document.getElementById(
+                    "setup-admin-password-confirm",
+                );
+                if (adminPasswordConfirm instanceof HTMLInputElement) {
+                    adminPasswordConfirm.value = "";
+                }
             }
 
             function showAppShell() {
@@ -594,9 +723,73 @@ const themes = [
                 showAuthScreen(message);
             });
 
+            setupNextButton?.addEventListener("click", () => {
+                clearSetupError();
+                const validationError = validateSetupConfigFields();
+                if (validationError) {
+                    setSetupError(validationError);
+                    return;
+                }
+                setSetupStep("admin");
+                const handleInput = document.getElementById("setup-admin-handle");
+                if (handleInput instanceof HTMLInputElement) {
+                    handleInput.focus();
+                }
+            });
+
+            setupBackButton?.addEventListener("click", () => {
+                clearSetupError();
+                setSetupStep("config");
+            });
+
             setupForm?.addEventListener("submit", async (event) => {
                 event.preventDefault();
+                clearSetupError();
+                if (setupStep !== "admin") {
+                    const validationError = validateSetupConfigFields();
+                    if (validationError) {
+                        setSetupError(validationError);
+                        return;
+                    }
+                    setSetupStep("admin");
+                    const handleInput =
+                        document.getElementById("setup-admin-handle");
+                    if (handleInput instanceof HTMLInputElement) {
+                        handleInput.focus();
+                    }
+                    return;
+                }
+
                 const input = (id) => document.getElementById(id);
+                const adminHandle =
+                    input("setup-admin-handle") instanceof HTMLInputElement
+                        ? input("setup-admin-handle").value.trim()
+                        : "";
+                const adminDisplayName =
+                    input("setup-admin-display-name") instanceof HTMLInputElement
+                        ? input("setup-admin-display-name").value.trim()
+                        : "";
+                const adminPassword =
+                    input("setup-admin-password") instanceof HTMLInputElement
+                        ? input("setup-admin-password").value
+                        : "";
+                const adminPasswordConfirm =
+                    input("setup-admin-password-confirm") instanceof
+                    HTMLInputElement
+                        ? input("setup-admin-password-confirm").value
+                        : "";
+
+                if (!adminHandle || !adminDisplayName || !adminPassword) {
+                    setSetupError(
+                        "Admin handle, display name, and password are required.",
+                    );
+                    return;
+                }
+                if (adminPassword !== adminPasswordConfirm) {
+                    setSetupError("Password confirmation does not match.");
+                    return;
+                }
+
                 const settings = {};
                 setupConfigFields
                     ?.querySelectorAll("[data-setup-config-key]")
@@ -619,21 +812,9 @@ const themes = [
                 const payload = {
                     settings,
                     admin: {
-                        handle:
-                            input("setup-admin-handle") instanceof
-                            HTMLInputElement
-                                ? input("setup-admin-handle").value.trim()
-                                : "",
-                        display_name:
-                            input("setup-admin-display-name") instanceof
-                            HTMLInputElement
-                                ? input("setup-admin-display-name").value.trim()
-                                : "",
-                        password:
-                            input("setup-admin-password") instanceof
-                            HTMLInputElement
-                                ? input("setup-admin-password").value
-                                : "",
+                        handle: adminHandle,
+                        display_name: adminDisplayName,
+                        password: adminPassword,
                     },
                 };
                 try {
@@ -651,21 +832,14 @@ const themes = [
                         const error = await response.json().catch(() => ({
                             message: "Setup failed.",
                         }));
-                        if (setupError) {
-                            setupError.textContent =
-                                error?.message || "Setup failed.";
-                            setupError.classList.remove("hidden");
-                        }
+                        setSetupError(error?.message || "Setup failed.");
                         return;
                     }
                     showAuthScreen(
                         "Setup complete. Sign in with the admin account you just created.",
                     );
                 } catch {
-                    if (setupError) {
-                        setupError.textContent = "Setup failed.";
-                        setupError.classList.remove("hidden");
-                    }
+                    setSetupError("Setup failed.");
                 }
             });
 

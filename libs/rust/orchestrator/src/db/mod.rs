@@ -92,14 +92,26 @@ pub trait JobStore: Send + Sync {
         status: Option<BuildStatus>,
         package_name: Option<String>,
         mock_chroot: Option<String>,
-        terminal_only: bool,
+        completed_only: bool,
     ) -> anyhow::Result<Vec<BuildJobResponse>>;
     async fn count_jobs(
         &self,
         status: Option<BuildStatus>,
         package_name: Option<String>,
         mock_chroot: Option<String>,
-        terminal_only: bool,
+        completed_only: bool,
+    ) -> anyhow::Result<u64>;
+    async fn list_active_jobs(
+        &self,
+        limit: usize,
+        offset: usize,
+        package_name: Option<String>,
+        mock_chroot: Option<String>,
+    ) -> anyhow::Result<Vec<BuildJobResponse>>;
+    async fn count_active_jobs(
+        &self,
+        package_name: Option<String>,
+        mock_chroot: Option<String>,
     ) -> anyhow::Result<u64>;
     async fn list_jobs_for_package(
         &self,
@@ -325,7 +337,7 @@ impl JobStore for DieselStore {
         status: Option<BuildStatus>,
         package_name: Option<String>,
         mock_chroot: Option<String>,
-        terminal_only: bool,
+        completed_only: bool,
     ) -> anyhow::Result<Vec<BuildJobResponse>> {
         job::list_jobs(
             self,
@@ -334,7 +346,7 @@ impl JobStore for DieselStore {
             status,
             package_name,
             mock_chroot,
-            terminal_only,
+            completed_only,
         )
         .await
     }
@@ -344,16 +356,27 @@ impl JobStore for DieselStore {
         status: Option<BuildStatus>,
         package_name: Option<String>,
         mock_chroot: Option<String>,
-        terminal_only: bool,
+        completed_only: bool,
     ) -> anyhow::Result<u64> {
-        job::count_jobs(
-            self,
-            status,
-            package_name,
-            mock_chroot,
-            terminal_only,
-        )
-        .await
+        job::count_jobs(self, status, package_name, mock_chroot, completed_only).await
+    }
+
+    async fn list_active_jobs(
+        &self,
+        limit: usize,
+        offset: usize,
+        package_name: Option<String>,
+        mock_chroot: Option<String>,
+    ) -> anyhow::Result<Vec<BuildJobResponse>> {
+        job::list_active_jobs(self, limit, offset, package_name, mock_chroot).await
+    }
+
+    async fn count_active_jobs(
+        &self,
+        package_name: Option<String>,
+        mock_chroot: Option<String>,
+    ) -> anyhow::Result<u64> {
+        job::count_active_jobs(self, package_name, mock_chroot).await
     }
 
     async fn list_jobs_for_package(

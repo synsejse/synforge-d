@@ -39,7 +39,7 @@ export default function Dashboard() {
         ] = await Promise.all([
           api.listPackagesPage(1, 0),
           api.listPackagesPage(1, 0, { enabled: true }),
-          api.listJobs({ limit: 6, offset: 0, terminalOnly: true }),
+          api.listJobs({ limit: 6, offset: 0, completedOnly: true }),
           api.listActiveJobs({ limit: 6, offset: 0 }),
           api.getRepoSummary(),
         ]);

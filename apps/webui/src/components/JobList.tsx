@@ -90,7 +90,7 @@ export default function JobList() {
               status: nextFilter,
               packageName: nextPackageFilter,
               mockChroot: nextTargetFilter,
-              terminalOnly: true,
+              completedOnly: true,
             });
       setJobs(res.jobs);
       setHasMore(res.page.has_more);

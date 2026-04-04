@@ -264,12 +264,12 @@ pub(super) async fn list_jobs(
     status: Option<BuildStatus>,
     package_name: Option<String>,
     mock_chroot: Option<String>,
-    terminal_only: bool,
+    completed_only: bool,
 ) -> anyhow::Result<Vec<BuildJobResponse>> {
     store
         .with_connection(move |conn| {
             let mut query = build_jobs::table.into_boxed();
-            if terminal_only {
+            if completed_only {
                 query = query.filter(
                     build_jobs::status
                         .ne(BuildStatus::Pending)
@@ -303,12 +303,12 @@ pub(super) async fn count_jobs(
     status: Option<BuildStatus>,
     package_name: Option<String>,
     mock_chroot: Option<String>,
-    terminal_only: bool,
+    completed_only: bool,
 ) -> anyhow::Result<u64> {
     store
         .with_connection(move |conn| {
             let mut query = build_jobs::table.into_boxed();
-            if terminal_only {
+            if completed_only {
                 query = query.filter(
                     build_jobs::status
                         .ne(BuildStatus::Pending)
@@ -318,6 +318,65 @@ pub(super) async fn count_jobs(
             if let Some(status) = status {
                 query = query.filter(build_jobs::status.eq(status));
             }
+            if let Some(package_name) = package_name.as_deref() {
+                let search = format!("%{}%", package_name);
+                query = query.filter(build_jobs::package_name.like(search));
+            }
+            if let Some(mock_chroot) = mock_chroot.as_deref() {
+                let search = format!("%{}%", mock_chroot);
+                query = query.filter(build_jobs::mock_chroot.like(search));
+            }
+            let count = query.count().get_result::<i64>(conn)?;
+            Ok(count as u64)
+        })
+        .await
+}
+
+pub(super) async fn list_active_jobs(
+    store: &DieselStore,
+    limit: usize,
+    offset: usize,
+    package_name: Option<String>,
+    mock_chroot: Option<String>,
+) -> anyhow::Result<Vec<BuildJobResponse>> {
+    store
+        .with_connection(move |conn| {
+            let mut query = build_jobs::table.into_boxed().filter(
+                build_jobs::status
+                    .eq(BuildStatus::Pending)
+                    .or(build_jobs::status.eq(BuildStatus::Running)),
+            );
+            if let Some(package_name) = package_name.as_deref() {
+                let search = format!("%{}%", package_name);
+                query = query.filter(build_jobs::package_name.like(search));
+            }
+            if let Some(mock_chroot) = mock_chroot.as_deref() {
+                let search = format!("%{}%", mock_chroot);
+                query = query.filter(build_jobs::mock_chroot.like(search));
+            }
+            let rows = query
+                .order(build_jobs::created_at.desc())
+                .limit(limit as i64)
+                .offset(offset as i64)
+                .select(JobRecord::as_select())
+                .load(conn)?;
+            load_job_responses(conn, rows)
+        })
+        .await
+}
+
+pub(super) async fn count_active_jobs(
+    store: &DieselStore,
+    package_name: Option<String>,
+    mock_chroot: Option<String>,
+) -> anyhow::Result<u64> {
+    store
+        .with_connection(move |conn| {
+            let mut query = build_jobs::table.into_boxed().filter(
+                build_jobs::status
+                    .eq(BuildStatus::Pending)
+                    .or(build_jobs::status.eq(BuildStatus::Running)),
+            );
             if let Some(package_name) = package_name.as_deref() {
                 let search = format!("%{}%", package_name);
                 query = query.filter(build_jobs::package_name.like(search));

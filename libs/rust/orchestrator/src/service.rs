@@ -863,7 +863,7 @@ impl SynforgeService {
         status: Option<BuildStatus>,
         package_name: Option<String>,
         mock_chroot: Option<String>,
-        terminal_only: bool,
+        completed_only: bool,
     ) -> anyhow::Result<BuildJobListResponse> {
         let (limit, offset) = normalize_pagination(limit, offset);
         let total = self
@@ -872,7 +872,7 @@ impl SynforgeService {
                 status,
                 package_name.clone(),
                 mock_chroot.clone(),
-                terminal_only,
+                completed_only,
             )
             .await?;
         let jobs = self
@@ -883,7 +883,7 @@ impl SynforgeService {
                 status,
                 package_name,
                 mock_chroot,
-                terminal_only,
+                completed_only,
             )
             .await?;
         Ok(BuildJobListResponse {
@@ -899,15 +899,19 @@ impl SynforgeService {
         package_name: Option<String>,
         mock_chroot: Option<String>,
     ) -> anyhow::Result<BuildJobListResponse> {
-        self.list_jobs(
-            limit,
-            offset,
-            None,
-            package_name,
-            mock_chroot,
-            false,
-        )
-        .await
+        let (limit, offset) = normalize_pagination(limit, offset);
+        let total = self
+            .store
+            .count_active_jobs(package_name.clone(), mock_chroot.clone())
+            .await?;
+        let jobs = self
+            .store
+            .list_active_jobs(limit, offset, package_name, mock_chroot)
+            .await?;
+        Ok(BuildJobListResponse {
+            page: build_page_info(limit, offset, total, jobs.len()),
+            jobs,
+        })
     }
 
     pub async fn get_job(&self, job_id: Uuid) -> anyhow::Result<BuildJobResponse> {

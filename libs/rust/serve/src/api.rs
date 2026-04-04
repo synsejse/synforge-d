@@ -413,7 +413,7 @@ pub(crate) async fn list_jobs(
                 query.status,
                 query.package_name,
                 query.mock_chroot,
-                query.terminal_only.unwrap_or(false),
+                query.completed_only.unwrap_or(false),
             )
             .await?,
     ))

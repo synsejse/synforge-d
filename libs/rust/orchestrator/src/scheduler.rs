@@ -314,7 +314,7 @@ impl BuildScheduler {
                 revision: revision_key.clone(),
                 trigger,
                 status: BuildStatus::Pending,
-                spec_path: updated_package.spec_path.clone(),
+                spec_file: updated_package.spec_file.clone(),
                 worker_container_id: None,
                 created_at: now,
                 updated_at: now,

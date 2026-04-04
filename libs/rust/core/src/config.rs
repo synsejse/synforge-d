@@ -224,12 +224,7 @@ impl DaemonConfig {
     }
 
     pub fn runtime_paths(&self) -> RuntimePaths {
-        RuntimePaths::new(
-            self.runtime_root.join("metadata"),
-            self.runtime_root.join("metadata/packages"),
-            self.runtime_root.join("metadata/repo/fedora"),
-            self.runtime_root.join("jobs"),
-        )
+        RuntimePaths::new(self.runtime_root.clone())
     }
 }
 

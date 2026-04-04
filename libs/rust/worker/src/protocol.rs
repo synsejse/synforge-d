@@ -66,14 +66,16 @@ impl WorkerTransportHandle {
         artifact_root: &Path,
         artifact: &BuildArtifact,
     ) -> anyhow::Result<()> {
-        let path = artifact.path.to_string_lossy().to_string();
+        let path = artifact.file.to_string_lossy().to_string();
+        let storage_path = artifact.storage_path().to_string_lossy().to_string();
         self.send_message(WorkerWireMessage::ArtifactStart {
             artifact_id: artifact.id,
             path,
+            storage_path: storage_path.clone(),
             kind: artifact.kind,
         })
         .await?;
-        let bytes = tokio::fs::read(artifact_root.join(&artifact.path)).await?;
+        let bytes = tokio::fs::read(artifact_root.join(storage_path)).await?;
         for chunk in bytes.chunks(64 * 1024) {
             self.send_message(WorkerWireMessage::ArtifactChunk {
                 bytes: chunk.to_vec(),

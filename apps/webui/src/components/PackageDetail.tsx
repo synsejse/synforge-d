@@ -110,7 +110,7 @@ export default function PackageDetail({ packageName }: Props) {
     setPkg(packageRes);
     setForm({
       repoUrl: packageRes.package.source.repo_url,
-      specPath: packageRes.package.source.spec_path,
+      specPath: packageRes.package.source.spec_file,
       poll: packageRes.package.source.poll,
       mockChroots: packageRes.package.mock_chroots,
       pollIntervalSeconds: String(packageRes.package.poll_interval_seconds),
@@ -238,7 +238,7 @@ export default function PackageDetail({ packageName }: Props) {
     try {
       const source: SpecSource = {
         repo_url: form.repoUrl,
-        spec_path: form.specPath,
+        spec_file: form.specPath,
         poll: form.poll,
       };
       const request: UpdatePackageRequest = {
@@ -763,7 +763,7 @@ export default function PackageDetail({ packageName }: Props) {
             label="Active Job"
             value={pkg.state.active_job_id || "None"}
           />
-          <DetailStat label="Spec Path" value={pkg.package.spec_path} mono />
+          <DetailStat label="Spec File" value={pkg.package.spec_file} mono />
           <div className="border border-zinc-800 bg-black px-4 py-3">
             <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
               Target State
@@ -1017,11 +1017,11 @@ export default function PackageDetail({ packageName }: Props) {
               <tbody className="divide-y divide-white/10 bg-black">
                 {repoFiles.map((file) => (
                   <tr
-                    key={`${file.job_id}:${file.repo_path}`}
+                    key={`${file.job_id}:${file.path}`}
                     className="hover:bg-zinc-950"
                   >
                     <td className="px-4 py-3 font-mono text-sm text-zinc-200">
-                      {file.repo_path}
+                      {file.path}
                     </td>
                     <td className="px-4 py-3">
                       <a

@@ -36,7 +36,7 @@ impl FileRepoManager {
         }
         let published_at = now_utc();
         let mut files = Vec::new();
-        let mut seen_repo_paths = HashSet::new();
+        let mut seen_paths = HashSet::new();
         for artifact in &worker_result.artifacts {
             if artifact.kind == ArtifactKind::Srpm && !package.publish_srpm {
                 continue;
@@ -47,16 +47,18 @@ impl FileRepoManager {
                 .with_context(|| format!("failed to create {}", build_root.display()))?;
             let source_path = paths
                 .job_artifacts_dir(worker_result.job_id)
-                .join(&artifact.path);
-            let file_name = artifact.path.file_name().ok_or_else(|| {
-                anyhow::anyhow!("artifact path {} has no filename", artifact.path.display())
+                .join(artifact.storage_path());
+            let file_name = artifact.file.file_name().ok_or_else(|| {
+                anyhow::anyhow!("artifact file {} has no filename", artifact.file.display())
             })?;
             let destination = build_root.join(file_name);
-            let repo_path = destination
-                .strip_prefix(paths.repo_dir())
-                .unwrap_or(&destination)
-                .to_path_buf();
-            if !seen_repo_paths.insert(repo_path.clone()) {
+            let path = crate::db::build_published_repo_path(
+                &package.name,
+                &artifact.mock_chroot,
+                worker_result.job_id,
+                &artifact.file,
+            )?;
+            if !seen_paths.insert(path.clone()) {
                 continue;
             }
             if destination.exists() {
@@ -79,7 +81,7 @@ impl FileRepoManager {
                 job_id: worker_result.job_id,
                 package_name: package.name.clone(),
                 mock_chroot: artifact.mock_chroot.clone(),
-                repo_path,
+                path,
                 sha256: artifact.sha256.clone(),
                 size_bytes: artifact.size_bytes,
                 kind: artifact.kind,
@@ -102,7 +104,7 @@ impl FileRepoManager {
     ) -> anyhow::Result<()> {
         let paths = config.runtime_paths();
         for file in files {
-            let path = paths.repo_dir().join(&file.repo_path);
+            let path = paths.repo_dir().join(&file.path);
             match tokio::fs::remove_file(&path).await {
                 Ok(()) => prune_empty_parents(&path, paths.repo_dir()).await?,
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}

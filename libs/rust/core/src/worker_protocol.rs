@@ -19,6 +19,7 @@ pub enum WorkerWireMessage {
     ArtifactStart {
         artifact_id: Uuid,
         path: String,
+        storage_path: String,
         kind: ArtifactKind,
     },
     ArtifactChunk {

@@ -59,13 +59,13 @@ impl Validator<PackageDefinition> for PackageDefinitionValidator {
                 "spec release must not be empty".to_string(),
             ));
         }
-        if value.spec_path.extension().and_then(|part| part.to_str()) != Some("spec") {
+        if value.spec_file.extension().and_then(|part| part.to_str()) != Some("spec") {
             return Err(SynforgeError::Spec(format!(
                 "spec path {} must end with .spec",
-                value.spec_path.display()
+                value.spec_file.display()
             )));
         }
-        if value.spec_path.is_absolute() {
+        if value.spec_file.is_absolute() {
             return Err(SynforgeError::Spec(
                 "spec path must be relative to the git repository root".to_string(),
             ));
@@ -108,18 +108,18 @@ impl Validator<BuildEnvVar> for BuildEnvVarValidator {
 impl Validator<SpecSource> for SpecSourceValidator {
     fn validate(&self, value: &SpecSource) -> Result<(), SynforgeError> {
         let _ = RepoUrl::new(&value.repo_url)?;
-        if value.spec_path.trim().is_empty() {
+        if value.spec_file.trim().is_empty() {
             return Err(SynforgeError::Spec(
                 "spec path must not be empty".to_string(),
             ));
         }
-        let spec_path = PathBuf::from(value.spec_path.trim());
-        if spec_path.is_absolute() {
+        let spec_file = PathBuf::from(value.spec_file.trim());
+        if spec_file.is_absolute() {
             return Err(SynforgeError::Spec(
                 "spec path must be relative to the repository root".to_string(),
             ));
         }
-        if spec_path.extension().and_then(|part| part.to_str()) != Some("spec") {
+        if spec_file.extension().and_then(|part| part.to_str()) != Some("spec") {
             return Err(SynforgeError::Spec(
                 "spec path must point to a .spec file".to_string(),
             ));

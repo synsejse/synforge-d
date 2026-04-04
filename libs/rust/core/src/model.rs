@@ -42,10 +42,16 @@ pub struct BuildArtifact {
     pub package_name: String,
     pub mock_chroot: String,
     #[schema(value_type = String)]
-    pub path: PathBuf,
+    pub file: PathBuf,
     pub sha256: String,
     pub size_bytes: u64,
     pub kind: ArtifactKind,
+}
+
+impl BuildArtifact {
+    pub fn storage_path(&self) -> PathBuf {
+        PathBuf::from(&self.mock_chroot).join(&self.file)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
@@ -55,7 +61,7 @@ pub struct PublishedRepoFile {
     pub package_name: String,
     pub mock_chroot: String,
     #[schema(value_type = String)]
-    pub repo_path: PathBuf,
+    pub path: PathBuf,
     pub sha256: String,
     pub size_bytes: u64,
     pub kind: ArtifactKind,
@@ -175,7 +181,7 @@ pub struct BuildJob {
     pub trigger: BuildTrigger,
     pub status: BuildStatus,
     #[schema(value_type = String)]
-    pub spec_path: PathBuf,
+    pub spec_file: PathBuf,
     pub worker_container_id: Option<String>,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,

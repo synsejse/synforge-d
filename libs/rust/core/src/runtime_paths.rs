@@ -4,29 +4,20 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuntimePaths {
-    metadata_root: PathBuf,
     packages_dir: PathBuf,
     repo_dir: PathBuf,
     jobs_root: PathBuf,
+    temp_root: PathBuf,
 }
 
 impl RuntimePaths {
-    pub fn new(
-        metadata_root: PathBuf,
-        packages_dir: PathBuf,
-        repo_dir: PathBuf,
-        jobs_root: PathBuf,
-    ) -> Self {
+    pub fn new(runtime_root: PathBuf) -> Self {
         Self {
-            metadata_root,
-            packages_dir,
-            repo_dir,
-            jobs_root,
+            packages_dir: runtime_root.join("packages"),
+            repo_dir: runtime_root.join("repo"),
+            jobs_root: runtime_root.join("jobs"),
+            temp_root: runtime_root.join("tmp"),
         }
-    }
-
-    pub fn metadata_root(&self) -> &Path {
-        &self.metadata_root
     }
 
     pub fn packages_dir(&self) -> &Path {
@@ -53,8 +44,12 @@ impl RuntimePaths {
         self.job_root(job_id).join("logs")
     }
 
+    pub fn job_log_path(&self, job_id: Uuid, file: &str) -> PathBuf {
+        self.job_logs_dir(job_id).join(sanitize_relative_path(file))
+    }
+
     pub fn temp_root(&self) -> PathBuf {
-        self.metadata_root.join("tmp")
+        self.temp_root.clone()
     }
 
     pub fn parse_workspace_dir(&self, job_id: Uuid) -> PathBuf {
@@ -72,4 +67,17 @@ impl RuntimePaths {
             .join(release)
             .join(arch)
     }
+}
+
+fn sanitize_relative_path(path: &str) -> PathBuf {
+    Path::new(path)
+        .components()
+        .filter_map(|component| match component {
+            std::path::Component::Normal(part) => Some(PathBuf::from(part)),
+            _ => None,
+        })
+        .fold(PathBuf::new(), |mut acc, part| {
+            acc.push(part);
+            acc
+        })
 }

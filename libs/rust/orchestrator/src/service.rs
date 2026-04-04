@@ -96,7 +96,7 @@ impl SynforgeService {
                     source, job_id
                 )))
             })?;
-        let path = PathBuf::from(row.log_path);
+        let path = self.config.runtime_paths().job_log_path(job_id, &row.file);
         if tokio::fs::try_exists(&path).await.unwrap_or(false) {
             return Ok(path);
         }
@@ -118,7 +118,7 @@ impl SynforgeService {
         let artifact = job
             .artifacts
             .into_iter()
-            .find(|artifact| artifact.path == std::path::Path::new(relative_artifact_path))
+            .find(|artifact| artifact.file == std::path::Path::new(relative_artifact_path))
             .ok_or_else(|| {
                 anyhow::anyhow!(SynforgeError::NotFound(relative_artifact_path.to_string()))
             })?;
@@ -127,7 +127,7 @@ impl SynforgeService {
             .config
             .runtime_paths()
             .job_artifacts_dir(job_id)
-            .join(&artifact.path);
+            .join(artifact.storage_path());
         if !tokio::fs::try_exists(&path).await? {
             return Err(anyhow::anyhow!(SynforgeError::NotFound(
                 path.display().to_string()
@@ -1001,10 +1001,10 @@ impl SynforgeService {
         let db_logs = self.store.list_build_logs_for_job(job_id).await?;
 
         for row in db_logs {
-            let log_path = PathBuf::from(&row.log_path);
+            let log_path = self.config.runtime_paths().job_log_path(job_id, &row.file);
             if let Ok(meta) = tokio::fs::metadata(&log_path).await {
                 sources.push(LogSource {
-                    path: row.source_path,
+                    file: row.file,
                     size: meta.len(),
                     source_type: LogSourceType::Raw,
                 });

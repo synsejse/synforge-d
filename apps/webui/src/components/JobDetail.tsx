@@ -117,7 +117,7 @@ export default function JobDetail({ jobId }: Props) {
     artifact: BuildJobResponse["artifacts"][number],
   ) {
     try {
-      setDownloadingArtifactPath(artifact.path);
+      setDownloadingArtifactPath(artifact.file);
       await api.downloadJobArtifact(jobId, artifact);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to download artifact");
@@ -224,7 +224,7 @@ export default function JobDetail({ jobId }: Props) {
             value={job.job.worker_container_id || "Not assigned"}
             mono
           />
-          <DetailStat label="Spec Path" value={job.job.spec_path} mono />
+          <DetailStat label="Spec File" value={job.job.spec_file} mono />
           {job.job.error_message && (
             <div className="border border-zinc-800 bg-black p-4">
               <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
@@ -304,12 +304,12 @@ export default function JobDetail({ jobId }: Props) {
               <div className="grid gap-3">
                 {job.artifacts.map((artifact) => (
                   <div
-                    key={`${artifact.id}-${artifact.path}`}
+                    key={`${artifact.id}-${artifact.file}`}
                     className="grid gap-3 border border-zinc-800 bg-black px-4 py-4 md:grid-cols-[minmax(0,1fr)_auto_auto_auto]"
                   >
                     <div>
                       <div className="font-mono text-sm text-white">
-                        {artifact.path}
+                        {artifact.file}
                       </div>
                       <div className="mt-1 text-xs text-zinc-500">
                         {artifact.sha256}
@@ -324,14 +324,14 @@ export default function JobDetail({ jobId }: Props) {
                     <div className="flex md:justify-end">
                       <button
                         onClick={() => handleArtifactDownload(artifact)}
-                        disabled={downloadingArtifactPath === artifact.path}
+                        disabled={downloadingArtifactPath === artifact.file}
                         className="inline-flex items-center border border-zinc-800 bg-black px-3 py-1.5 text-xs text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <FaIcon
                           icon={faDownload}
                           className="mr-2 text-[0.95em]"
                         />
-                        {downloadingArtifactPath === artifact.path
+                        {downloadingArtifactPath === artifact.file
                           ? "Downloading…"
                           : "Download"}
                       </button>

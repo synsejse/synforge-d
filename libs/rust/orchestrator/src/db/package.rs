@@ -84,7 +84,7 @@ pub(super) async fn upsert_package(
     let package = package.clone();
     store
         .with_connection(move |conn| {
-            let spec_path = package.spec_path.to_string_lossy().to_string();
+            let spec_file = package.spec_file.to_string_lossy().to_string();
             let build_env_json = serde_json::to_string(&package.build_env)?;
             let mock_chroots_json = serde_json::to_string(&package.mock_chroots)?;
             let new_row = NewPackageRecord {
@@ -96,13 +96,13 @@ pub(super) async fn upsert_package(
                 network_access: package.network_access,
                 mock_chroots_json: mock_chroots_json.as_str(),
                 source_repo_url: package.source.repo_url.as_str(),
-                source_spec_path: package.source.spec_path.as_str(),
+                source_spec_file: package.source.spec_file.as_str(),
                 source_poll: package.source.poll,
                 poll_interval_seconds: package.poll_interval_seconds as i64,
                 build_timeout_seconds: package.build_timeout_seconds as i64,
                 package_history_count: package.package_history_count as i64,
                 build_env_json: build_env_json.as_str(),
-                spec_path: spec_path.as_str(),
+                spec_file: spec_file.as_str(),
                 version: package.version.as_str(),
                 release: package.release.as_str(),
             };
@@ -118,13 +118,13 @@ pub(super) async fn upsert_package(
                     packages::network_access.eq(new_row.network_access),
                     packages::mock_chroots_json.eq(new_row.mock_chroots_json),
                     packages::source_repo_url.eq(new_row.source_repo_url),
-                    packages::source_spec_path.eq(new_row.source_spec_path),
+                    packages::source_spec_file.eq(new_row.source_spec_file),
                     packages::source_poll.eq(new_row.source_poll),
                     packages::poll_interval_seconds.eq(new_row.poll_interval_seconds),
                     packages::build_timeout_seconds.eq(new_row.build_timeout_seconds),
                     packages::package_history_count.eq(new_row.package_history_count),
                     packages::build_env_json.eq(new_row.build_env_json),
-                    packages::spec_path.eq(new_row.spec_path),
+                    packages::spec_file.eq(new_row.spec_file),
                     packages::version.eq(new_row.version),
                     packages::release.eq(new_row.release),
                 ))

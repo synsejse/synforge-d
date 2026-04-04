@@ -80,7 +80,7 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
       if (current) {
         return current;
       }
-      return response.sources[0]?.path ?? null;
+      return response.sources[0]?.file ?? null;
     });
     setManifestLoading(false);
   }
@@ -248,15 +248,15 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
       <div className="mb-4 flex flex-wrap gap-1 border-b border-zinc-800">
         {(manifest?.sources ?? []).map((source) => (
           <button
-            key={source.path}
-            onClick={() => setActiveSourcePath(source.path)}
+            key={source.file}
+            onClick={() => setActiveSourcePath(source.file)}
             className={`px-4 py-2 text-sm font-medium transition ${
-              activeSourcePath === source.path
+              activeSourcePath === source.file
                 ? "border-b-2 border-white text-white"
                 : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
-            {source.path}
+            {source.file}
             {source.size > 0 && (
               <span className="ml-2 text-xs text-zinc-500">
                 ({formatBytes(source.size)})

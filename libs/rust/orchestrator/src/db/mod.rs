@@ -76,14 +76,13 @@ pub trait JobStore: Send + Sync {
     async fn upsert_build_log(
         &self,
         job_id: Uuid,
-        source_path: &str,
-        log_path: &Path,
+        file: &str,
     ) -> anyhow::Result<()>;
     async fn list_build_logs_for_job(&self, job_id: Uuid) -> anyhow::Result<Vec<BuildLogRecord>>;
     async fn get_build_log_for_job_source(
         &self,
         job_id: Uuid,
-        source_path: &str,
+        file: &str,
     ) -> anyhow::Result<Option<BuildLogRecord>>;
     async fn list_jobs(
         &self,
@@ -316,18 +315,17 @@ impl JobStore for DieselStore {
     async fn upsert_build_log(
         &self,
         job_id: Uuid,
-        source_path: &str,
-        log_path: &Path,
+        file: &str,
     ) -> anyhow::Result<()> {
-        job::upsert_build_log(self, job_id, source_path, log_path).await
+        job::upsert_build_log(self, job_id, file).await
     }
 
     async fn get_build_log_for_job_source(
         &self,
         job_id: Uuid,
-        source_path: &str,
+        file: &str,
     ) -> anyhow::Result<Option<BuildLogRecord>> {
-        job::get_build_log_for_job_source(self, job_id, source_path).await
+        job::get_build_log_for_job_source(self, job_id, file).await
     }
 
     async fn list_jobs(
@@ -541,13 +539,13 @@ pub(crate) struct PackageRecord {
     pub(crate) network_access: bool,
     pub(crate) mock_chroots_json: String,
     pub(crate) source_repo_url: String,
-    pub(crate) source_spec_path: String,
+    pub(crate) source_spec_file: String,
     pub(crate) source_poll: bool,
     pub(crate) poll_interval_seconds: i64,
     pub(crate) build_timeout_seconds: i64,
     pub(crate) package_history_count: i64,
     pub(crate) build_env_json: String,
-    pub(crate) spec_path: String,
+    pub(crate) spec_file: String,
     pub(crate) version: String,
     pub(crate) release: String,
 }
@@ -563,13 +561,13 @@ pub(crate) struct NewPackageRecord<'a> {
     pub(crate) network_access: bool,
     pub(crate) mock_chroots_json: &'a str,
     pub(crate) source_repo_url: &'a str,
-    pub(crate) source_spec_path: &'a str,
+    pub(crate) source_spec_file: &'a str,
     pub(crate) source_poll: bool,
     pub(crate) poll_interval_seconds: i64,
     pub(crate) build_timeout_seconds: i64,
     pub(crate) package_history_count: i64,
     pub(crate) build_env_json: &'a str,
-    pub(crate) spec_path: &'a str,
+    pub(crate) spec_file: &'a str,
     pub(crate) version: &'a str,
     pub(crate) release: &'a str,
 }
@@ -583,7 +581,7 @@ pub(crate) struct JobRecord {
     pub(crate) revision: String,
     pub(crate) trigger: BuildTrigger,
     pub(crate) status: BuildStatus,
-    pub(crate) spec_path: String,
+    pub(crate) spec_file: String,
     pub(crate) worker_container_id: Option<String>,
     pub(crate) created_at: String,
     pub(crate) updated_at: String,
@@ -600,7 +598,7 @@ pub(crate) struct NewJobRecord<'a> {
     pub(crate) revision: &'a str,
     pub(crate) trigger: BuildTrigger,
     pub(crate) status: BuildStatus,
-    pub(crate) spec_path: &'a str,
+    pub(crate) spec_file: &'a str,
     pub(crate) worker_container_id: Option<&'a str>,
     pub(crate) created_at: String,
     pub(crate) updated_at: String,
@@ -615,7 +613,7 @@ pub(crate) struct ArtifactRecord {
     pub(crate) job_id: String,
     pub(crate) package_name: String,
     pub(crate) mock_chroot: String,
-    pub(crate) path: String,
+    pub(crate) file: String,
     pub(crate) sha256: String,
     pub(crate) size_bytes: i64,
     pub(crate) kind: ArtifactKind,
@@ -628,7 +626,7 @@ pub(crate) struct NewArtifactRecord {
     pub(crate) job_id: String,
     pub(crate) package_name: String,
     pub(crate) mock_chroot: String,
-    pub(crate) path: String,
+    pub(crate) file: String,
     pub(crate) sha256: String,
     pub(crate) size_bytes: i64,
     pub(crate) kind: ArtifactKind,
@@ -638,22 +636,19 @@ pub(crate) struct NewArtifactRecord {
 #[diesel(table_name = build_logs)]
 pub(crate) struct NewBuildLogRecord<'a> {
     pub(crate) job_id: &'a str,
-    pub(crate) source_path: &'a str,
-    pub(crate) log_path: &'a str,
+    pub(crate) file: &'a str,
     pub(crate) updated_at: &'a str,
 }
 
 #[derive(Debug, Queryable)]
 pub struct BuildLogRecord {
-    pub source_path: String,
-    pub log_path: String,
+    pub file: String,
 }
 
 #[derive(Insertable)]
 #[diesel(table_name = published_repo_files)]
 pub(crate) struct NewPublishedRepoFileRecord {
     pub(crate) artifact_id: String,
-    pub(crate) repo_path: String,
     pub(crate) published_at: String,
 }
 
@@ -732,7 +727,7 @@ pub(crate) fn package_response_from_record(
             .unwrap_or_default(),
         source: SpecSource {
             repo_url: record.source_repo_url,
-            spec_path: record.source_spec_path,
+            spec_file: record.source_spec_file,
             poll: record.source_poll,
         },
         poll_interval_seconds: record.poll_interval_seconds as u64,
@@ -740,7 +735,7 @@ pub(crate) fn package_response_from_record(
         package_history_count: record.package_history_count as u64,
         build_env: serde_json::from_str::<Vec<BuildEnvVar>>(&record.build_env_json)
             .unwrap_or_default(),
-        spec_path: PathBuf::from(record.spec_path),
+        spec_file: PathBuf::from(record.spec_file),
         version: record.version,
         release: record.release,
     };
@@ -852,7 +847,7 @@ pub(crate) fn row_to_build_job(row: JobRecord) -> anyhow::Result<BuildJob> {
         revision: row.revision,
         trigger: row.trigger,
         status: row.status,
-        spec_path: PathBuf::from(row.spec_path),
+        spec_file: PathBuf::from(row.spec_file),
         worker_container_id: row.worker_container_id,
         created_at: parse_timestamp(&row.created_at)?,
         updated_at: parse_timestamp(&row.updated_at)?,
@@ -878,13 +873,13 @@ pub(crate) fn load_published_repo_files_for_job(
             build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
         )
         .filter(build_artifacts::job_id.eq(job_id))
-        .order(published_repo_files::repo_path.asc())
+        .order(build_artifacts::file.asc())
         .select((
             published_repo_files::artifact_id,
             build_artifacts::job_id,
             build_artifacts::package_name,
             build_artifacts::mock_chroot,
-            published_repo_files::repo_path,
+            build_artifacts::file,
             build_artifacts::sha256,
             build_artifacts::size_bytes,
             build_artifacts::kind,
@@ -924,23 +919,50 @@ pub(crate) fn published_repo_file_from_record(
         job_id,
         package_name,
         mock_chroot,
-        repo_path,
+        artifact_path,
         sha256,
         size_bytes,
         kind,
         published_at,
     ) = row;
+    let job_id = Uuid::parse_str(&job_id)?;
+    let path = build_published_repo_path(
+        &package_name,
+        &mock_chroot,
+        job_id,
+        Path::new(&artifact_path),
+    )?;
     Ok(PublishedRepoFile {
         artifact_id: Uuid::parse_str(&artifact_id)?,
-        job_id: Uuid::parse_str(&job_id)?,
+        job_id,
         package_name,
         mock_chroot,
-        repo_path: PathBuf::from(repo_path),
+        path,
         sha256,
         size_bytes: size_bytes.max(0) as u64,
         kind,
         published_at: parse_timestamp(&published_at)?,
     })
+}
+
+pub(crate) fn build_published_repo_path(
+    package_name: &str,
+    mock_chroot: &str,
+    job_id: Uuid,
+    artifact_path: &Path,
+) -> anyhow::Result<PathBuf> {
+    let file_name = artifact_path.file_name().ok_or_else(|| {
+        anyhow::anyhow!(
+            "artifact path {} has no filename for published repo path",
+            artifact_path.display()
+        )
+    })?;
+    Ok(PathBuf::from("packages")
+        .join(package_name)
+        .join(mock_chroot)
+        .join("builds")
+        .join(job_id.to_string())
+        .join(file_name))
 }
 
 pub(crate) fn user_from_record(

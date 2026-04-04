@@ -51,7 +51,7 @@ pub(super) async fn insert_job(store: &DieselStore, job: &BuildJob) -> anyhow::R
     store
         .with_connection(move |conn| {
             let id = job.id.to_string();
-            let spec_path = job.spec_path.to_string_lossy().to_string();
+            let spec_file = job.spec_file.to_string_lossy().to_string();
             let new_job = NewJobRecord {
                 id: id.as_str(),
                 package_name: job.package_name.as_str(),
@@ -59,7 +59,7 @@ pub(super) async fn insert_job(store: &DieselStore, job: &BuildJob) -> anyhow::R
                 revision: job.revision.as_str(),
                 trigger: job.trigger,
                 status: job.status,
-                spec_path: spec_path.as_str(),
+                spec_file: spec_file.as_str(),
                 worker_container_id: job.worker_container_id.as_deref(),
                 created_at: format_timestamp(job.created_at),
                 updated_at: format_timestamp(job.updated_at),
@@ -139,7 +139,7 @@ pub(super) async fn finish_job(
                             job_id: job_id.clone(),
                             package_name: job_row.package_name.clone(),
                             mock_chroot: job_row.mock_chroot.clone(),
-                            path: artifact.path.to_string_lossy().to_string(),
+                            file: artifact.file.to_string_lossy().to_string(),
                             sha256: artifact.sha256.clone(),
                             size_bytes: artifact.size_bytes as i64,
                             kind: artifact.kind,
@@ -166,7 +166,6 @@ pub(super) async fn finish_job(
                         .iter()
                         .map(|file| NewPublishedRepoFileRecord {
                             artifact_id: file.artifact_id.to_string(),
-                            repo_path: file.repo_path.to_string_lossy().to_string(),
                             published_at: format_timestamp(file.published_at),
                         })
                         .collect::<Vec<_>>();
@@ -185,33 +184,27 @@ pub(super) async fn finish_job(
 pub(super) async fn upsert_build_log(
     store: &DieselStore,
     job_id: Uuid,
-    source_path: &str,
-    log_path: &Path,
+    file: &str,
 ) -> anyhow::Result<()> {
     let job_id = job_id.to_string();
-    let source_path = source_path.to_string();
-    let log_path = log_path.to_string_lossy().to_string();
+    let file = file.to_string();
     let updated_at = format_timestamp(now_utc());
     store
         .with_connection(move |conn| {
             let existing: Option<String> = build_logs::table
-                .find((job_id.as_str(), source_path.as_str()))
-                .select(build_logs::log_path)
+                .find((job_id.as_str(), file.as_str()))
+                .select(build_logs::file)
                 .first(conn)
                 .optional()?;
 
             if existing.is_some() {
-                diesel::update(build_logs::table.find((job_id.as_str(), source_path.as_str())))
-                    .set((
-                        build_logs::log_path.eq(log_path.as_str()),
-                        build_logs::updated_at.eq(updated_at.as_str()),
-                    ))
+                diesel::update(build_logs::table.find((job_id.as_str(), file.as_str())))
+                    .set(build_logs::updated_at.eq(updated_at.as_str()))
                     .execute(conn)?;
             } else {
                 let row = NewBuildLogRecord {
                     job_id: job_id.as_str(),
-                    source_path: source_path.as_str(),
-                    log_path: log_path.as_str(),
+                    file: file.as_str(),
                     updated_at: updated_at.as_str(),
                 };
                 diesel::insert_into(build_logs::table)
@@ -232,8 +225,8 @@ pub(super) async fn list_build_logs_for_job(
         .with_connection(move |conn| {
             Ok(build_logs::table
                 .filter(build_logs::job_id.eq(job_id.as_str()))
-                .order(build_logs::source_path.asc())
-                .select((build_logs::source_path, build_logs::log_path))
+                .order(build_logs::file.asc())
+                .select((build_logs::file,))
                 .load(conn)?)
         })
         .await
@@ -242,15 +235,15 @@ pub(super) async fn list_build_logs_for_job(
 pub(super) async fn get_build_log_for_job_source(
     store: &DieselStore,
     job_id: Uuid,
-    source_path: &str,
+    file: &str,
 ) -> anyhow::Result<Option<BuildLogRecord>> {
     let job_id = job_id.to_string();
-    let source_path = source_path.to_string();
+    let file = file.to_string();
     store
         .with_connection(move |conn| {
             Ok(build_logs::table
-                .find((job_id.as_str(), source_path.as_str()))
-                .select((build_logs::source_path, build_logs::log_path))
+                .find((job_id.as_str(), file.as_str()))
+                .select((build_logs::file,))
                 .first(conn)
                 .optional()?)
         })
@@ -555,7 +548,7 @@ fn load_artifacts_map_for_job_ids(
             id: Uuid::parse_str(&row.id)?,
             package_name: row.package_name,
             mock_chroot: row.mock_chroot,
-            path: PathBuf::from(row.path),
+            file: PathBuf::from(row.file),
             sha256: row.sha256,
             size_bytes: row.size_bytes as u64,
             kind: row.kind,

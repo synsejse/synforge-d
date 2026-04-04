@@ -124,7 +124,8 @@ impl WorkerSessionBroker {
         &self,
         job_id: Uuid,
         artifact_id: Uuid,
-        relative_path: &str,
+        file: &str,
+        storage_path: &str,
         kind: ArtifactKind,
     ) -> anyhow::Result<BuildArtifact> {
         let entry = self
@@ -132,27 +133,27 @@ impl WorkerSessionBroker {
             .get(&job_id)
             .ok_or_else(|| anyhow::anyhow!("worker session {} not found", job_id))?;
         let (package_name, mock_chroot) = build_metadata_from_payload(&entry.payload)?;
-        let path = self.artifact_upload_path(job_id, relative_path);
-        let mut file = tokio::fs::File::open(&path).await?;
+        let stored_path = self.artifact_upload_path(job_id, storage_path);
+        let mut stored_file = tokio::fs::File::open(&stored_path).await?;
         let mut hasher = sha2::Sha256::new();
         let mut size_bytes = 0_u64;
         let mut buffer = vec![0_u8; 64 * 1024];
         loop {
-            let read = file.read(&mut buffer).await?;
+            let read = stored_file.read(&mut buffer).await?;
             if read == 0 {
                 break;
             }
             hasher.update(&buffer[..read]);
             size_bytes += read as u64;
         }
-        if let Some(parent) = path.parent() {
+        if let Some(parent) = stored_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
         let artifact = BuildArtifact {
             id: artifact_id,
             package_name,
             mock_chroot,
-            path: PathBuf::from(relative_path),
+            file: PathBuf::from(file),
             sha256: format!("{:x}", hasher.finalize()),
             size_bytes,
             kind,

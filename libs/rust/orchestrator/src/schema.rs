@@ -8,13 +8,13 @@ diesel::table! {
         network_access -> Bool,
         mock_chroots_json -> Text,
         source_repo_url -> Text,
-        source_spec_path -> Text,
+        source_spec_file -> Text,
         source_poll -> Bool,
         poll_interval_seconds -> BigInt,
         build_timeout_seconds -> BigInt,
         package_history_count -> BigInt,
         build_env_json -> Text,
-        spec_path -> Text,
+        spec_file -> Text,
         version -> Text,
         release -> Text,
     }
@@ -28,7 +28,7 @@ diesel::table! {
         revision -> Text,
         trigger -> Text,
         status -> Text,
-        spec_path -> Text,
+        spec_file -> Text,
         worker_container_id -> Nullable<Text>,
         created_at -> Text,
         updated_at -> Text,
@@ -43,7 +43,7 @@ diesel::table! {
         job_id -> Text,
         package_name -> Text,
         mock_chroot -> Text,
-        path -> Text,
+        file -> Text,
         sha256 -> Text,
         size_bytes -> BigInt,
         kind -> Text,
@@ -51,10 +51,9 @@ diesel::table! {
 }
 
 diesel::table! {
-    build_logs (job_id, source_path) {
+    build_logs (job_id, file) {
         job_id -> Text,
-        source_path -> Text,
-        log_path -> Text,
+        file -> Text,
         updated_at -> Text,
     }
 }
@@ -89,7 +88,6 @@ diesel::table! {
 diesel::table! {
     published_repo_files (artifact_id) {
         artifact_id -> Text,
-        repo_path -> Text,
         published_at -> Text,
     }
 }

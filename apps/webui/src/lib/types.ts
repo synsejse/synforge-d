@@ -2,7 +2,7 @@
 
 export interface SpecSource {
   repo_url: string;
-  spec_path: string;
+  spec_file: string;
   poll: boolean;
 }
 
@@ -24,7 +24,7 @@ export interface PackageDefinition {
   build_timeout_seconds: number;
   package_history_count: number;
   build_env: BuildEnvVar[];
-  spec_path: string;
+  spec_file: string;
   version: string;
   release: string;
 }
@@ -112,7 +112,7 @@ export type UserPermission = "read" | "write" | "repo";
 
 export interface BuildArtifact {
   id: string;
-  path: string;
+  file: string;
   sha256: string;
   size_bytes: number;
   kind: ArtifactKind;
@@ -123,7 +123,7 @@ export interface PublishedRepoFile {
   job_id: string;
   package_name: string;
   mock_chroot: string;
-  repo_path: string;
+  path: string;
   sha256: string;
   size_bytes: number;
   kind: ArtifactKind;
@@ -137,7 +137,7 @@ export interface BuildJob {
   revision: string;
   trigger: BuildTrigger;
   status: BuildStatus;
-  spec_path: string;
+  spec_file: string;
   worker_container_id: string | null;
   created_at: string;
   updated_at: string;
@@ -230,7 +230,7 @@ export interface LogMetaResponse {
 export type LogSourceType = "structured" | "raw";
 
 export interface LogSource {
-  path: string;
+  file: string;
   size: number;
   source_type: LogSourceType;
 }

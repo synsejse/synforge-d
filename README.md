@@ -23,9 +23,9 @@
 
 The daemon uses a single `runtime_root` and derives all managed paths from it:
 
-- `runtime_root/metadata/packages/`
-- `runtime_root/metadata/repo/fedora/`
-- `runtime_root/metadata/tmp/`
+- `runtime_root/packages/`
+- `runtime_root/repo/`
+- `runtime_root/tmp/`
 - `runtime_root/jobs/<job-id>/`
 
 Per-job state is stored under `jobs/<job-id>/`, including:

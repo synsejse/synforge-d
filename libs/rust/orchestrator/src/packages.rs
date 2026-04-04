@@ -115,7 +115,7 @@ impl PackageSyncStore {
             build_timeout_seconds: options.build_timeout_seconds,
             package_history_count: options.package_history_count,
             build_env: options.build_env,
-            spec_path: PathBuf::from(&source.spec_path),
+            spec_file: PathBuf::from(&source.spec_file),
             version: inspected.revision.version.clone(),
             release: inspected.revision.release.clone(),
         };

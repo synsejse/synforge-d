@@ -230,12 +230,12 @@ export default function RepositoryBrowser() {
           <div className="mt-5 grid gap-3">
             {recentFiles.slice(0, 6).map((file) => (
               <div
-                key={`${file.job_id}:${file.repo_path}`}
+                key={`${file.job_id}:${file.path}`}
                 className="grid gap-3 border border-zinc-800 bg-zinc-950/40 p-4 md:grid-cols-[minmax(0,1fr)_auto]"
               >
                 <div className="min-w-0">
                   <div className="truncate font-mono text-sm text-white">
-                    {file.repo_path}
+                    {file.path}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs uppercase tracking-[0.18em] text-zinc-500">
                     <span>{file.package_name}</span>
@@ -248,7 +248,7 @@ export default function RepositoryBrowser() {
                 </div>
                 <div className="flex items-start md:justify-end">
                   <a
-                    href={`/repo/${file.repo_path}`}
+                    href={`/repo/${file.path}`}
                     className="inline-flex items-center border border-zinc-800 px-3 py-2 text-sm text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
                   >
                     <FaIcon icon={faDownload} className="mr-2" />
@@ -351,7 +351,7 @@ export default function RepositoryBrowser() {
               <tbody className="divide-y divide-white/8">
                 {files.map((file) => (
                   <tr
-                    key={`${file.job_id}:${file.repo_path}`}
+                    key={`${file.job_id}:${file.path}`}
                     className="hover:bg-zinc-950"
                   >
                     <td className="px-4 py-3">
@@ -363,7 +363,7 @@ export default function RepositoryBrowser() {
                       </a>
                     </td>
                     <td className="px-4 py-3 font-mono text-sm text-zinc-200">
-                      {file.repo_path}
+                      {file.path}
                     </td>
                     <td className="px-4 py-3 font-mono text-sm text-zinc-400">
                       {file.mock_chroot || "unknown"}
@@ -380,7 +380,7 @@ export default function RepositoryBrowser() {
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
                         <a
-                          href={`/repo/${file.repo_path}`}
+                          href={`/repo/${file.path}`}
                           className="inline-flex items-center border border-zinc-800 px-3 py-2 text-sm text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
                         >
                           <FaIcon icon={faDownload} className="mr-2" />

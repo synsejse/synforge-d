@@ -18,16 +18,16 @@ pub(crate) async fn execute_spec_parse(
 ) -> anyhow::Result<WorkerParseResult> {
     let repo_dir = job_payload.workspace_dir.join("repo");
     clone_repository(&payload.source, &repo_dir, None).await?;
-    let spec_path = repo_dir.join(&payload.source.spec_path);
-    if !tokio::fs::try_exists(&spec_path).await? {
+    let spec_file = repo_dir.join(&payload.source.spec_file);
+    if !tokio::fs::try_exists(&spec_file).await? {
         anyhow::bail!(
             "spec file {} does not exist in repository {}",
-            payload.source.spec_path,
+            payload.source.spec_file,
             payload.source.repo_url
         );
     }
-    let parsed = query_spec_metadata(&spec_path).await?;
-    let content_digest = hash_tracked_spec(&spec_path).await?;
+    let parsed = query_spec_metadata(&spec_file).await?;
+    let content_digest = hash_tracked_spec(&spec_file).await?;
     let source_commit = git_head_commit(&repo_dir).await?;
     Ok(WorkerParseResult {
         parsed: parsed.clone(),

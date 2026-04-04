@@ -42,7 +42,7 @@ pub(super) async fn list_published_repo_files(
                 .order((
                     build_artifacts::package_name.asc(),
                     published_repo_files::published_at.desc(),
-                    published_repo_files::repo_path.asc(),
+                    build_artifacts::file.asc(),
                 ))
                 .limit(limit as i64)
                 .offset(offset as i64)
@@ -51,7 +51,7 @@ pub(super) async fn list_published_repo_files(
                     build_artifacts::job_id,
                     build_artifacts::package_name,
                     build_artifacts::mock_chroot,
-                    published_repo_files::repo_path,
+                    build_artifacts::file,
                     build_artifacts::sha256,
                     build_artifacts::size_bytes,
                     build_artifacts::kind,
@@ -90,14 +90,14 @@ pub(super) async fn list_published_repo_files_for_package(
                 .filter(build_artifacts::package_name.eq(package_name.as_str()))
                 .order((
                     published_repo_files::published_at.desc(),
-                    published_repo_files::repo_path.asc(),
+                    build_artifacts::file.asc(),
                 ))
                 .select((
                     published_repo_files::artifact_id,
                     build_artifacts::job_id,
                     build_artifacts::package_name,
                     build_artifacts::mock_chroot,
-                    published_repo_files::repo_path,
+                    build_artifacts::file,
                     build_artifacts::sha256,
                     build_artifacts::size_bytes,
                     build_artifacts::kind,
@@ -153,7 +153,7 @@ pub(super) async fn list_recent_published_repo_files(
                 )
                 .order((
                     published_repo_files::published_at.desc(),
-                    published_repo_files::repo_path.asc(),
+                    build_artifacts::file.asc(),
                 ))
                 .limit(limit as i64)
                 .select((
@@ -161,7 +161,7 @@ pub(super) async fn list_recent_published_repo_files(
                     build_artifacts::job_id,
                     build_artifacts::package_name,
                     build_artifacts::mock_chroot,
-                    published_repo_files::repo_path,
+                    build_artifacts::file,
                     build_artifacts::sha256,
                     build_artifacts::size_bytes,
                     build_artifacts::kind,

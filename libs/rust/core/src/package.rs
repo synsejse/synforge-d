@@ -33,7 +33,7 @@ pub struct PackageDefinition {
     #[serde(default)]
     pub build_env: Vec<BuildEnvVar>,
     #[schema(value_type = String)]
-    pub spec_path: PathBuf,
+    pub spec_file: PathBuf,
     pub version: String,
     pub release: String,
 }
@@ -74,7 +74,7 @@ pub struct BuildTarget {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct SpecSource {
     pub repo_url: String,
-    pub spec_path: String,
+    pub spec_file: String,
     #[serde(default = "default_true")]
     pub poll: bool,
 }

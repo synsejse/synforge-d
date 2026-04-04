@@ -65,15 +65,15 @@ async fn execute_spec_build(
         build_payload.checkout_commit.as_deref(),
     )
     .await?;
-    let spec_path = repo_dir.join(&package.source.spec_path);
-    let package_dir = spec_path.parent().map(Path::to_path_buf).ok_or_else(|| {
-        anyhow::anyhow!("spec path {} has no parent directory", spec_path.display())
+    let spec_file = repo_dir.join(&package.source.spec_file);
+    let package_dir = spec_file.parent().map(Path::to_path_buf).ok_or_else(|| {
+        anyhow::anyhow!("spec path {} has no parent directory", spec_file.display())
     })?;
     let build = async {
         logger.section("Prepare build workspace").await?;
         logger.line(format!("Package: {}", package.name)).await?;
         logger
-            .line(format!("Spec path: {}", spec_path.display()))
+            .line(format!("Spec file: {}", spec_file.display()))
             .await?;
         logger
             .line(format!("Repository: {}", package.source.repo_url))
@@ -85,15 +85,15 @@ async fn execute_spec_build(
             .line(format!("Workspace: {}", payload.workspace_dir.display()))
             .await?;
         logger.section("Apply spec compatibility fixes").await?;
-        apply_spec_compat_fixes(&spec_path).await?;
+        apply_spec_compat_fixes(&spec_file).await?;
         logger.section("Prepare chroot build tooling").await?;
         prepare_build_tooling(&logger).await?;
         logger.section("Fetch sources").await?;
-        fetch_spec_sources(&spec_path, &package_dir, &logger).await?;
+        fetch_spec_sources(&spec_file, &package_dir, &logger).await?;
         let source_topdir = topdir.join("source");
         prepare_topdir(&source_topdir).await?;
         let srpm_path =
-            build_source_rpm(package, &spec_path, &package_dir, &source_topdir, &logger).await?;
+            build_source_rpm(package, &spec_file, &package_dir, &source_topdir, &logger).await?;
         let mut artifacts = Vec::new();
         let arch_topdir = topdir.join(&build_payload.mock_chroot);
         logger.section("Build packages").await?;
@@ -330,13 +330,13 @@ async fn collect_artifacts(
             let path = entry?;
             if path.is_file() {
                 let artifact = build_artifact(package, topdir, path, mock_chroot).await?;
-                if seen.insert(artifact.path.clone()) {
+                if seen.insert(artifact.file.clone()) {
                     artifacts.push(artifact);
                 }
             }
         }
     }
-    artifacts.sort_by(|left, right| left.path.cmp(&right.path));
+    artifacts.sort_by(|left, right| left.file.cmp(&right.file));
     Ok(artifacts)
 }
 
@@ -361,7 +361,7 @@ async fn collect_success_artifacts(
             })?;
         source_artifacts.retain(|artifact| artifact.kind == ArtifactKind::Srpm);
         artifacts.extend(source_artifacts);
-        artifacts.sort_by(|left, right| left.path.cmp(&right.path));
+        artifacts.sort_by(|left, right| left.file.cmp(&right.file));
     }
     Ok(artifacts)
 }
@@ -401,12 +401,15 @@ async fn build_artifact(
         package_name: package.name.clone(),
         mock_chroot: mock_chroot.to_string(),
         size_bytes: bytes.len() as u64,
-        path: path
-            .strip_prefix(artifact_root)
-            .ok()
+        file: path
+            .file_name()
             .map(PathBuf::from)
-            .or_else(|| path.file_name().map(PathBuf::from))
-            .unwrap_or_else(|| PathBuf::from("artifact.rpm")),
+            .unwrap_or_else(|| {
+                path.strip_prefix(artifact_root)
+                    .ok()
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|| PathBuf::from("artifact.rpm"))
+            }),
         sha256,
         kind,
     })

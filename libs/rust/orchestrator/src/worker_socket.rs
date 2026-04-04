@@ -98,7 +98,7 @@ async fn handle_connection(
                 };
                 if created {
                     store
-                        .upsert_build_log(job_id, &path, &upload_path)
+                        .upsert_build_log(job_id, &path)
                         .await
                         .with_context(|| {
                             format!("failed to register log source {} for job {}", path, job_id)
@@ -113,39 +113,42 @@ async fn handle_connection(
             WorkerWireMessage::ArtifactStart {
                 artifact_id,
                 path,
+                storage_path,
                 kind,
             } => {
                 if current_artifact.is_some() {
                     anyhow::bail!("artifact upload already in progress");
                 }
-                let upload_path = sessions.artifact_upload_path(job_id, &path);
+                let upload_path = sessions.artifact_upload_path(job_id, &storage_path);
                 if let Some(parent) = upload_path.parent() {
                     tokio::fs::create_dir_all(parent).await?;
                 }
-                let file = tokio::fs::File::create(&upload_path).await?;
+                let handle = tokio::fs::File::create(&upload_path).await?;
                 current_artifact = Some(ActiveArtifactUpload {
                     artifact_id,
-                    relative_path: path,
+                    file: path,
+                    storage_path,
                     kind,
-                    file,
+                    handle,
                 });
             }
             WorkerWireMessage::ArtifactChunk { bytes } => {
                 let upload = current_artifact
                     .as_mut()
                     .ok_or_else(|| anyhow::anyhow!("artifact chunk received without start"))?;
-                upload.file.write_all(&bytes).await?;
+                upload.handle.write_all(&bytes).await?;
             }
             WorkerWireMessage::ArtifactComplete => {
                 let Some(mut upload) = current_artifact.take() else {
                     anyhow::bail!("artifact complete received without start");
                 };
-                upload.file.flush().await?;
+                upload.handle.flush().await?;
                 sessions
                     .finalize_artifact_upload(
                         job_id,
                         upload.artifact_id,
-                        &upload.relative_path,
+                        &upload.file,
+                        &upload.storage_path,
                         upload.kind,
                     )
                     .await?;
@@ -188,7 +191,8 @@ async fn write_message(
 
 struct ActiveArtifactUpload {
     artifact_id: uuid::Uuid,
-    relative_path: String,
+    file: String,
+    storage_path: String,
     kind: ArtifactKind,
-    file: tokio::fs::File,
+    handle: tokio::fs::File,
 }

@@ -415,7 +415,7 @@ pub struct LogMetaResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct LogSource {
-    pub path: String,
+    pub file: String,
     pub size: u64,
     #[serde(rename = "type")]
     pub source_type: LogSourceType,

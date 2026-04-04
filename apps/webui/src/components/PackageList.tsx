@@ -287,7 +287,7 @@ export default function PackageList() {
                           Spec File
                         </div>
                         <div className="mt-2 break-all font-mono text-sm text-zinc-300">
-                          {entry.package.source.spec_path}
+                          {entry.package.source.spec_file}
                         </div>
                       </div>
                       <div className="border border-zinc-800 bg-zinc-950/40 px-4 py-3 md:col-span-2">
@@ -534,7 +534,7 @@ function AddPackageModal({
 
     const source: SpecSource = {
       repo_url: repoUrl.trim(),
-      spec_path: specPath.trim(),
+      spec_file: specPath.trim(),
       poll,
     };
 

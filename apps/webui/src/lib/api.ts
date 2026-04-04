@@ -291,14 +291,13 @@ class ApiClient {
   }
 
   async getJobLogMeta(id: string, source?: string): Promise<LogMetaResponse> {
-    const params = new URLSearchParams();
     if (source) {
-      params.set("source", source);
+      return this.request(
+        "GET",
+        `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(source)}/meta`,
+      );
     }
-    return this.request(
-      "GET",
-      `/api/v1/jobs/${encodeURIComponent(id)}/logs/meta${params.toString() ? `?${params.toString()}` : ""}`,
-    );
+    return this.request("GET", `/api/v1/jobs/${encodeURIComponent(id)}/logs/meta`);
   }
 
   async getJobLogChunk(
@@ -315,7 +314,10 @@ class ApiClient {
       params.set("offset", String(options.offset));
     }
     if (options.source) {
-      params.set("source", options.source);
+      return this.request(
+        "GET",
+        `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(options.source)}/stream?${params.toString()}`,
+      );
     }
     return this.request(
       "GET",
@@ -324,11 +326,9 @@ class ApiClient {
   }
 
   async downloadJobLog(id: string, source?: string): Promise<void> {
-    const params = new URLSearchParams();
-    if (source) {
-      params.set("source", source);
-    }
-    const path = `/api/v1/jobs/${encodeURIComponent(id)}/logs/stream${params.toString() ? `?${params.toString()}` : ""}`;
+    const path = source
+      ? `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(source)}/stream`
+      : `/api/v1/jobs/${encodeURIComponent(id)}/logs/stream`;
 
     const res = await fetch(`${API_BASE}${path}`, {
       method: "GET",

@@ -59,6 +59,11 @@ pub fn router(_state: AppState) -> Router<AppState> {
         .route("/users/{id}/password", post(change_user_password))
         .route("/jobs/{id}", get(get_job).delete(delete_job))
         .route("/jobs/{id}/logs", get(get_job_log_manifest))
+        .route("/jobs/{id}/logs/{*source}/meta", get(get_job_log_meta_by_source))
+        .route(
+            "/jobs/{id}/logs/{*source}/stream",
+            get(get_job_log_chunk_by_source),
+        )
         .route("/jobs/{id}/logs/meta", get(get_job_log_meta))
         .route("/jobs/{id}/logs/stream", get(get_job_log_chunk))
         .route("/jobs/{id}/artifacts/{*path}", get(download_job_artifact))
@@ -759,6 +764,38 @@ pub(crate) async fn get_job_log_chunk(
 
 #[utoipa::path(
     get,
+    path = "/api/v1/jobs/{id}/logs/{source}/stream",
+    tag = "Logs",
+    params(
+        ("id" = Uuid, Path, description = "Job identifier"),
+        ("source" = String, Path, description = "Log source path"),
+        ("cursor" = Option<u64>, Query, description = "Current byte cursor"),
+        ("offset" = Option<i64>, Query, description = "Relative byte offset from the cursor"),
+        ("limit" = Option<usize>, Query, description = "Maximum bytes to read")
+    ),
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "Read a log chunk", body = LogChunkResponse),
+        (status = 400, body = synforge_core::api::ApiError),
+        (status = 401, body = synforge_core::api::ApiError),
+        (status = 404, body = synforge_core::api::ApiError)
+    )
+)]
+pub(crate) async fn get_job_log_chunk_by_source(
+    State(state): State<AppState>,
+    Path((id, source)): Path<(Uuid, String)>,
+    Query(query): Query<LogChunkQuery>,
+) -> Result<Json<LogChunkResponse>, AppError> {
+    Ok(Json(
+        state
+            .service
+            .get_job_log_chunk(id, Some(source), query.cursor, query.offset, query.limit)
+            .await?,
+    ))
+}
+
+#[utoipa::path(
+    get,
     path = "/api/v1/jobs/{id}/logs/meta",
     tag = "Logs",
     params(
@@ -781,6 +818,29 @@ pub(crate) async fn get_job_log_meta(
     Ok(Json(
         state.service.get_job_log_meta(id, query.source).await?,
     ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/jobs/{id}/logs/{source}/meta",
+    tag = "Logs",
+    params(
+        ("id" = Uuid, Path, description = "Job identifier"),
+        ("source" = String, Path, description = "Log source path")
+    ),
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "Get log file metadata", body = LogMetaResponse),
+        (status = 400, body = synforge_core::api::ApiError),
+        (status = 401, body = synforge_core::api::ApiError),
+        (status = 404, body = synforge_core::api::ApiError)
+    )
+)]
+pub(crate) async fn get_job_log_meta_by_source(
+    State(state): State<AppState>,
+    Path((id, source)): Path<(Uuid, String)>,
+) -> Result<Json<LogMetaResponse>, AppError> {
+    Ok(Json(state.service.get_job_log_meta(id, Some(source)).await?))
 }
 
 #[utoipa::path(

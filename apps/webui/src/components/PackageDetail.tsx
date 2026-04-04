@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import api from "../lib/api";
-import { summarizePackageAction } from "../lib/package-actions";
+import {
+  summarizePackageAction,
+  summarizePackageTargetAction,
+} from "../lib/package-actions";
 import DetailStat from "./DetailStat";
 import EmptyState from "./EmptyState";
 import FaIcon from "./FaIcon";
@@ -56,8 +59,12 @@ function parseBuildEnv(input: string): BuildEnvVar[] {
 }
 
 export default function PackageDetail({ packageName }: Props) {
+  const BUILD_HISTORY_PAGE_SIZE = 12;
   const [pkg, setPkg] = useState<PackageResponse | null>(null);
   const [builds, setBuilds] = useState<PackageBuildInventoryEntry[]>([]);
+  const [buildsOffset, setBuildsOffset] = useState(0);
+  const [buildsHasMore, setBuildsHasMore] = useState(false);
+  const [buildsTotal, setBuildsTotal] = useState<number | null>(null);
   const [repoFiles, setRepoFiles] = useState<PublishedRepoFile[]>([]);
   const [buildsOpen, setBuildsOpen] = useState(false);
   const [repoFilesOpen, setRepoFilesOpen] = useState(false);
@@ -129,14 +136,21 @@ export default function PackageDetail({ packageName }: Props) {
     }
   }
 
-  async function loadBuildHistory(force = false) {
-    if (buildsLoading || (buildsLoaded && !force)) {
+  async function loadBuildHistory(force = false, offset = buildsOffset) {
+    if (buildsLoading || (buildsLoaded && !force && offset === buildsOffset)) {
       return;
     }
     try {
       setBuildsLoading(true);
-      const buildsRes = await api.getPackageBuilds(packageName);
+      const buildsRes = await api.getPackageBuilds(
+        packageName,
+        BUILD_HISTORY_PAGE_SIZE,
+        offset,
+      );
       setBuilds(buildsRes.builds);
+      setBuildsOffset(buildsRes.page.offset);
+      setBuildsHasMore(buildsRes.page.has_more);
+      setBuildsTotal(buildsRes.page.total ?? null);
       setBuildsLoaded(true);
       setError(null);
     } catch (e) {
@@ -181,6 +195,9 @@ export default function PackageDetail({ packageName }: Props) {
 
   useEffect(() => {
     setBuilds([]);
+    setBuildsOffset(0);
+    setBuildsHasMore(false);
+    setBuildsTotal(null);
     setRepoFiles([]);
     setBuildsOpen(false);
     setRepoFilesOpen(false);
@@ -261,6 +278,27 @@ export default function PackageDetail({ packageName }: Props) {
     }
   }
 
+  async function triggerBuildTarget(
+    mockChroot: string,
+    action: "rebuild" | "refresh",
+  ) {
+    try {
+      const response =
+        action === "rebuild"
+          ? await api.rebuildPackageTarget(packageName, mockChroot)
+          : await api.refreshPackageTarget(packageName, mockChroot);
+      alert(
+        summarizePackageTargetAction(
+          response,
+          action === "rebuild" ? "Rebuild" : "Refresh",
+        ),
+      );
+      await refreshVisibleData();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : `Failed to ${action}`);
+    }
+  }
+
   async function handleDeleteJob(jobId: string) {
     if (
       !confirm(
@@ -327,8 +365,6 @@ export default function PackageDetail({ packageName }: Props) {
       </div>
     );
   }
-
-  const latestBuilds = builds.slice(0, 12);
 
   return (
     <div className="space-y-8">
@@ -729,7 +765,7 @@ export default function PackageDetail({ packageName }: Props) {
           <div className="flex items-center gap-3">
             {buildsLoaded ? (
               <div className="border border-zinc-800 bg-black px-4 py-2 text-xs uppercase tracking-[0.2em] text-zinc-400">
-                {builds.length} total builds
+                {buildsTotal ?? builds.length} total builds
               </div>
             ) : null}
             <button
@@ -748,10 +784,11 @@ export default function PackageDetail({ packageName }: Props) {
           </EmptyState>
         ) : buildsLoading && !buildsLoaded ? (
           <LoadingBlock label="Loading build history…" lines={4} />
-        ) : latestBuilds.length === 0 ? (
+        ) : builds.length === 0 ? (
           <EmptyState>No build history yet.</EmptyState>
         ) : (
-          <div className="overflow-hidden border border-zinc-800">
+          <div className="space-y-4">
+            <div className="overflow-hidden border border-zinc-800">
             <table className="w-full">
               <thead className="bg-zinc-950 text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
                 <tr>
@@ -765,7 +802,7 @@ export default function PackageDetail({ packageName }: Props) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10 bg-black">
-                {latestBuilds.map((entry) => {
+                {builds.map((entry) => {
                   const publishedFiles = entry.repo_files;
                   const live =
                     entry.build.job.status === "pending" ||
@@ -804,6 +841,34 @@ export default function PackageDetail({ packageName }: Props) {
                             <FaIcon icon={faFolderOpen} className="mr-2" />
                             Open Job
                           </a>
+                          {!live ? (
+                            <>
+                              <button
+                                onClick={() =>
+                                  triggerBuildTarget(
+                                    entry.build.job.mock_chroot,
+                                    "refresh",
+                                  )
+                                }
+                                className="text-sm font-medium text-zinc-500 transition hover:text-white"
+                              >
+                                <FaIcon icon={faRotate} className="mr-2" />
+                                Refresh Target
+                              </button>
+                              <button
+                                onClick={() =>
+                                  triggerBuildTarget(
+                                    entry.build.job.mock_chroot,
+                                    "rebuild",
+                                  )
+                                }
+                                className="text-sm font-medium text-zinc-500 transition hover:text-white"
+                              >
+                                <FaIcon icon={faHammer} className="mr-2" />
+                                Rebuild Target
+                              </button>
+                            </>
+                          ) : null}
                           <button
                             onClick={() => handleDeleteJob(entry.build.job.id)}
                             disabled={
@@ -823,6 +888,35 @@ export default function PackageDetail({ packageName }: Props) {
                 })}
               </tbody>
             </table>
+            </div>
+            <div className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-400">
+              <span>
+                Showing {buildsOffset + 1}-{buildsOffset + builds.length}
+                {buildsTotal !== null ? ` of ${buildsTotal}` : ""}
+              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    void loadBuildHistory(true, Math.max(0, buildsOffset - BUILD_HISTORY_PAGE_SIZE))
+                  }
+                  disabled={buildsLoading || buildsOffset === 0}
+                  className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    void loadBuildHistory(true, buildsOffset + BUILD_HISTORY_PAGE_SIZE)
+                  }
+                  disabled={buildsLoading || !buildsHasMore}
+                  className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </section>

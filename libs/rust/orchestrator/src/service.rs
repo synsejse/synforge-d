@@ -17,10 +17,9 @@ use synforge_core::{
         MockChrootListResponse, PackageActionResponse, PackageActionTargetResult,
         PackageBuildHistoryResponse, PackageBuildInventoryEntry, PackageListResponse,
         PackageRepoFilesResponse, PackageResponse, PageInfo, PruneJobsResponse, RebuildRequest,
-        RefreshRequest, RepoInventoryResponse,
-        RepoSummaryResponse, SessionResponse, SetupInitializeRequest, UpdatePackageRequest,
-        UpdateRuntimeSettingsRequest, UpdateUserRequest, UserListResponse, UserMetricsResponse,
-        UserResponse,
+        RefreshRequest, RepoInventoryResponse, RepoSummaryResponse, SessionResponse,
+        SetupInitializeRequest, UpdatePackageRequest, UpdateRuntimeSettingsRequest,
+        UpdateUserRequest, UserListResponse, UserMetricsResponse, UserResponse,
     },
     config::DaemonConfig,
     error::SynforgeError,
@@ -204,11 +203,7 @@ impl SynforgeService {
         );
         let registry = PackageRegistry::new(store.clone(), package_store);
         let scheduler = BuildScheduler::new(store.clone(), registry.clone());
-        let runner = BuildRunner::new(
-            config.clone(),
-            worker_launcher.clone(),
-            lifecycle.clone(),
-        );
+        let runner = BuildRunner::new(config.clone(), worker_launcher.clone(), lifecycle.clone());
 
         let (queue_tx, queue_rx) = mpsc::channel(config.queue_buffer_size);
         let (shutdown_tx, shutdown_rx) = watch::channel(false);
@@ -336,13 +331,24 @@ impl SynforgeService {
     pub async fn get_package_build_history(
         &self,
         package_name: &str,
+        limit: Option<usize>,
+        offset: Option<usize>,
     ) -> anyhow::Result<PackageBuildHistoryResponse> {
         self.registry.get_package(package_name).await?;
-        let jobs = self.store.list_jobs_for_package(package_name).await?;
+        let (limit, offset) = normalize_pagination(limit, offset);
+        let total = self
+            .store
+            .count_jobs(None, Some(package_name.to_string()), None)
+            .await?;
+        let jobs = self
+            .store
+            .list_jobs(limit, offset, None, Some(package_name.to_string()), None)
+            .await?;
         let published_files = self
             .store
             .list_published_repo_files_for_package(package_name)
             .await?;
+        let returned = jobs.len();
         let mut published_files_by_job =
             std::collections::HashMap::<Uuid, Vec<PublishedRepoFile>>::new();
         for file in &published_files {
@@ -363,6 +369,7 @@ impl SynforgeService {
         Ok(PackageBuildHistoryResponse {
             package_name: package_name.to_string(),
             builds,
+            page: build_page_info(limit, offset, total, returned),
         })
     }
 

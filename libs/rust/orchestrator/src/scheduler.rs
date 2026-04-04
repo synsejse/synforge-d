@@ -220,7 +220,11 @@ impl BuildScheduler {
 
         let build_chroots = match target_mock_chroot {
             Some(mock_chroot) => {
-                if package.mock_chroots.iter().any(|value| value == mock_chroot) {
+                if package
+                    .mock_chroots
+                    .iter()
+                    .any(|value| value == mock_chroot)
+                {
                     vec![mock_chroot.to_string()]
                 } else {
                     return Err(anyhow::anyhow!(SynforgeError::NotFound(format!(

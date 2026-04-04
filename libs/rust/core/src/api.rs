@@ -173,6 +173,7 @@ pub struct PackageBuildInventoryEntry {
 pub struct PackageBuildHistoryResponse {
     pub package_name: String,
     pub builds: Vec<PackageBuildInventoryEntry>,
+    pub page: PageInfo,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

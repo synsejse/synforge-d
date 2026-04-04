@@ -1,4 +1,7 @@
-import type { PackageActionResponse } from "./types";
+import type {
+  PackageActionResponse,
+  PackageActionTargetResult,
+} from "./types";
 
 export function summarizePackageAction(response: PackageActionResponse): string {
   const queued = response.results.filter(
@@ -42,4 +45,31 @@ function capitalizeTrigger(trigger: string): string {
     .split("_")
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(" ");
+}
+
+export function summarizePackageTargetAction(
+  result: PackageActionTargetResult,
+  actionLabel: string,
+): string {
+  switch (result.disposition) {
+    case "queued":
+      return `${actionLabel}: queued ${result.mock_chroot}.`;
+    case "skipped":
+      return `${actionLabel}: skipped ${result.mock_chroot} (${humanizeReason(result.reason)}).`;
+    case "blocked":
+      return `${actionLabel}: blocked ${result.mock_chroot} (${humanizeReason(result.reason)}).`;
+    default:
+      return `${actionLabel}: ${result.mock_chroot}.`;
+  }
+}
+
+function humanizeReason(reason: string | null): string {
+  switch (reason) {
+    case "no_source_change":
+      return "no source change";
+    case "pending_or_running":
+      return "pending or running";
+    default:
+      return reason ?? "no reason provided";
+  }
 }

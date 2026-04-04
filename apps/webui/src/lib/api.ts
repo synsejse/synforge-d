@@ -14,6 +14,7 @@ import type {
   BuildJobListResponse,
   BuildJobResponse,
   PackageActionResponse,
+  PackageActionTargetResult,
   LogChunkResponse,
   LogManifestResponse,
   LogMetaResponse,
@@ -160,10 +161,18 @@ class ApiClient {
     );
   }
 
-  async getPackageBuilds(name: string): Promise<PackageBuildHistoryResponse> {
+  async getPackageBuilds(
+    name: string,
+    limit = 12,
+    offset = 0,
+  ): Promise<PackageBuildHistoryResponse> {
+    const params = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
     return this.request(
       "GET",
-      `/api/v1/packages/${encodeURIComponent(name)}/builds`,
+      `/api/v1/packages/${encodeURIComponent(name)}/builds?${params.toString()}`,
     );
   }
 
@@ -215,6 +224,28 @@ class ApiClient {
     return this.request(
       "POST",
       `/api/v1/packages/${encodeURIComponent(name)}/refresh`,
+      {},
+    );
+  }
+
+  async rebuildPackageTarget(
+    name: string,
+    mockChroot: string,
+  ): Promise<PackageActionTargetResult> {
+    return this.request(
+      "POST",
+      `/api/v1/packages/${encodeURIComponent(name)}/targets/${encodeURIComponent(mockChroot)}/rebuild`,
+      {},
+    );
+  }
+
+  async refreshPackageTarget(
+    name: string,
+    mockChroot: string,
+  ): Promise<PackageActionTargetResult> {
+    return this.request(
+      "POST",
+      `/api/v1/packages/${encodeURIComponent(name)}/targets/${encodeURIComponent(mockChroot)}/refresh`,
       {},
     );
   }

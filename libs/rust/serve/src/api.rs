@@ -11,9 +11,9 @@ use synforge_core::api::{
     EffectiveConfigDto, JobListQuery, LogChunkQuery, LogChunkResponse, LogManifestResponse,
     LogMetaResponse, MockChrootListResponse, PackageActionResponse, PackageActionTargetResult,
     PackageBuildHistoryResponse, PackageListQuery, PackageListResponse, PackageRepoFilesResponse,
-    PackageResponse, PruneJobsResponse, RebuildRequest, RefreshRequest, RepoInventoryQuery,
-    RepoInventoryResponse, RepoSummaryResponse, SessionLoginRequest, SessionResponse,
-    SetupInitializeRequest, SetupStatusResponse, UpdatePackageRequest,
+    PackageResponse, PaginationQuery, PruneJobsResponse, RebuildRequest, RefreshRequest,
+    RepoInventoryQuery, RepoInventoryResponse, RepoSummaryResponse, SessionLoginRequest,
+    SessionResponse, SetupInitializeRequest, SetupStatusResponse, UpdatePackageRequest,
     UpdateRuntimeSettingsRequest, UpdateUserRequest, UserListResponse, UserMetricsResponse,
     UserResponse,
 };
@@ -97,7 +97,8 @@ pub(crate) async fn list_packages(
     path = "/api/v1/packages/{name}",
     tag = "Packages",
     params(
-        ("name" = String, Path, description = "Package name")
+        ("name" = String, Path, description = "Package name"),
+        PaginationQuery
     ),
     security(("session_auth" = [])),
     responses(
@@ -219,7 +220,8 @@ pub(crate) async fn delete_package(
     path = "/api/v1/packages/{name}/builds",
     tag = "Packages",
     params(
-        ("name" = String, Path, description = "Package name")
+        ("name" = String, Path, description = "Package name"),
+        PaginationQuery
     ),
     security(("session_auth" = [])),
     responses(
@@ -231,8 +233,14 @@ pub(crate) async fn delete_package(
 pub(crate) async fn get_package_builds(
     State(state): State<AppState>,
     Path(name): Path<String>,
+    Query(query): Query<PaginationQuery>,
 ) -> Result<Json<PackageBuildHistoryResponse>, AppError> {
-    Ok(Json(state.service.get_package_build_history(&name).await?))
+    Ok(Json(
+        state
+            .service
+            .get_package_build_history(&name, query.limit, query.offset)
+            .await?,
+    ))
 }
 
 #[utoipa::path(

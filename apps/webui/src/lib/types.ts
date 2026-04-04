@@ -171,6 +171,7 @@ export interface PackageBuildInventoryEntry {
 export interface PackageBuildHistoryResponse {
   package_name: string;
   builds: PackageBuildInventoryEntry[];
+  page: PageInfo;
 }
 
 export interface PackageRepoFilesResponse {

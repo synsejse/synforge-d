@@ -6,7 +6,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     model::{
-        BuildArtifact, BuildJob, PackageRuntimeState, PublishedRepoFile, UserAccount,
+        BuildArtifact, BuildJob, BuildTrigger, PackageRuntimeState, PublishedRepoFile, UserAccount,
         UserPermission, UserRepoMetrics,
     },
     package::{BuildEnvVar, PackageDefinition, SpecSource},
@@ -85,6 +85,34 @@ pub struct RebuildRequest {}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, ToSchema)]
 pub struct RefreshRequest {}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum PackageActionDisposition {
+    Queued,
+    Skipped,
+    Blocked,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct PackageActionTargetResult {
+    pub package_name: String,
+    pub mock_chroot: String,
+    pub disposition: PackageActionDisposition,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_id: Option<uuid::Uuid>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revision: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct PackageActionResponse {
+    pub package_name: String,
+    pub trigger: BuildTrigger,
+    pub results: Vec<PackageActionTargetResult>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct PackageResponse {

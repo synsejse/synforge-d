@@ -8,8 +8,10 @@ import DetailStat from "./DetailStat";
 import FaIcon from "./FaIcon";
 import LoadingBlock from "./LoadingBlock";
 import PackageBuildHistorySection from "./PackageBuildHistorySection";
+import PackageEditFormSection, {
+  type PackageEditFormState,
+} from "./PackageEditFormSection";
 import PackageRepoFilesSection from "./PackageRepoFilesSection";
-import SelectionDialog from "./common/SelectionDialog";
 import StatusPill from "./StatusPill";
 import type {
   BuildEnvVar,
@@ -22,9 +24,7 @@ import type {
 import {
   faArrowLeft,
   faHammer,
-  faMagnifyingGlass,
   faRotate,
-  faSave,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 
@@ -86,7 +86,7 @@ export default function PackageDetail({ packageName }: Props) {
   const [browseFiles, setBrowseFiles] = useState<string[]>([]);
   const [browseError, setBrowseError] = useState<string | null>(null);
   const [browsing, setBrowsing] = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<PackageEditFormState>({
     repoUrl: "",
     specPath: "",
     poll: true,
@@ -436,304 +436,29 @@ export default function PackageDetail({ packageName }: Props) {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-        <form
+        <PackageEditFormSection
+          form={form}
+          saving={saving}
+          availableChroots={availableChroots}
+          showSpecPicker={showSpecPicker}
+          showChrootPicker={showChrootPicker}
+          browsing={browsing}
+          browseError={browseError}
+          selectableFiles={selectableFiles}
           onSubmit={handleSave}
-          className="border border-zinc-800 bg-black p-6"
-        >
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-white">Edit Package</h2>
-            <p className="mt-2 text-sm text-zinc-400">
-              Update the tracked repository, selected spec path, polling
-              behavior, and package state from one place.
-            </p>
-          </div>
-
-          <div className="space-y-5">
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">
-                Git repository URL
-              </span>
-              <input
-                type="url"
-                value={form.repoUrl}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    repoUrl: event.target.value,
-                  }))
-                }
-                className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
-                required
-              />
-            </label>
-
-            <div className="border border-zinc-800 bg-black p-4">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <span className="block text-sm font-medium text-zinc-300">
-                    Repository spec path
-                  </span>
-                  <span className="mt-1 block text-xs text-zinc-500">
-                    Choose the .spec file from the tracked repository.
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowSpecPicker(true)}
-                  className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950"
-                >
-                  <FaIcon icon={faMagnifyingGlass} className="mr-2" />
-                  Browse repository
-                </button>
-              </div>
-              <input
-                type="text"
-                value={form.specPath}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    specPath: event.target.value,
-                  }))
-                }
-                placeholder="path/to/package.spec"
-                className="mt-4 w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
-                required
-              />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-zinc-300">
-                  Poll interval (seconds)
-                </span>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={form.pollIntervalSeconds}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      pollIntervalSeconds: event.target.value,
-                    }))
-                  }
-                  className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
-                  required
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-zinc-300">
-                  Build timeout (seconds)
-                </span>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={form.buildTimeoutSeconds}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      buildTimeoutSeconds: event.target.value,
-                    }))
-                  }
-                  className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
-                  required
-                />
-              </label>
-
-              <label className="block md:col-span-2">
-                <span className="mb-2 block text-sm font-medium text-zinc-300">
-                  History count
-                </span>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={form.packageHistoryCount}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      packageHistoryCount: event.target.value,
-                    }))
-                  }
-                  className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
-                  required
-                />
-              </label>
-
-              <div className="border border-zinc-800 bg-black p-4 md:col-span-2">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <span className="block text-sm font-medium text-zinc-300">
-                      Mock chroots
-                    </span>
-                    <span className="mt-1 block text-xs text-zinc-500">
-                      Each selected chroot becomes a separate build job.
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowChrootPicker(true)}
-                    className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950"
-                  >
-                    Choose chroots
-                  </button>
-                </div>
-                <div className="mt-4 border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-mono text-zinc-200">
-                  {form.mockChroots.length > 0
-                    ? formatMockChroots(form.mockChroots)
-                    : "No chroots selected"}
-                </div>
-              </div>
-
-              <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
-                <span>
-                  <span className="block text-sm font-medium text-white">
-                    Enabled
-                  </span>
-                  <span className="mt-1 block text-xs text-zinc-400">
-                    Allow new builds for this package.
-                  </span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={form.enabled}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      enabled: event.target.checked,
-                    }))
-                  }
-                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
-                />
-              </label>
-
-              <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
-                <span>
-                  <span className="block text-sm font-medium text-white">
-                    Source Polling
-                  </span>
-                  <span className="mt-1 block text-xs text-zinc-400">
-                    Watch the tracked git repository for new commits.
-                  </span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={form.poll}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      poll: event.target.checked,
-                    }))
-                  }
-                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
-                />
-              </label>
-
-              <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
-                <span>
-                  <span className="block text-sm font-medium text-white">
-                    Publish SRPM
-                  </span>
-                  <span className="mt-1 block text-xs text-zinc-400">
-                    Keep source RPM publication enabled for this package.
-                  </span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={form.publish_srpm}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      publish_srpm: event.target.checked,
-                    }))
-                  }
-                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
-                />
-              </label>
-
-              <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
-                <span>
-                  <span className="block text-sm font-medium text-white">
-                    Publish debug packages
-                  </span>
-                  <span className="mt-1 block text-xs text-zinc-400">
-                    Include debuginfo and debugsource RPMs in repository.
-                  </span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={form.publish_debuginfo}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      publish_debuginfo: event.target.checked,
-                    }))
-                  }
-                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
-                />
-              </label>
-
-              <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3 md:col-span-2">
-                <span>
-                  <span className="block text-sm font-medium text-white">
-                    Network access
-                  </span>
-                  <span className="mt-1 block text-xs text-zinc-400">
-                    Allow mock builds for this package to access the network.
-                  </span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={form.network_access}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      network_access: event.target.checked,
-                    }))
-                  }
-                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
-                />
-              </label>
-            </div>
-
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">
-                Build environment
-              </span>
-              <textarea
-                value={form.buildEnv}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    buildEnv: event.target.value,
-                  }))
-                }
-                rows={6}
-                placeholder={
-                  "KEY=value\nMESON_ARGS=-Dgallium-drivers=swrast\nRUSTFLAGS=-C debuginfo=1"
-                }
-                className="w-full border border-zinc-800 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition focus:border-zinc-600"
-              />
-              <span className="mt-2 block text-xs text-zinc-500">
-                One `KEY=value` entry per line. Applied to SRPM creation and
-                mock rebuild steps.
-              </span>
-            </label>
-
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={saving}
-                className="border border-zinc-200 bg-zinc-100 px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-white disabled:opacity-70"
-              >
-                <FaIcon icon={faSave} className="mr-2" />
-                {saving ? "Saving…" : "Save Changes"}
-              </button>
-            </div>
-          </div>
-        </form>
+          onFormChange={(next) =>
+            setForm((current) => ({
+              ...current,
+              ...next,
+            }))
+          }
+          onToggleChroot={toggleChroot}
+          onOpenSpecPicker={() => setShowSpecPicker(true)}
+          onCloseSpecPicker={() => setShowSpecPicker(false)}
+          onOpenChrootPicker={() => setShowChrootPicker(true)}
+          onCloseChrootPicker={() => setShowChrootPicker(false)}
+          onBrowseRepository={() => void handleBrowse()}
+        />
 
         <aside className="space-y-4 border border-zinc-800 bg-black p-6">
           <div>
@@ -868,85 +593,6 @@ export default function PackageDetail({ packageName }: Props) {
           void loadPackageRepoFiles(true, repoFilesOffset + REPO_FILES_PAGE_SIZE)
         }
       />
-
-      {showSpecPicker && (
-        <SelectionDialog
-          title="Choose spec file"
-          subtitle="Browse the tracked repository and select the .spec file to build."
-          onClose={() => setShowSpecPicker(false)}
-        >
-          <div className="space-y-4">
-            <button
-              type="button"
-              onClick={handleBrowse}
-              disabled={browsing}
-              className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:opacity-60"
-            >
-              <FaIcon icon={faMagnifyingGlass} className="mr-2" />
-              {browsing ? "Browsing…" : "Load repository files"}
-            </button>
-            {browseError ? (
-              <div className="border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-200">
-                {browseError}
-              </div>
-            ) : null}
-            <div className="max-h-[50vh] overflow-auto border border-zinc-800 bg-black">
-              {selectableFiles.length > 0 ? (
-                selectableFiles.map((file) => (
-                  <button
-                    key={file}
-                    type="button"
-                    onClick={() => {
-                      setForm((current) => ({ ...current, specPath: file }));
-                      setShowSpecPicker(false);
-                    }}
-                    className={`block w-full border-b border-zinc-800 px-4 py-2 text-left font-mono text-sm transition last:border-b-0 ${
-                      form.specPath === file
-                        ? "bg-zinc-950 text-white"
-                        : "bg-black text-zinc-300 hover:bg-zinc-950"
-                    }`}
-                  >
-                    {file}
-                  </button>
-                ))
-              ) : (
-                <div className="px-4 py-3 text-sm text-zinc-400">
-                  No spec files loaded yet.
-                </div>
-              )}
-            </div>
-          </div>
-        </SelectionDialog>
-      )}
-
-      {showChrootPicker && (
-        <SelectionDialog
-          title="Choose mock chroots"
-          subtitle="Select one or more build targets."
-          onClose={() => setShowChrootPicker(false)}
-        >
-          <div className="max-h-[50vh] overflow-y-auto border border-zinc-800 bg-black">
-            <div className="divide-y divide-white/8">
-              {availableChroots.map((chroot) => (
-                <label
-                  key={chroot}
-                  className="flex items-center justify-between gap-4 px-4 py-3 text-sm text-zinc-200"
-                >
-                  <span className="font-mono">{chroot}</span>
-                  <input
-                    type="checkbox"
-                    checked={form.mockChroots.includes(chroot)}
-                    onChange={(event) =>
-                      toggleChroot(chroot, event.target.checked)
-                    }
-                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
-        </SelectionDialog>
-      )}
     </div>
   );
 }

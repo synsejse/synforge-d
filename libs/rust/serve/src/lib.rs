@@ -1,6 +1,7 @@
 mod api;
 mod auth;
 pub mod openapi;
+mod repo_files;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -9,18 +10,16 @@ use crate::auth::middleware::{
     authenticate_api_request, authenticate_docs_request, authenticate_repo_request,
 };
 pub(crate) use crate::auth::session::{clear_session_cookie, create_session_cookie};
-use axum::body::Body;
+use crate::repo_files::{download_repo_file, repo_root};
 use axum::extract::State;
-use axum::extract::{Extension, Path};
+use axum::http::StatusCode;
 use axum::http::header::{self, HeaderName, HeaderValue};
-use axum::http::{HeaderMap, StatusCode};
 use axum::middleware;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
-use synforge_core::{api::ApiError, error::SynforgeError, model::UserAccount};
+use synforge_core::{api::ApiError, error::SynforgeError};
 use synforge_orchestrator::SynforgeService;
-use tokio_util::io::ReaderStream;
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -100,33 +99,6 @@ async fn add_security_headers(mut response: Response) -> Response {
         HeaderValue::from_static("same-origin"),
     );
     response
-}
-
-async fn repo_root() -> Result<StatusCode, AppError> {
-    Err(AppError::from(anyhow::anyhow!(SynforgeError::NotFound(
-        "repository root".to_string()
-    ))))
-}
-
-async fn download_repo_file(
-    Extension(user): Extension<UserAccount>,
-    State(state): State<AppState>,
-    Path(path): Path<String>,
-) -> Result<impl IntoResponse, AppError> {
-    let resolved = state.service.resolve_repo_file_path(&path).await?;
-    let metadata = tokio::fs::metadata(&resolved).await?;
-    let file = tokio::fs::File::open(&resolved).await?;
-    state
-        .service
-        .increment_user_download_bytes(user.id, metadata.len())
-        .await?;
-
-    let mut headers = HeaderMap::new();
-    headers.insert(
-        header::CONTENT_TYPE,
-        HeaderValue::from_static("application/octet-stream"),
-    );
-    Ok((headers, Body::from_stream(ReaderStream::new(file))))
 }
 
 #[derive(Debug)]

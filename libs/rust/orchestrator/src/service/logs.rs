@@ -2,12 +2,12 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use uuid::Uuid;
 
 use super::SynforgeService;
+use crate::db::JobStore;
 use anyhow::Context;
 use synforge_core::{
     api::{LogChunkResponse, LogManifestResponse, LogMetaResponse, LogSource, LogSourceType},
     error::SynforgeError,
 };
-use crate::db::JobStore;
 
 impl SynforgeService {
     async fn resolve_job_log_path(

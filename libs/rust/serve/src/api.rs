@@ -7,20 +7,22 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use synforge_core::api::{
     BrowseRepositoryRequest, BrowseRepositoryResponse, BuildJobListResponse, BuildJobResponse,
-    ConfigSchemaResponse, CreatePackageRequest, EffectiveConfigDto, JobArtifactListResponse,
-    JobArtifactMetaResponse, JobListQuery, LogChunkQuery, LogChunkResponse, LogManifestResponse,
-    LogMetaResponse, MockChrootListResponse, PackageActionResponse, PackageActionTargetResult,
-    PackageBuildHistoryResponse, PackageListQuery, PackageListResponse, PackageResponse,
-    PaginationQuery, PruneJobsResponse, RebuildRequest, RefreshRequest, RepoInventoryQuery,
-    RepoInventoryResponse, RepoSummaryResponse, UpdatePackageRequest, UpdateRuntimeSettingsRequest,
+    CreatePackageRequest, JobArtifactListResponse, JobArtifactMetaResponse, JobListQuery,
+    LogChunkQuery, LogChunkResponse, LogManifestResponse, LogMetaResponse, MockChrootListResponse,
+    PackageActionResponse, PackageActionTargetResult, PackageBuildHistoryResponse,
+    PackageListQuery, PackageListResponse, PackageResponse, PaginationQuery, PruneJobsResponse,
+    RebuildRequest, RefreshRequest, RepoInventoryQuery, RepoInventoryResponse, RepoSummaryResponse,
+    UpdatePackageRequest,
 };
 use tokio_util::io::ReaderStream;
 use uuid::Uuid;
 
 use crate::{AppError, AppState};
 
+pub(crate) mod config;
 pub(crate) mod session;
 pub(crate) mod users;
+pub(crate) use config::{get_config_schema, get_effective_config, update_runtime_settings};
 pub(crate) use session::{
     get_session, get_setup_status, initialize_setup, login_session, logout_session,
 };
@@ -704,55 +706,6 @@ fn normalize_artifact_path(path: &str) -> anyhow::Result<String> {
     }
 
     Ok(normalized.to_string_lossy().into_owned())
-}
-
-#[utoipa::path(
-    get,
-    path = "/api/v1/config/effective",
-    tag = "Settings",
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "Get effective daemon configuration", body = EffectiveConfigDto),
-        (status = 401, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn get_effective_config(
-    State(state): State<AppState>,
-) -> Result<Json<EffectiveConfigDto>, AppError> {
-    Ok(Json(state.service.effective_config().await))
-}
-
-#[utoipa::path(
-    get,
-    path = "/api/v1/config/schema",
-    tag = "Settings",
-    responses(
-        (status = 200, description = "Get editable daemon configuration schema", body = ConfigSchemaResponse)
-    )
-)]
-pub(crate) async fn get_config_schema(
-    State(state): State<AppState>,
-) -> Result<Json<ConfigSchemaResponse>, AppError> {
-    Ok(Json(state.service.config_schema().await))
-}
-
-#[utoipa::path(
-    post,
-    path = "/api/v1/config/runtime",
-    tag = "Settings",
-    request_body = UpdateRuntimeSettingsRequest,
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "Update runtime-editable daemon configuration", body = EffectiveConfigDto),
-        (status = 400, body = synforge_core::api::ApiError),
-        (status = 401, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn update_runtime_settings(
-    State(state): State<AppState>,
-    Json(request): Json<UpdateRuntimeSettingsRequest>,
-) -> Result<Json<EffectiveConfigDto>, AppError> {
-    Ok(Json(state.service.update_runtime_settings(request).await?))
 }
 
 #[utoipa::path(

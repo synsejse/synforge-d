@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::Context;
 use synforge_core::package::SpecSource;
 use tokio::process::Command;
-use tracing::warn;
+use tracing::{info, warn};
 
 const SHALLOW_CLONE_DEPTH: &str = "1";
 const HEAD_REVISION: &str = "HEAD";
@@ -13,6 +13,12 @@ pub(crate) async fn clone_repository(
     destination: &Path,
     commit: Option<&str>,
 ) -> anyhow::Result<()> {
+    info!(
+        repo_url = %source.repo_url,
+        destination = %destination.display(),
+        commit = ?commit,
+        "cloning package source repository"
+    );
     if tokio::fs::try_exists(destination).await?
         && let Err(error) = tokio::fs::remove_dir_all(destination).await
     {
@@ -59,6 +65,12 @@ pub(crate) async fn clone_repository(
         .await
         .with_context(|| format!("failed to checkout commit {}", commit))?;
     }
+    info!(
+        repo_url = %source.repo_url,
+        destination = %destination.display(),
+        commit = ?commit,
+        "repository clone prepared"
+    );
     Ok(())
 }
 

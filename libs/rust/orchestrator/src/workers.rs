@@ -8,9 +8,9 @@ use bollard::query_parameters::CreateContainerOptionsBuilder;
 use futures_util::StreamExt;
 use synforge_core::{
     config::DaemonConfig,
-    model::{WorkerJobPayload, WorkerResult},
+    model::{WorkerAction, WorkerJobPayload, WorkerResult},
 };
-use tracing::warn;
+use tracing::{info, warn};
 
 use crate::job_lifecycle::JobLifecycle;
 use crate::sessions::WorkerSessionBroker;
@@ -43,14 +43,35 @@ impl DockerWorkerLauncher {
         payload: &WorkerJobPayload,
         config: &DaemonConfig,
     ) -> anyhow::Result<WorkerResult> {
+        let (action, package_name, mock_chroot) = job_descriptor(payload);
+        info!(
+            job_id = %payload.job_id,
+            action,
+            package_name,
+            mock_chroot,
+            timeout_seconds = payload.timeout_seconds,
+            "launching worker job"
+        );
         tokio::fs::create_dir_all(&payload.workspace_dir).await?;
         tokio::fs::create_dir_all(config.runtime_paths().job_logs_dir(payload.job_id)).await?;
         let session = self
             .sessions
             .create_session(payload.job_id, payload.clone())
             .await?;
+        info!(
+            job_id = %payload.job_id,
+            worker_id = %session.worker_id,
+            "worker session created"
+        );
 
         let container_name = format!("synforge-worker-{}", payload.job_id);
+        info!(
+            job_id = %payload.job_id,
+            container_name = %container_name,
+            worker_image = %config.worker_image,
+            network_mode = ?self.network_mode,
+            "creating worker container"
+        );
         let container = self
             .docker
             .create_container(
@@ -77,9 +98,19 @@ impl DockerWorkerLauncher {
             .with_context(|| format!("failed to create worker container {}", container_name))?;
 
         let container_id = container.id;
+        info!(
+            job_id = %payload.job_id,
+            container_id = %container_id,
+            "worker container created"
+        );
         self.sessions
             .set_container_id(payload.job_id, container_id.clone())
             .await;
+        info!(
+            job_id = %payload.job_id,
+            container_id = %container_id,
+            "starting worker container"
+        );
         self.docker
             .start_container(
                 &container_id,
@@ -90,7 +121,17 @@ impl DockerWorkerLauncher {
         self.lifecycle
             .mark_running(payload.job_id, &container_id)
             .await?;
+        info!(
+            job_id = %payload.job_id,
+            container_id = %container_id,
+            "worker container started"
+        );
 
+        info!(
+            job_id = %payload.job_id,
+            container_id = %container_id,
+            "waiting for worker container exit"
+        );
         let mut wait = self.docker.wait_container(
             &container_id,
             None::<bollard::query_parameters::WaitContainerOptions>,
@@ -98,6 +139,11 @@ impl DockerWorkerLauncher {
         while let Some(next) = wait.next().await {
             next?;
         }
+        info!(
+            job_id = %payload.job_id,
+            container_id = %container_id,
+            "worker container exited; waiting for uploaded result"
+        );
         let result = self
             .sessions
             .wait_for_result(
@@ -112,13 +158,35 @@ impl DockerWorkerLauncher {
                 )
             })?;
 
+        match &result {
+            WorkerResult::Parse(_) => {
+                info!(job_id = %payload.job_id, "worker parse job completed")
+            }
+            WorkerResult::Build(build_result) => info!(
+                job_id = %payload.job_id,
+                status = ?build_result.status,
+                artifact_count = build_result.artifacts.len(),
+                "worker build job completed"
+            ),
+        }
         self.sessions.remove_session(payload.job_id);
+        info!(
+            job_id = %payload.job_id,
+            "worker session removed after completion"
+        );
 
         Ok(result)
     }
 
     pub async fn shutdown(&self) -> anyhow::Result<()> {
-        for session in self.sessions.active_container_sessions().await {
+        let sessions = self.sessions.active_container_sessions().await;
+        if !sessions.is_empty() {
+            info!(
+                active_container_count = sessions.len(),
+                "stopping active worker containers during shutdown"
+            );
+        }
+        for session in sessions {
             self.docker
                 .kill_container(
                     &session.container_id,
@@ -176,4 +244,15 @@ async fn detect_daemon_network(docker: &Docker) -> Option<String> {
         })
         .cloned()
         .or_else(|| networks.keys().next().cloned())
+}
+
+fn job_descriptor(payload: &WorkerJobPayload) -> (&'static str, &str, &str) {
+    match &payload.action {
+        WorkerAction::Parse(parse) => ("parse", parse.package_name.as_str(), "-"),
+        WorkerAction::Build(build) => (
+            "build",
+            build.package_name.as_str(),
+            build.mock_chroot.as_str(),
+        ),
+    }
 }

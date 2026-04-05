@@ -12,6 +12,7 @@ use synforge_core::{
     package::PackageDefinition,
 };
 use tokio::process::Command;
+use tracing::{info, warn};
 use uuid::Uuid;
 
 fn should_skip_artifact(artifact: &BuildArtifact, package: &PackageDefinition) -> bool {
@@ -27,6 +28,10 @@ pub struct FileRepoManager;
 
 impl FileRepoManager {
     pub async fn ensure_repo(&self, config: &DaemonConfig) -> anyhow::Result<()> {
+        info!(
+            repo_dir = %config.runtime_paths().repo_dir().display(),
+            "ensuring repository metadata exists"
+        );
         regenerate_metadata(config.runtime_paths().repo_dir()).await
     }
 
@@ -42,6 +47,12 @@ impl FileRepoManager {
                 "cannot publish artifacts for failed worker result"
             ));
         }
+        info!(
+            job_id = %worker_result.job_id,
+            package_name = %package.name,
+            artifact_count = worker_result.artifacts.len(),
+            "publishing build output into repository"
+        );
         let published_at = now_utc();
         let mut files = Vec::new();
         let mut seen_paths = HashSet::new();
@@ -97,6 +108,12 @@ impl FileRepoManager {
             });
         }
         regenerate_metadata(paths.repo_dir()).await?;
+        info!(
+            job_id = %worker_result.job_id,
+            package_name = %package.name,
+            published_file_count = files.len(),
+            "repository publication completed"
+        );
         Ok(RepoPublication {
             package_name: package.name.clone(),
             repo_root: paths.repo_dir().to_path_buf(),
@@ -111,6 +128,12 @@ impl FileRepoManager {
         config: &DaemonConfig,
     ) -> anyhow::Result<()> {
         let paths = config.runtime_paths();
+        if !files.is_empty() {
+            info!(
+                file_count = files.len(),
+                "removing repository files for pruned build history"
+            );
+        }
         for file in files {
             let path = paths.repo_dir().join(&file.path);
             match tokio::fs::remove_file(&path).await {
@@ -123,6 +146,12 @@ impl FileRepoManager {
             }
         }
         regenerate_metadata(paths.repo_dir()).await?;
+        if !files.is_empty() {
+            info!(
+                file_count = files.len(),
+                "repository metadata regenerated after file removal"
+            );
+        }
         Ok(())
     }
 }
@@ -145,6 +174,7 @@ fn build_repo_build_dir(
 
 async fn regenerate_metadata(repo_dir: &Path) -> anyhow::Result<()> {
     tokio::fs::create_dir_all(repo_dir).await?;
+    info!(repo_dir = %repo_dir.display(), "regenerating repository metadata");
     let output = Command::new("createrepo_c")
         .arg("--update")
         .arg(repo_dir)
@@ -164,6 +194,10 @@ async fn regenerate_metadata(repo_dir: &Path) -> anyhow::Result<()> {
                 format!("<repomd generated=\"{}\" />", format_timestamp(now_utc())),
             )
             .await?;
+            warn!(
+                repo_dir = %repo_dir.display(),
+                "createrepo_c not found; wrote placeholder repomd.xml"
+            );
             Ok(())
         }
         Err(error) => Err(error.into()),

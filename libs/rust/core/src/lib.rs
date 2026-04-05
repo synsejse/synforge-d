@@ -1,6 +1,7 @@
 pub mod api;
 pub mod config;
 pub mod error;
+pub mod logging;
 pub mod model;
 pub mod package;
 #[path = "worker_protocol.rs"]

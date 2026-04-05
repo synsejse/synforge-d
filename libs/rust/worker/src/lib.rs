@@ -12,6 +12,7 @@ use synforge_core::{
     error::SynforgeError,
     model::{WorkerAction, WorkerBuildResult, WorkerJobPayload, WorkerResult},
 };
+use tracing::{info, warn};
 
 pub use executor::{BuildExecutor, RpmBuildExecutor};
 pub use protocol::WorkerTransportHandle;
@@ -38,13 +39,30 @@ where
         let connect_addr =
             env_string("SYNFORGE_WORKER_CONNECT_ADDR").unwrap_or_else(|| "daemon:8090".to_string());
         let socket_timeout = env_u64("SYNFORGE_WORKER_SOCKET_TIMEOUT_SECONDS").unwrap_or(30);
+        info!(
+            worker_id,
+            connect_addr,
+            socket_timeout_seconds = socket_timeout,
+            "connecting worker runtime to daemon"
+        );
         let transport = WorkerTransportHandle::connect(
             &connect_addr,
             &worker_id,
             std::time::Duration::from_secs(socket_timeout),
         )
         .await?;
+        info!(worker_id, "worker connected; waiting for assignment");
         let payload = transport.receive_assignment().await?;
+        let (action, package_name, mock_chroot) = action_descriptor(&payload.action);
+        info!(
+            worker_id,
+            job_id = %payload.job_id,
+            action,
+            package_name,
+            mock_chroot,
+            timeout_seconds = payload.timeout_seconds,
+            "worker assignment received"
+        );
         self.run_with_transport(payload, Some(transport)).await
     }
 
@@ -57,6 +75,16 @@ where
         payload: WorkerJobPayload,
         transport: Option<WorkerTransportHandle>,
     ) -> anyhow::Result<WorkerResult> {
+        let (action, package_name, mock_chroot) = action_descriptor(&payload.action);
+        info!(
+            job_id = %payload.job_id,
+            action,
+            package_name,
+            mock_chroot,
+            workspace = %payload.workspace_dir.display(),
+            timeout_seconds = payload.timeout_seconds,
+            "worker job started"
+        );
         let heartbeat_task = transport.as_ref().map(|transport| {
             let transport = transport.clone();
             tokio::spawn(async move {
@@ -64,7 +92,7 @@ where
                 loop {
                     tokio::time::sleep(interval).await;
                     if let Err(error) = transport.send_heartbeat().await {
-                        tracing::warn!("failed to send worker heartbeat: {}", error);
+                        warn!("failed to send worker heartbeat: {}", error);
                         break;
                     }
                 }
@@ -87,6 +115,21 @@ where
                 )
             }
         };
+        match &local_result {
+            WorkerResult::Parse(parse_result) => info!(
+                job_id = %payload.job_id,
+                package_name = %parse_result.parsed.name,
+                revision = %parse_result.revision.comparison_key(),
+                "worker parse completed"
+            ),
+            WorkerResult::Build(build_result) => info!(
+                job_id = %payload.job_id,
+                package_name = %build_result.package_name,
+                status = ?build_result.status,
+                artifact_count = build_result.artifacts.len(),
+                "worker build completed"
+            ),
+        }
         if let Some(task) = heartbeat_task {
             task.abort();
             let _ = task.await;
@@ -129,6 +172,11 @@ async fn publish_worker_result(
         WorkerResult::Parse(parse) => WorkerResult::Parse(parse.clone()),
         WorkerResult::Build(build) => WorkerResult::Build(WorkerBuildResult {
             artifacts: {
+                info!(
+                    job_id = %build.job_id,
+                    artifact_count = build.artifacts.len(),
+                    "uploading build artifacts to daemon"
+                );
                 for artifact in &build.artifacts {
                     transport.send_artifact(artifact_root, artifact).await?;
                 }
@@ -137,6 +185,14 @@ async fn publish_worker_result(
             ..build.clone()
         }),
     };
+    info!("uploading worker result to daemon");
     transport.send_result(uploaded_result).await?;
     Ok(())
+}
+
+fn action_descriptor(action: &WorkerAction) -> (&'static str, &str, &str) {
+    match action {
+        WorkerAction::Parse(parse) => ("parse", parse.package_name.as_str(), "-"),
+        WorkerAction::Build(build) => ("build", build.package_name.as_str(), &build.mock_chroot),
+    }
 }

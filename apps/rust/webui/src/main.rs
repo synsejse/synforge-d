@@ -23,12 +23,7 @@ const MAX_REQUEST_BODY_BYTES: usize = 8 * 1024 * 1024;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info,synforge=debug".into()),
-        )
-        .init();
+    synforge_core::logging::init_tracing();
 
     let listen_addr =
         env_string("SYNFORGE_WEBUI_LISTEN_ADDR").unwrap_or_else(|| "0.0.0.0:80".to_string());

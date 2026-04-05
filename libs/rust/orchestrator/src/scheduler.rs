@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
 use thiserror::Error;
-use tracing::warn;
+use tracing::{info, warn};
 use uuid::Uuid;
 
 use synforge_core::{
@@ -85,6 +85,8 @@ impl BuildScheduler {
                     continue;
                 }
                 warn!("poll failed for {}: {}", package.name, error);
+            } else {
+                info!(package_name = %package.name, "poll queued build work");
             }
         }
         Ok(())
@@ -117,8 +119,11 @@ impl BuildScheduler {
 
         match result {
             Ok(plan) => {
+                let package_name = plan.package_name;
+                let trigger = plan.trigger;
                 let jobs = plan.jobs;
                 let queued_builds = plan.queued_builds;
+                let queued_targets = queued_builds.len();
                 let response_job_id = jobs
                     .first()
                     .map(|job| job.id)
@@ -132,6 +137,13 @@ impl BuildScheduler {
                         return Err(anyhow::anyhow!("failed to queue build: {}", error));
                     }
                 }
+                info!(
+                    package_name = %package_name,
+                    trigger = ?trigger,
+                    queued_targets,
+                    created_jobs = jobs.len(),
+                    "scheduled package build jobs"
+                );
                 self.store.get_job(response_job_id).await?.ok_or_else(|| {
                     anyhow::anyhow!(SynforgeError::NotFound(response_job_id.to_string()))
                 })
@@ -161,6 +173,15 @@ impl BuildScheduler {
                 .await
                 .map_err(|error| anyhow::anyhow!("failed to queue build: {}", error))?;
         }
+        let (queued_count, skipped_count, blocked_count) = count_dispositions(&plan.results);
+        info!(
+            package_name = %plan.package_name,
+            trigger = ?plan.trigger,
+            queued_targets = queued_count,
+            skipped_targets = skipped_count,
+            blocked_targets = blocked_count,
+            "scheduled package action"
+        );
 
         Ok(PackageActionResponse {
             package_name: plan.package_name,
@@ -190,6 +211,16 @@ impl BuildScheduler {
                 .await
                 .map_err(|error| anyhow::anyhow!("failed to queue build: {}", error))?;
         }
+        let (queued_count, skipped_count, blocked_count) = count_dispositions(&plan.results);
+        info!(
+            package_name,
+            target = mock_chroot,
+            trigger = ?trigger,
+            queued_targets = queued_count,
+            skipped_targets = skipped_count,
+            blocked_targets = blocked_count,
+            "scheduled target action"
+        );
         plan.results
             .into_iter()
             .find(|result| result.mock_chroot == mock_chroot)
@@ -348,4 +379,18 @@ impl BuildScheduler {
             results,
         })
     }
+}
+
+fn count_dispositions(results: &[PackageActionTargetResult]) -> (usize, usize, usize) {
+    let mut queued = 0_usize;
+    let mut skipped = 0_usize;
+    let mut blocked = 0_usize;
+    for result in results {
+        match result.disposition {
+            PackageActionDisposition::Queued => queued += 1,
+            PackageActionDisposition::Skipped => skipped += 1,
+            PackageActionDisposition::Blocked => blocked += 1,
+        }
+    }
+    (queued, skipped, blocked)
 }

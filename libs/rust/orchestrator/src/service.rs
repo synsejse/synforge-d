@@ -13,7 +13,7 @@ use crate::workers::DockerWorkerLauncher;
 use synforge_core::{api::PageInfo, config::DaemonConfig, model::UserPermission};
 use tokio::sync::{Semaphore, mpsc, watch};
 use tokio_util::task::TaskTracker;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 const DEFAULT_PAGE_SIZE: usize = 50;
 const MAX_PAGE_SIZE: usize = 200;
 const WORKER_LISTEN_ADDR: &str = "0.0.0.0:8090";
@@ -54,6 +54,7 @@ impl SynforgeService {
     }
 
     pub async fn new(config: DaemonConfig) -> anyhow::Result<Arc<Self>> {
+        info!("initializing synforge service");
         let paths = config.runtime_paths();
         let store = DieselStore::new(&config.database_url, config.db_pool_size).await?;
         let sessions = WorkerSessionBroker::new(paths.jobs_root().to_path_buf());
@@ -87,6 +88,15 @@ impl SynforgeService {
         config
             .validate()
             .map_err(|error| anyhow::anyhow!(error.to_string()))?;
+        info!(
+            packages_dir = %config.runtime_paths().packages_dir().display(),
+            repo_dir = %config.runtime_paths().repo_dir().display(),
+            jobs_root = %config.runtime_paths().jobs_root().display(),
+            max_concurrent_builds = config.max_concurrent_builds,
+            queue_buffer_size = config.queue_buffer_size,
+            poller_tick_seconds = config.poller_tick_seconds,
+            "configuring synforge runtime"
+        );
         let paths = config.runtime_paths();
         tokio::fs::create_dir_all(paths.packages_dir()).await?;
         tokio::fs::create_dir_all(paths.repo_dir()).await?;
@@ -129,8 +139,13 @@ impl SynforgeService {
             service.task_tracker.clone(),
             shutdown_rx.clone(),
         );
+        info!(
+            worker_listener = WORKER_LISTEN_ADDR,
+            "worker socket listener started"
+        );
         service.start_queue_runner(queue_rx, shutdown_rx.clone());
         service.start_poller(shutdown_rx);
+        info!("synforge service background workers started");
         Ok(service)
     }
 
@@ -167,6 +182,10 @@ impl SynforgeService {
         let runner = self.runner.clone();
         let semaphore = Arc::new(Semaphore::new(self.config.max_concurrent_builds));
         let task_tracker = self.task_tracker.clone();
+        info!(
+            max_concurrent_builds = self.config.max_concurrent_builds,
+            "starting build queue runner"
+        );
         task_tracker.clone().spawn(async move {
             loop {
                 let maybe_build = tokio::select! {
@@ -178,6 +197,12 @@ impl SynforgeService {
                 let Some(build) = maybe_build else {
                     break;
                 };
+                info!(
+                    job_id = %build.job_id,
+                    package_name = %build.package.name,
+                    mock_chroot = %build.mock_chroot,
+                    "build dequeued for execution"
+                );
                 let runner = runner.clone();
                 let semaphore = Arc::clone(&semaphore);
                 let task_tracker = task_tracker.clone();
@@ -198,6 +223,10 @@ impl SynforgeService {
 
     fn start_poller(self: &Arc<Self>, mut shutdown_rx: watch::Receiver<bool>) {
         let service = Arc::clone(self);
+        info!(
+            poller_tick_seconds = service.config.poller_tick_seconds,
+            "starting poller"
+        );
         self.task_tracker.spawn(async move {
             let mut ticker = tokio::time::interval(std::time::Duration::from_secs(
                 service.config.poller_tick_seconds,

@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use synforge_core::{
     config::DaemonConfig,
-    model::{WorkerAction, WorkerBuildPayload, WorkerJobPayload},
+    model::{WorkerAction, WorkerBuildPayload, WorkerJobPayload, WorkerResult},
 };
-use tracing::instrument;
+use tracing::{error, info, instrument};
 
 use crate::job_lifecycle::JobLifecycle;
 use crate::scheduler::QueuedBuild;
@@ -36,6 +36,13 @@ impl BuildRunner {
     }
 
     async fn process_build_inner(&self, build: QueuedBuild) -> anyhow::Result<()> {
+        info!(
+            job_id = %build.job_id,
+            package_name = %build.package.name,
+            mock_chroot = %build.mock_chroot,
+            trigger = ?build.trigger,
+            "starting queued build"
+        );
         let paths = self.config.runtime_paths();
         let job_root = paths.job_root(build.job_id);
         tokio::fs::create_dir_all(paths.job_artifacts_dir(build.job_id)).await?;
@@ -55,8 +62,29 @@ impl BuildRunner {
         };
         let execution = self.worker_launcher.run_job(&payload, &self.config).await;
         match execution {
-            Ok(execution) => self.lifecycle.finalize_execution(&build, execution).await,
-            Err(error) => self.lifecycle.fail_launch(&build, &error.to_string()).await,
+            Ok(execution) => {
+                if let WorkerResult::Build(build_result) = &execution {
+                    info!(
+                        job_id = %build.job_id,
+                        package_name = %build.package.name,
+                        mock_chroot = %build.mock_chroot,
+                        status = ?build_result.status,
+                        artifact_count = build_result.artifacts.len(),
+                        "worker execution finished"
+                    );
+                }
+                self.lifecycle.finalize_execution(&build, execution).await
+            }
+            Err(error) => {
+                error!(
+                    job_id = %build.job_id,
+                    package_name = %build.package.name,
+                    mock_chroot = %build.mock_chroot,
+                    error = %error,
+                    "worker launch or execution failed"
+                );
+                self.lifecycle.fail_launch(&build, &error.to_string()).await
+            }
         }
     }
 }

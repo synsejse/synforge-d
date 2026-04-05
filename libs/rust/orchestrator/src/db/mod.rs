@@ -30,11 +30,9 @@ use crate::schema::{
     user_repo_metrics, users,
 };
 
-
 pub use traits::{JobStore, PackageStore, RepoStore, UserStore};
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
-
 
 #[derive(Clone)]
 pub struct DieselStore {
@@ -111,7 +109,6 @@ impl PackageStore for DieselStore {
     async fn remove_package(&self, package_name: &str) -> anyhow::Result<()> {
         package::remove_package(self, package_name).await
     }
-
 }
 
 #[async_trait]
@@ -255,7 +252,6 @@ impl JobStore for DieselStore {
     ) -> anyhow::Result<Vec<Uuid>> {
         job::list_prunable_successful_job_ids(self, package_name, mock_chroot, keep).await
     }
-
 }
 
 #[async_trait]
@@ -312,7 +308,6 @@ impl RepoStore for DieselStore {
     async fn sum_published_repo_file_bytes(&self) -> anyhow::Result<u64> {
         repo::sum_published_repo_file_bytes(self).await
     }
-
 }
 
 #[async_trait]
@@ -385,7 +380,6 @@ impl UserStore for DieselStore {
     async fn increment_user_download_bytes(&self, user_id: Uuid, bytes: u64) -> anyhow::Result<()> {
         user::increment_user_download_bytes(self, user_id, bytes).await
     }
-
 }
 
 #[derive(Debug, Queryable, Selectable)]

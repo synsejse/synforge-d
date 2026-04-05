@@ -7,3 +7,4 @@ apps/webui/node_modules
 apps/webui/dist
 *.log
 .DS_Store
+.github/skills/

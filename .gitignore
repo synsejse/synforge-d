@@ -8,3 +8,4 @@ runtime/
 **/dist/
 **/build/
 /plans/
+.github/skills/

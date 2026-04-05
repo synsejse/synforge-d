@@ -6,7 +6,7 @@ use synforge_core::{
     model::{BuildStatus, PublishedRepoFile, WorkerResult},
     package::PackageDefinition,
 };
-use tracing::warn;
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 use crate::db::{DieselStore, JobStore, RepoStore};
@@ -33,6 +33,11 @@ impl JobLifecycle {
     }
 
     pub async fn mark_running(&self, job_id: Uuid, container_id: &str) -> anyhow::Result<()> {
+        info!(
+            job_id = %job_id,
+            container_id = %container_id,
+            "marking build as running"
+        );
         self.store
             .set_job_running(job_id, Some(container_id))
             .await
@@ -44,6 +49,13 @@ impl JobLifecycle {
         build: &QueuedBuild,
         error_message: &str,
     ) -> anyhow::Result<()> {
+        error!(
+            job_id = %build.job_id,
+            package_name = %build.package.name,
+            mock_chroot = %build.mock_chroot,
+            error = error_message,
+            "build launch failed"
+        );
         self.store
             .finish_job(
                 build.job_id,
@@ -73,13 +85,36 @@ impl JobLifecycle {
         let mut published_files = Vec::new();
 
         if status == BuildStatus::Succeeded {
+            info!(
+                job_id = %build.job_id,
+                package_name = %build.package.name,
+                mock_chroot = %build.mock_chroot,
+                artifact_count = build_result.artifacts.len(),
+                "publishing build artifacts"
+            );
             match self
                 .repo_manager
                 .publish_build(&build.package, &build_result, &self.config)
                 .await
             {
-                Ok(publication) => published_files = publication.files,
+                Ok(publication) => {
+                    info!(
+                        job_id = %build.job_id,
+                        package_name = %build.package.name,
+                        mock_chroot = %build.mock_chroot,
+                        published_file_count = publication.files.len(),
+                        "build artifacts published"
+                    );
+                    published_files = publication.files;
+                }
                 Err(error) => {
+                    error!(
+                        job_id = %build.job_id,
+                        package_name = %build.package.name,
+                        mock_chroot = %build.mock_chroot,
+                        error = %error,
+                        "failed to publish build artifacts"
+                    );
                     status = BuildStatus::Failed;
                     error_message = Some(error.to_string());
                 }
@@ -95,6 +130,15 @@ impl JobLifecycle {
                 &published_files,
             )
             .await?;
+        info!(
+            job_id = %build.job_id,
+            package_name = %build.package.name,
+            mock_chroot = %build.mock_chroot,
+            final_status = ?status,
+            artifact_count = build_result.artifacts.len(),
+            published_file_count = published_files.len(),
+            "build finalized"
+        );
 
         if status == BuildStatus::Succeeded
             && let Err(error) = self
@@ -114,6 +158,10 @@ impl JobLifecycle {
         if files.is_empty() {
             return Ok(());
         }
+        info!(
+            file_count = files.len(),
+            "removing published repository files"
+        );
         self.repo_manager
             .remove_build_files(files, &self.config)
             .await
@@ -130,6 +178,7 @@ impl JobLifecycle {
     }
 
     pub async fn abort_unfinished_jobs(&self, message: &str) -> anyhow::Result<()> {
+        warn!(reason = message, "aborting unfinished jobs");
         self.store.abort_unfinished_jobs(message).await
     }
 
@@ -143,6 +192,15 @@ impl JobLifecycle {
             .store
             .list_prunable_successful_job_ids(&package.name, mock_chroot, keep)
             .await?;
+        if !old_job_ids.is_empty() {
+            info!(
+                package_name = %package.name,
+                mock_chroot,
+                prune_count = old_job_ids.len(),
+                keep,
+                "pruning old build history"
+            );
+        }
 
         for job_id in old_job_ids {
             let published_files = self.store.list_published_repo_files_for_job(job_id).await?;

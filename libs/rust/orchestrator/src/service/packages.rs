@@ -12,6 +12,7 @@ use synforge_core::{
     model::{BuildStatus, BuildTrigger, PublishedRepoFile},
     package::parse_mock_chroot,
 };
+use tracing::info;
 use uuid::Uuid;
 
 use super::SynforgeService;
@@ -103,6 +104,11 @@ impl SynforgeService {
     pub async fn list_mock_chroots(&self) -> anyhow::Result<MockChrootListResponse> {
         let docker = Docker::connect_with_local_defaults()?;
         let container_name = format!("synforge-mock-chroots-{}", Uuid::now_v7());
+        info!(
+            container_name = %container_name,
+            worker_image = %self.config.worker_image,
+            "listing mock chroots via worker image"
+        );
         let container = docker
             .create_container(
                 Some(
@@ -124,6 +130,7 @@ impl SynforgeService {
             .await?;
 
         let container_id = container.id;
+        info!(container_id = %container_id, "starting mock chroot listing container");
         docker
             .start_container(
                 &container_id,
@@ -166,6 +173,11 @@ impl SynforgeService {
             .collect::<Vec<_>>();
         chroots.sort();
         chroots.dedup();
+        info!(
+            container_id = %container_id,
+            chroot_count = chroots.len(),
+            "mock chroot listing completed"
+        );
         Ok(MockChrootListResponse { chroots })
     }
 
@@ -208,14 +220,18 @@ impl SynforgeService {
         package_name: &str,
         _request: RefreshRequest,
     ) -> anyhow::Result<PackageActionResponse> {
-        self.scheduler
+        info!(package_name, trigger = ?BuildTrigger::ManualRefresh, "manual refresh requested");
+        let response = self
+            .scheduler
             .enqueue_package_action(
                 package_name,
                 BuildTrigger::ManualRefresh,
                 false,
                 &self.queue_tx,
             )
-            .await
+            .await?;
+        log_action_response(package_name, BuildTrigger::ManualRefresh, &response.results);
+        Ok(response)
     }
 
     pub async fn trigger_rebuild(
@@ -223,14 +239,18 @@ impl SynforgeService {
         package_name: &str,
         _request: RebuildRequest,
     ) -> anyhow::Result<PackageActionResponse> {
-        self.scheduler
+        info!(package_name, trigger = ?BuildTrigger::ManualRebuild, "manual rebuild requested");
+        let response = self
+            .scheduler
             .enqueue_package_action(
                 package_name,
                 BuildTrigger::ManualRebuild,
                 true,
                 &self.queue_tx,
             )
-            .await
+            .await?;
+        log_action_response(package_name, BuildTrigger::ManualRebuild, &response.results);
+        Ok(response)
     }
 
     pub async fn trigger_target_refresh(
@@ -239,7 +259,14 @@ impl SynforgeService {
         mock_chroot: &str,
         _request: RefreshRequest,
     ) -> anyhow::Result<PackageActionTargetResult> {
-        self.scheduler
+        info!(
+            package_name,
+            mock_chroot,
+            trigger = ?BuildTrigger::ManualRefresh,
+            "manual target refresh requested"
+        );
+        let result = self
+            .scheduler
             .enqueue_target_action(
                 package_name,
                 mock_chroot,
@@ -247,7 +274,15 @@ impl SynforgeService {
                 false,
                 &self.queue_tx,
             )
-            .await
+            .await?;
+        info!(
+            package_name,
+            mock_chroot,
+            trigger = ?BuildTrigger::ManualRefresh,
+            disposition = ?result.disposition,
+            "manual target refresh scheduled"
+        );
+        Ok(result)
     }
 
     pub async fn trigger_target_rebuild(
@@ -256,7 +291,14 @@ impl SynforgeService {
         mock_chroot: &str,
         _request: RebuildRequest,
     ) -> anyhow::Result<PackageActionTargetResult> {
-        self.scheduler
+        info!(
+            package_name,
+            mock_chroot,
+            trigger = ?BuildTrigger::ManualRebuild,
+            "manual target rebuild requested"
+        );
+        let result = self
+            .scheduler
             .enqueue_target_action(
                 package_name,
                 mock_chroot,
@@ -264,6 +306,39 @@ impl SynforgeService {
                 true,
                 &self.queue_tx,
             )
-            .await
+            .await?;
+        info!(
+            package_name,
+            mock_chroot,
+            trigger = ?BuildTrigger::ManualRebuild,
+            disposition = ?result.disposition,
+            "manual target rebuild scheduled"
+        );
+        Ok(result)
     }
+}
+
+fn log_action_response(
+    package_name: &str,
+    trigger: BuildTrigger,
+    results: &[PackageActionTargetResult],
+) {
+    let mut queued = 0_usize;
+    let mut skipped = 0_usize;
+    let mut blocked = 0_usize;
+    for result in results {
+        match result.disposition {
+            synforge_core::api::PackageActionDisposition::Queued => queued += 1,
+            synforge_core::api::PackageActionDisposition::Skipped => skipped += 1,
+            synforge_core::api::PackageActionDisposition::Blocked => blocked += 1,
+        }
+    }
+    info!(
+        package_name,
+        trigger = ?trigger,
+        queued_targets = queued,
+        skipped_targets = skipped,
+        blocked_targets = blocked,
+        "manual package action scheduled"
+    );
 }

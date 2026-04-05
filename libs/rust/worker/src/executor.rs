@@ -7,6 +7,7 @@ use synforge_core::{
     package::{BuildEnvVar, PackageDefinition},
 };
 use tokio::process::Command;
+use tracing::{info, warn};
 
 use crate::artifact::{collect_artifacts, collect_success_artifacts};
 use crate::git::clone_repository;
@@ -49,6 +50,15 @@ async fn execute_spec_build(
     build_payload: &WorkerBuildPayload,
     transport: Option<WorkerTransportHandle>,
 ) -> anyhow::Result<WorkerBuildResult> {
+    info!(
+        job_id = %payload.job_id,
+        package_name = %package.name,
+        mock_chroot = %build_payload.mock_chroot,
+        revision = %build_payload.revision,
+        checkout_commit = ?build_payload.checkout_commit,
+        timeout_seconds = payload.timeout_seconds,
+        "starting RPM build execution"
+    );
     let logs_dir = payload.workspace_dir.join("logs");
     let logger = BuildLogger::new(&logs_dir, transport).await?;
     let topdir = payload.workspace_dir.join("rpmbuild");
@@ -59,6 +69,12 @@ async fn execute_spec_build(
         build_payload.checkout_commit.as_deref(),
     )
     .await?;
+    info!(
+        job_id = %payload.job_id,
+        package_name = %package.name,
+        repo_url = %package.source.repo_url,
+        "repository checkout prepared"
+    );
     let spec_file = repo_dir.join(&package.source.spec_file);
     let package_dir = spec_file.parent().map(Path::to_path_buf).ok_or_else(|| {
         anyhow::anyhow!("spec path {} has no parent directory", spec_file.display())
@@ -127,6 +143,13 @@ async fn execute_spec_build(
         Ok(Ok(artifacts)) => {
             logger.section("Build completed").await?;
             logger.line("Build finished successfully").await?;
+            info!(
+                job_id = %payload.job_id,
+                package_name = %package.name,
+                mock_chroot = %build_payload.mock_chroot,
+                artifact_count = artifacts.len(),
+                "RPM build completed successfully"
+            );
             Ok(WorkerBuildResult {
                 job_id: payload.job_id,
                 package_name: package.name.clone(),
@@ -137,6 +160,13 @@ async fn execute_spec_build(
         }
         Ok(Err(error)) => {
             let message = error.to_string();
+            warn!(
+                job_id = %payload.job_id,
+                package_name = %package.name,
+                mock_chroot = %build_payload.mock_chroot,
+                error = %message,
+                "RPM build failed"
+            );
             log_best_effort(&logger, "Build failed", &message).await;
             let (artifacts, artifact_message) = collect_artifacts_after_failure(
                 package,
@@ -154,6 +184,13 @@ async fn execute_spec_build(
             })
         }
         Err(_) => {
+            warn!(
+                job_id = %payload.job_id,
+                package_name = %package.name,
+                mock_chroot = %build_payload.mock_chroot,
+                timeout_seconds = payload.timeout_seconds,
+                "RPM build timed out"
+            );
             log_best_effort(&logger, "Build timed out", "build timed out").await;
             let (artifacts, artifact_message) = collect_artifacts_after_failure(
                 package,

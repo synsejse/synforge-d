@@ -9,6 +9,7 @@ pub(crate) mod logs;
 pub(crate) mod packages;
 pub(crate) mod repo;
 pub(crate) mod session;
+pub(crate) mod setup;
 pub(crate) mod users;
 pub(crate) use config::{get_config_schema, get_effective_config, update_runtime_settings};
 pub(crate) use jobs::{
@@ -24,9 +25,8 @@ pub(crate) use packages::{
     trigger_target_refresh, update_package,
 };
 pub(crate) use repo::{browse_repository, get_repo_inventory, get_repo_summary};
-pub(crate) use session::{
-    get_session, get_setup_status, initialize_setup, login_session, logout_session,
-};
+pub(crate) use session::{get_session, login_session, logout_session};
+pub(crate) use setup::{get_setup_status, initialize_setup};
 pub(crate) use users::{
     change_user_password, create_user, delete_user, get_user_metrics, list_users, update_user,
 };

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::db::{DieselStore, JobStore, PackageStore, RepoStore, UserStore};
+use crate::db::{DieselStore, JobStore};
 use crate::job_lifecycle::JobLifecycle;
 use crate::packages::PackageSyncStore;
 use crate::registry::PackageRegistry;

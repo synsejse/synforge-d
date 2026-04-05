@@ -602,11 +602,11 @@ pub(crate) fn package_response_from_record(
         version: record.version,
         release: record.release,
     };
-    let state = derive_package_state(conn, &record.name, &package.mock_chroots)?;
+    let state = compute_package_state(conn, &record.name, &package.mock_chroots)?;
     Ok(PackageResponse { package, state })
 }
 
-pub(crate) fn derive_package_state(
+pub(crate) fn compute_package_state(
     conn: &mut MysqlConnection,
     package_name: &str,
     mock_chroots: &[String],
@@ -695,14 +695,14 @@ pub(crate) fn build_job_response_from_row(
     row: JobRecord,
     artifacts: &HashMap<Uuid, Vec<BuildArtifact>>,
 ) -> anyhow::Result<BuildJobResponse> {
-    let job = row_to_build_job(row)?;
+    let job = job_from_row(row)?;
     Ok(BuildJobResponse {
         artifacts: artifacts.get(&job.id).cloned().unwrap_or_default(),
         job,
     })
 }
 
-pub(crate) fn row_to_build_job(row: JobRecord) -> anyhow::Result<BuildJob> {
+pub(crate) fn job_from_row(row: JobRecord) -> anyhow::Result<BuildJob> {
     Ok(BuildJob {
         id: Uuid::parse_str(&row.id)?,
         package_name: row.package_name,

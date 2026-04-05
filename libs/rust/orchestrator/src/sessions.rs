@@ -105,7 +105,7 @@ impl WorkerSessionBroker {
         sessions
     }
 
-    pub fn artifact_upload_path(&self, job_id: Uuid, relative_path: &str) -> PathBuf {
+    pub fn artifact_storage_path(&self, job_id: Uuid, relative_path: &str) -> PathBuf {
         let relative = Path::new(relative_path);
         let sanitized = relative
             .components()
@@ -133,7 +133,7 @@ impl WorkerSessionBroker {
             .get(&job_id)
             .ok_or_else(|| anyhow::anyhow!("worker session {} not found", job_id))?;
         let (package_name, mock_chroot) = build_metadata_from_payload(&entry.payload)?;
-        let stored_path = self.artifact_upload_path(job_id, storage_path);
+        let stored_path = self.artifact_storage_path(job_id, storage_path);
         let mut stored_file = tokio::fs::File::open(&stored_path).await?;
         let mut hasher = sha2::Sha256::new();
         let mut size_bytes = 0_u64;
@@ -162,7 +162,7 @@ impl WorkerSessionBroker {
         Ok(artifact)
     }
 
-    pub fn log_upload_path(&self, job_id: Uuid, relative_path: &str) -> PathBuf {
+    pub fn log_storage_path(&self, job_id: Uuid, relative_path: &str) -> PathBuf {
         let relative = Path::new(relative_path);
         let sanitized = relative
             .components()

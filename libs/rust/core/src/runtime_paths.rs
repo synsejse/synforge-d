@@ -52,11 +52,11 @@ impl RuntimePaths {
         self.temp_root.clone()
     }
 
-    pub fn parse_workspace_dir(&self, job_id: Uuid) -> PathBuf {
+    pub fn spec_parse_workspace_dir(&self, job_id: Uuid) -> PathBuf {
         self.temp_root().join("parse").join(job_id.to_string())
     }
 
-    pub fn browse_workspace_dir(&self, browse_id: Uuid) -> PathBuf {
+    pub fn repo_browse_workspace_dir(&self, browse_id: Uuid) -> PathBuf {
         self.temp_root().join("browse").join(browse_id.to_string())
     }
 

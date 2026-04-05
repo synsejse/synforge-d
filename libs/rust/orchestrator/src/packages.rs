@@ -63,7 +63,7 @@ impl PackageSyncStore {
     ) -> anyhow::Result<InspectedPackageSource> {
         let job_id = uuid::Uuid::now_v7();
         let paths = self.config.runtime_paths();
-        let workspace_dir = paths.parse_workspace_dir(job_id);
+        let workspace_dir = paths.spec_parse_workspace_dir(job_id);
         let payload = WorkerJobPayload {
             job_id,
             workspace_dir,
@@ -148,7 +148,7 @@ impl PackageSyncStore {
 
         let paths = self.config.runtime_paths();
         tokio::fs::create_dir_all(paths.temp_root()).await?;
-        let clone_dir = paths.browse_workspace_dir(uuid::Uuid::now_v7());
+        let clone_dir = paths.repo_browse_workspace_dir(uuid::Uuid::now_v7());
 
         let git_timeout = Duration::from_secs(self.config.git_operation_timeout_seconds);
         let clone_result = run_git(

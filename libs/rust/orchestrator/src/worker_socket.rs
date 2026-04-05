@@ -80,7 +80,7 @@ async fn handle_connection(
         let message: WorkerWireMessage = bincode::deserialize(&frame)?;
         match message {
             WorkerWireMessage::LogChunk { path, bytes } => {
-                let upload_path = sessions.log_upload_path(job_id, &path);
+                let upload_path = sessions.log_storage_path(job_id, &path);
                 if let Some(parent) = upload_path.parent() {
                     tokio::fs::create_dir_all(parent).await?;
                 }
@@ -119,7 +119,7 @@ async fn handle_connection(
                 if current_artifact.is_some() {
                     anyhow::bail!("artifact upload already in progress");
                 }
-                let upload_path = sessions.artifact_upload_path(job_id, &storage_path);
+                let upload_path = sessions.artifact_storage_path(job_id, &storage_path);
                 if let Some(parent) = upload_path.parent() {
                     tokio::fs::create_dir_all(parent).await?;
                 }

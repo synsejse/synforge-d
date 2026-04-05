@@ -2,6 +2,7 @@ mod api;
 mod auth;
 pub mod openapi;
 mod repo_files;
+mod system_routes;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -11,9 +12,9 @@ use crate::auth::middleware::{
 };
 pub(crate) use crate::auth::session::{clear_session_cookie, create_session_cookie};
 use crate::repo_files::{download_repo_file, repo_root};
-use axum::extract::State;
+use crate::system_routes::{add_security_headers, healthz, readyz};
 use axum::http::StatusCode;
-use axum::http::header::{self, HeaderName, HeaderValue};
+use axum::http::header::{self, HeaderValue};
 use axum::middleware;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
@@ -68,37 +69,6 @@ pub fn router(service: Arc<SynforgeService>) -> Router {
         .layer(middleware::map_response(add_security_headers))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
-}
-
-async fn healthz(State(state): State<AppState>) -> Result<&'static str, AppError> {
-    state.service.health_check().await?;
-    Ok("ok")
-}
-
-async fn readyz(State(state): State<AppState>) -> Result<&'static str, AppError> {
-    state.service.health_check().await?;
-    Ok("ready")
-}
-
-async fn add_security_headers(mut response: Response) -> Response {
-    let headers = response.headers_mut();
-    headers.insert(
-        HeaderName::from_static("x-content-type-options"),
-        HeaderValue::from_static("nosniff"),
-    );
-    headers.insert(
-        HeaderName::from_static("x-frame-options"),
-        HeaderValue::from_static("DENY"),
-    );
-    headers.insert(
-        HeaderName::from_static("referrer-policy"),
-        HeaderValue::from_static("no-referrer"),
-    );
-    headers.insert(
-        HeaderName::from_static("cross-origin-opener-policy"),
-        HeaderValue::from_static("same-origin"),
-    );
-    response
 }
 
 #[derive(Debug)]

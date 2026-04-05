@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use super::SynforgeService;
 use crate::auth::{hash_password, verify_password};
-use crate::db::JobStore;
+use crate::db::UserStore;
 
 impl SynforgeService {
     pub async fn authenticate_user(

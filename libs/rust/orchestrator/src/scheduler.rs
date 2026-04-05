@@ -16,7 +16,7 @@ use synforge_core::{
     package::{PackageDefinition, SpecRevision, parse_mock_chroot},
 };
 
-use crate::db::{DieselStore, JobStore};
+use crate::db::{DieselStore, JobStore, PackageStore};
 use crate::packages::MaterializePackageOptions;
 use crate::registry::PackageRegistry;
 

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use super::SynforgeService;
-use crate::db::JobStore;
+use crate::db::RepoStore;
 use synforge_core::{
     api::{RepoInventoryResponse, RepoSummaryResponse},
     error::SynforgeError,

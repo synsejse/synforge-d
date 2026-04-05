@@ -9,7 +9,7 @@ use synforge_core::{
 use tracing::warn;
 use uuid::Uuid;
 
-use crate::db::{DieselStore, JobStore};
+use crate::db::{DieselStore, JobStore, RepoStore};
 use crate::repo_manager::FileRepoManager;
 use crate::scheduler::QueuedBuild;
 #[derive(Clone)]

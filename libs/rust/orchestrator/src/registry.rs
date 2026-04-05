@@ -5,7 +5,7 @@ use synforge_core::{
     package::{PackageDefinition, SpecRevision, SpecSource},
 };
 
-use crate::db::{DieselStore, JobStore};
+use crate::db::{DieselStore, PackageStore};
 use crate::packages::{InspectedPackageSource, MaterializePackageOptions, PackageSyncStore};
 
 #[derive(Clone)]

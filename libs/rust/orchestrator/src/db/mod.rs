@@ -1,6 +1,7 @@
 mod job;
 mod package;
 mod repo;
+mod traits;
 mod user;
 
 use std::collections::HashMap;
@@ -29,156 +30,11 @@ use crate::schema::{
     user_repo_metrics, users,
 };
 
+
+pub use traits::{JobStore, PackageStore, RepoStore, UserStore};
+
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
-#[async_trait]
-pub trait JobStore: Send + Sync {
-    async fn list_packages(
-        &self,
-        limit: usize,
-        offset: usize,
-        search: Option<String>,
-        enabled: Option<bool>,
-    ) -> anyhow::Result<Vec<PackageResponse>>;
-    async fn count_packages(
-        &self,
-        search: Option<String>,
-        enabled: Option<bool>,
-    ) -> anyhow::Result<u64>;
-    async fn get_package(&self, package_name: &str) -> anyhow::Result<Option<PackageResponse>>;
-    async fn upsert_package(&self, package: &PackageDefinition) -> anyhow::Result<()>;
-    async fn remove_package(&self, package_name: &str) -> anyhow::Result<()>;
-    async fn get_last_successful_revision(
-        &self,
-        package_name: &str,
-        mock_chroot: &str,
-    ) -> anyhow::Result<Option<String>>;
-    async fn has_active_job_for_target(
-        &self,
-        package_name: &str,
-        mock_chroot: &str,
-    ) -> anyhow::Result<bool>;
-    async fn insert_job(&self, job: &BuildJob) -> anyhow::Result<()>;
-    async fn set_job_running(
-        &self,
-        job_id: Uuid,
-        worker_container_id: Option<&str>,
-    ) -> anyhow::Result<()>;
-    async fn finish_job(
-        &self,
-        job_id: Uuid,
-        status: BuildStatus,
-        error_message: Option<&str>,
-        artifacts: &[BuildArtifact],
-        published_files: &[PublishedRepoFile],
-    ) -> anyhow::Result<()>;
-    async fn upsert_build_log(&self, job_id: Uuid, file: &str) -> anyhow::Result<()>;
-    async fn list_build_logs_for_job(&self, job_id: Uuid) -> anyhow::Result<Vec<BuildLogRecord>>;
-    async fn get_build_log_for_job_source(
-        &self,
-        job_id: Uuid,
-        file: &str,
-    ) -> anyhow::Result<Option<BuildLogRecord>>;
-    async fn list_jobs(
-        &self,
-        limit: usize,
-        offset: usize,
-        status: Option<BuildStatus>,
-        package_name: Option<String>,
-        mock_chroot: Option<String>,
-        completed_only: bool,
-    ) -> anyhow::Result<Vec<BuildJobResponse>>;
-    async fn count_jobs(
-        &self,
-        status: Option<BuildStatus>,
-        package_name: Option<String>,
-        mock_chroot: Option<String>,
-        completed_only: bool,
-    ) -> anyhow::Result<u64>;
-    async fn list_active_jobs(
-        &self,
-        limit: usize,
-        offset: usize,
-        package_name: Option<String>,
-        mock_chroot: Option<String>,
-    ) -> anyhow::Result<Vec<BuildJobResponse>>;
-    async fn count_active_jobs(
-        &self,
-        package_name: Option<String>,
-        mock_chroot: Option<String>,
-    ) -> anyhow::Result<u64>;
-    async fn list_jobs_for_package(
-        &self,
-        package_name: &str,
-    ) -> anyhow::Result<Vec<BuildJobResponse>>;
-    async fn get_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>>;
-    async fn list_published_repo_files(
-        &self,
-        limit: usize,
-        offset: usize,
-        package_name: Option<String>,
-        mock_chroot: Option<String>,
-        kind: Option<ArtifactKind>,
-    ) -> anyhow::Result<Vec<PublishedRepoFile>>;
-    async fn count_published_repo_files(
-        &self,
-        package_name: Option<String>,
-        mock_chroot: Option<String>,
-        kind: Option<ArtifactKind>,
-    ) -> anyhow::Result<u64>;
-    async fn list_published_repo_files_for_job(
-        &self,
-        job_id: Uuid,
-    ) -> anyhow::Result<Vec<PublishedRepoFile>>;
-    async fn list_published_repo_files_for_package(
-        &self,
-        package_name: &str,
-    ) -> anyhow::Result<Vec<PublishedRepoFile>>;
-    async fn list_recent_published_repo_files(
-        &self,
-        limit: usize,
-    ) -> anyhow::Result<Vec<PublishedRepoFile>>;
-    async fn list_repo_target_summaries(&self) -> anyhow::Result<Vec<RepoTargetSummary>>;
-    async fn get_repo_distinct_counts(&self) -> anyhow::Result<(u64, u64, u64)>;
-    async fn sum_published_repo_file_bytes(&self) -> anyhow::Result<u64>;
-    async fn delete_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>>;
-    async fn abort_unfinished_jobs(&self, message: &str) -> anyhow::Result<()>;
-    async fn list_prunable_successful_job_ids(
-        &self,
-        package_name: &str,
-        mock_chroot: &str,
-        keep: usize,
-    ) -> anyhow::Result<Vec<Uuid>>;
-    async fn user_count(&self) -> anyhow::Result<u64>;
-    async fn list_users(&self) -> anyhow::Result<Vec<UserSummary>>;
-    async fn get_user(&self, user_id: Uuid) -> anyhow::Result<Option<UserSummary>>;
-    async fn get_user_by_handle(&self, handle: &str) -> anyhow::Result<Option<UserSummary>>;
-    async fn get_user_auth_by_handle(&self, handle: &str)
-    -> anyhow::Result<Option<UserAuthRecord>>;
-    async fn create_user(
-        &self,
-        handle: &str,
-        display_name: &str,
-        password_hash: &str,
-        active: bool,
-        permissions: &[UserPermission],
-    ) -> anyhow::Result<UserSummary>;
-    async fn update_user(
-        &self,
-        user_id: Uuid,
-        handle: &str,
-        display_name: &str,
-        active: bool,
-        permissions: &[UserPermission],
-    ) -> anyhow::Result<Option<UserSummary>>;
-    async fn update_user_password(
-        &self,
-        user_id: Uuid,
-        password_hash: &str,
-    ) -> anyhow::Result<bool>;
-    async fn delete_user(&self, user_id: Uuid) -> anyhow::Result<Option<UserSummary>>;
-    async fn increment_user_download_bytes(&self, user_id: Uuid, bytes: u64) -> anyhow::Result<()>;
-}
 
 #[derive(Clone)]
 pub struct DieselStore {
@@ -225,7 +81,7 @@ impl DieselStore {
 }
 
 #[async_trait]
-impl JobStore for DieselStore {
+impl PackageStore for DieselStore {
     async fn list_packages(
         &self,
         limit: usize,
@@ -256,6 +112,10 @@ impl JobStore for DieselStore {
         package::remove_package(self, package_name).await
     }
 
+}
+
+#[async_trait]
+impl JobStore for DieselStore {
     async fn get_last_successful_revision(
         &self,
         package_name: &str,
@@ -379,6 +239,27 @@ impl JobStore for DieselStore {
         job::get_job(self, job_id).await
     }
 
+    async fn delete_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>> {
+        job::delete_job(self, job_id).await
+    }
+
+    async fn abort_unfinished_jobs(&self, message: &str) -> anyhow::Result<()> {
+        job::abort_unfinished_jobs(self, message).await
+    }
+
+    async fn list_prunable_successful_job_ids(
+        &self,
+        package_name: &str,
+        mock_chroot: &str,
+        keep: usize,
+    ) -> anyhow::Result<Vec<Uuid>> {
+        job::list_prunable_successful_job_ids(self, package_name, mock_chroot, keep).await
+    }
+
+}
+
+#[async_trait]
+impl RepoStore for DieselStore {
     async fn list_published_repo_files(
         &self,
         limit: usize,
@@ -432,23 +313,10 @@ impl JobStore for DieselStore {
         repo::sum_published_repo_file_bytes(self).await
     }
 
-    async fn delete_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>> {
-        job::delete_job(self, job_id).await
-    }
+}
 
-    async fn abort_unfinished_jobs(&self, message: &str) -> anyhow::Result<()> {
-        job::abort_unfinished_jobs(self, message).await
-    }
-
-    async fn list_prunable_successful_job_ids(
-        &self,
-        package_name: &str,
-        mock_chroot: &str,
-        keep: usize,
-    ) -> anyhow::Result<Vec<Uuid>> {
-        job::list_prunable_successful_job_ids(self, package_name, mock_chroot, keep).await
-    }
-
+#[async_trait]
+impl UserStore for DieselStore {
     async fn user_count(&self) -> anyhow::Result<u64> {
         user::user_count(self).await
     }
@@ -517,6 +385,7 @@ impl JobStore for DieselStore {
     async fn increment_user_download_bytes(&self, user_id: Uuid, bytes: u64) -> anyhow::Result<()> {
         user::increment_user_download_bytes(self, user_id, bytes).await
     }
+
 }
 
 #[derive(Debug, Queryable, Selectable)]

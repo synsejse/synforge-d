@@ -15,7 +15,7 @@ use synforge_core::{
 use uuid::Uuid;
 
 use super::SynforgeService;
-use crate::db::JobStore;
+use crate::db::{JobStore, PackageStore, RepoStore};
 
 impl SynforgeService {
     pub async fn list_packages(

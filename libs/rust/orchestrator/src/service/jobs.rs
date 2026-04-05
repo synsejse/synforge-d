@@ -12,7 +12,7 @@ use synforge_core::{
 use uuid::Uuid;
 
 use super::SynforgeService;
-use crate::db::JobStore;
+use crate::db::{JobStore, RepoStore};
 
 impl SynforgeService {
     pub async fn resolve_job_artifact_path(

@@ -11,7 +11,7 @@ use synforge_core::{
 };
 
 use super::SynforgeService;
-use crate::db::JobStore;
+use crate::db::{PackageStore, UserStore};
 
 impl SynforgeService {
     pub async fn config_schema(&self) -> ConfigSchemaResponse {

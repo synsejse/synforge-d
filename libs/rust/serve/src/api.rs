@@ -6,13 +6,11 @@ use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use synforge_core::api::{
-    BrowseRepositoryRequest, BrowseRepositoryResponse, BuildJobListResponse, BuildJobResponse,
-    CreatePackageRequest, JobArtifactListResponse, JobArtifactMetaResponse, JobListQuery,
-    LogChunkQuery, LogChunkResponse, LogManifestResponse, LogMetaResponse, MockChrootListResponse,
-    PackageActionResponse, PackageActionTargetResult, PackageBuildHistoryResponse,
-    PackageListQuery, PackageListResponse, PackageResponse, PaginationQuery, PruneJobsResponse,
-    RebuildRequest, RefreshRequest, RepoInventoryQuery, RepoInventoryResponse, RepoSummaryResponse,
-    UpdatePackageRequest,
+    BuildJobListResponse, BuildJobResponse, CreatePackageRequest, JobArtifactListResponse,
+    JobArtifactMetaResponse, JobListQuery, LogChunkQuery, LogChunkResponse, LogManifestResponse,
+    LogMetaResponse, MockChrootListResponse, PackageActionResponse, PackageActionTargetResult,
+    PackageBuildHistoryResponse, PackageListQuery, PackageListResponse, PackageResponse,
+    PaginationQuery, PruneJobsResponse, RebuildRequest, RefreshRequest, UpdatePackageRequest,
 };
 use tokio_util::io::ReaderStream;
 use uuid::Uuid;
@@ -20,9 +18,11 @@ use uuid::Uuid;
 use crate::{AppError, AppState};
 
 pub(crate) mod config;
+pub(crate) mod repo;
 pub(crate) mod session;
 pub(crate) mod users;
 pub(crate) use config::{get_config_schema, get_effective_config, update_runtime_settings};
+pub(crate) use repo::{browse_repository, get_repo_inventory, get_repo_summary};
 pub(crate) use session::{
     get_session, get_setup_status, initialize_setup, login_session, logout_session,
 };
@@ -167,25 +167,6 @@ pub(crate) async fn list_mock_chroots(
     State(state): State<AppState>,
 ) -> Result<Json<MockChrootListResponse>, AppError> {
     Ok(Json(state.service.list_mock_chroots().await?))
-}
-
-#[utoipa::path(
-    post,
-    path = "/api/v1/repositories/browse",
-    tag = "Repository",
-    request_body = BrowseRepositoryRequest,
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "Browse repository files", body = BrowseRepositoryResponse),
-        (status = 400, body = synforge_core::api::ApiError),
-        (status = 401, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn browse_repository(
-    State(state): State<AppState>,
-    Json(request): Json<BrowseRepositoryRequest>,
-) -> Result<Json<BrowseRepositoryResponse>, AppError> {
-    Ok(Json(state.service.browse_repository(request).await?))
 }
 
 #[utoipa::path(
@@ -706,49 +687,4 @@ fn normalize_artifact_path(path: &str) -> anyhow::Result<String> {
     }
 
     Ok(normalized.to_string_lossy().into_owned())
-}
-
-#[utoipa::path(
-    get,
-    path = "/api/v1/repo/files",
-    tag = "Repository",
-    params(RepoInventoryQuery),
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "List managed repository files", body = RepoInventoryResponse),
-        (status = 401, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn get_repo_inventory(
-    State(state): State<AppState>,
-    Query(query): Query<RepoInventoryQuery>,
-) -> Result<Json<RepoInventoryResponse>, AppError> {
-    Ok(Json(
-        state
-            .service
-            .get_repo_inventory(
-                query.limit,
-                query.offset,
-                query.package_name,
-                query.mock_chroot,
-                query.kind,
-            )
-            .await?,
-    ))
-}
-
-#[utoipa::path(
-    get,
-    path = "/api/v1/repo/summary",
-    tag = "Repository",
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "Get repository summary metrics", body = RepoSummaryResponse),
-        (status = 401, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn get_repo_summary(
-    State(state): State<AppState>,
-) -> Result<Json<RepoSummaryResponse>, AppError> {
-    Ok(Json(state.service.get_repo_summary().await?))
 }

@@ -12,6 +12,7 @@ use crate::{
     package::{BuildEnvVar, PackageDefinition, SpecSource},
 };
 
+// --- Pagination ---
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct PageInfo {
     pub limit: usize,
@@ -22,6 +23,7 @@ pub struct PageInfo {
     pub has_more: bool,
 }
 
+// --- Packages ---
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct CreatePackageRequest {
     pub name: String,
@@ -43,6 +45,8 @@ pub struct CreatePackageRequest {
     pub build_env: Vec<BuildEnvVar>,
 }
 
+/// PATCH-style update payload for packages.
+/// Optional fields use "None means keep existing value" semantics.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct UpdatePackageRequest {
     pub source: SpecSource,
@@ -166,6 +170,7 @@ pub struct PackageListQuery {
     pub enabled: Option<bool>,
 }
 
+// --- Jobs & Artifacts ---
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct BuildJobResponse {
     pub job: BuildJob,
@@ -242,6 +247,7 @@ pub struct JobListQuery {
     pub mock_chroot: Option<String>,
 }
 
+// --- Users, Session, Setup ---
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct UserResponse {
     pub user: UserAccount,
@@ -334,12 +340,14 @@ fn default_user_active() -> bool {
     true
 }
 
+// --- Common API errors ---
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct ApiError {
     pub code: &'static str,
     pub message: String,
 }
 
+// --- Runtime configuration ---
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct EffectiveConfigView {
     #[schema(value_type = String)]
@@ -406,6 +414,7 @@ pub struct ConfigSchemaResponse {
     pub fields: Vec<ConfigFieldDescriptor>,
 }
 
+// --- Logs ---
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct LogChunkResponse {
     pub job_id: uuid::Uuid,

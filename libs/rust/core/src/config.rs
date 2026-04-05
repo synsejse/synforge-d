@@ -136,7 +136,7 @@ impl DaemonConfig {
 
     pub fn load_from_file(path: &std::path::Path) -> anyhow::Result<Self> {
         let raw = std::fs::read_to_string(path)?;
-        let mut config: Self = serde_yaml::from_str(&raw)?;
+        let mut config: Self = serde_yml::from_str(&raw)?;
         if config.runtime_root.as_os_str().is_empty() {
             config.runtime_root = default_runtime_root();
         }
@@ -153,7 +153,7 @@ impl DaemonConfig {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        let contents = serde_yaml::to_string(self)?;
+        let contents = serde_yml::to_string(self)?;
         write_config_atomically(path, &contents)
     }
 

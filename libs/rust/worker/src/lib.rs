@@ -1,3 +1,4 @@
+mod artifact;
 mod executor;
 mod git;
 mod logging;

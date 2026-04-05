@@ -1,9 +1,12 @@
 mod api;
+mod auth;
 pub mod openapi;
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
+pub(crate) use crate::auth::session::{clear_session_cookie, create_session_cookie};
+use crate::auth::session::{decode_session_cookie, find_cookie, session_cookie_name};
 use axum::body::Body;
 use axum::extract::State;
 use axum::extract::{Extension, Path};
@@ -14,25 +17,16 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
 use base64::Engine;
-use hmac::{Hmac, Mac};
-use serde::{Deserialize, Serialize};
-use sha2::Sha256;
 use synforge_core::{
     api::ApiError,
     error::SynforgeError,
     model::{UserAccount, UserPermission},
 };
 use synforge_orchestrator::SynforgeService;
-use time::{Duration, OffsetDateTime};
 use tokio_util::io::ReaderStream;
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-use uuid::Uuid;
-
-type HmacSha256 = Hmac<Sha256>;
-const SESSION_COOKIE_NAME: &str = "synforge_session";
-const SESSION_TTL_HOURS: i64 = 24 * 7;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -163,7 +157,7 @@ async fn authenticate_session_headers(
     headers: &HeaderMap,
     required: UserPermission,
 ) -> Result<UserAccount, AppError> {
-    let cookie_value = find_cookie(headers, SESSION_COOKIE_NAME)
+    let cookie_value = find_cookie(headers, session_cookie_name())
         .ok_or_else(|| AppError::auth("missing session cookie"))?;
     let claims = decode_session_cookie(
         cookie_value,
@@ -253,85 +247,6 @@ fn is_setup_complete(state: &AppState) -> Result<bool, AppError> {
             .map(|config| config.bootstrap_completed)
             .unwrap_or(false),
     )
-}
-
-fn find_cookie<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
-    let header = headers.get(header::COOKIE)?.to_str().ok()?;
-    header.split(';').map(str::trim).find_map(|pair| {
-        let (key, value) = pair.split_once('=')?;
-        (key == name).then_some(value)
-    })
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct UiSessionClaims {
-    pub user_id: Uuid,
-    pub issued_at: i64,
-    pub expires_at: i64,
-}
-
-pub(crate) fn create_session_cookie(
-    user_id: Uuid,
-    secret: &[u8],
-    secure: bool,
-) -> Result<HeaderValue, AppError> {
-    let now = OffsetDateTime::now_utc();
-    let claims = UiSessionClaims {
-        user_id,
-        issued_at: now.unix_timestamp(),
-        expires_at: (now + Duration::hours(SESSION_TTL_HOURS)).unix_timestamp(),
-    };
-    let encoded = encode_session_cookie(&claims, secret)?;
-    let mut cookie = format!(
-        "{SESSION_COOKIE_NAME}={encoded}; Path=/; Max-Age={}; HttpOnly; SameSite=Lax",
-        Duration::hours(SESSION_TTL_HOURS).whole_seconds()
-    );
-    if secure {
-        cookie.push_str("; Secure");
-    }
-    HeaderValue::from_str(&cookie).map_err(AppError::from)
-}
-
-pub(crate) fn clear_session_cookie(secure: bool) -> Result<HeaderValue, AppError> {
-    let mut cookie = format!("{SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax");
-    if secure {
-        cookie.push_str("; Secure");
-    }
-    HeaderValue::from_str(&cookie).map_err(AppError::from)
-}
-
-fn encode_session_cookie(claims: &UiSessionClaims, secret: &[u8]) -> Result<String, AppError> {
-    let payload = serde_json::to_vec(claims).map_err(AppError::from)?;
-    let payload = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(payload);
-    let mut mac =
-        HmacSha256::new_from_slice(secret).map_err(|_| AppError::auth("invalid session secret"))?;
-    mac.update(payload.as_bytes());
-    let signature =
-        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes());
-    Ok(format!("{payload}.{signature}"))
-}
-
-fn decode_session_cookie(cookie: &str, secret: &[u8]) -> Result<UiSessionClaims, AppError> {
-    let (payload, signature) = cookie
-        .split_once('.')
-        .ok_or_else(|| AppError::auth("invalid session cookie"))?;
-    let mut mac =
-        HmacSha256::new_from_slice(secret).map_err(|_| AppError::auth("invalid session secret"))?;
-    mac.update(payload.as_bytes());
-    let signature = base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .decode(signature)
-        .map_err(|_| AppError::auth("invalid session cookie"))?;
-    mac.verify_slice(&signature)
-        .map_err(|_| AppError::auth("invalid session cookie"))?;
-    let payload = base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .decode(payload)
-        .map_err(|_| AppError::auth("invalid session cookie"))?;
-    let claims = serde_json::from_slice::<UiSessionClaims>(&payload)
-        .map_err(|_| AppError::auth("invalid session cookie"))?;
-    if claims.expires_at <= OffsetDateTime::now_utc().unix_timestamp() {
-        return Err(AppError::auth("session expired"));
-    }
-    Ok(claims)
 }
 
 async fn repo_root() -> Result<StatusCode, AppError> {

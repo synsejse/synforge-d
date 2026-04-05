@@ -1,0 +1,564 @@
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
+import {
+  faMagnifyingGlass,
+  faPlus,
+} from "@fortawesome/free-solid-svg-icons";
+import api from "../lib/api";
+import type {
+  BuildEnvVar,
+  CreatePackageRequest,
+  SpecSource,
+} from "../lib/types";
+import FaIcon from "./FaIcon";
+import SelectionDialog from "./common/SelectionDialog";
+
+interface AddPackageModalProps {
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function formatMockChroots(chroots: string[]) {
+  return chroots.join(", ");
+}
+
+function encodeBuildEnv(entries: BuildEnvVar[]): string {
+  return entries.map((entry) => `${entry.key}=${entry.value}`).join("\n");
+}
+
+function parseBuildEnv(input: string): BuildEnvVar[] {
+  return input
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const separator = line.indexOf("=");
+      if (separator === -1) {
+        return { key: line, value: "" };
+      }
+      return {
+        key: line.slice(0, separator).trim(),
+        value: line.slice(separator + 1),
+      };
+    });
+}
+
+export default function AddPackageModal({
+  onClose,
+  onSuccess,
+}: AddPackageModalProps) {
+  const [name, setName] = useState("");
+  const [repoUrl, setRepoUrl] = useState("");
+  const [specPath, setSpecPath] = useState("");
+  const [enabled, setEnabled] = useState(true);
+  const [poll, setPoll] = useState(true);
+  const [publishSrpm, setPublishSrpm] = useState(true);
+  const [publishDebuginfo, setPublishDebuginfo] = useState(true);
+  const [networkAccess, setNetworkAccess] = useState(false);
+  const [mockChroots, setMockChroots] = useState<string[]>(["fedora-44-x86_64"]);
+  const [pollIntervalSeconds, setPollIntervalSeconds] = useState("900");
+  const [buildTimeoutSeconds, setBuildTimeoutSeconds] = useState("7200");
+  const [packageHistoryCount, setPackageHistoryCount] = useState("3");
+  const [buildEnv, setBuildEnv] = useState(encodeBuildEnv([]));
+  const [browsing, setBrowsing] = useState(false);
+  const [browseError, setBrowseError] = useState<string | null>(null);
+  const [browseFiles, setBrowseFiles] = useState<string[]>([]);
+  const [availableChroots, setAvailableChroots] = useState<string[]>([]);
+  const [chrootsLoading, setChrootsLoading] = useState(true);
+  const [showSpecPicker, setShowSpecPicker] = useState(false);
+  const [showChrootPicker, setShowChrootPicker] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+
+  const selectableFiles = useMemo(
+    () => browseFiles.filter((file) => file.endsWith(".spec")),
+    [browseFiles],
+  );
+
+  useEffect(() => {
+    async function loadChroots() {
+      try {
+        const response = await api.listMockChroots();
+        setAvailableChroots(response.chroots);
+        setMockChroots((current) => {
+          if (current.some((value) => response.chroots.includes(value))) {
+            return current.filter((value) => response.chroots.includes(value));
+          }
+          if (response.chroots.includes("fedora-44-x86_64")) {
+            return ["fedora-44-x86_64"];
+          }
+          return response.chroots.length > 0 ? [response.chroots[0]] : [];
+        });
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load mock chroots");
+      } finally {
+        setChrootsLoading(false);
+      }
+    }
+
+    loadChroots();
+  }, []);
+
+  useEffect(() => {
+    const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
+      'input, select, textarea, button, [href], [tabindex]:not([tabindex="-1"])',
+    );
+    firstFocusable?.focus();
+  }, []);
+
+  async function handleBrowse() {
+    if (!repoUrl.trim()) {
+      setBrowseError("Repository URL is required before browsing.");
+      return;
+    }
+    setBrowsing(true);
+    setBrowseError(null);
+    try {
+      const response = await api.browseRepository({ repo_url: repoUrl.trim() });
+      setBrowseFiles(response.files);
+      if (!specPath && response.spec_files.length > 0) {
+        setSpecPath(response.spec_files[0]);
+      }
+    } catch (e) {
+      setBrowseError(
+        e instanceof Error ? e.message : "Failed to browse repository",
+      );
+    } finally {
+      setBrowsing(false);
+    }
+  }
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError(null);
+
+    const source: SpecSource = {
+      repo_url: repoUrl.trim(),
+      spec_file: specPath.trim(),
+      poll,
+    };
+
+    const request: CreatePackageRequest = {
+      name: name.trim(),
+      source,
+      enabled,
+      publish_srpm: publishSrpm,
+      publish_debuginfo: publishDebuginfo,
+      network_access: networkAccess,
+      mock_chroots: mockChroots,
+      poll_interval_seconds: Number(pollIntervalSeconds),
+      build_timeout_seconds: Number(buildTimeoutSeconds),
+      package_history_count: Number(packageHistoryCount),
+      build_env: parseBuildEnv(buildEnv),
+    };
+
+    try {
+      await api.createPackage(request);
+      onSuccess();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create package");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function toggleChroot(chroot: string, checked: boolean) {
+    setMockChroots((current) => {
+      const next = checked
+        ? Array.from(new Set([...current, chroot]))
+        : current.filter((value) => value !== chroot);
+      return next;
+    });
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden overscroll-none bg-black/70 px-4 py-6"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="flex max-h-[calc(100dvh-3rem)] w-full max-w-3xl flex-col border border-zinc-800 bg-black"
+      >
+        <div className="border-b border-zinc-800 px-6 py-5">
+          <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">
+            Package
+          </p>
+          <h2 id={titleId} className="mt-2 text-2xl font-semibold text-white">
+            Add package
+          </h2>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-6 py-6"
+        >
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-zinc-300">
+              Package name
+            </span>
+            <input
+              type="text"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="mesa"
+              required
+              className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-zinc-300">
+              Git repository URL
+            </span>
+            <input
+              type="url"
+              value={repoUrl}
+              onChange={(event) => setRepoUrl(event.target.value)}
+              placeholder="https://github.com/example/repo.git"
+              required
+              className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+            />
+          </label>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+              <span>
+                <span className="block text-sm font-medium text-white">
+                  Enabled
+                </span>
+                <span className="mt-1 block text-xs text-zinc-400">
+                  Allow new builds for this package.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={enabled}
+                onChange={(event) => setEnabled(event.target.checked)}
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+              />
+            </label>
+
+            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+              <span>
+                <span className="block text-sm font-medium text-white">
+                  Enable polling
+                </span>
+                <span className="mt-1 block text-xs text-zinc-400">
+                  Automatically watch the source for updates.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={poll}
+                onChange={(event) => setPoll(event.target.checked)}
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+              />
+            </label>
+
+            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+              <span>
+                <span className="block text-sm font-medium text-white">
+                  Publish SRPM
+                </span>
+                <span className="mt-1 block text-xs text-zinc-400">
+                  Keep source RPM publication enabled for this package.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={publishSrpm}
+                onChange={(event) => setPublishSrpm(event.target.checked)}
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+              />
+            </label>
+
+            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+              <span>
+                <span className="block text-sm font-medium text-white">
+                  Publish debug packages
+                </span>
+                <span className="mt-1 block text-xs text-zinc-400">
+                  Include debuginfo and debugsource RPMs in repository.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={publishDebuginfo}
+                onChange={(event) => setPublishDebuginfo(event.target.checked)}
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+              />
+            </label>
+
+            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3 md:col-span-2">
+              <span>
+                <span className="block text-sm font-medium text-white">
+                  Network access
+                </span>
+                <span className="mt-1 block text-xs text-zinc-400">
+                  Allow mock builds to access the network for packages that
+                  cannot build fully offline.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={networkAccess}
+                onChange={(event) => setNetworkAccess(event.target.checked)}
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="border border-zinc-800 bg-black p-4 lg:col-span-2">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <span className="block text-sm font-medium text-zinc-300">
+                    Mock chroots
+                  </span>
+                  <span className="mt-1 block text-xs text-zinc-500">
+                    Each selected chroot becomes a separate build job.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowChrootPicker(true)}
+                  className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950"
+                >
+                  Choose chroots
+                </button>
+              </div>
+              <div className="mt-4 border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-mono text-zinc-200">
+                {mockChroots.length > 0
+                  ? formatMockChroots(mockChroots)
+                  : "No chroots selected"}
+              </div>
+            </div>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-zinc-300">
+                Poll interval (seconds)
+              </span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={pollIntervalSeconds}
+                onChange={(event) => setPollIntervalSeconds(event.target.value)}
+                className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+                required
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-zinc-300">
+                Build timeout (seconds)
+              </span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={buildTimeoutSeconds}
+                onChange={(event) => setBuildTimeoutSeconds(event.target.value)}
+                className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+                required
+              />
+            </label>
+
+            <label className="block lg:col-span-2">
+              <span className="mb-2 block text-sm font-medium text-zinc-300">
+                History count
+              </span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={packageHistoryCount}
+                onChange={(event) => setPackageHistoryCount(event.target.value)}
+                className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+                required
+              />
+            </label>
+          </div>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-zinc-300">
+              Build environment
+            </span>
+            <textarea
+              value={buildEnv}
+              onChange={(event) => setBuildEnv(event.target.value)}
+              rows={6}
+              placeholder={
+                "KEY=value\nMESON_ARGS=-Dgallium-drivers=swrast\nRUSTFLAGS=-C debuginfo=1"
+              }
+              className="w-full border border-zinc-800 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition focus:border-zinc-600"
+            />
+            <span className="mt-2 block text-xs text-zinc-500">
+              One `KEY=value` entry per line. Applied to SRPM creation and mock
+              rebuild steps.
+            </span>
+          </label>
+
+          <div className="border border-zinc-800 bg-black p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="text-sm font-medium text-white">Spec file</div>
+                <div className="mt-1 text-xs text-zinc-400">
+                  Browse the repository and select the `.spec` file to build.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSpecPicker(true)}
+                disabled={browsing}
+                className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:opacity-60"
+              >
+                <FaIcon icon={faMagnifyingGlass} className="mr-2" />
+                Browse repository
+              </button>
+            </div>
+
+            <input
+              type="text"
+              value={specPath}
+              onChange={(event) => setSpecPath(event.target.value)}
+              placeholder="path/to/package.spec"
+              required
+              className="mt-4 w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+            />
+          </div>
+
+          {error && (
+            <div className="border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-200">
+              {error}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="border border-zinc-200 bg-zinc-100 px-4 py-2 text-sm font-semibold text-black transition hover:bg-white disabled:opacity-70"
+            >
+              <FaIcon icon={faPlus} className="mr-2" />
+              {submitting ? "Adding…" : "Add Package"}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {showSpecPicker && (
+        <SelectionDialog
+          title="Choose spec file"
+          subtitle="Browse the repository and select the .spec file to build."
+          onClose={() => setShowSpecPicker(false)}
+        >
+          <div className="space-y-4">
+            <button
+              type="button"
+              onClick={handleBrowse}
+              disabled={browsing}
+              className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:opacity-60"
+            >
+              <FaIcon icon={faMagnifyingGlass} className="mr-2" />
+              {browsing ? "Browsing…" : "Load repository files"}
+            </button>
+            {browseError ? (
+              <div className="border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-200">
+                {browseError}
+              </div>
+            ) : null}
+            <div className="max-h-[50vh] overflow-auto border border-zinc-800 bg-black">
+              {selectableFiles.length > 0 ? (
+                selectableFiles.map((file) => (
+                  <button
+                    key={file}
+                    type="button"
+                    onClick={() => {
+                      setSpecPath(file);
+                      setShowSpecPicker(false);
+                    }}
+                    className={`block w-full border-b border-zinc-800 px-4 py-2 text-left font-mono text-sm transition last:border-b-0 ${
+                      specPath === file
+                        ? "bg-zinc-950 text-white"
+                        : "bg-black text-zinc-300 hover:bg-zinc-950"
+                    }`}
+                  >
+                    {file}
+                  </button>
+                ))
+              ) : (
+                <div className="px-4 py-3 text-sm text-zinc-400">
+                  No spec files loaded yet.
+                </div>
+              )}
+            </div>
+          </div>
+        </SelectionDialog>
+      )}
+
+      {showChrootPicker && (
+        <SelectionDialog
+          title="Choose mock chroots"
+          subtitle="Select one or more build targets."
+          onClose={() => setShowChrootPicker(false)}
+        >
+          <div className="max-h-[50vh] overflow-y-auto border border-zinc-800 bg-black">
+            {chrootsLoading ? (
+              <div className="px-4 py-3 text-sm text-zinc-400">
+                Loading available chroots…
+              </div>
+            ) : availableChroots.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-zinc-400">
+                No mock chroots available.
+              </div>
+            ) : (
+              <div className="divide-y divide-white/8">
+                {availableChroots.map((chroot) => (
+                  <label
+                    key={chroot}
+                    className="flex items-center justify-between gap-4 px-4 py-3 text-sm text-zinc-200"
+                  >
+                    <span className="font-mono">{chroot}</span>
+                    <input
+                      type="checkbox"
+                      checked={mockChroots.includes(chroot)}
+                      onChange={(event) =>
+                        toggleChroot(chroot, event.target.checked)
+                      }
+                      className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        </SelectionDialog>
+      )}
+    </div>
+  );
+}

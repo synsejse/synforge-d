@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import api from "../lib/api";
-import { formatDateTime } from "../lib/datetime";
-import type { BuildJobResponse, RepoSummaryResponse } from "../lib/types";
-import EmptyState from "./EmptyState";
-import FaIcon from "./FaIcon";
-import LoadingBlock from "./LoadingBlock";
-import MetricCard from "./MetricCard";
-import PageHeader from "./PageHeader";
-import StatusPill from "./StatusPill";
+import api from "../../lib/api";
+import { formatBytes } from "../../lib/bytes";
+import { formatDateTime } from "../../lib/datetime";
+import type { BuildJobResponse, RepoSummaryResponse } from "../../lib/types";
+import ErrorMessage from "../common/ErrorMessage";
+import EmptyState from "../ui/EmptyState";
+import FaIcon from "../ui/FaIcon";
+import LoadingBlock from "../ui/LoadingBlock";
+import MetricCard from "../ui/MetricCard";
+import PageHeader from "../ui/PageHeader";
+import StatusPill from "../ui/StatusPill";
 import {
   faBoxesStacked,
   faChartLine,
@@ -68,11 +70,7 @@ export default function Dashboard() {
   }
 
   if (error) {
-    return (
-      <div className="border border-zinc-800 bg-black p-4 text-zinc-200">
-        Error: {error}
-      </div>
-    );
+    return <ErrorMessage message={error} />;
   }
 
   return (
@@ -287,12 +285,4 @@ function MiniMetric({
       </div>
     </div>
   );
-}
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GiB`;
 }

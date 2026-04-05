@@ -1,10 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
-import api from "../lib/api";
-import type { ConfigFieldDescriptor, DaemonConfig } from "../lib/types";
-import LoadingBlock from "./LoadingBlock";
-import PageHeader from "./PageHeader";
+import api from "../../lib/api";
+import type { ConfigFieldDescriptor, DaemonConfig } from "../../lib/types";
+import ErrorMessage from "../common/ErrorMessage";
+import LoadingBlock from "../ui/LoadingBlock";
+import PageHeader from "../ui/PageHeader";
 import { faSave, faServer } from "@fortawesome/free-solid-svg-icons";
-import FaIcon from "./FaIcon";
+import FaIcon from "../ui/FaIcon";
 
 export default function Settings() {
   const [config, setConfig] = useState<DaemonConfig | null>(null);
@@ -57,11 +58,7 @@ export default function Settings() {
   }
 
   if (error || !config) {
-    return (
-      <div className="border border-zinc-800 bg-black p-4 text-zinc-200">
-        Error: {error || "Failed to load"}
-      </div>
-    );
+    return <ErrorMessage message={error || "Failed to load"} />;
   }
 
   const groupedFields = groupConfigFields(schema);

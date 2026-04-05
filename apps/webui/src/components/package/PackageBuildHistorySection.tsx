@@ -4,12 +4,13 @@ import {
   faRotate,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
-import { formatDateTime } from "../lib/datetime";
-import type { PackageBuildInventoryEntry } from "../lib/types";
-import EmptyState from "./EmptyState";
-import FaIcon from "./FaIcon";
-import LoadingBlock from "./LoadingBlock";
-import StatusPill from "./StatusPill";
+import { formatDateTime } from "../../lib/datetime";
+import type { PackageBuildInventoryEntry } from "../../lib/types";
+import PaginationControls from "../common/PaginationControls";
+import EmptyState from "../ui/EmptyState";
+import FaIcon from "../ui/FaIcon";
+import LoadingBlock from "../ui/LoadingBlock";
+import StatusPill from "../ui/StatusPill";
 
 interface PackageBuildHistorySectionProps {
   buildsLoaded: boolean;
@@ -171,29 +172,19 @@ export default function PackageBuildHistorySection({
               </tbody>
             </table>
           </div>
-          <div className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-400">
-            <span>
-              Showing {buildsOffset + 1}-{buildsOffset + builds.length}
-              {buildsTotal !== null ? ` of ${buildsTotal}` : ""}
-            </span>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={onLoadPrevious}
-                disabled={buildsLoading || buildsOffset === 0}
-                className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                onClick={onLoadNext}
-                disabled={buildsLoading || !buildsHasMore}
-                className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
+          <div className="border border-zinc-800 bg-black px-4 py-3">
+            <PaginationControls
+              onPrevious={onLoadPrevious}
+              onNext={onLoadNext}
+              previousDisabled={buildsLoading || buildsOffset === 0}
+              nextDisabled={buildsLoading || !buildsHasMore}
+              summary={
+                <>
+                  Showing {buildsOffset + 1}-{buildsOffset + builds.length}
+                  {buildsTotal !== null ? ` of ${buildsTotal}` : ""}
+                </>
+              }
+            />
           </div>
         </div>
       )}

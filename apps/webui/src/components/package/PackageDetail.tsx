@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import api from "../lib/api";
+import api from "../../lib/api";
 import {
   summarizePackageAction,
   summarizePackageTargetAction,
-} from "../lib/package-actions";
-import LoadingBlock from "./LoadingBlock";
+} from "../../lib/package-actions";
+import ErrorMessage from "../common/ErrorMessage";
+import LoadingBlock from "../ui/LoadingBlock";
 import PackageBuildHistorySection from "./PackageBuildHistorySection";
 import PackageEditFormSection, {
   type PackageEditFormState,
@@ -19,7 +20,7 @@ import type {
   PublishedRepoFile,
   SpecSource,
   UpdatePackageRequest,
-} from "../lib/types";
+} from "../../lib/types";
 
 interface Props {
   packageName: string;
@@ -366,11 +367,7 @@ export default function PackageDetail({ packageName }: Props) {
   }
 
   if (error || !pkg) {
-    return (
-      <div className="border border-zinc-800 bg-black p-4 text-zinc-200">
-        Error: {error || "Failed to load package"}
-      </div>
-    );
+    return <ErrorMessage message={error || "Failed to load package"} />;
   }
 
   return (

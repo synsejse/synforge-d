@@ -1,5 +1,5 @@
 import { faArrowLeft, faHammer, faRotate, faTrash } from "@fortawesome/free-solid-svg-icons";
-import FaIcon from "./FaIcon";
+import FaIcon from "../ui/FaIcon";
 
 interface PackageDetailHeaderProps {
   packageName: string;

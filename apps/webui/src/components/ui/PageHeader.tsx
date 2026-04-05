@@ -1,5 +1,5 @@
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import FaIcon from "./FaIcon";
+import ActionButton from "./ActionButton";
 
 interface ActionLink {
   href: string;
@@ -34,32 +34,30 @@ export default function PageHeader({ eyebrow, title, description, actions = [] }
         {actions.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {actions.map((action) => {
-              const classes = [
-                "inline-flex items-center border px-4 py-2 text-sm transition",
-                (action.variant ?? "default") === "primary"
-                  ? "border-zinc-200 bg-zinc-100 font-semibold text-black hover:bg-white"
-                  : "border-zinc-800 bg-black text-zinc-200 hover:border-zinc-600 hover:bg-zinc-950",
-              ].join(" ");
-
-              const content = (
-                <>
-                  {action.icon ? <FaIcon icon={action.icon} className="mr-2 text-[0.95em]" /> : null}
-                  {action.label}
-                </>
-              );
-
               if ("href" in action) {
                 return (
-                  <a key={`${action.href}:${action.label}`} href={action.href} className={classes}>
-                    {content}
-                  </a>
+                  <ActionButton
+                    key={`${action.href}:${action.label}`}
+                    href={action.href}
+                    icon={action.icon}
+                    variant={action.variant}
+                    className="px-4 py-2 text-sm"
+                  >
+                    {action.label}
+                  </ActionButton>
                 );
               }
 
               return (
-                <button key={action.label} onClick={action.onClick} className={classes}>
-                  {content}
-                </button>
+                <ActionButton
+                  key={action.label}
+                  onClick={action.onClick}
+                  icon={action.icon}
+                  variant={action.variant}
+                  className="px-4 py-2 text-sm"
+                >
+                  {action.label}
+                </ActionButton>
               );
             })}
           </div>

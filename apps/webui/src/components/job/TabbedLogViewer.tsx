@@ -3,11 +3,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import type { CSSProperties, UIEvent } from "react";
 
-import api from "../lib/api";
-import type { LogManifestResponse } from "../lib/types";
-import EmptyState from "./EmptyState";
-import FaIcon from "./FaIcon";
-import LoadingBlock from "./LoadingBlock";
+import api from "../../lib/api";
+import { formatBytes } from "../../lib/bytes";
+import type { LogManifestResponse } from "../../lib/types";
+import EmptyState from "../ui/EmptyState";
+import FaIcon from "../ui/FaIcon";
+import LoadingBlock from "../ui/LoadingBlock";
 
 interface Props {
   jobId: string;
@@ -259,7 +260,7 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
             {source.file}
             {source.size > 0 && (
               <span className="ml-2 text-xs text-zinc-500">
-                ({formatBytes(source.size)})
+                ({formatBytes(source.size, "metric")})
               </span>
             )}
           </button>
@@ -374,14 +375,4 @@ function VirtualizedAnsiLines({
       </div>
     </div>
   );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

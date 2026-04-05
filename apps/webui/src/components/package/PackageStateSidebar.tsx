@@ -1,6 +1,6 @@
-import type { PackageResponse } from "../lib/types";
-import DetailStat from "./DetailStat";
-import StatusPill from "./StatusPill";
+import type { PackageResponse } from "../../lib/types";
+import DetailStat from "../ui/DetailStat";
+import StatusPill from "../ui/StatusPill";
 
 interface PackageStateSidebarProps {
   pkg: PackageResponse;

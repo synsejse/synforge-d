@@ -1,7 +1,7 @@
 import { faMagnifyingGlass, faSave } from "@fortawesome/free-solid-svg-icons";
 import type { FormEvent } from "react";
-import FaIcon from "./FaIcon";
-import SelectionDialog from "./common/SelectionDialog";
+import FaIcon from "../ui/FaIcon";
+import SelectionDialog from "../common/SelectionDialog";
 
 export interface PackageEditFormState {
   repoUrl: string;

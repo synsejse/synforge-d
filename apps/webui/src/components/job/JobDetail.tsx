@@ -1,12 +1,13 @@
 import { Suspense, lazy, useEffect, useState } from "react";
-import api from "../lib/api";
-import DetailStat from "./DetailStat";
-import ArtifactList from "./job/ArtifactList";
-import FaIcon from "./FaIcon";
-import LoadingBlock from "./LoadingBlock";
-import StatusPill from "./StatusPill";
-import { formatDateTime } from "../lib/datetime";
-import type { BuildArtifact, BuildJobResponse } from "../lib/types";
+import api from "../../lib/api";
+import DetailStat from "../ui/DetailStat";
+import ArtifactList from "./ArtifactList";
+import ErrorMessage from "../common/ErrorMessage";
+import FaIcon from "../ui/FaIcon";
+import LoadingBlock from "../ui/LoadingBlock";
+import StatusPill from "../ui/StatusPill";
+import { formatDateTime } from "../../lib/datetime";
+import type { BuildArtifact, BuildJobResponse } from "../../lib/types";
 import {
   faArrowLeft,
   faCircle,
@@ -137,11 +138,7 @@ export default function JobDetail({ jobId }: Props) {
   }
 
   if (error || !job) {
-    return (
-      <div className="border border-zinc-800 bg-black p-4 text-zinc-200">
-        Error: {error || "Job not found"}
-      </div>
-    );
+    return <ErrorMessage message={error || "Job not found"} />;
   }
 
   return (

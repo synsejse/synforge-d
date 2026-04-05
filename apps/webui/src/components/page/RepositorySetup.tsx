@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import api from "../lib/api";
-import LoadingBlock from "./LoadingBlock";
-import PageHeader from "./PageHeader";
-import FaIcon from "./FaIcon";
+import api from "../../lib/api";
+import ErrorMessage from "../common/ErrorMessage";
+import LoadingBlock from "../ui/LoadingBlock";
+import PageHeader from "../ui/PageHeader";
+import FaIcon from "../ui/FaIcon";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import {
@@ -71,11 +72,7 @@ export default function RepositorySetup() {
   }
 
   if (error) {
-    return (
-      <div className="border border-zinc-800 bg-black p-4 text-zinc-200">
-        Error: {error}
-      </div>
-    );
+    return <ErrorMessage message={error} />;
   }
 
   return (

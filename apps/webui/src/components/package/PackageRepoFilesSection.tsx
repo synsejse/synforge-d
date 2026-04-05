@@ -1,9 +1,11 @@
 import { faBoxesStacked } from "@fortawesome/free-solid-svg-icons";
-import { formatDateTime } from "../lib/datetime";
-import type { PublishedRepoFile } from "../lib/types";
-import EmptyState from "./EmptyState";
-import FaIcon from "./FaIcon";
-import LoadingBlock from "./LoadingBlock";
+import { formatBytes } from "../../lib/bytes";
+import { formatDateTime } from "../../lib/datetime";
+import type { PublishedRepoFile } from "../../lib/types";
+import PaginationControls from "../common/PaginationControls";
+import EmptyState from "../ui/EmptyState";
+import FaIcon from "../ui/FaIcon";
+import LoadingBlock from "../ui/LoadingBlock";
 
 interface PackageRepoFilesSectionProps {
   repoFilesLoaded: boolean;
@@ -16,14 +18,6 @@ interface PackageRepoFilesSectionProps {
   repoFilesHasMore: boolean;
   onLoadPrevious: () => void;
   onLoadNext: () => void;
-}
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GiB`;
 }
 
 export default function PackageRepoFilesSection({
@@ -116,29 +110,19 @@ export default function PackageRepoFilesSection({
               </tbody>
             </table>
           </div>
-          <div className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-400">
-            <span>
-              Showing {repoFilesOffset + 1}-{repoFilesOffset + repoFiles.length}
-              {repoFilesTotal !== null ? ` of ${repoFilesTotal}` : ""}
-            </span>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={onLoadPrevious}
-                disabled={repoFilesLoading || repoFilesOffset === 0}
-                className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                onClick={onLoadNext}
-                disabled={repoFilesLoading || !repoFilesHasMore}
-                className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
+          <div className="border border-zinc-800 bg-black px-4 py-3">
+            <PaginationControls
+              onPrevious={onLoadPrevious}
+              onNext={onLoadNext}
+              previousDisabled={repoFilesLoading || repoFilesOffset === 0}
+              nextDisabled={repoFilesLoading || !repoFilesHasMore}
+              summary={
+                <>
+                  Showing {repoFilesOffset + 1}-{repoFilesOffset + repoFiles.length}
+                  {repoFilesTotal !== null ? ` of ${repoFilesTotal}` : ""}
+                </>
+              }
+            />
           </div>
         </div>
       )}

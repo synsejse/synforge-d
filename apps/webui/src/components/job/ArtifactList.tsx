@@ -1,22 +1,13 @@
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
+import { formatBytes } from "../../lib/bytes";
 import type { BuildArtifact } from "../../lib/types";
-import EmptyState from "../EmptyState";
-import FaIcon from "../FaIcon";
+import EmptyState from "../ui/EmptyState";
+import FaIcon from "../ui/FaIcon";
 
 interface ArtifactListProps {
   artifacts: BuildArtifact[];
   downloadingArtifactPath: string | null;
   onDownload: (artifact: BuildArtifact) => void;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export default function ArtifactList({
@@ -46,7 +37,7 @@ export default function ArtifactList({
                 <div className="mt-1 text-xs text-zinc-500">{artifact.sha256}</div>
               </div>
               <div className="text-sm text-zinc-300">
-                {formatBytes(artifact.size_bytes)}
+                {formatBytes(artifact.size_bytes, "metric")}
               </div>
               <div className="text-sm uppercase tracking-[0.18em] text-zinc-500">
                 {artifact.kind}

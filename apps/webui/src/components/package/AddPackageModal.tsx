@@ -10,14 +10,14 @@ import {
   faMagnifyingGlass,
   faPlus,
 } from "@fortawesome/free-solid-svg-icons";
-import api from "../lib/api";
+import api from "../../lib/api";
 import type {
   BuildEnvVar,
   CreatePackageRequest,
   SpecSource,
-} from "../lib/types";
-import FaIcon from "./FaIcon";
-import SelectionDialog from "./common/SelectionDialog";
+} from "../../lib/types";
+import FaIcon from "../ui/FaIcon";
+import SelectionDialog from "../common/SelectionDialog";
 
 interface AddPackageModalProps {
   onClose: () => void;

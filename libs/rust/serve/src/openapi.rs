@@ -61,12 +61,12 @@ impl Modify for SecurityAddon {
         api::session::login_session,
         api::session::logout_session,
         api::session::get_session,
-        api::list_users,
-        api::create_user,
-        api::update_user,
-        api::change_user_password,
-        api::delete_user,
-        api::get_user_metrics
+        api::users::list_users,
+        api::users::create_user,
+        api::users::update_user,
+        api::users::change_user_password,
+        api::users::delete_user,
+        api::users::get_user_metrics
     ),
     components(
         schemas(

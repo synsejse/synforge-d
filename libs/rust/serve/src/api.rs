@@ -1,30 +1,31 @@
 use std::path::{Component, PathBuf};
 
-use axum::extract::{Extension, Path, Query, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use synforge_core::api::{
     BrowseRepositoryRequest, BrowseRepositoryResponse, BuildJobListResponse, BuildJobResponse,
-    ChangePasswordRequest, ConfigSchemaResponse, CreatePackageRequest, CreateUserRequest,
-    EffectiveConfigDto, JobArtifactListResponse, JobArtifactMetaResponse, JobListQuery,
-    LogChunkQuery, LogChunkResponse, LogManifestResponse, LogMetaResponse, MockChrootListResponse,
-    PackageActionResponse, PackageActionTargetResult, PackageBuildHistoryResponse,
-    PackageListQuery, PackageListResponse, PackageResponse, PaginationQuery, PruneJobsResponse,
-    RebuildRequest, RefreshRequest, RepoInventoryQuery, RepoInventoryResponse, RepoSummaryResponse,
-    UpdatePackageRequest, UpdateRuntimeSettingsRequest, UpdateUserRequest, UserListResponse,
-    UserMetricsResponse, UserResponse,
+    ConfigSchemaResponse, CreatePackageRequest, EffectiveConfigDto, JobArtifactListResponse,
+    JobArtifactMetaResponse, JobListQuery, LogChunkQuery, LogChunkResponse, LogManifestResponse,
+    LogMetaResponse, MockChrootListResponse, PackageActionResponse, PackageActionTargetResult,
+    PackageBuildHistoryResponse, PackageListQuery, PackageListResponse, PackageResponse,
+    PaginationQuery, PruneJobsResponse, RebuildRequest, RefreshRequest, RepoInventoryQuery,
+    RepoInventoryResponse, RepoSummaryResponse, UpdatePackageRequest, UpdateRuntimeSettingsRequest,
 };
-use synforge_core::model::UserAccount;
 use tokio_util::io::ReaderStream;
 use uuid::Uuid;
 
 use crate::{AppError, AppState};
 
 pub(crate) mod session;
+pub(crate) mod users;
 pub(crate) use session::{
     get_session, get_setup_status, initialize_setup, login_session, logout_session,
+};
+pub(crate) use users::{
+    change_user_password, create_user, delete_user, get_user_metrics, list_users, update_user,
 };
 
 pub fn router(_state: AppState) -> Router<AppState> {
@@ -524,140 +525,6 @@ pub(crate) async fn get_job_artifact_meta(
     Path((id, file)): Path<(Uuid, String)>,
 ) -> Result<Json<JobArtifactMetaResponse>, AppError> {
     Ok(Json(state.service.get_job_artifact_meta(id, &file).await?))
-}
-
-#[utoipa::path(
-    get,
-    path = "/api/v1/users",
-    tag = "Users",
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "List users", body = UserListResponse),
-        (status = 401, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn list_users(
-    State(state): State<AppState>,
-) -> Result<Json<UserListResponse>, AppError> {
-    Ok(Json(state.service.list_users().await?))
-}
-
-#[utoipa::path(
-    post,
-    path = "/api/v1/users",
-    tag = "Users",
-    request_body = CreateUserRequest,
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "Create user", body = UserResponse),
-        (status = 400, body = synforge_core::api::ApiError),
-        (status = 401, body = synforge_core::api::ApiError),
-        (status = 409, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn create_user(
-    State(state): State<AppState>,
-    Json(request): Json<CreateUserRequest>,
-) -> Result<Json<UserResponse>, AppError> {
-    Ok(Json(state.service.create_user(request).await?))
-}
-
-#[utoipa::path(
-    put,
-    path = "/api/v1/users/{id}",
-    tag = "Users",
-    params(
-        ("id" = Uuid, Path, description = "User identifier")
-    ),
-    request_body = UpdateUserRequest,
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "Update user", body = UserResponse),
-        (status = 400, body = synforge_core::api::ApiError),
-        (status = 401, body = synforge_core::api::ApiError),
-        (status = 404, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn update_user(
-    State(state): State<AppState>,
-    Path(id): Path<Uuid>,
-    Json(request): Json<UpdateUserRequest>,
-) -> Result<Json<UserResponse>, AppError> {
-    Ok(Json(state.service.update_user(id, request).await?))
-}
-
-#[utoipa::path(
-    post,
-    path = "/api/v1/users/{id}/password",
-    tag = "Users",
-    params(
-        ("id" = Uuid, Path, description = "User identifier")
-    ),
-    request_body = ChangePasswordRequest,
-    security(("session_auth" = [])),
-    responses(
-        (status = 204, description = "Change user password"),
-        (status = 400, body = synforge_core::api::ApiError),
-        (status = 401, body = synforge_core::api::ApiError),
-        (status = 404, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn change_user_password(
-    State(state): State<AppState>,
-    Path(id): Path<Uuid>,
-    Json(request): Json<ChangePasswordRequest>,
-) -> Result<StatusCode, AppError> {
-    state.service.change_user_password(id, request).await?;
-    Ok(StatusCode::NO_CONTENT)
-}
-
-#[utoipa::path(
-    delete,
-    path = "/api/v1/users/{id}",
-    tag = "Users",
-    params(
-        ("id" = Uuid, Path, description = "User identifier")
-    ),
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "Delete user", body = UserResponse),
-        (status = 400, body = synforge_core::api::ApiError),
-        (status = 401, body = synforge_core::api::ApiError),
-        (status = 404, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn delete_user(
-    Extension(current_user): Extension<UserAccount>,
-    State(state): State<AppState>,
-    Path(id): Path<Uuid>,
-) -> Result<Json<UserResponse>, AppError> {
-    if current_user.id == id {
-        return Err(AppError::from(anyhow::anyhow!(
-            "cannot delete the currently authenticated user"
-        )));
-    }
-    Ok(Json(state.service.delete_user(id).await?))
-}
-
-#[utoipa::path(
-    get,
-    path = "/api/v1/users/{id}",
-    tag = "Users",
-    params(
-        ("id" = Uuid, Path, description = "User identifier")
-    ),
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "Get user metrics", body = UserMetricsResponse),
-        (status = 401, body = synforge_core::api::ApiError),
-        (status = 404, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn get_user_metrics(
-    State(state): State<AppState>,
-    Path(id): Path<Uuid>,
-) -> Result<Json<UserMetricsResponse>, AppError> {
-    Ok(Json(state.service.get_user_metrics(id).await?))
 }
 
 #[utoipa::path(

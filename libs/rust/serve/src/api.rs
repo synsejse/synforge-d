@@ -3,6 +3,7 @@ use axum::routing::{get, post};
 
 use crate::AppState;
 
+pub(crate) mod artifacts;
 pub(crate) mod config;
 pub(crate) mod jobs;
 pub(crate) mod logs;
@@ -11,10 +12,10 @@ pub(crate) mod repo;
 pub(crate) mod session;
 pub(crate) mod setup;
 pub(crate) mod users;
+pub(crate) use artifacts::{download_job_artifact, get_job_artifact_meta, list_job_artifacts};
 pub(crate) use config::{get_config_schema, get_effective_config, update_runtime_settings};
 pub(crate) use jobs::{
-    delete_job, download_job_artifact, get_job, get_job_artifact_meta, list_active_jobs,
-    list_completed_jobs, list_job_artifacts, list_jobs, prune_failed_jobs,
+    delete_job, get_job, list_active_jobs, list_completed_jobs, list_jobs, prune_failed_jobs,
 };
 pub(crate) use logs::{
     get_job_log_chunk_by_source, get_job_log_manifest, get_job_log_meta_by_source,

@@ -7,8 +7,7 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use synforge_core::api::{
     BuildJobListResponse, BuildJobResponse, JobArtifactListResponse, JobArtifactMetaResponse,
-    JobListQuery, LogChunkQuery, LogChunkResponse, LogManifestResponse, LogMetaResponse,
-    PruneJobsResponse,
+    JobListQuery, PruneJobsResponse,
 };
 use tokio_util::io::ReaderStream;
 use uuid::Uuid;
@@ -16,11 +15,15 @@ use uuid::Uuid;
 use crate::{AppError, AppState};
 
 pub(crate) mod config;
+pub(crate) mod logs;
 pub(crate) mod packages;
 pub(crate) mod repo;
 pub(crate) mod session;
 pub(crate) mod users;
 pub(crate) use config::{get_config_schema, get_effective_config, update_runtime_settings};
+pub(crate) use logs::{
+    get_job_log_chunk_by_source, get_job_log_manifest, get_job_log_meta_by_source,
+};
 pub(crate) use packages::{
     create_package, delete_package, get_package, get_package_builds, list_mock_chroots,
     list_packages, trigger_rebuild, trigger_refresh, trigger_target_rebuild,
@@ -282,82 +285,6 @@ pub(crate) async fn prune_failed_jobs(
     State(state): State<AppState>,
 ) -> Result<Json<PruneJobsResponse>, AppError> {
     Ok(Json(state.service.prune_failed_jobs().await?))
-}
-
-#[utoipa::path(
-    get,
-    path = "/api/v1/jobs/{id}/logs",
-    tag = "Logs",
-    params(
-        ("id" = Uuid, Path, description = "Job identifier")
-    ),
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "Get available log sources for a job", body = LogManifestResponse),
-        (status = 401, body = synforge_core::api::ApiError),
-        (status = 404, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn get_job_log_manifest(
-    State(state): State<AppState>,
-    Path(id): Path<Uuid>,
-) -> Result<Json<LogManifestResponse>, AppError> {
-    Ok(Json(state.service.get_job_log_manifest(id).await?))
-}
-
-#[utoipa::path(
-    get,
-    path = "/api/v1/jobs/{id}/logs/{source}/stream",
-    tag = "Logs",
-    params(
-        ("id" = Uuid, Path, description = "Job identifier"),
-        ("source" = String, Path, description = "Log source path"),
-        ("cursor" = Option<u64>, Query, description = "Current byte cursor"),
-        ("offset" = Option<i64>, Query, description = "Relative byte offset from the cursor"),
-        ("limit" = Option<usize>, Query, description = "Maximum bytes to read")
-    ),
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "Read a log chunk", body = LogChunkResponse),
-        (status = 400, body = synforge_core::api::ApiError),
-        (status = 401, body = synforge_core::api::ApiError),
-        (status = 404, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn get_job_log_chunk_by_source(
-    State(state): State<AppState>,
-    Path((id, source)): Path<(Uuid, String)>,
-    Query(query): Query<LogChunkQuery>,
-) -> Result<Json<LogChunkResponse>, AppError> {
-    Ok(Json(
-        state
-            .service
-            .get_job_log_chunk(id, source, query.cursor, query.offset, query.limit)
-            .await?,
-    ))
-}
-
-#[utoipa::path(
-    get,
-    path = "/api/v1/jobs/{id}/logs/{source}/meta",
-    tag = "Logs",
-    params(
-        ("id" = Uuid, Path, description = "Job identifier"),
-        ("source" = String, Path, description = "Log source path")
-    ),
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "Get log file metadata", body = LogMetaResponse),
-        (status = 400, body = synforge_core::api::ApiError),
-        (status = 401, body = synforge_core::api::ApiError),
-        (status = 404, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn get_job_log_meta_by_source(
-    State(state): State<AppState>,
-    Path((id, source)): Path<(Uuid, String)>,
-) -> Result<Json<LogMetaResponse>, AppError> {
-    Ok(Json(state.service.get_job_log_meta(id, source).await?))
 }
 
 #[utoipa::path(

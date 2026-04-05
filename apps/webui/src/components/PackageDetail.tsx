@@ -4,12 +4,12 @@ import {
   summarizePackageAction,
   summarizePackageTargetAction,
 } from "../lib/package-actions";
-import FaIcon from "./FaIcon";
 import LoadingBlock from "./LoadingBlock";
 import PackageBuildHistorySection from "./PackageBuildHistorySection";
 import PackageEditFormSection, {
   type PackageEditFormState,
 } from "./PackageEditFormSection";
+import PackageDetailHeader from "./PackageDetailHeader";
 import PackageRepoFilesSection from "./PackageRepoFilesSection";
 import PackageStateSidebar from "./PackageStateSidebar";
 import type {
@@ -20,12 +20,6 @@ import type {
   SpecSource,
   UpdatePackageRequest,
 } from "../lib/types";
-import {
-  faArrowLeft,
-  faHammer,
-  faRotate,
-  faTrash,
-} from "@fortawesome/free-solid-svg-icons";
 
 interface Props {
   packageName: string;
@@ -381,54 +375,14 @@ export default function PackageDetail({ packageName }: Props) {
 
   return (
     <div className="space-y-8">
-      <section className="border border-zinc-800 bg-black p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-3">
-            <a
-              href="/packages/"
-              className="text-sm text-zinc-400 transition hover:text-zinc-100"
-            >
-              <FaIcon icon={faArrowLeft} className="mr-2" />
-              Back to packages
-            </a>
-            <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">
-                Package Control
-              </p>
-              <h1 className="mt-2 text-4xl font-semibold tracking-tight text-white">
-                {pkg.package.name}
-              </h1>
-            </div>
-            <p className="max-w-3xl text-sm leading-6 text-zinc-300">
-              {pkg.package.description || "No description"}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => trigger("refresh")}
-              className="border border-zinc-800 bg-black px-4 py-2 text-sm font-medium text-zinc-100 transition hover:border-zinc-600 hover:bg-zinc-950"
-            >
-              <FaIcon icon={faRotate} className="mr-2" />
-              Refresh
-            </button>
-            <button
-              onClick={() => trigger("rebuild")}
-              className="border border-zinc-200 bg-zinc-100 px-4 py-2 text-sm font-semibold text-black transition hover:bg-white"
-            >
-              <FaIcon icon={faHammer} className="mr-2" />
-              Rebuild
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="border border-zinc-800 bg-black px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:opacity-60"
-            >
-              <FaIcon icon={faTrash} className="mr-2" />
-              {deleting ? "Deleting…" : "Delete Package"}
-            </button>
-          </div>
-        </div>
-      </section>
+      <PackageDetailHeader
+        packageName={pkg.package.name}
+        description={pkg.package.description || "No description"}
+        deleting={deleting}
+        onRefresh={() => void trigger("refresh")}
+        onRebuild={() => void trigger("rebuild")}
+        onDelete={() => void handleDelete()}
+      />
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
         <PackageEditFormSection

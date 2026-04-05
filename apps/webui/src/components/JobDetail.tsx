@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import api from "../lib/api";
 import DetailStat from "./DetailStat";
-import EmptyState from "./EmptyState";
+import ArtifactList from "./job/ArtifactList";
 import FaIcon from "./FaIcon";
 import LoadingBlock from "./LoadingBlock";
 import StatusPill from "./StatusPill";
@@ -10,7 +10,6 @@ import type { BuildArtifact, BuildJobResponse } from "../lib/types";
 import {
   faArrowLeft,
   faCircle,
-  faDownload,
   faFolderOpen,
   faRotate,
   faTerminal,
@@ -296,68 +295,13 @@ export default function JobDetail({ jobId }: Props) {
             )}
           </section>
 
-          <section className="border border-zinc-800 bg-black p-6">
-            <div className="mb-5">
-              <h2 className="text-xl font-semibold text-white">Artifacts</h2>
-              <p className="mt-2 text-sm text-zinc-400">
-                Published outputs for this job run.
-              </p>
-            </div>
-            {artifacts.length === 0 ? (
-              <EmptyState>No artifacts were recorded for this job.</EmptyState>
-            ) : (
-              <div className="grid gap-3">
-                {artifacts.map((artifact) => (
-                  <div
-                    key={`${artifact.id}-${artifact.file}`}
-                    className="grid gap-3 border border-zinc-800 bg-black px-4 py-4 md:grid-cols-[minmax(0,1fr)_auto_auto_auto]"
-                  >
-                    <div>
-                      <div className="font-mono text-sm text-white">
-                        {artifact.file}
-                      </div>
-                      <div className="mt-1 text-xs text-zinc-500">
-                        {artifact.sha256}
-                      </div>
-                    </div>
-                    <div className="text-sm text-zinc-300">
-                      {formatBytes(artifact.size_bytes)}
-                    </div>
-                    <div className="text-sm uppercase tracking-[0.18em] text-zinc-500">
-                      {artifact.kind}
-                    </div>
-                    <div className="flex md:justify-end">
-                      <button
-                        onClick={() => handleArtifactDownload(artifact)}
-                        disabled={downloadingArtifactPath === artifact.file}
-                        className="inline-flex items-center border border-zinc-800 bg-black px-3 py-1.5 text-xs text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <FaIcon
-                          icon={faDownload}
-                          className="mr-2 text-[0.95em]"
-                        />
-                        {downloadingArtifactPath === artifact.file
-                          ? "Downloading…"
-                          : "Download"}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+          <ArtifactList
+            artifacts={artifacts}
+            downloadingArtifactPath={downloadingArtifactPath}
+            onDownload={handleArtifactDownload}
+          />
         </div>
       </section>
     </div>
   );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

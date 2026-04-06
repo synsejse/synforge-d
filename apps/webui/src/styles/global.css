@@ -85,6 +85,46 @@ h1, h2, h3,
   color: var(--theme-text-strong);
 }
 
+/* Brutalist Scrollbar */
+:root {
+  --sb-track-color: #0a0a0a;
+  --sb-thumb-color: #BFFF00;
+  --sb-size: 14px;
+}
+
+*::-webkit-scrollbar {
+  width: var(--sb-size);
+  height: var(--sb-size);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--sb-track-color);
+  border-radius: 0;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb-color);
+  border-radius: 0;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #d8ff72;
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: #fff;
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--sb-track-color);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-color: var(--sb-thumb-color) var(--sb-track-color);
+  }
+}
+
 :focus-visible {
   outline: 2px solid var(--theme-accent-lime);
   outline-offset: 2px;

@@ -217,9 +217,29 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
 
   return (
     <div className="space-y-0">
-      {/* Controls Bar */}
-      <div className="border-2 border-zinc-700 border-b-0 bg-black px-5 py-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+      {/* Tabs with Controls */}
+      <div className="border-2 border-zinc-700 border-b-0 bg-zinc-950 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap">
+          {(manifest?.sources ?? []).map((source) => (
+            <button
+              key={source.file}
+              onClick={() => setActiveSourcePath(source.file)}
+              className={`px-5 py-3 font-mono text-xs font-bold uppercase tracking-[0.15em] transition ${
+                activeSourcePath === source.file
+                  ? "bg-black text-[var(--theme-terminal-green)] border-b-4 border-[var(--theme-terminal-green)]"
+                  : "text-zinc-500 hover:text-zinc-300 hover:bg-black/50"
+              }`}
+            >
+              {source.file}
+              {source.size > 0 && (
+                <span className="ml-2 text-[10px] text-zinc-600">
+                  {formatBytes(source.size, "metric")}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-3 px-5 py-3">
           <label className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.15em] text-zinc-400">
             <input
               type="checkbox"
@@ -237,28 +257,6 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
             {downloading ? "Downloading…" : "Download"}
           </button>
         </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="border-2 border-zinc-700 border-b-0 bg-zinc-950 flex flex-wrap">
-        {(manifest?.sources ?? []).map((source) => (
-          <button
-            key={source.file}
-            onClick={() => setActiveSourcePath(source.file)}
-            className={`px-5 py-3 font-mono text-xs font-bold uppercase tracking-[0.15em] transition ${
-              activeSourcePath === source.file
-                ? "bg-black text-[var(--theme-terminal-green)] border-b-4 border-[var(--theme-terminal-green)]"
-                : "text-zinc-500 hover:text-zinc-300 hover:bg-black/50"
-            }`}
-          >
-            {source.file}
-            {source.size > 0 && (
-              <span className="ml-2 text-[10px] text-zinc-600">
-                {formatBytes(source.size, "metric")}
-              </span>
-            )}
-          </button>
-        ))}
       </div>
 
       {/* Log Content */}

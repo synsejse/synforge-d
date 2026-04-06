@@ -243,9 +243,9 @@ export default function JobDetail({ jobId }: Props) {
             </h2>
           </div>
         </div>
-        <div className="bg-black p-6">
-          <Suspense fallback={<LoadingBlock label="Loading logs…" lines={3} />}>
-            <TabbedLogViewer jobId={jobId} />
+        <div className="bg-black p-0">
+          <Suspense fallback={<div className="p-6"><LoadingBlock label="Loading logs…" lines={3} /></div>}>
+            <TabbedLogViewer jobId={jobId} isLive={isLive} />
           </Suspense>
         </div>
       </div>

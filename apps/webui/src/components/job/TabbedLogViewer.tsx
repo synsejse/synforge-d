@@ -216,29 +216,22 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
   }
 
   return (
-    <section className="border border-zinc-800 bg-black p-5 lg:p-6">
-      <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold text-white">Build Logs</h2>
-          <p className="mt-2 text-sm text-zinc-400">
-            Multiple log files are streamed independently. Long lines scroll
-            horizontally.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <label className="inline-flex items-center gap-3 border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300">
+    <div className="space-y-0">
+      {/* Controls Bar */}
+      <div className="border-2 border-zinc-700 border-b-0 bg-black px-5 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <label className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.15em] text-zinc-400">
             <input
               type="checkbox"
               checked={followLogs}
               onChange={(event) => setFollowLogs(event.target.checked)}
-              className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
             />
-            Follow output
+            Follow
           </label>
           <button
             onClick={handleDownloadLog}
             disabled={!activeSourcePath || downloading}
-            className="border border-zinc-800 bg-black px-4 py-2 text-sm font-medium text-zinc-100 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
+            className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition hover:text-[var(--theme-terminal-green)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FaIcon icon={faDownload} className="mr-2" />
             {downloading ? "Downloading…" : "Download"}
@@ -246,30 +239,34 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-1 border-b border-zinc-800">
+      {/* Tabs */}
+      <div className="border-2 border-zinc-700 border-b-0 bg-zinc-950 flex flex-wrap">
         {(manifest?.sources ?? []).map((source) => (
           <button
             key={source.file}
             onClick={() => setActiveSourcePath(source.file)}
-            className={`px-4 py-2 text-sm font-medium transition ${
+            className={`px-5 py-3 font-mono text-xs font-bold uppercase tracking-[0.15em] transition ${
               activeSourcePath === source.file
-                ? "border-b-2 border-white text-white"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-black text-[var(--theme-terminal-green)] border-b-4 border-[var(--theme-terminal-green)]"
+                : "text-zinc-500 hover:text-zinc-300 hover:bg-black/50"
             }`}
           >
             {source.file}
             {source.size > 0 && (
-              <span className="ml-2 text-xs text-zinc-500">
-                ({formatBytes(source.size, "metric")})
+              <span className="ml-2 text-[10px] text-zinc-600">
+                {formatBytes(source.size, "metric")}
               </span>
             )}
           </button>
         ))}
       </div>
 
-      <div className="border border-zinc-800 bg-black">
+      {/* Log Content */}
+      <div className="border-2 border-zinc-700 bg-black">
         {logLines.length === 0 && !currentLog?.loading ? (
-          <EmptyState>No log content available yet.</EmptyState>
+          <div className="px-5 py-8">
+            <EmptyState>No log content available yet.</EmptyState>
+          </div>
         ) : (
           <VirtualizedAnsiLines
             sourcePath={activeSourcePath ?? "unknown"}
@@ -288,7 +285,7 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
           />
         )}
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -343,7 +340,7 @@ function VirtualizedAnsiLines({
     <div
       ref={viewportRef}
       onScroll={handleScroll}
-      className="max-h-[78vh] overflow-auto font-mono text-[14px] leading-6"
+      className="max-h-[78vh] overflow-auto font-mono text-[13px] leading-6 bg-black"
       style={{ height: LOG_VIEWPORT_HEIGHT }}
     >
       <div
@@ -366,7 +363,7 @@ function VirtualizedAnsiLines({
             <div
               key={`${sourcePath}:${index}`}
               style={style}
-              className="px-5 text-slate-100 whitespace-pre"
+              className="px-5 text-[var(--theme-terminal-green)] whitespace-pre hover:bg-zinc-950/30"
             >
               <Ansi>{line || " "}</Ansi>
             </div>

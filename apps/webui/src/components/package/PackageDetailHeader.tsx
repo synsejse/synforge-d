@@ -24,7 +24,7 @@ export default function PackageDetailHeader({
         <div className="min-w-0 flex-1 space-y-3">
           <a
             href="/packages/"
-            className="inline-flex items-center font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400 transition hover:text-zinc-100"
+            className="inline-flex items-center font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400 transition-all duration-100 ease-linear hover:text-zinc-100"
           >
             <FaIcon icon={faArrowLeft} className="mr-2" />
             Back to packages

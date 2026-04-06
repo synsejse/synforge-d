@@ -545,7 +545,7 @@ export default function AddPackageModal({
                       onChange={(event) =>
                         toggleChroot(chroot, event.target.checked)
                       }
-                      className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                      className="h-4 w-4 border-zinc-700 bg-zinc-900"
                     />
                   </label>
                 ))}

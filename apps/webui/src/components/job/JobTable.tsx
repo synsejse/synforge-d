@@ -54,7 +54,7 @@ export default function JobTable({ jobs, onDelete }: JobTableProps) {
                   <div className="min-w-[160px] space-y-1">
                     <a
                       href={`/jobs/view/?id=${encodeURIComponent(entry.job.id)}`}
-                      className="font-medium text-white transition hover:text-zinc-300"
+                      className="font-medium text-white transition-all duration-100 ease-linear hover:text-zinc-300"
                     >
                       {entry.job.package_name}
                     </a>

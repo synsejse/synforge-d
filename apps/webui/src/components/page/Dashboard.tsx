@@ -138,7 +138,7 @@ export default function Dashboard() {
           </div>
           <a
             href="/jobs/"
-            className="font-mono text-sm font-semibold text-[var(--theme-accent-lime)] transition hover:underline"
+            className="font-mono text-sm font-semibold text-[var(--theme-accent-lime)] transition-all duration-100 ease-linear hover:underline"
           >
             View_All →
           </a>
@@ -201,8 +201,8 @@ export default function Dashboard() {
           <div className="border-b-4 border-[var(--theme-terminal-green)] bg-black px-6 py-5">
             <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.25em] text-[var(--theme-terminal-green)]">
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--theme-terminal-green)] opacity-75"></span>
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--theme-terminal-green)]"></span>
+                <span className="absolute inline-flex h-full w-full animate-ping bg-[var(--theme-terminal-green)] opacity-75"></span>
+                <span className="relative inline-flex h-2 w-2 bg-[var(--theme-terminal-green)]"></span>
               </span>
               Live_Queue
             </div>
@@ -224,7 +224,7 @@ export default function Dashboard() {
                   <a
                     key={entry.job.id}
                     href={`/jobs/view/?id=${encodeURIComponent(entry.job.id)}`}
-                    className="block border-2 border-[var(--theme-border)] bg-zinc-950/40 px-5 py-4 transition-all hover:border-[var(--theme-terminal-green)] hover:bg-zinc-950"
+                    className="block border-2 border-[var(--theme-border)] bg-zinc-950/40 px-5 py-4 transition-all duration-100 ease-linear hover:border-[var(--theme-terminal-green)] hover:bg-zinc-950"
                   >
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div className="min-w-0">

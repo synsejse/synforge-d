@@ -112,7 +112,7 @@ export default function PackageBuildHistorySection({
                         <div className="flex flex-wrap gap-3">
                           <a
                             href={`/jobs/view/?id=${encodeURIComponent(entry.build.job.id)}`}
-                            className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-300 transition hover:text-[var(--theme-accent-lime)]"
+                            className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-300 transition-all duration-100 ease-linear hover:text-[var(--theme-accent-lime)]"
                           >
                             <FaIcon icon={faFolderOpen} className="mr-2" />
                             Open Job
@@ -123,7 +123,7 @@ export default function PackageBuildHistorySection({
                                 onClick={() =>
                                   onRefreshTarget(entry.build.job.mock_chroot)
                                 }
-                                className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition hover:text-white"
+                                className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition-all duration-100 ease-linear hover:text-white"
                               >
                                 <FaIcon icon={faRotate} className="mr-2" />
                                 Refresh Target
@@ -132,7 +132,7 @@ export default function PackageBuildHistorySection({
                                 onClick={() =>
                                   onRebuildTarget(entry.build.job.mock_chroot)
                                 }
-                                className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition hover:text-white"
+                                className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition-all duration-100 ease-linear hover:text-white"
                               >
                                 <FaIcon icon={faHammer} className="mr-2" />
                                 Rebuild Target
@@ -142,7 +142,7 @@ export default function PackageBuildHistorySection({
                           <button
                             onClick={() => onDeleteJob(entry.build.job.id)}
                             disabled={live || deletingJobId === entry.build.job.id}
-                            className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                            className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition-all duration-100 ease-linear hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <FaIcon icon={faTrash} className="mr-2" />
                             {deletingJobId === entry.build.job.id

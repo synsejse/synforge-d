@@ -37,7 +37,7 @@ export default function PackageCard({
             <div className="min-w-0">
               <a
                 href={`/packages/view/?name=${encodeURIComponent(entry.package.name)}`}
-                className="font-mono text-lg font-bold uppercase text-white transition hover:text-[var(--theme-accent-lime)]"
+                className="font-mono text-lg font-bold uppercase text-white transition-all duration-100 ease-linear hover:text-[var(--theme-accent-lime)]"
               >
                 {entry.package.name}
               </a>

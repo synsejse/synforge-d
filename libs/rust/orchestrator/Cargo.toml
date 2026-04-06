@@ -10,6 +10,7 @@ anyhow.workspace = true
 argon2.workspace = true
 async-trait.workspace = true
 bincode.workspace = true
+bigdecimal.workspace = true
 bollard.workspace = true
 bytes.workspace = true
 dashmap = "6.1"

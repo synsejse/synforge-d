@@ -25,6 +25,7 @@ use synforge_core::{
     package::{BuildEnvVar, PackageDefinition, SpecSource},
 };
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
+use tracing::info;
 use uuid::Uuid;
 
 use crate::schema::{
@@ -50,8 +51,16 @@ impl DieselStore {
             let manager = ConnectionManager::<MysqlConnection>::new(&database_url);
             let pool = Pool::builder().max_size(pool_size).build(manager)?;
             let mut conn = pool.get()?;
-            conn.run_pending_migrations(MIGRATIONS)
+            let applied_migrations = conn
+                .run_pending_migrations(MIGRATIONS)
                 .map_err(|error| anyhow::anyhow!("failed to run diesel migrations: {}", error))?;
+            if applied_migrations.is_empty() {
+                info!("no pending diesel migrations");
+            } else {
+                for migration in applied_migrations {
+                    info!(migration = %migration, "applied diesel migration");
+                }
+            }
             Ok(pool)
         })
         .await

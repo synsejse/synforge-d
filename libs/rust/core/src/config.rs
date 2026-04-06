@@ -50,6 +50,18 @@ fn default_public_base_url() -> String {
     "http://localhost:8080".to_string()
 }
 
+fn default_mock_chroot_cache_ttl_seconds() -> u64 {
+    300
+}
+
+fn default_git_mirror_refresh_ttl_seconds() -> u64 {
+    300
+}
+
+fn default_git_mirror_max_unused_seconds() -> u64 {
+    604_800
+}
+
 fn default_session_secret() -> String {
     "synforge-dev-session-secret-change-me".to_string()
 }
@@ -88,6 +100,12 @@ pub struct DaemonConfig {
     pub git_operation_timeout_seconds: u64,
     #[serde(default = "default_public_base_url")]
     pub public_base_url: String,
+    #[serde(default = "default_mock_chroot_cache_ttl_seconds")]
+    pub mock_chroot_cache_ttl_seconds: u64,
+    #[serde(default = "default_git_mirror_refresh_ttl_seconds")]
+    pub git_mirror_refresh_ttl_seconds: u64,
+    #[serde(default = "default_git_mirror_max_unused_seconds")]
+    pub git_mirror_max_unused_seconds: u64,
 }
 
 impl Default for DaemonConfig {
@@ -107,6 +125,9 @@ impl Default for DaemonConfig {
             worker_socket_timeout_seconds: default_worker_socket_timeout_seconds(),
             git_operation_timeout_seconds: default_git_operation_timeout_seconds(),
             public_base_url: default_public_base_url(),
+            mock_chroot_cache_ttl_seconds: default_mock_chroot_cache_ttl_seconds(),
+            git_mirror_refresh_ttl_seconds: default_git_mirror_refresh_ttl_seconds(),
+            git_mirror_max_unused_seconds: default_git_mirror_max_unused_seconds(),
         }
     }
 }
@@ -218,6 +239,21 @@ impl DaemonConfig {
         if self.session_secret.trim().is_empty() {
             return Err(SynforgeError::Config(
                 "session_secret must not be empty".to_string(),
+            ));
+        }
+        if self.mock_chroot_cache_ttl_seconds == 0 {
+            return Err(SynforgeError::Config(
+                "mock_chroot_cache_ttl_seconds must be greater than zero".to_string(),
+            ));
+        }
+        if self.git_mirror_refresh_ttl_seconds == 0 {
+            return Err(SynforgeError::Config(
+                "git_mirror_refresh_ttl_seconds must be greater than zero".to_string(),
+            ));
+        }
+        if self.git_mirror_max_unused_seconds == 0 {
+            return Err(SynforgeError::Config(
+                "git_mirror_max_unused_seconds must be greater than zero".to_string(),
             ));
         }
         Ok(())

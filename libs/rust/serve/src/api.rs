@@ -4,6 +4,7 @@ use axum::routing::{get, post};
 use crate::AppState;
 
 pub(crate) mod artifacts;
+pub(crate) mod cache;
 pub(crate) mod config;
 pub(crate) mod jobs;
 pub(crate) mod logs;
@@ -14,6 +15,7 @@ pub(crate) mod setup;
 pub(crate) mod sync;
 pub(crate) mod users;
 pub(crate) use artifacts::{download_job_artifact, get_job_artifact_meta, list_job_artifacts};
+pub(crate) use cache::get_cache_stats;
 pub(crate) use config::{get_config_schema, get_effective_config, update_runtime_settings};
 pub(crate) use jobs::{
     delete_job, get_job, list_active_jobs, list_completed_jobs, list_jobs, prune_failed_jobs,
@@ -93,6 +95,7 @@ pub fn router(_state: AppState) -> Router<AppState> {
         .route("/repo/summary", get(get_repo_summary))
         .route("/sync/operations", get(list_sync_operations))
         .route("/sync/metrics", get(get_sync_metrics))
+        .route("/cache/stats", get(get_cache_stats))
         .route("/config/schema", get(get_config_schema))
         .route("/config/effective", get(get_effective_config))
         .route("/config/runtime", post(update_runtime_settings))

@@ -7,6 +7,7 @@ use synforge_core::{
 };
 
 use crate::db::{DieselStore, PackageStore};
+use crate::git_cache::GitMirrorCacheStatsSnapshot;
 use crate::packages::{InspectedPackageSource, MaterializePackageOptions, PackageSyncStore};
 use crate::sync_tracker::{SyncResult, SyncStatusTracker};
 
@@ -258,5 +259,9 @@ impl PackageRegistry {
         repo_url: &str,
     ) -> anyhow::Result<BrowseRepositoryResponse> {
         self.package_store.browse_repository(repo_url).await
+    }
+
+    pub async fn git_cache_stats(&self) -> anyhow::Result<GitMirrorCacheStatsSnapshot> {
+        self.package_store.git_cache_stats().await
     }
 }

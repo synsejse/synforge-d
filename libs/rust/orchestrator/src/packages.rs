@@ -12,6 +12,8 @@ use synforge_core::{
 use tokio::process::Command;
 use tracing::instrument;
 
+use crate::db::DieselStore;
+use crate::git_cache::{GitMirrorCache, GitMirrorCacheStatsSnapshot};
 use crate::workers::DockerWorkerLauncher;
 
 #[derive(Debug, Clone)]
@@ -39,6 +41,7 @@ pub struct PackageSyncStore {
     root: PathBuf,
     config: DaemonConfig,
     worker_launcher: Arc<DockerWorkerLauncher>,
+    git_mirror_cache: Arc<GitMirrorCache>,
 }
 
 impl PackageSyncStore {
@@ -46,12 +49,29 @@ impl PackageSyncStore {
         root: PathBuf,
         config: DaemonConfig,
         worker_launcher: Arc<DockerWorkerLauncher>,
+        store: DieselStore,
     ) -> Self {
+        let git_mirror_cache = Arc::new(GitMirrorCache::new(store, &config));
         Self {
             root,
             config,
             worker_launcher,
+            git_mirror_cache,
         }
+    }
+
+    pub fn git_mirror_root(&self) -> PathBuf {
+        self.git_mirror_cache.mirror_root().to_path_buf()
+    }
+
+    pub async fn cleanup_git_mirror_cache(&self) -> anyhow::Result<()> {
+        let summary = self.git_mirror_cache.cleanup_stale().await?;
+        self.git_mirror_cache.log_cleanup_result(summary);
+        Ok(())
+    }
+
+    pub async fn git_cache_stats(&self) -> anyhow::Result<GitMirrorCacheStatsSnapshot> {
+        self.git_mirror_cache.stats().await
     }
 
     #[instrument(skip(self, source), fields(package_name = %package_name, repo_url = %source.repo_url))]
@@ -61,6 +81,14 @@ impl PackageSyncStore {
         source: &SpecSource,
         timeout_seconds: u64,
     ) -> anyhow::Result<InspectedPackageSource> {
+        if let Err(error) = self.git_mirror_cache.ensure_mirror(&source.repo_url).await {
+            tracing::warn!(
+                package_name,
+                repo_url = %source.repo_url,
+                error = %error,
+                "failed to warm git mirror cache before inspect; continuing with direct clone"
+            );
+        }
         let job_id = uuid::Uuid::now_v7();
         let paths = self.config.runtime_paths();
         let workspace_dir = paths.spec_parse_workspace_dir(job_id);
@@ -151,18 +179,69 @@ impl PackageSyncStore {
         let clone_dir = paths.repo_browse_workspace_dir(uuid::Uuid::now_v7());
 
         let git_timeout = Duration::from_secs(self.config.git_operation_timeout_seconds);
-        let clone_result = run_git(
-            None,
-            &[
-                "clone",
-                "--depth",
-                "1",
-                repo_url,
-                clone_dir.to_string_lossy().as_ref(),
-            ],
-            git_timeout,
-        )
-        .await;
+        let clone_result: anyhow::Result<()> =
+            match self.git_mirror_cache.ensure_mirror(repo_url).await {
+                Ok(mirror_dir) => {
+                    let mirror_path = mirror_dir.to_string_lossy().to_string();
+                    let mirror_clone = run_git(
+                        None,
+                        &[
+                            "clone",
+                            "--depth",
+                            "1",
+                            mirror_path.as_str(),
+                            clone_dir.to_string_lossy().as_ref(),
+                        ],
+                        git_timeout,
+                    )
+                    .await
+                    .map(|_| ());
+                    if let Err(error) = mirror_clone {
+                        tracing::warn!(
+                            repo_url,
+                            mirror_dir = %mirror_dir.display(),
+                            error = %error,
+                            "failed to clone from mirror cache; falling back to direct clone"
+                        );
+                        let _ = tokio::fs::remove_dir_all(&clone_dir).await;
+                        run_git(
+                            None,
+                            &[
+                                "clone",
+                                "--depth",
+                                "1",
+                                repo_url,
+                                clone_dir.to_string_lossy().as_ref(),
+                            ],
+                            git_timeout,
+                        )
+                        .await
+                        .map(|_| ())
+                    } else {
+                        Ok(())
+                    }
+                }
+                Err(error) => {
+                    tracing::warn!(
+                        repo_url,
+                        error = %error,
+                        "failed to prepare mirror cache; falling back to direct clone"
+                    );
+                    run_git(
+                        None,
+                        &[
+                            "clone",
+                            "--depth",
+                            "1",
+                            repo_url,
+                            clone_dir.to_string_lossy().as_ref(),
+                        ],
+                        git_timeout,
+                    )
+                    .await
+                    .map(|_| ())
+                }
+            };
 
         let response = async {
             clone_result?;

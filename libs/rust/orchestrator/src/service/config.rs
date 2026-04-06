@@ -42,6 +42,9 @@ impl SynforgeService {
                 worker_socket_timeout_seconds: current.worker_socket_timeout_seconds,
                 git_operation_timeout_seconds: current.git_operation_timeout_seconds,
                 public_base_url: current.public_base_url,
+                mock_chroot_cache_ttl_seconds: current.mock_chroot_cache_ttl_seconds,
+                git_mirror_refresh_ttl_seconds: current.git_mirror_refresh_ttl_seconds,
+                git_mirror_max_unused_seconds: current.git_mirror_max_unused_seconds,
             },
         }
     }
@@ -257,6 +260,48 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
                 in_runtime: true,
             },
         ),
+        config_number_field(
+            ConfigSection {
+                key: "cache",
+                label: "Cache",
+            },
+            "mock_chroot_cache_ttl_seconds",
+            "Mock chroot cache TTL seconds",
+            "How long to cache discovered mock chroots before refreshing.",
+            300,
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: true,
+            },
+        ),
+        config_number_field(
+            ConfigSection {
+                key: "cache",
+                label: "Cache",
+            },
+            "git_mirror_refresh_ttl_seconds",
+            "Git mirror refresh TTL seconds",
+            "Maximum age before a cached git mirror is refreshed from origin.",
+            300,
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: true,
+            },
+        ),
+        config_number_field(
+            ConfigSection {
+                key: "cache",
+                label: "Cache",
+            },
+            "git_mirror_max_unused_seconds",
+            "Git mirror max unused seconds",
+            "Remove cached git mirrors that have not been used within this window.",
+            604_800,
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: true,
+            },
+        ),
     ]
 }
 
@@ -362,6 +407,18 @@ fn apply_config_settings(
     if let Some(value) = settings.get("git_operation_timeout_seconds") {
         config.git_operation_timeout_seconds =
             parse_u64_setting(value, "git_operation_timeout_seconds")?;
+    }
+    if let Some(value) = settings.get("mock_chroot_cache_ttl_seconds") {
+        config.mock_chroot_cache_ttl_seconds =
+            parse_u64_setting(value, "mock_chroot_cache_ttl_seconds")?;
+    }
+    if let Some(value) = settings.get("git_mirror_refresh_ttl_seconds") {
+        config.git_mirror_refresh_ttl_seconds =
+            parse_u64_setting(value, "git_mirror_refresh_ttl_seconds")?;
+    }
+    if let Some(value) = settings.get("git_mirror_max_unused_seconds") {
+        config.git_mirror_max_unused_seconds =
+            parse_u64_setting(value, "git_mirror_max_unused_seconds")?;
     }
 
     Ok(())

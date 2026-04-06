@@ -60,6 +60,19 @@ impl RuntimePaths {
         self.temp_root().join("browse").join(browse_id.to_string())
     }
 
+    pub fn git_cache_root(&self) -> PathBuf {
+        self.temp_root().join("git-cache")
+    }
+
+    pub fn git_mirror_root(&self) -> PathBuf {
+        self.git_cache_root().join("mirrors")
+    }
+
+    pub fn git_mirror_dir(&self, mirror_key: &str) -> PathBuf {
+        self.git_mirror_root()
+            .join(sanitize_relative_path(mirror_key))
+    }
+
     pub fn package_repo_dir(&self, package_name: &str, release: &str, arch: &str) -> PathBuf {
         self.repo_dir
             .join("packages")

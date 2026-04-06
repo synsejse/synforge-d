@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Instant;
 
 use crate::db::{DieselStore, JobStore};
 use crate::job_lifecycle::JobLifecycle;
@@ -11,14 +12,19 @@ use crate::sessions::WorkerSessionBroker;
 use crate::sync_tracker::SyncStatusTracker;
 use crate::worker_socket::start_worker_listener;
 use crate::workers::DockerWorkerLauncher;
-use synforge_core::{api::PageInfo, config::DaemonConfig, model::UserPermission};
-use tokio::sync::{Semaphore, mpsc, watch};
+use synforge_core::{
+    api::{MockChrootListResponse, PageInfo},
+    config::DaemonConfig,
+    model::UserPermission,
+};
+use tokio::sync::{Mutex, Semaphore, mpsc, watch};
 use tokio_util::task::TaskTracker;
 use tracing::{error, info, warn};
 const DEFAULT_PAGE_SIZE: usize = 50;
 const MAX_PAGE_SIZE: usize = 200;
 const WORKER_LISTEN_ADDR: &str = "0.0.0.0:8090";
 
+mod cache;
 mod config;
 mod jobs;
 mod logs;
@@ -39,6 +45,23 @@ pub struct SynforgeService {
     task_tracker: TaskTracker,
     queue_tx: mpsc::Sender<crate::scheduler::QueuedBuild>,
     shutdown_tx: watch::Sender<bool>,
+    mock_chroot_cache: Arc<Mutex<MockChrootCacheState>>,
+}
+
+#[derive(Debug, Clone)]
+struct MockChrootCacheEntry {
+    worker_image: String,
+    fetched_at: Instant,
+    fetched_at_unix_seconds: i64,
+    response: MockChrootListResponse,
+}
+
+#[derive(Debug, Default)]
+struct MockChrootCacheState {
+    entry: Option<MockChrootCacheEntry>,
+    hit_count: u64,
+    miss_count: u64,
+    stale_served_count: u64,
 }
 
 impl SynforgeService {
@@ -113,7 +136,11 @@ impl SynforgeService {
             paths.packages_dir().to_path_buf(),
             config.clone(),
             worker_launcher.clone(),
+            store.clone(),
         );
+        if let Err(error) = package_store.cleanup_git_mirror_cache().await {
+            warn!(error = %error, "failed to cleanup git mirror cache at startup");
+        }
         let sync_tracker = Some(SyncStatusTracker::new(store.clone()));
         let registry = PackageRegistry::new(store.clone(), package_store, sync_tracker);
         let scheduler = BuildScheduler::new(store.clone(), registry.clone());
@@ -134,6 +161,7 @@ impl SynforgeService {
             task_tracker,
             queue_tx,
             shutdown_tx,
+            mock_chroot_cache: Arc::new(Mutex::new(MockChrootCacheState::default())),
         });
         start_worker_listener(
             WORKER_LISTEN_ADDR.to_string(),

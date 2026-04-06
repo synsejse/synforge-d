@@ -284,6 +284,43 @@ pub struct SyncMetricsResponse {
     pub last_failure_at: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct MockChrootCacheStats {
+    pub ttl_seconds: u64,
+    pub hit_count: u64,
+    pub miss_count: u64,
+    pub stale_served_count: u64,
+    pub cached_chroot_count: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub age_seconds: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub worker_image: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_refresh_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct GitMirrorCacheStats {
+    #[schema(value_type = String)]
+    pub mirror_root: std::path::PathBuf,
+    pub refresh_ttl_seconds: u64,
+    pub max_unused_seconds: u64,
+    pub tracked_mirrors: u64,
+    pub stale_mirrors: u64,
+    pub mirror_directories: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub latest_fetched_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub latest_used_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct CacheStatsResponse {
+    pub collected_at: String,
+    pub mock_chroot_cache: MockChrootCacheStats,
+    pub git_mirror_cache: GitMirrorCacheStats,
+}
+
 // --- Users, Session, Setup ---
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct UserResponse {
@@ -409,6 +446,9 @@ pub struct EffectiveConfigView {
     pub worker_socket_timeout_seconds: u64,
     pub git_operation_timeout_seconds: u64,
     pub public_base_url: String,
+    pub mock_chroot_cache_ttl_seconds: u64,
+    pub git_mirror_refresh_ttl_seconds: u64,
+    pub git_mirror_max_unused_seconds: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

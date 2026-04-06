@@ -1,4 +1,5 @@
 import type {
+  CacheStatsResponse,
   SyncMetricsResponse,
   SyncOperationListQuery,
   SyncOperationListResponse,
@@ -52,5 +53,9 @@ export class SyncApiClient extends UserApiClient {
 
   async getSyncMetrics(): Promise<SyncMetricsResponse> {
     return this.request("GET", "/api/v1/sync/metrics");
+  }
+
+  async getCacheStats(): Promise<CacheStatsResponse> {
+    return this.request("GET", "/api/v1/cache/stats");
   }
 }

@@ -1,5 +1,6 @@
 mod auth;
 mod db;
+mod git_cache;
 mod job_lifecycle;
 mod packages;
 mod registry;

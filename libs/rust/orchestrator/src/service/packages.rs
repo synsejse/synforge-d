@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bollard::Docker;
 use bollard::models::{ContainerCreateBody, HostConfig};
 use bollard::query_parameters::{CreateContainerOptionsBuilder, LogsOptionsBuilder};
@@ -9,10 +11,10 @@ use synforge_core::{
         PackageBuildHistoryResponse, PackageBuildInventoryEntry, PackageListResponse,
         PackageResponse, RebuildRequest, RefreshRequest, UpdatePackageRequest,
     },
-    model::{BuildStatus, BuildTrigger, PublishedRepoFile},
+    model::{BuildStatus, BuildTrigger, PublishedRepoFile, now_utc},
     package::parse_mock_chroot,
 };
-use tracing::info;
+use tracing::{info, warn};
 use uuid::Uuid;
 
 use super::SynforgeService;
@@ -102,6 +104,53 @@ impl SynforgeService {
     }
 
     pub async fn list_mock_chroots(&self) -> anyhow::Result<MockChrootListResponse> {
+        let ttl = Duration::from_secs(self.config.mock_chroot_cache_ttl_seconds);
+        let now = std::time::Instant::now();
+        let mut cache = self.mock_chroot_cache.lock().await;
+        let cache_hit = cache.entry.as_ref().and_then(|entry| {
+            if entry.worker_image == self.config.worker_image
+                && now.duration_since(entry.fetched_at) < ttl
+            {
+                Some(entry.response.clone())
+            } else {
+                None
+            }
+        });
+        if let Some(response) = cache_hit {
+            cache.hit_count = cache.hit_count.saturating_add(1);
+            return Ok(response);
+        }
+        cache.miss_count = cache.miss_count.saturating_add(1);
+        let stale = cache.entry.clone();
+        match self.load_mock_chroots_uncached().await {
+            Ok(response) => {
+                cache.entry = Some(super::MockChrootCacheEntry {
+                    worker_image: self.config.worker_image.clone(),
+                    fetched_at: now,
+                    fetched_at_unix_seconds: now_utc().unix_timestamp(),
+                    response: response.clone(),
+                });
+                Ok(response)
+            }
+            Err(error) => {
+                if let Some(entry) = stale
+                    && entry.worker_image == self.config.worker_image
+                {
+                    cache.stale_served_count = cache.stale_served_count.saturating_add(1);
+                    warn!(
+                        worker_image = %self.config.worker_image,
+                        error = %error,
+                        stale_count = entry.response.chroots.len(),
+                        "failed to refresh mock chroot cache; serving stale value"
+                    );
+                    return Ok(entry.response);
+                }
+                Err(error)
+            }
+        }
+    }
+
+    async fn load_mock_chroots_uncached(&self) -> anyhow::Result<MockChrootListResponse> {
         let docker = Docker::connect_with_local_defaults()?;
         let container_name = format!("synforge-mock-chroots-{}", Uuid::now_v7());
         info!(

@@ -12,6 +12,7 @@ use synforge_core::{
 };
 use tracing::{info, warn};
 
+use crate::git_cache::{GitMirrorCache, WORKER_MIRROR_MOUNT_PATH};
 use crate::job_lifecycle::JobLifecycle;
 use crate::sessions::WorkerSessionBroker;
 
@@ -54,6 +55,7 @@ impl DockerWorkerLauncher {
         );
         tokio::fs::create_dir_all(&payload.workspace_dir).await?;
         tokio::fs::create_dir_all(config.runtime_paths().job_logs_dir(payload.job_id)).await?;
+        tokio::fs::create_dir_all(config.runtime_paths().git_mirror_root()).await?;
         let session = self
             .sessions
             .create_session(payload.job_id, payload.clone())
@@ -65,6 +67,13 @@ impl DockerWorkerLauncher {
         );
 
         let container_name = format!("synforge-worker-{}", payload.job_id);
+        let repo_url = payload_repo_url(payload).map(str::to_string);
+        let mirror_key = repo_url.as_deref().map(GitMirrorCache::mirror_key);
+        let mirror_bind = format!(
+            "{}:{}:ro",
+            config.runtime_paths().git_mirror_root().display(),
+            WORKER_MIRROR_MOUNT_PATH
+        );
         info!(
             job_id = %payload.job_id,
             container_name = %container_name,
@@ -72,7 +81,7 @@ impl DockerWorkerLauncher {
             network_mode = ?self.network_mode,
             "creating worker container"
         );
-        let container = self
+        let container_with_bind = self
             .docker
             .create_container(
                 Some(
@@ -80,22 +89,48 @@ impl DockerWorkerLauncher {
                         .name(container_name.as_str())
                         .build(),
                 ),
-                ContainerCreateBody {
-                    image: Some(config.worker_image.clone()),
-                    env: Some(worker_env(payload, config, &session.worker_id)),
-                    host_config: Some(HostConfig {
-                        auto_remove: Some(true),
-                        privileged: Some(true),
-                        extra_hosts: Some(vec!["host.docker.internal:host-gateway".to_string()]),
-                        network_mode: self.network_mode.clone(),
-                        ..Default::default()
-                    }),
-                    working_dir: Some("/synforge".to_string()),
-                    ..Default::default()
-                },
+                worker_container_body(
+                    config,
+                    payload,
+                    &session.worker_id,
+                    self.network_mode.clone(),
+                    Some(vec![mirror_bind.clone()]),
+                    mirror_key.clone(),
+                ),
             )
-            .await
-            .with_context(|| format!("failed to create worker container {}", container_name))?;
+            .await;
+        let container = match container_with_bind {
+            Ok(container) => container,
+            Err(error) => {
+                warn!(
+                    job_id = %payload.job_id,
+                    container_name = %container_name,
+                    bind = %mirror_bind,
+                    error = %error,
+                    "failed to create worker container with git mirror bind; retrying without mirror cache mount"
+                );
+                self.docker
+                    .create_container(
+                        Some(
+                            CreateContainerOptionsBuilder::default()
+                                .name(container_name.as_str())
+                                .build(),
+                        ),
+                        worker_container_body(
+                            config,
+                            payload,
+                            &session.worker_id,
+                            self.network_mode.clone(),
+                            None,
+                            None,
+                        ),
+                    )
+                    .await
+                    .with_context(|| {
+                        format!("failed to create worker container {}", container_name)
+                    })?
+            }
+        };
 
         let container_id = container.id;
         info!(
@@ -219,6 +254,37 @@ fn worker_env(payload: &WorkerJobPayload, config: &DaemonConfig, worker_id: &str
     ]
 }
 
+fn worker_container_body(
+    config: &DaemonConfig,
+    payload: &WorkerJobPayload,
+    worker_id: &str,
+    network_mode: Option<String>,
+    binds: Option<Vec<String>>,
+    mirror_key: Option<String>,
+) -> ContainerCreateBody {
+    let mut env = worker_env(payload, config, worker_id);
+    if let Some(mirror_key) = mirror_key {
+        env.push(format!(
+            "SYNFORGE_GIT_MIRROR_ROOT={WORKER_MIRROR_MOUNT_PATH}"
+        ));
+        env.push(format!("SYNFORGE_GIT_MIRROR_KEY={mirror_key}"));
+    }
+    ContainerCreateBody {
+        image: Some(config.worker_image.clone()),
+        env: Some(env),
+        host_config: Some(HostConfig {
+            auto_remove: Some(true),
+            privileged: Some(true),
+            extra_hosts: Some(vec!["host.docker.internal:host-gateway".to_string()]),
+            network_mode,
+            binds,
+            ..Default::default()
+        }),
+        working_dir: Some("/synforge".to_string()),
+        ..Default::default()
+    }
+}
+
 fn daemon_hostname() -> String {
     std::env::var("HOSTNAME")
         .ok()
@@ -254,5 +320,12 @@ fn job_descriptor(payload: &WorkerJobPayload) -> (&'static str, &str, &str) {
             build.package_name.as_str(),
             build.mock_chroot.as_str(),
         ),
+    }
+}
+
+fn payload_repo_url(payload: &WorkerJobPayload) -> Option<&str> {
+    match &payload.action {
+        WorkerAction::Parse(parse) => Some(parse.source.repo_url.as_str()),
+        WorkerAction::Build(build) => Some(build.package.source.repo_url.as_str()),
     }
 }

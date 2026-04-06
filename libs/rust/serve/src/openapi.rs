@@ -42,6 +42,7 @@ impl Modify for SecurityAddon {
         api::sync::list_sync_operations,
         api::sync::list_package_sync_operations,
         api::sync::get_sync_metrics,
+        api::cache::get_cache_stats,
         api::jobs::list_jobs,
         api::jobs::list_active_jobs,
         api::jobs::list_completed_jobs,
@@ -114,6 +115,9 @@ impl Modify for SecurityAddon {
             synforge_core::api::PackageSyncOperationListQuery,
             synforge_core::api::SyncOperationListResponse,
             synforge_core::api::SyncMetricsResponse,
+            synforge_core::api::MockChrootCacheStats,
+            synforge_core::api::GitMirrorCacheStats,
+            synforge_core::api::CacheStatsResponse,
             synforge_core::api::SetupAdminRequest,
             synforge_core::api::SetupInitializeRequest,
             synforge_core::api::SetupStatusResponse,
@@ -151,6 +155,7 @@ impl Modify for SecurityAddon {
         (name = "Sync", description = "Sync operation history and health metrics"),
         (name = "Logs", description = "Per-job log source discovery and streaming"),
         (name = "Repository", description = "Managed repository inventory and source browsing"),
+        (name = "Statistics", description = "System and cache telemetry endpoints"),
         (name = "Settings", description = "Daemon configuration schema and runtime updates"),
         (name = "Users", description = "Administrative user and permissions management")
     )

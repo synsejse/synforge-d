@@ -105,6 +105,15 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    git_mirror_cache_states (mirror_key) {
+        mirror_key -> Text,
+        repo_url -> Text,
+        last_fetched_at -> BigInt,
+        last_used_at -> BigInt,
+    }
+}
+
 diesel::allow_tables_to_appear_in_same_query!(
     packages,
     build_jobs,
@@ -115,4 +124,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     user_repo_metrics,
     published_repo_files,
     sync_operations,
+    git_mirror_cache_states,
 );

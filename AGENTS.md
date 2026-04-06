@@ -1,51 +1,60 @@
-# Repository Guidelines
+# Repository Guidelines (Technical)
 
-## Project Structure & Module Organization
+## Purpose
 
-This repository is a mixed Rust and web workspace for `synforge-d`, a Docker-backed Fedora package build orchestrator.
+`synforge-d` is a Rust + web workspace for orchestrating Fedora RPM package sync/build/publish workflows with a Docker worker runtime and a WebUI.
 
-- `libs/rust/core`: shared models, config, API types, runtime paths, and worker protocol
-- `libs/rust/orchestrator`: MariaDB-backed orchestration, scheduling, repo publication, and migrations
-- `libs/rust/serve`: Axum API and static repository serving
-- `libs/rust/worker`: reusable worker runtime code
-- `apps/rust/daemon`, `apps/rust/worker`, `apps/rust/webui`: binary entry points
-- `apps/webui/src`: Astro + React frontend source
-- `docker-compose.yml`: local stack for daemon, web UI, and worker image builds
-- `docs/`: design and cleanup notes
+## Project Structure
 
-Treat `target/`, `apps/webui/dist/`, and `apps/webui/node_modules/` as generated output.
+- `libs/rust/core`: shared API contracts, runtime config, and domain models
+- `libs/rust/orchestrator`: DB-backed orchestration logic, sync/build/repo services, migrations
+- `libs/rust/serve`: Axum API + static serving layer
+- `libs/rust/worker`: worker runtime logic used by containerized build workers
+- `apps/rust/daemon`: main daemon binary
+- `apps/rust/worker`: worker binary
+- `apps/rust/webui`: backend for serving/proxying the frontend
+- `apps/webui`: Astro + React frontend
 
-## Build, Test, and Development Commands
+Generated artifacts: `target/`, `apps/webui/dist/`, `apps/webui/node_modules/`.
 
-- `cargo check --workspace`: fast validation for all Rust crates
-- `cargo build --workspace`: build all Rust libraries and binaries
-- `cargo test --workspace`: run Rust tests when present
-- `docker compose build worker-fedora daemon`: build the local worker and daemon images
-- `docker compose up`: start the local stack
-- `cd apps/webui && npm run dev`: run the Astro frontend with API proxying to `http://localhost:8080`
-- `cd apps/webui && npm run build`: produce the frontend bundle
+## Current Product/Behavior Notes
 
-## Coding Style & Naming Conventions
+- Overview dashboard is intentionally reduced to high-signal cards; detailed system metrics moved to `/statistics`.
+- Packages page supports **Refresh All** (manual source refresh queueing across enabled packages).
+- Permission model is API-centric:
+  - `write` implies `read` for session/API access checks.
+  - `repo` remains separate for repository consumption/auth use-cases.
+- WebUI deauth trigger is narrow by design: only session endpoint auth failures (`/api/v1/session` 401) force auth reset.
+- Git mirror cache state persistence is DB-backed (`git_mirror_cache_states`) instead of file metadata.
+- Repo summary/stat queries were optimized to DB aggregates (Diesel query builder `COUNT DISTINCT`/`SUM` style paths), replacing in-memory aggregation loops.
 
-Rust uses the workspace defaults in `Cargo.toml` with 4-space indentation, `snake_case` for modules/functions, and `PascalCase` for types. Prefer small modules with explicit re-exports from `lib.rs`.
+## Database and Migrations
 
-Frontend code uses TypeScript, React, and Astro. Follow the existing style: 2-space indentation, double quotes in `.tsx`, and `PascalCase` component names such as `Dashboard.tsx`. Keep utility code under `apps/webui/src/lib`.
+- Migrations live in `libs/rust/orchestrator/migrations/`.
+- Performance index migration exists: `00000000000006_performance_indexes`.
+- Migration execution now logs whether migrations were applied and prints applied migration versions at startup.
+- Prefer Diesel query builder patterns over raw SQL strings for application query logic.
 
-Run `cargo fmt --all` before submitting Rust changes. For frontend edits, keep imports grouped and match the surrounding file style.
+## Build/Test/Validation
 
-## Testing Guidelines
+- Rust formatting + validation:
+  - `cargo fmt --all`
+  - `cargo check --workspace`
+  - `cargo test --workspace`
+- Frontend build validation:
+  - `cd apps/webui && npm run build`
+- Local stack:
+  - `docker compose build worker-fedora daemon`
+  - `docker compose up`
 
-There is not yet a broad automated test suite, so add tests with new behavior where practical. Prefer unit tests beside Rust modules with `#[cfg(test)]`, and name tests for the behavior they prove, for example `publishes_repo_files_on_success`.
+## Coding Conventions
 
-Before opening a PR, run `cargo check --workspace`, `cargo test --workspace`, and `cd apps/webui && npm run build`.
+- Rust: 4 spaces, `snake_case` modules/functions, `PascalCase` types, small focused modules.
+- Frontend: 2 spaces, double quotes in `.tsx`, `PascalCase` components, utilities under `apps/webui/src/lib`.
+- Follow existing patterns over introducing parallel abstractions.
 
-## Commit & Pull Request Guidelines
+## Change and PR Expectations
 
-Current history uses short, imperative commit subjects, for example `Initial project import`. Keep commit titles concise and specific.
-
-PRs should include:
-
-- a brief summary of the user-visible or operational change
-- linked issues or design notes when relevant
-- screenshots for `apps/webui` changes
-- notes about new environment variables, schema changes, or Docker/runtime impacts
+- Keep commits short, imperative, and scoped.
+- Include schema/migration and runtime impact notes when relevant.
+- Include UI screenshots when frontend behavior changes.

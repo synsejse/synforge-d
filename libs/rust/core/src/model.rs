@@ -206,7 +206,13 @@ pub struct UserAccount {
 
 impl UserAccount {
     pub fn has_permission(&self, permission: UserPermission) -> bool {
-        self.permissions.contains(&permission)
+        match permission {
+            UserPermission::Read => {
+                self.permissions.contains(&UserPermission::Read)
+                    || self.permissions.contains(&UserPermission::Write)
+            }
+            _ => self.permissions.contains(&permission),
+        }
     }
 }
 

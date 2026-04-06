@@ -43,7 +43,7 @@ export default function MetricCard({
       
       <div className="relative">
         {icon && (
-          <div className="mb-3 text-2xl text-[var(--theme-text-muted)]">
+          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center border-2 border-zinc-700 bg-zinc-950 text-xl text-zinc-400">
             {icon}
           </div>
         )}

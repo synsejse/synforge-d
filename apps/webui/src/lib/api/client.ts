@@ -14,6 +14,10 @@ export class ApiClientError extends Error {
   }
 }
 
+function shouldTriggerAuthRequired(path: string): boolean {
+  return path === "/api/v1/session";
+}
+
 export class BaseApiClient {
   protected authHeaders(contentType = true): Record<string, string> {
     const headers: Record<string, string> = {};
@@ -42,7 +46,11 @@ export class BaseApiClient {
         code: "internal_error",
         message: res.statusText,
       }));
-      if (res.status === 401 && typeof window !== "undefined") {
+      if (
+        res.status === 401 &&
+        typeof window !== "undefined" &&
+        shouldTriggerAuthRequired(path)
+      ) {
         window.dispatchEvent(
           new CustomEvent("synforge:auth-required", {
             detail: {

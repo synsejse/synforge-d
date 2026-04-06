@@ -198,16 +198,6 @@ export class JobApiClient extends PackageApiClient {
         code: "internal_error",
         message: res.statusText,
       }));
-      if (res.status === 401 && typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent("synforge:auth-required", {
-            detail: {
-              path,
-              error,
-            },
-          }),
-        );
-      }
       throw new ApiClientError(res.status, error);
     }
 

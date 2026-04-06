@@ -12,6 +12,7 @@ import PageHeader from "../ui/PageHeader";
 import {
   faBoxesStacked,
   faChartLine,
+  faCircleCheck,
   faFolderTree,
   faRocket,
 } from "@fortawesome/free-solid-svg-icons";
@@ -107,13 +108,14 @@ export default function Dashboard() {
           value={enabledPackageCount}
           detail="Actively buildable"
           variant="accent"
+          icon={<FaIcon icon={faCircleCheck} />}
         />
         <MetricCard
           label="Active_Jobs"
           value={activeJobCount}
           detail="Pending or running"
           variant="terminal"
-          icon={activeJobCount > 0 ? <FaIcon icon={faRocket} /> : undefined}
+          icon={<FaIcon icon={faRocket} />}
         />
         <MetricCard
           label="Stored"

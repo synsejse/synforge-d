@@ -6,7 +6,7 @@ import {
   faTrash,
   faFolderOpen,
 } from "@fortawesome/free-solid-svg-icons";
-import api from "../../lib/api";
+import api, { ApiClientError } from "../../lib/api";
 import { summarizePackageAction } from "../../lib/package-actions";
 import type { PackageResponse } from "../../lib/types";
 import AddPackageModal from "../package/AddPackageModal";
@@ -43,6 +43,7 @@ export default function PackageList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [refreshingAll, setRefreshingAll] = useState(false);
   const pageSize = 50;
 
   async function load(
@@ -111,6 +112,96 @@ export default function PackageList() {
     }
   }
 
+  async function listAllEnabledPackageNames(): Promise<string[]> {
+    const names: string[] = [];
+    let nextOffset = 0;
+    const batchSize = 200;
+
+    while (true) {
+      const res = await api.listPackagesPage(batchSize, nextOffset, {
+        enabled: true,
+      });
+      names.push(...res.packages.map((entry) => entry.package.name));
+      if (!res.page.has_more) {
+        break;
+      }
+      nextOffset += batchSize;
+    }
+
+    return names;
+  }
+
+  async function handleRefreshAllPackages() {
+    if (refreshingAll) {
+      return;
+    }
+    if (!confirm("Queue manual refresh for all enabled packages?")) {
+      return;
+    }
+
+    try {
+      setRefreshingAll(true);
+      const packageNames = await listAllEnabledPackageNames();
+      if (packageNames.length === 0) {
+        alert("No enabled packages found to refresh.");
+        return;
+      }
+
+      let queuedPackages = 0;
+      let skippedPackages = 0;
+      let blockedPackages = 0;
+      let failedPackages = 0;
+      let queuedTargets = 0;
+      let skippedTargets = 0;
+      let blockedTargets = 0;
+
+      for (const packageName of packageNames) {
+        try {
+          const response = await api.refreshPackage(packageName);
+          queuedPackages += 1;
+          for (const result of response.results) {
+            if (result.disposition === "queued") {
+              queuedTargets += 1;
+            } else if (result.disposition === "skipped") {
+              skippedTargets += 1;
+            } else if (result.disposition === "blocked") {
+              blockedTargets += 1;
+            }
+          }
+        } catch (e) {
+          if (e instanceof ApiClientError) {
+            const message = e.error.message.toLowerCase();
+            if (message.includes("no source changes")) {
+              skippedPackages += 1;
+            } else if (message.includes("already queued")) {
+              blockedPackages += 1;
+            } else {
+              failedPackages += 1;
+            }
+          } else {
+            failedPackages += 1;
+          }
+        }
+      }
+
+      alert(
+        [
+          `Refresh all complete for ${packageNames.length} package(s).`,
+          `Queued packages: ${queuedPackages}`,
+          `Skipped packages: ${skippedPackages}`,
+          `Blocked packages: ${blockedPackages}`,
+          `Failed packages: ${failedPackages}`,
+          `Queued targets: ${queuedTargets}`,
+          `Skipped targets: ${skippedTargets}`,
+          `Blocked targets: ${blockedTargets}`,
+        ].join("\n"),
+      );
+      await load();
+    } finally {
+      setRefreshingAll(false);
+    }
+  }
+
   if (loading) {
     return <LoadingBlock label="Loading packages…" lines={4} />;
   }
@@ -128,6 +219,11 @@ export default function PackageList() {
         description="Sources, targets, and builds."
         color="lime"
         actions={[
+          {
+            onClick: () => void handleRefreshAllPackages(),
+            label: refreshingAll ? "Refreshing…" : "Refresh All",
+            icon: faRotate,
+          },
           {
             onClick: () => setShowAddModal(true),
             label: "Add Package",

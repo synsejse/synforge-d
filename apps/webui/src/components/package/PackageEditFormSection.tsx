@@ -2,6 +2,14 @@ import { faMagnifyingGlass, faSave } from "@fortawesome/free-solid-svg-icons";
 import type { FormEvent } from "react";
 import FaIcon from "../ui/FaIcon";
 import SelectionDialog from "../common/SelectionDialog";
+import {
+  TextField,
+  NumberField,
+  TextAreaField,
+  ToggleField,
+  FieldGroup,
+  DisplayBox,
+} from "../ui/FormFields";
 
 export interface PackageEditFormState {
   repoUrl: string;
@@ -61,7 +69,7 @@ export default function PackageEditFormSection({
 }: PackageEditFormSectionProps) {
   return (
     <>
-      <form onSubmit={onSubmit} className="border-4 border-white bg-black p-6 shadow-[6px_6px_0_rgba(255,255,255,0.2)]">
+      <form onSubmit={onSubmit} className="border-4 border-white bg-black p-6">
         <div className="mb-6">
           <h2 className="font-mono text-xl font-bold uppercase text-white">Edit Package</h2>
           <p className="mt-2 text-sm text-zinc-400">
@@ -71,29 +79,18 @@ export default function PackageEditFormSection({
         </div>
 
         <div className="space-y-5">
-          <label className="block">
-            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">
-              Git repository URL
-            </span>
-            <input
-              type="url"
-              value={form.repoUrl}
-              onChange={(event) => onFormChange({ repoUrl: event.target.value })}
-              className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
-              required
-            />
-          </label>
+          <TextField
+            label="Git repository URL"
+            value={form.repoUrl}
+            onChange={(value) => onFormChange({ repoUrl: value })}
+            type="url"
+            required
+          />
 
-          <div className="border-2 border-zinc-700 bg-black p-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <span className="block text-sm font-medium text-zinc-300">
-                  Repository spec path
-                </span>
-                <span className="mt-1 block text-xs text-zinc-500">
-                  Choose the .spec file from the tracked repository.
-                </span>
-              </div>
+          <FieldGroup
+            label="Repository spec path"
+            description="Choose the .spec file from the tracked repository."
+            action={
               <button
                 type="button"
                 onClick={onOpenSpecPicker}
@@ -102,79 +99,46 @@ export default function PackageEditFormSection({
                 <FaIcon icon={faMagnifyingGlass} className="mr-2" />
                 Browse repository
               </button>
-            </div>
+            }
+          >
             <input
               type="text"
               value={form.specPath}
               onChange={(event) => onFormChange({ specPath: event.target.value })}
               placeholder="path/to/package.spec"
-              className="mt-4 w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+              className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]"
               required
             />
-          </div>
+          </FieldGroup>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">
-                Poll interval (seconds)
-              </span>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={form.pollIntervalSeconds}
-                onChange={(event) =>
-                  onFormChange({ pollIntervalSeconds: event.target.value })
-                }
-                className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
-                required
-              />
-            </label>
+            <NumberField
+              label="Poll interval (seconds)"
+              value={form.pollIntervalSeconds}
+              onChange={(value) => onFormChange({ pollIntervalSeconds: value })}
+              required
+            />
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">
-                Build timeout (seconds)
-              </span>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={form.buildTimeoutSeconds}
-                onChange={(event) =>
-                  onFormChange({ buildTimeoutSeconds: event.target.value })
-                }
-                className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
-                required
-              />
-            </label>
+            <NumberField
+              label="Build timeout (seconds)"
+              value={form.buildTimeoutSeconds}
+              onChange={(value) => onFormChange({ buildTimeoutSeconds: value })}
+              required
+            />
 
-            <label className="block md:col-span-2">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">
-                History count
-              </span>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={form.packageHistoryCount}
-                onChange={(event) =>
-                  onFormChange({ packageHistoryCount: event.target.value })
-                }
-                className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
-                required
-              />
-            </label>
+            <NumberField
+              label="History count"
+              value={form.packageHistoryCount}
+              onChange={(value) => onFormChange({ packageHistoryCount: value })}
+              required
+              className="md:col-span-2"
+            />
 
-            <div className="border-2 border-zinc-700 bg-black p-4 md:col-span-2">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <span className="block text-sm font-medium text-zinc-300">
-                    Mock chroots
-                  </span>
-                  <span className="mt-1 block text-xs text-zinc-500">
-                    Each selected chroot becomes a separate build job.
-                  </span>
-                </div>
+            <FieldGroup
+              label="Mock chroots"
+              description="Each selected chroot becomes a separate build job."
+              className="md:col-span-2"
+              action={
                 <button
                   type="button"
                   onClick={onOpenChrootPicker}
@@ -182,124 +146,59 @@ export default function PackageEditFormSection({
                 >
                   Choose chroots
                 </button>
-              </div>
-              <div className="mt-4 border-2 border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-mono text-zinc-200">
+              }
+            >
+              <DisplayBox>
                 {form.mockChroots.length > 0
                   ? formatMockChroots(form.mockChroots)
                   : "No chroots selected"}
-              </div>
-            </div>
+              </DisplayBox>
+            </FieldGroup>
 
-            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3">
-              <span>
-                <span className="block text-sm font-medium text-white">
-                  Enabled
-                </span>
-                <span className="mt-1 block text-xs text-zinc-400">
-                  Allow new builds for this package.
-                </span>
-              </span>
-              <input
-                type="checkbox"
-                checked={form.enabled}
-                onChange={(event) => onFormChange({ enabled: event.target.checked })}
-                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
-              />
-            </label>
+            <ToggleField
+              label="Enabled"
+              description="Allow new builds for this package."
+              checked={form.enabled}
+              onChange={(checked) => onFormChange({ enabled: checked })}
+            />
 
-            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3">
-              <span>
-                <span className="block text-sm font-medium text-white">
-                  Source Polling
-                </span>
-                <span className="mt-1 block text-xs text-zinc-400">
-                  Watch the tracked git repository for new commits.
-                </span>
-              </span>
-              <input
-                type="checkbox"
-                checked={form.poll}
-                onChange={(event) => onFormChange({ poll: event.target.checked })}
-                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
-              />
-            </label>
+            <ToggleField
+              label="Source Polling"
+              description="Watch the tracked git repository for new commits."
+              checked={form.poll}
+              onChange={(checked) => onFormChange({ poll: checked })}
+            />
 
-            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3">
-              <span>
-                <span className="block text-sm font-medium text-white">
-                  Publish SRPM
-                </span>
-                <span className="mt-1 block text-xs text-zinc-400">
-                  Keep source RPM publication enabled for this package.
-                </span>
-              </span>
-              <input
-                type="checkbox"
-                checked={form.publish_srpm}
-                onChange={(event) =>
-                  onFormChange({ publish_srpm: event.target.checked })
-                }
-                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
-              />
-            </label>
+            <ToggleField
+              label="Publish SRPM"
+              description="Keep source RPM publication enabled for this package."
+              checked={form.publish_srpm}
+              onChange={(checked) => onFormChange({ publish_srpm: checked })}
+            />
 
-            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3">
-              <span>
-                <span className="block text-sm font-medium text-white">
-                  Publish debug packages
-                </span>
-                <span className="mt-1 block text-xs text-zinc-400">
-                  Include debuginfo and debugsource RPMs in repository.
-                </span>
-              </span>
-              <input
-                type="checkbox"
-                checked={form.publish_debuginfo}
-                onChange={(event) =>
-                  onFormChange({ publish_debuginfo: event.target.checked })
-                }
-                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
-              />
-            </label>
+            <ToggleField
+              label="Publish debug packages"
+              description="Include debuginfo and debugsource RPMs in repository."
+              checked={form.publish_debuginfo}
+              onChange={(checked) => onFormChange({ publish_debuginfo: checked })}
+            />
 
-            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3 md:col-span-2">
-              <span>
-                <span className="block text-sm font-medium text-white">
-                  Network access
-                </span>
-                <span className="mt-1 block text-xs text-zinc-400">
-                  Allow mock builds for this package to access the network.
-                </span>
-              </span>
-              <input
-                type="checkbox"
-                checked={form.network_access}
-                onChange={(event) =>
-                  onFormChange({ network_access: event.target.checked })
-                }
-                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
-              />
-            </label>
+            <ToggleField
+              label="Network access"
+              description="Allow mock builds for this package to access the network."
+              checked={form.network_access}
+              onChange={(checked) => onFormChange({ network_access: checked })}
+              className="md:col-span-2"
+            />
           </div>
 
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-zinc-300">
-              Build environment
-            </span>
-            <textarea
-              value={form.buildEnv}
-              onChange={(event) => onFormChange({ buildEnv: event.target.value })}
-              rows={6}
-              placeholder={
-                "KEY=value\nMESON_ARGS=-Dgallium-drivers=swrast\nRUSTFLAGS=-C debuginfo=1"
-              }
-              className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
-            />
-            <span className="mt-2 block text-xs text-zinc-500">
-              One `KEY=value` entry per line. Applied to SRPM creation and mock
-              rebuild steps.
-            </span>
-          </label>
+          <TextAreaField
+            label="Build environment"
+            value={form.buildEnv}
+            onChange={(value) => onFormChange({ buildEnv: value })}
+            placeholder="KEY=value&#10;MESON_ARGS=-Dgallium-drivers=swrast&#10;RUSTFLAGS=-C debuginfo=1"
+            hint="One `KEY=value` entry per line. Applied to SRPM creation and mock rebuild steps."
+          />
 
           <div className="flex justify-end">
             <button
@@ -371,11 +270,11 @@ export default function PackageEditFormSection({
           onClose={onCloseChrootPicker}
         >
           <div className="max-h-[50vh] overflow-y-auto border-2 border-zinc-700 bg-black">
-            <div className="divide-y divide-white/8">
+            <div className="divide-y divide-zinc-800">
               {availableChroots.map((chroot) => (
                 <label
                   key={chroot}
-                  className="flex items-center justify-between gap-4 px-4 py-3 text-sm text-zinc-200"
+                  className="flex items-center justify-between gap-4 px-4 py-3 text-sm text-zinc-200 hover:bg-zinc-950"
                 >
                   <span className="font-mono">{chroot}</span>
                   <input
@@ -384,7 +283,6 @@ export default function PackageEditFormSection({
                     onChange={(event) =>
                       onToggleChroot(chroot, event.target.checked)
                     }
-                    className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
                   />
                 </label>
               ))}

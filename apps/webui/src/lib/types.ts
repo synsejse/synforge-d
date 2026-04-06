@@ -85,3 +85,11 @@ export type SetupAdminRequest = ApiSchema["SetupAdminRequest"];
 export type SetupInitializeRequest = ApiSchema["SetupInitializeRequest"];
 export type SessionResponse = ApiSchema["SessionResponse"];
 
+export type SyncTriggerType = ApiSchema["SyncTriggerType"];
+export type SyncStatus = ApiSchema["SyncStatus"];
+export type SyncOperation = ApiSchema["SyncOperation"];
+export type SyncOperationListQuery = ApiSchema["SyncOperationListQuery"];
+export type PackageSyncOperationListQuery =
+  ApiSchema["PackageSyncOperationListQuery"];
+export type SyncOperationListResponse = ApiSchema["SyncOperationListResponse"];
+export type SyncMetricsResponse = ApiSchema["SyncMetricsResponse"];

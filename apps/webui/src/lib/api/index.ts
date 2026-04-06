@@ -1,7 +1,7 @@
 import { ApiClientError } from "./client";
-import { UserApiClient } from "./users";
+import { SyncApiClient } from "./sync";
 
-export class ApiClient extends UserApiClient {}
+export class ApiClient extends SyncApiClient {}
 
 export { ApiClientError };
 

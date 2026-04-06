@@ -19,6 +19,7 @@ use synforge_core::{
 use crate::db::{DieselStore, JobStore, PackageStore};
 use crate::packages::MaterializePackageOptions;
 use crate::registry::PackageRegistry;
+use crate::sync_tracker::sync_trigger_from_build_trigger;
 
 #[derive(Clone)]
 pub struct QueuedBuild {
@@ -239,12 +240,14 @@ impl BuildScheduler {
         trigger: BuildTrigger,
         force: bool,
     ) -> anyhow::Result<PackageActionPlan> {
+        let sync_trigger = sync_trigger_from_build_trigger(&trigger);
         let inspected = self
             .registry
-            .inspect_source(
+            .inspect_source_tracked(
                 &package.name,
                 &package.source,
                 package.build_timeout_seconds,
+                sync_trigger,
             )
             .await?;
         let revision_key = inspected.revision.comparison_key();

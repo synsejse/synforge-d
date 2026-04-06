@@ -10,6 +10,7 @@ use crate::{
         UserPermission, UserRepoMetrics,
     },
     package::{BuildEnvVar, PackageDefinition, SpecSource},
+    sync::{SyncOperation, SyncStatus},
 };
 
 // --- Pagination ---
@@ -245,6 +246,42 @@ pub struct JobListQuery {
     pub package_name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mock_chroot: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, IntoParams, ToSchema)]
+pub struct SyncOperationListQuery {
+    #[serde(default)]
+    pub limit: Option<usize>,
+    #[serde(default)]
+    pub offset: Option<usize>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub package_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<SyncStatus>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, IntoParams, ToSchema)]
+pub struct PackageSyncOperationListQuery {
+    #[serde(default)]
+    pub limit: Option<usize>,
+    #[serde(default)]
+    pub offset: Option<usize>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<SyncStatus>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct SyncOperationListResponse {
+    pub operations: Vec<SyncOperation>,
+    pub page: PageInfo,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct SyncMetricsResponse {
+    pub succeeded_24h: usize,
+    pub failed_24h: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_failure_at: Option<String>,
 }
 
 // --- Users, Session, Setup ---

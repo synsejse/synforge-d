@@ -3,22 +3,30 @@ use synforge_core::{
     api::{BrowseRepositoryResponse, CreatePackageRequest, PackageResponse, UpdatePackageRequest},
     error::SynforgeError,
     package::{PackageDefinition, SpecRevision, SpecSource},
+    sync::SyncTriggerType,
 };
 
 use crate::db::{DieselStore, PackageStore};
 use crate::packages::{InspectedPackageSource, MaterializePackageOptions, PackageSyncStore};
+use crate::sync_tracker::{SyncResult, SyncStatusTracker};
 
 #[derive(Clone)]
 pub struct PackageRegistry {
     store: DieselStore,
     package_store: PackageSyncStore,
+    sync_tracker: Option<SyncStatusTracker>,
 }
 
 impl PackageRegistry {
-    pub fn new(store: DieselStore, package_store: PackageSyncStore) -> Self {
+    pub fn new(
+        store: DieselStore,
+        package_store: PackageSyncStore,
+        sync_tracker: Option<SyncStatusTracker>,
+    ) -> Self {
         Self {
             store,
             package_store,
+            sync_tracker,
         }
     }
 
@@ -158,6 +166,34 @@ impl PackageRegistry {
             .await
     }
 
+    pub async fn inspect_source_tracked(
+        &self,
+        package_name: &str,
+        source: &SpecSource,
+        timeout_seconds: u64,
+        trigger: SyncTriggerType,
+    ) -> anyhow::Result<InspectedPackageSource> {
+        let result = self
+            .inspect_source(package_name, source, timeout_seconds)
+            .await;
+
+        if let Some(sync_tracker) = self.sync_tracker.clone() {
+            let sync_result = match &result {
+                Ok(inspected) => SyncResult::Success {
+                    revision: inspected.revision.comparison_key(),
+                },
+                Err(error) => SyncResult::Failure {
+                    error: error.to_string(),
+                },
+            };
+            sync_tracker
+                .record_sync_safe(package_name, trigger, &sync_result)
+                .await;
+        }
+
+        result
+    }
+
     pub async fn materialize_inspected_source(
         &self,
         source: &SpecSource,
@@ -191,6 +227,30 @@ impl PackageRegistry {
                 },
             )
             .await
+    }
+
+    pub async fn sync_existing_source_tracked(
+        &self,
+        package: &PackageDefinition,
+        trigger: SyncTriggerType,
+    ) -> anyhow::Result<(PackageDefinition, SpecRevision)> {
+        let result = self.sync_existing_source(package).await;
+
+        if let Some(sync_tracker) = self.sync_tracker.clone() {
+            let sync_result = match &result {
+                Ok((_, revision)) => SyncResult::Success {
+                    revision: revision.comparison_key(),
+                },
+                Err(error) => SyncResult::Failure {
+                    error: error.to_string(),
+                },
+            };
+            sync_tracker
+                .record_sync_safe(&package.name, trigger, &sync_result)
+                .await;
+        }
+
+        result
     }
 
     pub async fn browse_repository(

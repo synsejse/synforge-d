@@ -8,6 +8,7 @@ use crate::repo_manager::FileRepoManager;
 use crate::runner::BuildRunner;
 use crate::scheduler::BuildScheduler;
 use crate::sessions::WorkerSessionBroker;
+use crate::sync_tracker::SyncStatusTracker;
 use crate::worker_socket::start_worker_listener;
 use crate::workers::DockerWorkerLauncher;
 use synforge_core::{api::PageInfo, config::DaemonConfig, model::UserPermission};
@@ -23,6 +24,7 @@ mod jobs;
 mod logs;
 mod packages;
 mod repo;
+mod sync;
 mod users;
 
 pub struct SynforgeService {
@@ -112,7 +114,8 @@ impl SynforgeService {
             config.clone(),
             worker_launcher.clone(),
         );
-        let registry = PackageRegistry::new(store.clone(), package_store);
+        let sync_tracker = Some(SyncStatusTracker::new(store.clone()));
+        let registry = PackageRegistry::new(store.clone(), package_store, sync_tracker);
         let scheduler = BuildScheduler::new(store.clone(), registry.clone());
         let runner = BuildRunner::new(config.clone(), worker_launcher.clone(), lifecycle.clone());
 

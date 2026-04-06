@@ -93,6 +93,18 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    sync_operations (id) {
+        id -> Text,
+        package_name -> Text,
+        trigger_type -> Text,
+        status -> Text,
+        revision -> Nullable<Text>,
+        error_message -> Nullable<Text>,
+        created_at -> Text,
+    }
+}
+
 diesel::allow_tables_to_appear_in_same_query!(
     packages,
     build_jobs,
@@ -102,4 +114,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     user_permissions,
     user_repo_metrics,
     published_repo_files,
+    sync_operations,
 );

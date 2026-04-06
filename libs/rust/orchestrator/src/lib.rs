@@ -9,10 +9,11 @@ mod scheduler;
 mod schema;
 mod service;
 mod sessions;
+mod sync_tracker;
 mod worker_socket;
 mod workers;
 
-pub use db::{DieselStore, JobStore};
+pub use db::{DieselStore, JobStore, SyncStore};
 pub use job_lifecycle::JobLifecycle;
 pub use packages::{InspectedPackageSource, PackageSyncStore};
 pub use registry::PackageRegistry;
@@ -21,4 +22,5 @@ pub use runner::BuildRunner;
 pub use scheduler::{BuildScheduler, QueuedBuild, SchedulerError};
 pub use service::SynforgeService;
 pub use sessions::{ActiveWorkerSession, WorkerSession, WorkerSessionBroker};
+pub use sync_tracker::{SyncResult, SyncStatusTracker};
 pub use workers::DockerWorkerLauncher;

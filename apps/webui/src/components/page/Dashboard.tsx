@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import api from "../../lib/api";
 import { formatBytes } from "../../lib/bytes";
 import { formatDateTime } from "../../lib/datetime";
-import type { BuildJobResponse, RepoSummaryResponse } from "../../lib/types";
+import type {
+  BuildJobResponse,
+  RepoSummaryResponse,
+  SyncMetricsResponse,
+} from "../../lib/types";
 import ErrorMessage from "../common/ErrorMessage";
 import LoadingBlock from "../ui/LoadingBlock";
 import FaIcon from "../ui/FaIcon";
@@ -14,6 +18,7 @@ import {
   faChartLine,
   faCircleCheck,
   faFolderTree,
+  faRotate,
   faRocket,
 } from "@fortawesome/free-solid-svg-icons";
 
@@ -27,6 +32,7 @@ export default function Dashboard() {
   const [enabledPackageCount, setEnabledPackageCount] = useState(0);
   const [activeJobCount, setActiveJobCount] = useState(0);
   const [jobCount, setJobCount] = useState(0);
+  const [syncMetrics, setSyncMetrics] = useState<SyncMetricsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,12 +45,14 @@ export default function Dashboard() {
           recentJobsRes,
           activeJobsRes,
           repositoryRes,
+          syncMetricsRes,
         ] = await Promise.all([
           api.listPackagesPage(1, 0),
           api.listPackagesPage(1, 0, { enabled: true }),
           api.listCompletedJobs({ limit: 6, offset: 0 }),
           api.listActiveJobs({ limit: 6, offset: 0 }),
           api.getRepoSummary(),
+          api.getSyncMetrics(),
         ]);
         setPackageCount(packagesRes.page.total ?? packagesRes.packages.length);
         setEnabledPackageCount(
@@ -55,6 +63,7 @@ export default function Dashboard() {
         setActiveJobCount(activeJobsRes.page.total ?? activeJobsRes.jobs.length);
         setLiveJobs(activeJobsRes.jobs);
         setRepoSummary(repositoryRes);
+        setSyncMetrics(syncMetricsRes);
         setError(null);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load dashboard");
@@ -96,7 +105,7 @@ export default function Dashboard() {
       />
 
       {/* Metrics Grid */}
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <MetricCard
           label="Packages"
           value={packageCount}
@@ -116,6 +125,24 @@ export default function Dashboard() {
           detail="Pending or running"
           variant="terminal"
           icon={<FaIcon icon={faRocket} />}
+        />
+        <MetricCard
+          label="Sync_Failures_24h"
+          value={syncMetrics?.failed_24h ?? 0}
+          detail={
+            syncMetrics?.last_failure_at
+              ? `Last failure ${formatDateTime(syncMetrics.last_failure_at)}`
+              : "No recent failures"
+          }
+          variant={(syncMetrics?.failed_24h ?? 0) > 0 ? "error" : "success"}
+          icon={<FaIcon icon={faRotate} />}
+        />
+        <MetricCard
+          label="Sync_Succeeded_24h"
+          value={syncMetrics?.succeeded_24h ?? 0}
+          detail="Successful source sync operations"
+          variant="success"
+          icon={<FaIcon icon={faCircleCheck} />}
         />
         <MetricCard
           label="Stored"

@@ -6,7 +6,7 @@ interface MetricCardProps {
   value: string | number;
   detail?: string;
   icon?: ReactNode;
-  variant?: "default" | "accent" | "terminal";
+  variant?: "default" | "accent" | "terminal" | "success" | "error";
   className?: string;
 }
 
@@ -22,12 +22,16 @@ export default function MetricCard({
     default: "border-[var(--theme-border-strong)]",
     accent: "border-[var(--theme-accent-lime)]",
     terminal: "border-[var(--theme-terminal-green)]",
+    success: "border-[var(--theme-terminal-green)]",
+    error: "border-[var(--theme-error-red)]",
   }[variant];
 
   const textColor = {
     default: "text-white",
     accent: "text-[var(--theme-accent-lime)]",
     terminal: "text-[var(--theme-terminal-green)]",
+    success: "text-[var(--theme-terminal-green)]",
+    error: "text-[var(--theme-error-red)]",
   }[variant];
 
   return (
@@ -66,7 +70,9 @@ export default function MetricCard({
           className={cn(
             "absolute bottom-0 right-0 h-3 w-3",
             variant === "accent" && "bg-[var(--theme-accent-lime)]",
-            variant === "terminal" && "bg-[var(--theme-terminal-green)]"
+            variant === "terminal" && "bg-[var(--theme-terminal-green)]",
+            variant === "success" && "bg-[var(--theme-terminal-green)]",
+            variant === "error" && "bg-[var(--theme-error-red)]"
           )}
         ></div>
       )}

@@ -1,5 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { faBoxesStacked } from "@fortawesome/free-solid-svg-icons";
+import {
+  faBoxesStacked,
+  faBullseye,
+  faHardDrive,
+  faHammer,
+} from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import { formatBytes } from "../../lib/bytes";
 import type { PublishedRepoFile, RepoSummaryResponse } from "../../lib/types";
@@ -111,23 +116,26 @@ export default function RepositoryBrowser() {
           label="Packages"
           value={summary?.package_count ?? 0}
           detail="Published package names"
+          icon={<FaIcon icon={faBoxesStacked} />}
         />
         <MetricCard
           label="Targets"
           value={summary?.target_count ?? 0}
           detail="Active build targets"
-          accent="lime"
+          variant="accent"
+          icon={<FaIcon icon={faBullseye} />}
         />
         <MetricCard
           label="Builds"
           value={summary?.build_count ?? 0}
           detail="Recorded publish jobs"
+          icon={<FaIcon icon={faHammer} />}
         />
         <MetricCard
           label="Stored Size"
           value={formatBytes(summary?.stored_bytes ?? 0)}
           detail={`${summary?.published_file_count ?? 0} published files`}
-          icon
+          icon={<FaIcon icon={faHardDrive} />}
         />
       </div>
 

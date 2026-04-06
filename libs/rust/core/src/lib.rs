@@ -8,5 +8,6 @@ pub mod package;
 pub mod protocol;
 #[path = "runtime_paths.rs"]
 pub mod runtime;
+pub mod sync;
 pub mod validated;
 pub mod validation;

@@ -13,6 +13,7 @@ import PackageEditFormSection, {
 import PackageDetailHeader from "./PackageDetailHeader";
 import PackageRepoFilesSection from "./PackageRepoFilesSection";
 import PackageStateSidebar from "./PackageStateSidebar";
+import SyncHistoryTable from "./SyncHistoryTable";
 import type {
   BuildEnvVar,
   PackageBuildInventoryEntry,
@@ -418,6 +419,16 @@ export default function PackageDetail({ packageName }: Props) {
         onDeleteJob={(jobId) => void handleDeleteJob(jobId)}
         deletingJobId={deletingJobId}
       />
+
+      <section className="border-4 border-[var(--theme-border-strong)] bg-black p-6 shadow-[6px_6px_0_rgba(255,255,255,0.2)]">
+        <div className="mb-5">
+          <h2 className="font-mono text-xl font-bold uppercase text-white">Sync History</h2>
+          <p className="mt-2 text-sm text-zinc-400">
+            Source sync outcomes for this package across poll and manual triggers.
+          </p>
+        </div>
+        <SyncHistoryTable packageName={packageName} />
+      </section>
 
       <PackageRepoFilesSection
         repoFilesLoaded={repoFilesLoaded}

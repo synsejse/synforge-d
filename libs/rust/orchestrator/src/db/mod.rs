@@ -1,6 +1,7 @@
 mod job;
 mod package;
 mod repo;
+mod sync;
 mod traits;
 mod user;
 
@@ -30,7 +31,7 @@ use crate::schema::{
     user_repo_metrics, users,
 };
 
-pub use traits::{JobStore, PackageStore, RepoStore, UserStore};
+pub use traits::{JobStore, PackageStore, RepoStore, SyncStore, UserStore};
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
@@ -379,6 +380,50 @@ impl UserStore for DieselStore {
 
     async fn increment_user_download_bytes(&self, user_id: Uuid, bytes: u64) -> anyhow::Result<()> {
         user::increment_user_download_bytes(self, user_id, bytes).await
+    }
+}
+
+#[async_trait]
+impl SyncStore for DieselStore {
+    async fn insert_sync_operation(
+        &self,
+        package_name: &str,
+        trigger_type: synforge_core::sync::SyncTriggerType,
+        status: synforge_core::sync::SyncStatus,
+        revision: Option<&str>,
+        error_message: Option<&str>,
+    ) -> anyhow::Result<()> {
+        sync::insert_sync_operation(
+            self,
+            package_name,
+            trigger_type,
+            status,
+            revision,
+            error_message,
+        )
+        .await
+    }
+
+    async fn list_sync_operations(
+        &self,
+        limit: usize,
+        offset: usize,
+        package_name: Option<String>,
+        status: Option<synforge_core::sync::SyncStatus>,
+    ) -> anyhow::Result<Vec<synforge_core::sync::SyncOperation>> {
+        sync::list_sync_operations(self, limit, offset, package_name, status).await
+    }
+
+    async fn count_sync_operations(
+        &self,
+        package_name: Option<String>,
+        status: Option<synforge_core::sync::SyncStatus>,
+    ) -> anyhow::Result<u64> {
+        sync::count_sync_operations(self, package_name, status).await
+    }
+
+    async fn get_sync_metrics(&self) -> anyhow::Result<(usize, usize, Option<String>)> {
+        sync::get_sync_metrics(self).await
     }
 }
 

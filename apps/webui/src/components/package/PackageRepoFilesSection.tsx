@@ -10,8 +10,6 @@ import LoadingBlock from "../ui/LoadingBlock";
 interface PackageRepoFilesSectionProps {
   repoFilesLoaded: boolean;
   repoFilesTotal: number | null;
-  repoFilesOpen: boolean;
-  onToggleOpen: () => void;
   repoFilesLoading: boolean;
   repoFiles: PublishedRepoFile[];
   repoFilesOffset: number;
@@ -23,8 +21,6 @@ interface PackageRepoFilesSectionProps {
 export default function PackageRepoFilesSection({
   repoFilesLoaded,
   repoFilesTotal,
-  repoFilesOpen,
-  onToggleOpen,
   repoFilesLoading,
   repoFiles,
   repoFilesOffset,
@@ -42,27 +38,14 @@ export default function PackageRepoFilesSection({
             package.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {repoFilesLoaded ? (
-            <div className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs uppercase tracking-[0.2em] text-zinc-400">
-              {repoFilesTotal ?? repoFiles.length} tracked files
-            </div>
-          ) : null}
-          <button
-            type="button"
-            onClick={onToggleOpen}
-            className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
-          >
-            {repoFilesOpen ? "Hide Files" : "Open Files"}
-          </button>
-        </div>
+        {repoFilesLoaded ? (
+          <div className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs uppercase tracking-[0.2em] text-zinc-400">
+            {repoFilesTotal ?? repoFiles.length} tracked files
+          </div>
+        ) : null}
       </div>
 
-      {!repoFilesOpen ? (
-        <EmptyState>
-          Open repository files to load the repo-owned outputs for this package.
-        </EmptyState>
-      ) : repoFilesLoading && !repoFilesLoaded ? (
+      {repoFilesLoading && !repoFilesLoaded ? (
         <LoadingBlock label="Loading repository files…" lines={4} />
       ) : repoFiles.length === 0 ? (
         <EmptyState>

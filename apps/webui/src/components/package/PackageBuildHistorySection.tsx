@@ -15,8 +15,6 @@ import StatusPill from "../ui/StatusPill";
 interface PackageBuildHistorySectionProps {
   buildsLoaded: boolean;
   buildsTotal: number | null;
-  buildsOpen: boolean;
-  onToggleOpen: () => void;
   buildsLoading: boolean;
   builds: PackageBuildInventoryEntry[];
   buildsOffset: number;
@@ -32,8 +30,6 @@ interface PackageBuildHistorySectionProps {
 export default function PackageBuildHistorySection({
   buildsLoaded,
   buildsTotal,
-  buildsOpen,
-  onToggleOpen,
   buildsLoading,
   builds,
   buildsOffset,
@@ -55,25 +51,14 @@ export default function PackageBuildHistorySection({
             managed repo ownership.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {buildsLoaded ? (
-            <div className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs uppercase tracking-[0.2em] text-zinc-400">
-              {buildsTotal ?? builds.length} total builds
-            </div>
-          ) : null}
-          <button
-            type="button"
-            onClick={onToggleOpen}
-            className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
-          >
-            {buildsOpen ? "Hide History" : "Open History"}
-          </button>
-        </div>
+        {buildsLoaded ? (
+          <div className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs uppercase tracking-[0.2em] text-zinc-400">
+            {buildsTotal ?? builds.length} total builds
+          </div>
+        ) : null}
       </div>
 
-      {!buildsOpen ? (
-        <EmptyState>Open build history to load recent package builds.</EmptyState>
-      ) : buildsLoading && !buildsLoaded ? (
+      {buildsLoading && !buildsLoaded ? (
         <LoadingBlock label="Loading build history…" lines={4} />
       ) : builds.length === 0 ? (
         <EmptyState>No build history yet.</EmptyState>

@@ -59,8 +59,6 @@ export default function PackageDetail({ packageName }: Props) {
   const [repoFilesOffset, setRepoFilesOffset] = useState(0);
   const [repoFilesHasMore, setRepoFilesHasMore] = useState(false);
   const [repoFilesTotal, setRepoFilesTotal] = useState<number | null>(null);
-  const [buildsOpen, setBuildsOpen] = useState(false);
-  const [repoFilesOpen, setRepoFilesOpen] = useState(false);
   const [buildsLoaded, setBuildsLoaded] = useState(false);
   const [repoFilesLoaded, setRepoFilesLoaded] = useState(false);
   const [buildsLoading, setBuildsLoading] = useState(false);
@@ -189,12 +187,8 @@ export default function PackageDetail({ packageName }: Props) {
 
   async function refreshVisibleData() {
     await loadPrimary();
-    if (buildsOpen) {
-      await loadBuildHistory(true);
-    }
-    if (repoFilesOpen) {
-      await loadPackageRepoFiles(true);
-    }
+    await loadBuildHistory(true);
+    await loadPackageRepoFiles(true);
   }
 
   useEffect(() => {
@@ -206,24 +200,14 @@ export default function PackageDetail({ packageName }: Props) {
     setRepoFilesOffset(0);
     setRepoFilesHasMore(false);
     setRepoFilesTotal(null);
-    setBuildsOpen(false);
-    setRepoFilesOpen(false);
     setBuildsLoaded(false);
     setRepoFilesLoaded(false);
     loadPrimary();
+    loadBuildHistory(false, 0);
+    loadPackageRepoFiles(false, 0);
   }, [packageName]);
 
-  useEffect(() => {
-    if (buildsOpen && !buildsLoaded) {
-      void loadBuildHistory();
-    }
-  }, [buildsOpen, buildsLoaded, packageName]);
 
-  useEffect(() => {
-    if (repoFilesOpen && !repoFilesLoaded) {
-      void loadPackageRepoFiles();
-    }
-  }, [repoFilesOpen, repoFilesLoaded, packageName]);
 
   async function handleSave(event: FormEvent) {
     event.preventDefault();
@@ -412,8 +396,6 @@ export default function PackageDetail({ packageName }: Props) {
       <PackageBuildHistorySection
         buildsLoaded={buildsLoaded}
         buildsTotal={buildsTotal}
-        buildsOpen={buildsOpen}
-        onToggleOpen={() => setBuildsOpen((current) => !current)}
         buildsLoading={buildsLoading}
         builds={builds}
         buildsOffset={buildsOffset}
@@ -440,8 +422,6 @@ export default function PackageDetail({ packageName }: Props) {
       <PackageRepoFilesSection
         repoFilesLoaded={repoFilesLoaded}
         repoFilesTotal={repoFilesTotal}
-        repoFilesOpen={repoFilesOpen}
-        onToggleOpen={() => setRepoFilesOpen((current) => !current)}
         repoFilesLoading={repoFilesLoading}
         repoFiles={repoFiles}
         repoFilesOffset={repoFilesOffset}

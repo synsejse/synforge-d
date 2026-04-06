@@ -29,7 +29,6 @@ export default function JobDetail({ jobId }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [logsOpen, setLogsOpen] = useState(false);
   const [pageVisible, setPageVisible] = useState(() => {
     if (typeof document === "undefined") return true;
     return document.visibilityState === "visible";
@@ -237,29 +236,18 @@ export default function JobDetail({ jobId }: Props) {
       {/* Build Logs */}
       <div className="border-4 border-[var(--theme-terminal-green)] bg-black shadow-[4px_4px_0_rgba(0,255,65,0.2)]">
         <div className="border-b-4 border-[var(--theme-terminal-green)] bg-black px-6 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <FaIcon icon={faTerminal} className="text-[var(--theme-terminal-green)]" />
-              <h2 className="font-display text-xl font-bold uppercase tracking-tight text-[var(--theme-terminal-green)]">
-                Build_Logs
-              </h2>
-            </div>
-            <Button
-              variant="terminal"
-              size="sm"
-              onClick={() => setLogsOpen(!logsOpen)}
-            >
-              {logsOpen ? "Hide Logs" : "Show Logs"}
-            </Button>
+          <div className="flex items-center gap-2">
+            <FaIcon icon={faTerminal} className="text-[var(--theme-terminal-green)]" />
+            <h2 className="font-display text-xl font-bold uppercase tracking-tight text-[var(--theme-terminal-green)]">
+              Build_Logs
+            </h2>
           </div>
         </div>
-        {logsOpen && (
-          <div className="bg-black p-6">
-            <Suspense fallback={<LoadingBlock label="Loading logs…" lines={3} />}>
-              <TabbedLogViewer jobId={jobId} />
-            </Suspense>
-          </div>
-        )}
+        <div className="bg-black p-6">
+          <Suspense fallback={<LoadingBlock label="Loading logs…" lines={3} />}>
+            <TabbedLogViewer jobId={jobId} />
+          </Suspense>
+        </div>
       </div>
 
       {/* Artifacts */}

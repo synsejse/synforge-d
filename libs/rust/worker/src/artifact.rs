@@ -96,7 +96,10 @@ async fn build_artifact(
     let bytes = tokio::fs::read(&path)
         .await
         .with_context(|| format!("failed to read artifact {}", path.display()))?;
-    let sha256 = format!("{:x}", Sha256::digest(&bytes));
+    let sha256 = Sha256::digest(&bytes)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
     let kind = classify_rpm_artifact(&path);
     let artifact_root = topdir.parent().unwrap_or(topdir);
     Ok(BuildArtifact {

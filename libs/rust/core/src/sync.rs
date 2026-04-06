@@ -17,20 +17,24 @@ impl SyncTriggerType {
             Self::ManualRebuild => "manual_rebuild",
         }
     }
-
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s {
-            "poll" => Some(Self::Poll),
-            "manual_refresh" => Some(Self::ManualRefresh),
-            "manual_rebuild" => Some(Self::ManualRebuild),
-            _ => None,
-        }
-    }
 }
 
 impl std::fmt::Display for SyncTriggerType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for SyncTriggerType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "poll" => Ok(Self::Poll),
+            "manual_refresh" => Ok(Self::ManualRefresh),
+            "manual_rebuild" => Ok(Self::ManualRebuild),
+            _ => Err(()),
+        }
     }
 }
 
@@ -48,19 +52,23 @@ impl SyncStatus {
             Self::Failed => "failed",
         }
     }
-
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s {
-            "succeeded" => Some(Self::Succeeded),
-            "failed" => Some(Self::Failed),
-            _ => None,
-        }
-    }
 }
 
 impl std::fmt::Display for SyncStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for SyncStatus {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "succeeded" => Ok(Self::Succeeded),
+            "failed" => Ok(Self::Failed),
+            _ => Err(()),
+        }
     }
 }
 

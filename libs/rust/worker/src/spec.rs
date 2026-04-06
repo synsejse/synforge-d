@@ -90,5 +90,8 @@ async fn hash_tracked_spec(spec_path: &Path) -> anyhow::Result<String> {
     let bytes = tokio::fs::read(spec_path)
         .await
         .with_context(|| format!("failed to read tracked spec {}", spec_path.display()))?;
-    Ok(format!("{:x}", Sha256::digest(&bytes)))
+    Ok(Sha256::digest(&bytes)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect())
 }

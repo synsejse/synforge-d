@@ -2,7 +2,10 @@ use anyhow::Context;
 use bytes::Bytes;
 use futures_util::{SinkExt, StreamExt};
 use std::collections::HashMap;
-use synforge_core::{model::ArtifactKind, protocol::WorkerWireMessage};
+use synforge_core::{
+    model::ArtifactKind,
+    protocol::{WorkerWireMessage, decode_worker_wire_message, encode_worker_wire_message},
+};
 use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::watch;
@@ -77,7 +80,7 @@ async fn handle_connection(
     let mut log_files: HashMap<String, tokio::fs::File> = HashMap::new();
     while let Some(frame) = framed.next().await {
         let frame = frame?;
-        let message: WorkerWireMessage = bincode::deserialize(&frame)?;
+        let message: WorkerWireMessage = decode_worker_wire_message(frame.as_ref())?;
         match message {
             WorkerWireMessage::LogChunk { path, bytes } => {
                 let upload_path = sessions.log_storage_path(job_id, &path);
@@ -177,14 +180,14 @@ async fn read_message(
         .next()
         .await
         .ok_or_else(|| anyhow::anyhow!("worker disconnected before hello"))??;
-    Ok(bincode::deserialize(&bytes)?)
+    decode_worker_wire_message(bytes.as_ref())
 }
 
 async fn write_message(
     framed: &mut Framed<TcpStream, LengthDelimitedCodec>,
     message: &WorkerWireMessage,
 ) -> anyhow::Result<()> {
-    let bytes = bincode::serialize(message)?;
+    let bytes = encode_worker_wire_message(message)?;
     framed.send(Bytes::from(bytes)).await?;
     Ok(())
 }

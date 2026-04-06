@@ -572,21 +572,18 @@ impl SynforgeService {
 
         let mut updates = BTreeMap::new();
 
-        match (stored_private_key, status.key_present) {
-            (Some(armored_private_key), false) => {
-                manager.remove_all_keys(config).await?;
-                let imported = manager
-                    .import_private_key(config, &armored_private_key)
-                    .await?;
-                if config.signing_key_id.as_deref() != Some(imported.key_id.as_str()) {
-                    config.signing_key_id = Some(imported.key_id.clone());
-                    updates.insert(
-                        "signing_key_id".to_string(),
-                        serde_json::Value::String(imported.key_id),
-                    );
-                }
+        if let (Some(armored_private_key), false) = (stored_private_key, status.key_present) {
+            manager.remove_all_keys(config).await?;
+            let imported = manager
+                .import_private_key(config, &armored_private_key)
+                .await?;
+            if config.signing_key_id.as_deref() != Some(imported.key_id.as_str()) {
+                config.signing_key_id = Some(imported.key_id.clone());
+                updates.insert(
+                    "signing_key_id".to_string(),
+                    serde_json::Value::String(imported.key_id),
+                );
             }
-            _ => {}
         }
 
         if !updates.is_empty() {

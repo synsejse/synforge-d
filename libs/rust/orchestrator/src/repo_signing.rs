@@ -632,7 +632,10 @@ async fn recompute_artifact_metadata(path: &Path) -> anyhow::Result<(String, u64
     let bytes = tokio::fs::read(path)
         .await
         .with_context(|| format!("failed to read artifact {}", path.display()))?;
-    let sha256 = format!("{:x}", Sha256::digest(&bytes));
+    let sha256 = Sha256::digest(&bytes)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
     Ok((sha256, bytes.len() as u64))
 }
 

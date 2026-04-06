@@ -35,9 +35,8 @@ impl From<SyncOperationRow> for SyncOperation {
         Self {
             id: row.id,
             package_name: row.package_name,
-            trigger_type: SyncTriggerType::from_str(&row.trigger_type)
-                .unwrap_or(SyncTriggerType::Poll),
-            status: SyncStatus::from_str(&row.status).unwrap_or(SyncStatus::Failed),
+            trigger_type: row.trigger_type.parse().unwrap_or(SyncTriggerType::Poll),
+            status: row.status.parse().unwrap_or(SyncStatus::Failed),
             revision: row.revision,
             error_message: row.error_message,
             created_at: row.created_at,

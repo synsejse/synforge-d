@@ -7,7 +7,7 @@ use bytes::Bytes;
 use futures_util::{SinkExt, StreamExt};
 use synforge_core::{
     model::{BuildArtifact, WorkerJobPayload, WorkerResult},
-    protocol::WorkerWireMessage,
+    protocol::{WorkerWireMessage, decode_worker_wire_message, encode_worker_wire_message},
 };
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
@@ -95,7 +95,7 @@ impl WorkerTransportHandle {
     }
 
     async fn send_message(&self, message: WorkerWireMessage) -> anyhow::Result<()> {
-        let bytes = bincode::serialize(&message)?;
+        let bytes = encode_worker_wire_message(&message)?;
         let mut framed = self.framed.lock().await;
         framed.send(Bytes::from(bytes)).await?;
         Ok(())
@@ -107,6 +107,6 @@ impl WorkerTransportHandle {
             .await
             .context("timed out waiting for worker socket message")?
             .ok_or_else(|| anyhow::anyhow!("worker socket disconnected"))??;
-        Ok(bincode::deserialize(&bytes)?)
+        decode_worker_wire_message(bytes.as_ref())
     }
 }

@@ -154,7 +154,11 @@ impl WorkerSessionBroker {
             package_name,
             mock_chroot,
             file: PathBuf::from(file),
-            sha256: format!("{:x}", hasher.finalize()),
+            sha256: hasher
+                .finalize()
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect(),
             size_bytes,
             kind,
             signing_status: None,

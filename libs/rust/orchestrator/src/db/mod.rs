@@ -976,6 +976,20 @@ pub(crate) fn parse_timestamp(value: &str) -> anyhow::Result<OffsetDateTime> {
     Ok(OffsetDateTime::parse(value, &Rfc3339)?)
 }
 
+type PublishedRepoFileRow = (
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    i64,
+    ArtifactKind,
+    String,
+    Option<ArtifactSigningStatus>,
+    Option<String>,
+);
+
 pub(crate) fn load_published_repo_files_for_job(
     conn: &mut MysqlConnection,
     job_id: &str,
@@ -1002,38 +1016,14 @@ pub(crate) fn load_published_repo_files_for_job(
             artifact_signatures::status.nullable(),
             artifact_signatures::error_message.nullable(),
         ))
-        .load::<(
-            String,
-            String,
-            String,
-            String,
-            String,
-            String,
-            i64,
-            ArtifactKind,
-            String,
-            Option<ArtifactSigningStatus>,
-            Option<String>,
-        )>(conn)?;
+        .load::<PublishedRepoFileRow>(conn)?;
     rows.into_iter()
         .map(published_repo_file_from_record)
         .collect()
 }
 
 pub(crate) fn published_repo_file_from_record(
-    row: (
-        String,
-        String,
-        String,
-        String,
-        String,
-        String,
-        i64,
-        ArtifactKind,
-        String,
-        Option<ArtifactSigningStatus>,
-        Option<String>,
-    ),
+    row: PublishedRepoFileRow,
 ) -> anyhow::Result<PublishedRepoFile> {
     let (
         artifact_id,

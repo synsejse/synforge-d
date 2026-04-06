@@ -62,7 +62,7 @@ impl GitMirrorCache {
     pub fn mirror_key(repo_url: &str) -> String {
         let normalized = normalize_repo_url(repo_url);
         let digest = Sha256::digest(normalized.as_bytes());
-        format!("{digest:x}")
+        digest.iter().map(|byte| format!("{byte:02x}")).collect()
     }
 
     pub fn mirror_dir_for_key(&self, mirror_key: &str) -> PathBuf {

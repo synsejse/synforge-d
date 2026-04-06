@@ -209,12 +209,12 @@ impl DaemonConfig {
                 "session_secret must not be empty".to_string(),
             ));
         }
-        if let Some(key_id) = self.signing_key_id.as_ref() {
-            if key_id.trim().is_empty() {
-                return Err(SynforgeError::Config(
-                    "signing_key_id must not be empty when provided".to_string(),
-                ));
-            }
+        if let Some(key_id) = self.signing_key_id.as_ref()
+            && key_id.trim().is_empty()
+        {
+            return Err(SynforgeError::Config(
+                "signing_key_id must not be empty when provided".to_string(),
+            ));
         }
         if self.mock_chroot_cache_ttl_seconds == 0 {
             return Err(SynforgeError::Config(

@@ -30,14 +30,14 @@ export default function PackageCard({
   const status = summarizePackageStatus(entry);
 
   return (
-    <article key={entry.package.name} className="border border-zinc-800 bg-black">
-      <div className="flex flex-col gap-5 border-b border-zinc-800 px-5 py-5 xl:flex-row xl:items-start xl:justify-between">
+    <article key={entry.package.name} className="border-2 border-zinc-700 bg-black">
+      <div className="flex flex-col gap-5 border-b-2 border-zinc-700 px-5 py-5 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 flex-1 space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <a
                 href={`/packages/view/?name=${encodeURIComponent(entry.package.name)}`}
-                className="text-lg font-semibold text-white transition hover:text-zinc-300"
+                className="font-mono text-lg font-bold uppercase text-white transition hover:text-[var(--theme-accent-lime)]"
               >
                 {entry.package.name}
               </a>
@@ -51,40 +51,40 @@ export default function PackageCard({
           </div>
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="border border-zinc-800 bg-zinc-950/40 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+            <div className="border-2 border-zinc-700 bg-zinc-950/40 px-4 py-3">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
                 Version
               </div>
-              <div className="mt-2 text-sm text-zinc-200">
+              <div className="mt-2 font-mono text-sm text-zinc-200">
                 {entry.package.version}-{entry.package.release}
               </div>
             </div>
-            <div className="border border-zinc-800 bg-zinc-950/40 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+            <div className="border-2 border-zinc-700 bg-zinc-950/40 px-4 py-3">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
                 Targets
               </div>
-              <div className="mt-2 text-sm text-zinc-300">
+              <div className="mt-2 font-mono text-sm text-zinc-300">
                 {formatMockChroots(entry.package.mock_chroots)}
               </div>
             </div>
-            <div className="border border-zinc-800 bg-zinc-950/40 px-4 py-3 md:col-span-2">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+            <div className="border-2 border-zinc-700 bg-zinc-950/40 px-4 py-3 md:col-span-2">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
                 Repository
               </div>
               <div className="mt-2 break-all font-mono text-sm text-zinc-300">
                 {entry.package.source.repo_url}
               </div>
             </div>
-            <div className="border border-zinc-800 bg-zinc-950/40 px-4 py-3 md:col-span-2">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+            <div className="border-2 border-zinc-700 bg-zinc-950/40 px-4 py-3 md:col-span-2">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
                 Spec File
               </div>
               <div className="mt-2 break-all font-mono text-sm text-zinc-300">
                 {entry.package.source.spec_file}
               </div>
             </div>
-            <div className="border border-zinc-800 bg-zinc-950/40 px-4 py-3 md:col-span-2">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+            <div className="border-2 border-zinc-700 bg-zinc-950/40 px-4 py-3 md:col-span-2">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
                 Last Revision
               </div>
               <div className="mt-2 break-all font-mono text-sm text-zinc-400">
@@ -128,14 +128,14 @@ export default function PackageCard({
       </div>
 
       <div className="px-5 py-4">
-        <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+        <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
           Target State
         </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {entry.state.targets.map((target) => (
             <div
               key={`${entry.package.name}:${target.mock_chroot}`}
-              className="border border-zinc-800 bg-zinc-950/40 px-4 py-3"
+              className="border-2 border-zinc-700 bg-zinc-950/40 px-4 py-3"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -152,8 +152,8 @@ export default function PackageCard({
                 </div>
                 <StatusPill status={targetStatus(target)} />
               </div>
-              <div className="mt-3 border-t border-zinc-800 pt-3">
-                <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+              <div className="mt-3 border-t-2 border-zinc-700 pt-3">
+                <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
                   Revision
                 </div>
                 <div className="mt-2 break-all font-mono text-sm text-zinc-400">

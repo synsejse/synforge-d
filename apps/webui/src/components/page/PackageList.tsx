@@ -1,15 +1,21 @@
 import { useEffect, useState } from "react";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import {
+  faPlus,
+  faRotate,
+  faHammer,
+  faTrash,
+  faFolderOpen,
+} from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import { summarizePackageAction } from "../../lib/package-actions";
 import type { PackageResponse } from "../../lib/types";
 import AddPackageModal from "../package/AddPackageModal";
 import ErrorMessage from "../common/ErrorMessage";
-import PaginationControls from "../common/PaginationControls";
-import EmptyState from "../ui/EmptyState";
 import LoadingBlock from "../ui/LoadingBlock";
-import PackageCard from "../package-list/PackageCard";
-import PackageFilters from "../package-list/PackageFilters";
+import FaIcon from "../ui/FaIcon";
+import Badge from "../ui/Badge";
+import Button from "../ui/Button";
+import Select from "../ui/Select";
 import PageHeader from "../ui/PageHeader";
 
 export default function PackageList() {
@@ -27,15 +33,13 @@ export default function PackageList() {
     }
     return new URLSearchParams(window.location.search).get("search") || "";
   });
-  const [enabledFilter, setEnabledFilter] = useState<"all" | "true" | "false">(
-    () => {
-      if (typeof window === "undefined") {
-        return "all";
-      }
-      const value = new URLSearchParams(window.location.search).get("enabled");
-      return value === "true" || value === "false" ? value : "all";
-    },
-  );
+  const [enabledFilter, setEnabledFilter] = useState<"all" | "true" | "false">(() => {
+    if (typeof window === "undefined") {
+      return "all";
+    }
+    const value = new URLSearchParams(window.location.search).get("enabled");
+    return value === "true" || value === "false" ? value : "all";
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -58,6 +62,7 @@ export default function PackageList() {
       setSearch(nextSearch);
       setEnabledFilter(nextEnabled);
       setError(null);
+
       if (typeof window !== "undefined") {
         const params = new URLSearchParams();
         if (nextOffset > 0) {
@@ -84,9 +89,7 @@ export default function PackageList() {
   }, []);
 
   async function handleDelete(name: string) {
-    if (!confirm(`Delete package "${name}"?`)) {
-      return;
-    }
+    if (!confirm(`Delete package "${name}"?`)) return;
     try {
       await api.deletePackage(name);
       await load();
@@ -118,10 +121,12 @@ export default function PackageList() {
 
   return (
     <div className="space-y-8">
+      {/* Header */}
       <PageHeader
-        eyebrow="Package Registry"
+        eyebrow="PACKAGE_REGISTRY"
         title="Packages"
         description="Sources, targets, and builds."
+        color="lime"
         actions={[
           {
             onClick: () => setShowAddModal(true),
@@ -132,18 +137,62 @@ export default function PackageList() {
         ]}
       />
 
-      <PackageFilters
-        search={search}
-        enabledFilter={enabledFilter}
-        onSearchChange={setSearch}
-        onEnabledFilterChange={setEnabledFilter}
-        onApply={() => load(0, search, enabledFilter)}
-      />
+      {/* Filters */}
+      <div className="border-2 border-white bg-black p-5">
+        <div className="grid gap-4 md:grid-cols-[1fr_auto_auto]">
+          <div>
+            <label className="block">
+              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
+                Search
+              </span>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && load(0, search, enabledFilter)}
+                placeholder="Filter by name or description"
+                className="w-full border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+              />
+            </label>
+          </div>
+          <div>
+            <label className="block">
+              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
+                Status
+              </span>
+              <Select
+                value={enabledFilter}
+                onValueChange={(val) => setEnabledFilter(val as "all" | "true" | "false")}
+                options={[
+                  { value: "all", label: "All" },
+                  { value: "true", label: "Enabled" },
+                  { value: "false", label: "Disabled" },
+                ]}
+              />
+            </label>
+          </div>
+          <div className="flex items-end">
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => load(0, search, enabledFilter)}
+            >
+              Apply Filters
+            </Button>
+          </div>
+        </div>
+      </div>
 
+      {/* Package Cards */}
       {packages.length === 0 ? (
-        <EmptyState>
-          No packages configured yet. Add a spec source to start building.
-        </EmptyState>
+        <div className="border-2 border-zinc-700 bg-black p-12 text-center">
+          <p className="font-mono text-sm font-bold uppercase tracking-[0.3em] text-zinc-500">
+            NO_PACKAGES_CONFIGURED
+          </p>
+          <p className="mt-2 text-sm text-zinc-600">
+            Add a spec source to start building.
+          </p>
+        </div>
       ) : (
         <div className="space-y-4">
           {packages.map((entry) => (
@@ -158,14 +207,30 @@ export default function PackageList() {
         </div>
       )}
 
-      {packages.length > 0 ? (
-        <PaginationControls
-          onPrevious={() => load(Math.max(0, offset - pageSize), search, enabledFilter)}
-          onNext={() => load(offset + pageSize, search, enabledFilter)}
-          previousDisabled={loading || offset === 0}
-          nextDisabled={loading || !hasMore}
-        />
-      ) : null}
+      {/* Pagination */}
+      {packages.length > 0 && (
+        <div className="flex items-center justify-between border-2 border-white bg-black p-4">
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={() => load(Math.max(0, offset - pageSize), search, enabledFilter)}
+            disabled={loading || offset === 0}
+          >
+            Previous
+          </Button>
+          <span className="font-mono text-sm text-zinc-400">
+            Offset: {offset}
+          </span>
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={() => load(offset + pageSize, search, enabledFilter)}
+            disabled={loading || !hasMore}
+          >
+            Next
+          </Button>
+        </div>
+      )}
 
       {showAddModal && (
         <AddPackageModal
@@ -177,5 +242,97 @@ export default function PackageList() {
         />
       )}
     </div>
+  );
+}
+
+interface PackageCardProps {
+  entry: PackageResponse;
+  onRefresh: (name: string) => void;
+  onRebuild: (name: string) => void;
+  onDelete: (name: string) => void;
+}
+
+function PackageCard({ entry, onRefresh, onRebuild, onDelete }: PackageCardProps) {
+  const pkg = entry.package;
+  const status = pkg.enabled
+    ? entry.builds_pending || entry.builds_running
+      ? "running"
+      : "success"
+    : "disabled";
+
+  return (
+    <article className="border-2 border-white bg-black transition duration-100 ease-linear hover:-translate-x-[2px] hover:-translate-y-[2px] hover:shadow-[4px_4px_0_rgba(255,255,255,0.3)]">
+      <div className="border-b-2 border-zinc-800 bg-black px-6 py-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1">
+            <a
+              href={`/packages/view/?name=${encodeURIComponent(pkg.name)}`}
+              className="font-mono text-lg font-bold uppercase text-white transition duration-100 ease-linear hover:text-[var(--theme-accent-lime)]"
+            >
+              {pkg.name}
+            </a>
+            <p className="mt-1 text-sm text-zinc-500">
+              {pkg.description || "No description"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge 
+              variant={status === "running" ? "lime" : status === "success" ? "terminal-green" : "default"} 
+              pulse={status === "running"}
+            >
+              {status === "running" ? "ACTIVE" : status === "success" ? "READY" : "DISABLED"}
+            </Badge>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-px bg-zinc-800 md:grid-cols-2">
+        <div className="bg-black px-5 py-4">
+          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+            VERSION
+          </div>
+          <div className="mt-2 font-mono text-sm text-white">
+            {pkg.version}-{pkg.release}
+          </div>
+        </div>
+        <div className="bg-black px-5 py-4">
+          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+            TARGETS
+          </div>
+          <div className="mt-2 font-mono text-sm text-zinc-300">
+            {pkg.mock_chroots.join(", ") || "None"}
+          </div>
+        </div>
+        <div className="bg-black px-5 py-4 md:col-span-2">
+          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+            REPOSITORY
+          </div>
+          <div className="mt-2 break-all font-mono text-sm text-zinc-400">
+            {pkg.source.repo_url}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 border-t-2 border-zinc-800 bg-black px-6 py-4">
+        <Button variant="secondary" size="sm" onClick={() => onRefresh(pkg.name)}>
+          <FaIcon icon={faRotate} className="mr-2" />
+          Refresh
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => onRebuild(pkg.name)}>
+          <FaIcon icon={faHammer} className="mr-2" />
+          Rebuild
+        </Button>
+        <a href={`/packages/view/?name=${encodeURIComponent(pkg.name)}`}>
+          <Button variant="ghost" size="sm">
+            <FaIcon icon={faFolderOpen} className="mr-2" />
+            Details
+          </Button>
+        </a>
+        <Button variant="danger" size="sm" onClick={() => onDelete(pkg.name)}>
+          <FaIcon icon={faTrash} className="mr-2" />
+          Delete
+        </Button>
+      </div>
+    </article>
   );
 }

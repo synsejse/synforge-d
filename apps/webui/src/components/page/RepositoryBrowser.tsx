@@ -4,16 +4,12 @@ import api from "../../lib/api";
 import { formatBytes } from "../../lib/bytes";
 import type { PublishedRepoFile, RepoSummaryResponse } from "../../lib/types";
 import ErrorMessage from "../common/ErrorMessage";
-import PaginationControls from "../common/PaginationControls";
 import LoadingBlock from "../ui/LoadingBlock";
+import FaIcon from "../ui/FaIcon";
+import Button from "../ui/Button";
+import Select from "../ui/Select";
 import MetricCard from "../ui/MetricCard";
 import PageHeader from "../ui/PageHeader";
-import RepositoryInventoryFilters, {
-  type RepoKindFilter,
-} from "../repository/RepositoryInventoryFilters";
-import RepositoryInventoryTable from "../repository/RepositoryInventoryTable";
-import RepositoryRecentFilesSection from "../repository/RepositoryRecentFilesSection";
-import RepositoryTargetsSection from "../repository/RepositoryTargetsSection";
 
 const PAGE_SIZE = 50;
 
@@ -22,31 +18,21 @@ export default function RepositoryBrowser() {
   const [files, setFiles] = useState<PublishedRepoFile[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(() => {
-    if (typeof window === "undefined") {
-      return 0;
-    }
+    if (typeof window === "undefined") return 0;
     return Number(new URLSearchParams(window.location.search).get("offset") || "0");
   });
   const [packageFilter, setPackageFilter] = useState(() => {
-    if (typeof window === "undefined") {
-      return "";
-    }
+    if (typeof window === "undefined") return "";
     return new URLSearchParams(window.location.search).get("package") || "";
   });
   const [targetFilter, setTargetFilter] = useState(() => {
-    if (typeof window === "undefined") {
-      return "";
-    }
+    if (typeof window === "undefined") return "";
     return new URLSearchParams(window.location.search).get("target") || "";
   });
-  const [kindFilter, setKindFilter] = useState<RepoKindFilter>(() => {
-    if (typeof window === "undefined") {
-      return "all";
-    }
+  const [kindFilter, setKindFilter] = useState<"all" | "rpm" | "srpm" | "log">(() => {
+    if (typeof window === "undefined") return "all";
     const value = new URLSearchParams(window.location.search).get("kind");
-    return value === "rpm" || value === "srpm" || value === "log"
-      ? value
-      : "all";
+    return value === "rpm" || value === "srpm" || value === "log" ? value : "all";
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,25 +63,15 @@ export default function RepositoryBrowser() {
       setError(null);
       if (typeof window !== "undefined") {
         const params = new URLSearchParams();
-        if (nextOffset > 0) {
-          params.set("offset", String(nextOffset));
-        }
-        if (nextPackageFilter.trim()) {
-          params.set("package", nextPackageFilter.trim());
-        }
-        if (nextTargetFilter.trim()) {
-          params.set("target", nextTargetFilter.trim());
-        }
-        if (nextKindFilter !== "all") {
-          params.set("kind", nextKindFilter);
-        }
+        if (nextOffset > 0) params.set("offset", String(nextOffset));
+        if (nextPackageFilter.trim()) params.set("package", nextPackageFilter.trim());
+        if (nextTargetFilter.trim()) params.set("target", nextTargetFilter.trim());
+        if (nextKindFilter !== "all") params.set("kind", nextKindFilter);
         const query = params.toString();
         window.history.replaceState({}, "", `/repository/${query ? `?${query}` : ""}`);
       }
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Failed to load repository inventory",
-      );
+      setError(e instanceof Error ? e.message : "Failed to load repository inventory");
     } finally {
       setLoading(false);
     }
@@ -120,14 +96,17 @@ export default function RepositoryBrowser() {
 
   return (
     <div className="space-y-8">
+      {/* Header */}
       <PageHeader
-        eyebrow="Managed Repository"
+        eyebrow="MANAGED_REPOSITORY"
         title="Repository Control"
         description="Published packages, builds, and files."
+        color="green"
         actions={[{ href: "/packages/", label: "Packages", icon: faBoxesStacked }]}
       />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      {/* Metrics */}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Packages"
           value={summary?.package_count ?? 0}
@@ -137,6 +116,7 @@ export default function RepositoryBrowser() {
           label="Targets"
           value={summary?.target_count ?? 0}
           detail="Active build targets"
+          accent="lime"
         />
         <MetricCard
           label="Builds"
@@ -147,46 +127,165 @@ export default function RepositoryBrowser() {
           label="Stored Size"
           value={formatBytes(summary?.stored_bytes ?? 0)}
           detail={`${summary?.published_file_count ?? 0} published files`}
+          icon
         />
-      </section>
+      </div>
 
-      <RepositoryTargetsSection targets={summary?.targets ?? []} />
-      <RepositoryRecentFilesSection recentFiles={summary?.recent_files ?? []} />
-
-      <section className="space-y-4">
-        <RepositoryInventoryFilters
-          packageFilter={packageFilter}
-          targetFilter={targetFilter}
-          kindFilter={kindFilter}
-          onPackageFilterChange={setPackageFilter}
-          onTargetFilterChange={setTargetFilter}
-          onKindFilterChange={setKindFilter}
-          onApply={handleApply}
-        />
-
-        <div className="flex items-end justify-between gap-4">
+      {/* Filters */}
+      <form onSubmit={handleApply} className="border-2 border-white bg-black p-5">
+        <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto_auto]">
           <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-              Inventory
-            </div>
-            <h2 className="mt-2 text-2xl font-semibold text-white">
-              Published files
-            </h2>
+            <label className="block">
+              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
+                Package
+              </span>
+              <input
+                type="text"
+                value={packageFilter}
+                onChange={(e) => setPackageFilter(e.target.value)}
+                placeholder="Filter by package name"
+                className="w-full border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+              />
+            </label>
           </div>
-          <div className="text-sm text-zinc-500">Server-paginated inventory view</div>
+          <div>
+            <label className="block">
+              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
+                Target
+              </span>
+              <input
+                type="text"
+                value={targetFilter}
+                onChange={(e) => setTargetFilter(e.target.value)}
+                placeholder="Filter by target"
+                className="w-full border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+              />
+            </label>
+          </div>
+          <div>
+            <label className="block">
+              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
+                Kind
+              </span>
+              <Select
+                value={kindFilter}
+                onValueChange={(val) => setKindFilter(val as "all" | "rpm" | "srpm" | "log")}
+                options={[
+                  { value: "all", label: "All" },
+                  { value: "rpm", label: "RPM" },
+                  { value: "srpm", label: "SRPM" },
+                  { value: "log", label: "Logs" },
+                ]}
+              />
+            </label>
+          </div>
+          <div className="flex items-end">
+            <Button type="submit" variant="secondary" size="md">
+              Apply Filters
+            </Button>
+          </div>
+        </div>
+      </form>
+
+      {/* Files Table */}
+      <div className="border-2 border-white bg-black">
+        <div className="border-b-2 border-zinc-800 bg-black px-6 py-4">
+          <h2 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
+            Published Files
+          </h2>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px]">
+            <thead>
+              <tr className="border-b-2 border-zinc-800">
+                <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                  Package
+                </th>
+                <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                  Target
+                </th>
+                <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                  File
+                </th>
+                <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                  Repo Path
+                </th>
+                <th className="px-6 py-4 text-right font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                  Size
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {files.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center">
+                    <p className="font-mono text-sm text-zinc-500">
+                      No files match the current filters.
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                files.map((file) => {
+                  const fileName = file.path.split("/").pop() || file.path;
+                  return (
+                    <tr
+                      key={`${file.job_id}:${file.path}`}
+                      className="border-b border-zinc-900 transition duration-100 ease-linear hover:bg-zinc-950"
+                    >
+                      <td className="px-6 py-4 font-mono text-sm text-white">
+                        {file.package_name}
+                      </td>
+                      <td className="px-6 py-4 font-mono text-sm text-zinc-400">
+                        {file.mock_chroot || "unknown"}
+                      </td>
+                      <td className="px-6 py-4">
+                        <a
+                          href={`/repo/${file.path}`}
+                          className="break-all font-mono text-sm text-[var(--theme-accent-lime)] transition duration-100 ease-linear hover:text-white"
+                        >
+                          {fileName}
+                        </a>
+                      </td>
+                      <td className="px-6 py-4 font-mono text-sm text-zinc-500">
+                        {file.path}
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono text-sm text-zinc-400">
+                        {formatBytes(file.size_bytes)}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
 
-        <RepositoryInventoryTable files={files} />
-
-        {files.length > 0 ? (
-          <PaginationControls
-            onPrevious={() => load(Math.max(0, offset - PAGE_SIZE))}
-            onNext={() => load(offset + PAGE_SIZE)}
-            previousDisabled={loading || offset === 0}
-            nextDisabled={loading || !hasMore}
-          />
-        ) : null}
-      </section>
+        {/* Pagination */}
+        {files.length > 0 && (
+          <div className="flex items-center justify-between border-t-2 border-zinc-800 bg-black px-6 py-4">
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => load(Math.max(0, offset - PAGE_SIZE))}
+              disabled={loading || offset === 0}
+            >
+              Previous
+            </Button>
+            <span className="font-mono text-sm text-zinc-400">
+              Offset: {offset}
+            </span>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => load(offset + PAGE_SIZE)}
+              disabled={loading || !hasMore}
+            >
+              Next
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -4,16 +4,16 @@ import { formatBytes } from "../../lib/bytes";
 import { formatDateTime } from "../../lib/datetime";
 import type { BuildJobResponse, RepoSummaryResponse } from "../../lib/types";
 import ErrorMessage from "../common/ErrorMessage";
-import EmptyState from "../ui/EmptyState";
-import FaIcon from "../ui/FaIcon";
 import LoadingBlock from "../ui/LoadingBlock";
+import FaIcon from "../ui/FaIcon";
 import MetricCard from "../ui/MetricCard";
+import Badge from "../ui/Badge";
 import PageHeader from "../ui/PageHeader";
-import StatusPill from "../ui/StatusPill";
 import {
   faBoxesStacked,
   faChartLine,
   faFolderTree,
+  faRocket,
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function Dashboard() {
@@ -73,216 +73,234 @@ export default function Dashboard() {
     return <ErrorMessage message={error} />;
   }
 
+  const getStatusVariant = (status: string) => {
+    if (status === "completed") return "success";
+    if (status === "failed") return "error";
+    if (status === "running") return "lime";
+    return "default";
+  };
+
   return (
     <div className="space-y-8">
+      {/* Hero Header */}
       <PageHeader
-        eyebrow="System Overview"
-        title="Operations at a glance"
-        description="A high-signal snapshot of package state, active builds, and recent execution history."
+        eyebrow="SYSTEM_OVERVIEW"
+        title="Dashboard"
+        description="High-signal snapshot of package state, active builds, and execution history."
+        color="cyan"
         actions={[
-          {
-            href: "/packages/",
-            label: "Manage Packages",
-            icon: faBoxesStacked,
-          },
-          {
-            href: "/jobs/",
-            label: "Open Jobs",
-            icon: faChartLine,
-            variant: "primary",
-          },
+          { href: "/packages/", label: "Packages", icon: faBoxesStacked },
+          { href: "/jobs/", label: "Open Jobs", icon: faChartLine, variant: "primary" },
         ]}
       />
 
+      {/* Metrics Grid */}
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Packages"
           value={packageCount}
           detail="Registered sources"
+          icon={<FaIcon icon={faBoxesStacked} />}
         />
         <MetricCard
           label="Enabled"
           value={enabledPackageCount}
           detail="Actively buildable"
+          variant="accent"
         />
         <MetricCard
-          label="Active Jobs"
+          label="Active_Jobs"
           value={activeJobCount}
           detail="Pending or running"
+          variant="terminal"
+          icon={activeJobCount > 0 ? <FaIcon icon={faRocket} /> : undefined}
         />
         <MetricCard
-          label="Stored Size"
+          label="Stored"
           value={formatBytes(repoSummary?.stored_bytes ?? 0)}
           detail="Published repository data"
+          icon={<FaIcon icon={faFolderTree} />}
         />
       </section>
 
-      <section className="border border-zinc-800 bg-black p-6">
-        <div className="flex items-end justify-between gap-4">
+      {/* Recent Jobs Table */}
+      <section className="border-4 border-[var(--theme-border-strong)] bg-black shadow-[4px_4px_0_rgba(255,255,255,0.1)]">
+        <div className="flex items-end justify-between gap-4 border-b-4 border-[var(--theme-border-strong)] bg-gradient-to-r from-zinc-900 to-black px-6 py-5">
           <div>
-            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-              Recent Jobs
+            <div className="font-mono text-xs font-bold uppercase tracking-[0.25em] text-zinc-500">
+              Recent_Jobs
             </div>
-            <h2 className="mt-2 text-2xl font-semibold text-white">
-              Latest build runs
+            <h2 className="font-display mt-2 text-2xl font-bold uppercase tracking-tight text-white">
+              Latest_Build_Runs
             </h2>
           </div>
           <a
             href="/jobs/"
-            className="text-sm text-zinc-300 transition hover:text-white"
+            className="font-mono text-sm font-semibold text-[var(--theme-accent-lime)] transition hover:underline"
           >
-            View all →
+            View_All →
           </a>
         </div>
 
-        {jobs.length === 0 ? (
-          <div className="mt-5">
-            <EmptyState>No jobs have run yet.</EmptyState>
-          </div>
-        ) : (
-          <div className="mt-5 grid gap-3">
-            {jobs.map((entry) => (
-              <a
-                key={entry.job.id}
-                href={`/jobs/view/?id=${encodeURIComponent(entry.job.id)}`}
-                className="grid gap-3 border border-zinc-800 bg-zinc-950/40 p-4 transition hover:bg-zinc-950 md:grid-cols-[minmax(0,210px)_minmax(0,120px)_minmax(0,1fr)_auto]"
-              >
-                <div className="min-w-0">
-                  <div className="font-medium text-white">
-                    {entry.job.package_name}
-                  </div>
-                  <div className="mt-1 truncate text-xs text-zinc-500">
-                    {entry.job.id}
-                  </div>
+        <div className="p-6">
+          {jobs.length === 0 ? (
+            <div className="flex min-h-[200px] items-center justify-center border-2 border-dashed border-[var(--theme-border)] bg-zinc-950/30 px-6 py-8">
+              <div className="text-center">
+                <div className="font-mono text-sm text-zinc-500">
+                  No jobs have run yet.
                 </div>
-                <div className="flex items-start">
-                  <span className="inline-flex items-center border border-zinc-800 bg-black px-2.5 py-1 font-mono text-xs text-zinc-300">
-                    {entry.job.mock_chroot}
-                  </span>
-                </div>
-                <div className="min-w-0">
-                  <div className="truncate font-mono text-sm text-zinc-300">
-                    {entry.job.revision}
-                  </div>
-                  <div className="mt-1 text-xs text-zinc-500">
-                    {formatDateTime(entry.job.created_at)}
-                  </div>
-                </div>
-                <div className="flex items-start justify-start md:justify-end">
-                  <StatusPill status={entry.job.status} />
-                </div>
-              </a>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-2">
-        <article className="flex h-full flex-col border border-zinc-800 bg-black p-6">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-zinc-500">
-            <span className="inline-block h-2 w-2 bg-emerald-400"></span>
-            Live Queue
-          </div>
-          <h2 className="mt-3 text-2xl font-semibold text-white">
-            Builds in flight
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-400">
-            Pending and running jobs currently in the queue.
-          </p>
-
-          {liveJobs.length === 0 ? (
-            <div className="mt-5 flex flex-1">
-              <div className="flex min-h-[220px] flex-1 items-center justify-center border border-dashed border-zinc-800 bg-zinc-950/30 px-6 py-8 text-center text-zinc-400">
-                Nothing is building right now.
               </div>
             </div>
           ) : (
-            <div className="mt-5 grid gap-3">
-              {liveJobs.map((entry) => (
+            <div className="grid gap-2">
+              {jobs.map((entry) => (
                 <a
                   key={entry.job.id}
                   href={`/jobs/view/?id=${encodeURIComponent(entry.job.id)}`}
-                  className="block border border-zinc-800 bg-zinc-950/40 px-4 py-4 transition hover:bg-zinc-950"
+                  className="grid gap-4 border-2 border-[var(--theme-border)] bg-zinc-950/40 p-5 transition-all duration-100 hover:translate-x-[-1px] hover:translate-y-[-1px] hover:border-[var(--theme-border-strong)] hover:bg-zinc-950 hover:shadow-[3px_3px_0_rgba(255,255,255,0.08)] md:grid-cols-[minmax(0,220px)_minmax(0,130px)_minmax(0,1fr)_auto]"
                 >
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <div className="font-medium text-white">
-                          {entry.job.package_name}
-                        </div>
-                        <span className="inline-flex items-center border border-zinc-800 bg-black px-2.5 py-1 font-mono text-xs text-zinc-300">
-                          {entry.job.mock_chroot}
-                        </span>
-                      </div>
-                      <div className="mt-1 truncate font-mono text-xs text-zinc-500">
-                        {entry.job.revision}
-                      </div>
+                  <div className="min-w-0">
+                    <div className="font-display text-base font-bold text-white">
+                      {entry.job.package_name}
                     </div>
-                    <div className="flex md:justify-end">
-                      <StatusPill status={entry.job.status} />
+                    <div className="mt-1 truncate font-mono text-xs text-zinc-600">
+                      {entry.job.id}
                     </div>
+                  </div>
+                  <div className="flex items-start">
+                    <Badge variant="ghost">
+                      {entry.job.mock_chroot}
+                    </Badge>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate font-mono text-sm text-zinc-300">
+                      {entry.job.revision}
+                    </div>
+                    <div className="mt-1 font-mono text-xs text-zinc-600">
+                      {formatDateTime(entry.job.created_at)}
+                    </div>
+                  </div>
+                  <div className="flex items-start justify-start md:justify-end">
+                    <Badge variant={getStatusVariant(entry.job.status)} pulse={entry.job.status === "running"}>
+                      {entry.job.status}
+                    </Badge>
                   </div>
                 </a>
               ))}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Two Column Layout */}
+      <section className="grid gap-6 xl:grid-cols-2">
+        {/* Live Queue */}
+        <article className="flex h-full flex-col border-4 border-[var(--theme-terminal-green)] bg-black shadow-[4px_4px_0_rgba(0,255,65,0.2)]">
+          <div className="border-b-4 border-[var(--theme-terminal-green)] bg-black px-6 py-5">
+            <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.25em] text-[var(--theme-terminal-green)]">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--theme-terminal-green)] opacity-75"></span>
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--theme-terminal-green)]"></span>
+              </span>
+              Live_Queue
+            </div>
+            <h2 className="font-display mt-2 text-xl font-bold uppercase tracking-tight text-white">
+              Builds_In_Flight
+            </h2>
+          </div>
+
+          <div className="flex-1 p-6">
+            {liveJobs.length === 0 ? (
+              <div className="flex min-h-[240px] items-center justify-center border-2 border-dashed border-[var(--theme-border)] bg-zinc-950/30 px-6 py-8">
+                <div className="font-mono text-sm text-zinc-500">
+                  Nothing is building right now.
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {liveJobs.map((entry) => (
+                  <a
+                    key={entry.job.id}
+                    href={`/jobs/view/?id=${encodeURIComponent(entry.job.id)}`}
+                    className="block border-2 border-[var(--theme-border)] bg-zinc-950/40 px-5 py-4 transition-all hover:border-[var(--theme-terminal-green)] hover:bg-zinc-950"
+                  >
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="font-display font-bold text-white">
+                            {entry.job.package_name}
+                          </div>
+                          <Badge variant="ghost">
+                            {entry.job.mock_chroot}
+                          </Badge>
+                        </div>
+                        <div className="mt-1 truncate font-mono text-xs text-zinc-500">
+                          {entry.job.revision}
+                        </div>
+                      </div>
+                      <div className="flex md:justify-end">
+                        <Badge variant={getStatusVariant(entry.job.status)} pulse>
+                          {entry.job.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
         </article>
 
-        <article className="border border-zinc-800 bg-black p-6">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-zinc-500">
-            <FaIcon icon={faFolderTree} />
-            Published Repository
-          </div>
-          <h2 className="mt-3 text-2xl font-semibold text-white">
-            Repository snapshot
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-400">
-            Current published package, target, build, and file counts.
-          </p>
-
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <MiniMetric
-              label="Published packages"
-              value={repoSummary?.package_count ?? 0}
-            />
-            <MiniMetric
-              label="Targets"
-              value={repoSummary?.target_count ?? 0}
-            />
-            <MiniMetric label="Builds" value={repoSummary?.build_count ?? 0} />
-            <MiniMetric
-              label="Files"
-              value={repoSummary?.published_file_count ?? 0}
-            />
-          </div>
-
-          <div className="mt-5 border-t border-zinc-800 pt-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-              Historical jobs
+        {/* Repository Snapshot */}
+        <article className="border-4 border-[var(--theme-border-strong)] bg-black shadow-[4px_4px_0_rgba(255,255,255,0.1)]">
+          <div className="border-b-4 border-[var(--theme-border-strong)] bg-gradient-to-r from-zinc-900 to-black px-6 py-5">
+            <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.25em] text-zinc-500">
+              <FaIcon icon={faFolderTree} />
+              Published_Repository
             </div>
-            <div className="mt-2 text-sm text-zinc-200">{jobCount}</div>
+            <h2 className="font-display mt-2 text-xl font-bold uppercase tracking-tight text-white">
+              Repository_Snapshot
+            </h2>
+          </div>
+
+          <div className="p-6">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="border-l-4 border-[var(--theme-accent-lime)] bg-zinc-950/30 pl-4 pr-3 py-4">
+                <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+                  Packages
+                </div>
+                <div className="font-display mt-2 text-3xl font-black text-white">
+                  {repoSummary?.package_count ?? 0}
+                </div>
+              </div>
+              <div className="border-l-4 border-[var(--theme-accent-lime)] bg-zinc-950/30 pl-4 pr-3 py-4">
+                <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+                  Targets
+                </div>
+                <div className="font-display mt-2 text-3xl font-black text-white">
+                  {repoSummary?.target_count ?? 0}
+                </div>
+              </div>
+              <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
+                <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+                  Builds
+                </div>
+                <div className="font-display mt-2 text-3xl font-black text-white">
+                  {repoSummary?.build_count ?? 0}
+                </div>
+              </div>
+              <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
+                <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+                  Files
+                </div>
+                <div className="font-display mt-2 text-3xl font-black text-white">
+                  {repoSummary?.file_count ?? 0}
+                </div>
+              </div>
+            </div>
           </div>
         </article>
       </section>
-    </div>
-  );
-}
-
-function MiniMetric({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div className="border border-zinc-800 bg-zinc-950/40 px-4 py-4">
-      <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-        {label}
-      </div>
-      <div className="mt-2 text-2xl font-semibold tracking-tight text-white">
-        {value}
-      </div>
     </div>
   );
 }

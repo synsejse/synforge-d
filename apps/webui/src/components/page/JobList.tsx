@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
-import { faChartLine } from "@fortawesome/free-solid-svg-icons";
+import { faChartLine, faTrash, faFilter } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import type { BuildJobResponse } from "../../lib/types";
+import { formatDateTime, formatDurationBetween } from "../../lib/datetime";
 import ErrorMessage from "../common/ErrorMessage";
-import PaginationControls from "../common/PaginationControls";
-import EmptyState from "../ui/EmptyState";
-import JobModeFilterBar, { type JobViewMode } from "../job/JobModeFilterBar";
-import JobSearchFilters from "../job/JobSearchFilters";
-import JobTable from "../job/JobTable";
 import LoadingBlock from "../ui/LoadingBlock";
+import FaIcon from "../ui/FaIcon";
+import Button from "../ui/Button";
+import Badge from "../ui/Badge";
+import Select from "../ui/Select";
 import PageHeader from "../ui/PageHeader";
+
+type JobViewMode = "active" | "history";
 
 export default function JobList() {
   const [jobs, setJobs] = useState<BuildJobResponse[]>([]);
@@ -17,36 +19,20 @@ export default function JobList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<JobViewMode>(() => {
-    if (typeof window === "undefined") {
-      return "history";
-    }
+    if (typeof window === "undefined") return "history";
     const value = new URLSearchParams(window.location.search).get("mode");
     return value === "active" ? "active" : "history";
   });
   const [filter, setFilter] = useState<string>(() => {
-    if (typeof window === "undefined") {
-      return "all";
-    }
+    if (typeof window === "undefined") return "all";
     return new URLSearchParams(window.location.search).get("status") || "all";
   });
   const [offset, setOffset] = useState<number>(() => {
-    if (typeof window === "undefined") {
-      return 0;
-    }
+    if (typeof window === "undefined") return 0;
     return Number(new URLSearchParams(window.location.search).get("offset") || "0");
   });
-  const [packageFilter, setPackageFilter] = useState(() => {
-    if (typeof window === "undefined") {
-      return "";
-    }
-    return new URLSearchParams(window.location.search).get("package") || "";
-  });
-  const [targetFilter, setTargetFilter] = useState(() => {
-    if (typeof window === "undefined") {
-      return "";
-    }
-    return new URLSearchParams(window.location.search).get("target") || "";
-  });
+  const [packageFilter, setPackageFilter] = useState("");
+  const [targetFilter, setTargetFilter] = useState("");
   const [pruning, setPruning] = useState(false);
   const pageSize = 50;
 
@@ -82,33 +68,15 @@ export default function JobList() {
       setPackageFilter(nextPackageFilter);
       setTargetFilter(nextTargetFilter);
       setError(null);
+
+      // Update URL
       if (typeof window !== "undefined") {
-        const params = new URLSearchParams(window.location.search);
-        if (nextMode === "history") {
-          params.delete("mode");
-        } else {
-          params.set("mode", nextMode);
-        }
-        if (nextMode === "active" || nextFilter === "all") {
-          params.delete("status");
-        } else {
-          params.set("status", nextFilter);
-        }
-        if (nextOffset === 0) {
-          params.delete("offset");
-        } else {
-          params.set("offset", String(nextOffset));
-        }
-        if (nextPackageFilter.trim()) {
-          params.set("package", nextPackageFilter.trim());
-        } else {
-          params.delete("package");
-        }
-        if (nextTargetFilter.trim()) {
-          params.set("target", nextTargetFilter.trim());
-        } else {
-          params.delete("target");
-        }
+        const params = new URLSearchParams();
+        if (nextMode !== "history") params.set("mode", nextMode);
+        if (nextFilter !== "all" && nextMode === "history") params.set("status", nextFilter);
+        if (nextOffset > 0) params.set("offset", String(nextOffset));
+        if (nextPackageFilter.trim()) params.set("package", nextPackageFilter.trim());
+        if (nextTargetFilter.trim()) params.set("target", nextTargetFilter.trim());
         const query = params.toString();
         window.history.replaceState({}, "", `/jobs/${query ? `?${query}` : ""}`);
       }
@@ -124,9 +92,7 @@ export default function JobList() {
   }, []);
 
   async function handleDelete(job: BuildJobResponse) {
-    if (!confirm(`Delete job ${job.job.id}?`)) {
-      return;
-    }
+    if (!confirm(`Delete job ${job.job.id}?`)) return;
     try {
       await api.deleteJob(job.job.id);
       await load();
@@ -137,15 +103,10 @@ export default function JobList() {
 
   async function handlePruneFailed() {
     const failedCount = jobs.filter(
-      (entry) =>
-        entry.job.status === "failed" || entry.job.status === "timed_out",
+      (entry) => entry.job.status === "failed" || entry.job.status === "timed_out",
     ).length;
-    if (failedCount === 0) {
-      return;
-    }
-    if (!confirm(`Delete ${failedCount} failed or timed out jobs?`)) {
-      return;
-    }
+    if (failedCount === 0) return;
+    if (!confirm(`Delete ${failedCount} failed or timed out jobs?`)) return;
     try {
       setPruning(true);
       await api.pruneFailedJobs();
@@ -157,7 +118,15 @@ export default function JobList() {
     }
   }
 
-  if (loading) {
+  const getStatusVariant = (status: string) => {
+    if (status === "completed") return "success";
+    if (status === "failed" || status === "timed_out") return "error";
+    if (status === "running") return "lime";
+    if (status === "pending") return "warning";
+    return "default";
+  };
+
+  if (loading && jobs.length === 0) {
     return <LoadingBlock label="Loading jobs…" lines={4} />;
   }
 
@@ -166,58 +135,257 @@ export default function JobList() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Header */}
       <PageHeader
-        eyebrow="Job Activity"
+        eyebrow="JOB_ACTIVITY"
         title={mode === "active" ? "Active Builds" : "Build Timeline"}
         description={
           mode === "active"
             ? "Pending and running jobs currently in flight."
             : "Finished job history across all packages and targets."
         }
+        color="orange"
         actions={[{ href: "/", label: "Overview", icon: faChartLine }]}
       />
 
-      <JobModeFilterBar
-        mode={mode}
-        filter={filter}
-        pruning={pruning}
-        jobs={jobs}
-        onModeChange={(nextMode) => load(nextMode, "all", 0, packageFilter, targetFilter)}
-        onFilterChange={(nextFilter) =>
-          load(mode, nextFilter, 0, packageFilter, targetFilter)
-        }
-        onPruneFailed={handlePruneFailed}
-      />
+      {/* Mode Toggle + Filters */}
+      <div className="border-4 border-[var(--theme-border-strong)] bg-black shadow-[4px_4px_0_rgba(255,255,255,0.1)]">
+        <div className="border-b-4 border-[var(--theme-border-strong)] bg-gradient-to-r from-zinc-900 to-black px-6 py-4">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Mode Toggle */}
+            <div className="flex border-2 border-[var(--theme-border-strong)]">
+              <button
+                onClick={() => load("history", "all", 0, packageFilter, targetFilter)}
+                className={`px-5 py-2.5 font-mono text-sm font-bold uppercase tracking-wider transition-all ${
+                  mode === "history"
+                    ? "bg-[var(--theme-accent-lime)] text-black"
+                    : "bg-black text-[var(--theme-text-muted)] hover:text-white"
+                }`}
+              >
+                History
+              </button>
+              <button
+                onClick={() => load("active", "all", 0, packageFilter, targetFilter)}
+                className={`border-l-2 border-[var(--theme-border-strong)] px-5 py-2.5 font-mono text-sm font-bold uppercase tracking-wider transition-all ${
+                  mode === "active"
+                    ? "bg-[var(--theme-terminal-green)] text-black"
+                    : "bg-black text-[var(--theme-text-muted)] hover:text-white"
+                }`}
+              >
+                Active
+              </button>
+            </div>
 
-      <JobSearchFilters
-        packageFilter={packageFilter}
-        targetFilter={targetFilter}
-        onPackageFilterChange={setPackageFilter}
-        onTargetFilterChange={setTargetFilter}
-        onApply={() => load(mode, filter, 0, packageFilter, targetFilter)}
-      />
+            {/* Status Filter (history only) */}
+            {mode === "history" && (
+              <div className="flex-1 min-w-[200px] max-w-xs">
+                <Select
+                  options={[
+                    { value: "all", label: "All Statuses" },
+                    { value: "completed", label: "Completed" },
+                    { value: "failed", label: "Failed" },
+                    { value: "timed_out", label: "Timed Out" },
+                  ]}
+                  value={filter}
+                  onValueChange={(val) => load(mode, val, 0, packageFilter, targetFilter)}
+                  placeholder="Filter status..."
+                />
+              </div>
+            )}
 
-      {jobs.length === 0 ? (
-        <EmptyState>
-          {mode === "active"
-            ? "No active jobs match the current filter."
-            : "No finished jobs match the current filter."}
-        </EmptyState>
-      ) : (
-        <JobTable jobs={jobs} onDelete={handleDelete} />
-      )}
+            {/* Prune Button */}
+            {mode === "history" && (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handlePruneFailed}
+                disabled={pruning || jobs.filter((e) => e.job.status === "failed" || e.job.status === "timed_out").length === 0}
+              >
+                <FaIcon icon={faTrash} />
+                Prune Failed
+              </Button>
+            )}
+          </div>
+        </div>
 
-      {jobs.length > 0 ? (
-        <PaginationControls
-          onPrevious={() =>
-            load(mode, filter, Math.max(0, offset - pageSize), packageFilter, targetFilter)
-          }
-          onNext={() => load(mode, filter, offset + pageSize, packageFilter, targetFilter)}
-          previousDisabled={loading || offset === 0}
-          nextDisabled={loading || !hasMore}
-        />
-      ) : null}
+        {/* Search Filters */}
+        <div className="border-b-4 border-[var(--theme-border-strong)] bg-black px-6 py-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+                Package
+              </label>
+              <input
+                type="text"
+                value={packageFilter}
+                onChange={(e) => setPackageFilter(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && load(mode, filter, 0, packageFilter, targetFilter)}
+                placeholder="Filter by package..."
+                className="w-full border-2 border-[var(--theme-border-strong)] bg-black px-4 py-2.5 font-mono text-sm text-white transition focus:border-[var(--theme-accent-lime)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)] focus:ring-offset-2 focus:ring-offset-black"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+                Target
+              </label>
+              <input
+                type="text"
+                value={targetFilter}
+                onChange={(e) => setTargetFilter(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && load(mode, filter, 0, packageFilter, targetFilter)}
+                placeholder="Filter by target..."
+                className="w-full border-2 border-[var(--theme-border-strong)] bg-black px-4 py-2.5 font-mono text-sm text-white transition focus:border-[var(--theme-accent-lime)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)] focus:ring-offset-2 focus:ring-offset-black"
+              />
+            </div>
+            <div className="flex items-end">
+              <Button
+                variant="primary"
+                className="w-full"
+                onClick={() => load(mode, filter, 0, packageFilter, targetFilter)}
+              >
+                <FaIcon icon={faFilter} />
+                Apply Filters
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Jobs Table */}
+        <div className="overflow-x-auto">
+          {jobs.length === 0 ? (
+            <div className="flex min-h-[300px] items-center justify-center px-6 py-12">
+              <div className="text-center">
+                <div className="font-mono text-sm text-zinc-500">
+                  {mode === "active" ? "No active jobs" : "No jobs found"}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <table className="min-w-[980px] w-full">
+              <thead className="border-b-2 border-[var(--theme-border-strong)] bg-zinc-950">
+                <tr>
+                  <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                    Package
+                  </th>
+                  <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                    Target
+                  </th>
+                  <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                    Revision
+                  </th>
+                  <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                    Status
+                  </th>
+                  <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                    Duration
+                  </th>
+                  <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                    Created
+                  </th>
+                  <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {jobs.map((entry, idx) => {
+                  const isLive = entry.job.status === "pending" || entry.job.status === "running";
+                  return (
+                    <tr
+                      key={entry.job.id}
+                      className={`border-b-2 border-[var(--theme-border)] transition-all hover:bg-zinc-950 ${
+                        idx % 2 === 0 ? "bg-black" : "bg-zinc-950/40"
+                      }`}
+                    >
+                      <td className="px-5 py-4">
+                        <div className="min-w-[160px]">
+                          <a
+                            href={`/jobs/view/?id=${encodeURIComponent(entry.job.id)}`}
+                            className="font-display font-bold text-white transition hover:text-[var(--theme-accent-lime)]"
+                          >
+                            {entry.job.package_name}
+                          </a>
+                          <div className="mt-1 max-w-[200px] truncate font-mono text-xs text-zinc-600">
+                            {entry.job.id}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <Badge variant="ghost">{entry.job.mock_chroot}</Badge>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="max-w-[300px] truncate font-mono text-sm text-zinc-300">
+                          {entry.job.revision}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <Badge variant={getStatusVariant(entry.job.status)} pulse={isLive}>
+                          {entry.job.status}
+                        </Badge>
+                      </td>
+                      <td className="px-5 py-4 font-mono text-sm text-zinc-400">
+                        {formatDurationBetween(entry.job.created_at, entry.job.finished_at)}
+                      </td>
+                      <td className="px-5 py-4 font-mono text-sm text-zinc-400">
+                        {formatDateTime(entry.job.created_at)}
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => (window.location.href = `/jobs/view/?id=${encodeURIComponent(entry.job.id)}`)}
+                          >
+                            Open
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => handleDelete(entry)}
+                            disabled={isLive}
+                          >
+                            <FaIcon icon={faTrash} />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Pagination */}
+        {(offset > 0 || hasMore) && (
+          <div className="border-t-4 border-[var(--theme-border-strong)] bg-zinc-950 px-6 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="font-mono text-sm text-zinc-500">
+                Showing {offset + 1}-{offset + jobs.length}
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => load(mode, filter, Math.max(0, offset - pageSize), packageFilter, targetFilter)}
+                  disabled={offset === 0}
+                >
+                  ← Previous
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => load(mode, filter, offset + pageSize, packageFilter, targetFilter)}
+                  disabled={!hasMore}
+                >
+                  Next →
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

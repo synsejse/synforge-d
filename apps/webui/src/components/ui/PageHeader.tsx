@@ -15,24 +15,66 @@ interface ActionButton {
   variant?: "default" | "primary";
 }
 
+type HeaderColor = "lime" | "green" | "orange" | "cyan" | "purple" | "white";
+
+const colorMap: Record<HeaderColor, { border: string; text: string }> = {
+  lime: {
+    border: "border-[var(--theme-accent-lime)]",
+    text: "text-[var(--theme-accent-lime)]",
+  },
+  green: {
+    border: "border-[var(--theme-terminal-green)]",
+    text: "text-[var(--theme-terminal-green)]",
+  },
+  orange: {
+    border: "border-[var(--theme-accent-orange)]",
+    text: "text-[var(--theme-accent-orange)]",
+  },
+  cyan: {
+    border: "border-cyan-400",
+    text: "text-cyan-400",
+  },
+  purple: {
+    border: "border-purple-400",
+    text: "text-purple-400",
+  },
+  white: {
+    border: "border-white",
+    text: "text-white",
+  },
+};
+
 interface Props {
   eyebrow: string;
   title: string;
   description: string;
+  color?: HeaderColor;
   actions?: Array<ActionLink | ActionButton>;
 }
 
-export default function PageHeader({ eyebrow, title, description, actions = [] }: Props) {
+export default function PageHeader({
+  eyebrow,
+  title,
+  description,
+  color = "lime",
+  actions = [],
+}: Props) {
+  const colors = colorMap[color];
+
   return (
-    <section className="border border-zinc-800 bg-black p-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">{eyebrow}</p>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight text-white">{title}</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">{description}</p>
+    <section className={`border-4 ${colors.border} bg-black p-6`}>
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="min-w-0 flex-1">
+          <p className={`font-mono text-xs font-bold uppercase tracking-[0.3em] ${colors.text}`}>
+            {eyebrow}
+          </p>
+          <h1 className="mt-2 font-mono text-3xl font-bold uppercase text-white">
+            {title}
+          </h1>
+          <p className="mt-2 text-sm text-zinc-400">{description}</p>
         </div>
         {actions.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             {actions.map((action) => {
               if ("href" in action) {
                 return (

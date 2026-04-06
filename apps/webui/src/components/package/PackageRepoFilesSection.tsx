@@ -33,10 +33,10 @@ export default function PackageRepoFilesSection({
   onLoadNext,
 }: PackageRepoFilesSectionProps) {
   return (
-    <section className="border border-zinc-800 bg-black p-6">
+    <section className="border-4 border-white bg-black p-6 shadow-[6px_6px_0_rgba(255,255,255,0.2)]">
       <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-white">Repository Files</h2>
+          <h2 className="font-mono text-xl font-bold uppercase text-white">Repository Files</h2>
           <p className="mt-2 text-sm text-zinc-400">
             Build-owned files currently present in the repo namespace for this
             package.
@@ -44,14 +44,14 @@ export default function PackageRepoFilesSection({
         </div>
         <div className="flex items-center gap-3">
           {repoFilesLoaded ? (
-            <div className="border border-zinc-800 bg-black px-4 py-2 text-xs uppercase tracking-[0.2em] text-zinc-400">
+            <div className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs uppercase tracking-[0.2em] text-zinc-400">
               {repoFilesTotal ?? repoFiles.length} tracked files
             </div>
           ) : null}
           <button
             type="button"
             onClick={onToggleOpen}
-            className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950"
+            className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
           >
             {repoFilesOpen ? "Hide Files" : "Open Files"}
           </button>
@@ -70,9 +70,9 @@ export default function PackageRepoFilesSection({
         </EmptyState>
       ) : (
         <div className="space-y-4">
-          <div className="overflow-x-auto border border-zinc-800">
+          <div className="overflow-x-auto border-2 border-zinc-700">
             <table className="min-w-[980px] w-full">
-              <thead className="bg-zinc-950 text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
+              <thead className="border-b-2 border-zinc-700 bg-zinc-950 text-left font-mono text-xs uppercase tracking-[0.2em] text-zinc-500">
                 <tr>
                   <th className="px-4 py-3">Repo Path</th>
                   <th className="px-4 py-3">Build</th>
@@ -81,7 +81,7 @@ export default function PackageRepoFilesSection({
                   <th className="px-4 py-3">Published</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/10 bg-black">
+              <tbody className="divide-y divide-zinc-800 bg-black">
                 {repoFiles.map((file) => (
                   <tr key={`${file.job_id}:${file.path}`} className="hover:bg-zinc-950">
                     <td className="px-4 py-3 font-mono text-sm text-zinc-200">
@@ -90,19 +90,19 @@ export default function PackageRepoFilesSection({
                     <td className="px-4 py-3">
                       <a
                         href={`/jobs/view/?id=${encodeURIComponent(file.job_id)}`}
-                        className="font-mono text-sm text-zinc-300 transition hover:text-white"
+                        className="font-mono text-sm text-zinc-300 transition hover:text-[var(--theme-accent-lime)]"
                       >
                         <FaIcon icon={faBoxesStacked} className="mr-2" />
                         {file.job_id}
                       </a>
                     </td>
-                    <td className="px-4 py-3 text-sm uppercase tracking-[0.18em] text-zinc-500">
+                    <td className="px-4 py-3 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
                       {file.kind}
                     </td>
-                    <td className="px-4 py-3 text-sm text-zinc-400">
+                    <td className="px-4 py-3 font-mono text-sm text-zinc-400">
                       {formatBytes(file.size_bytes)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-zinc-400">
+                    <td className="px-4 py-3 font-mono text-sm text-zinc-400">
                       {formatDateTime(file.published_at)}
                     </td>
                   </tr>
@@ -110,7 +110,7 @@ export default function PackageRepoFilesSection({
               </tbody>
             </table>
           </div>
-          <div className="border border-zinc-800 bg-black px-4 py-3">
+          <div className="border-2 border-zinc-700 bg-black px-4 py-3">
             <PaginationControls
               onPrevious={onLoadPrevious}
               onNext={onLoadNext}

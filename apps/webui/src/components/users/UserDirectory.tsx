@@ -26,37 +26,39 @@ export default function UserDirectory({
   onDelete,
 }: UserDirectoryProps) {
   return (
-    <section className="overflow-hidden border border-zinc-800 bg-black">
-      <div className="border-b border-zinc-800 px-6 py-4">
+    <section className="overflow-hidden border-2 border-zinc-700 bg-black">
+      <div className="border-b-2 border-zinc-800 bg-zinc-950 px-6 py-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center border border-zinc-800 bg-zinc-950 text-white">
+          <div className="flex h-10 w-10 items-center justify-center border-2 border-zinc-700 bg-black text-white">
             <FaIcon icon={faUsers} />
           </div>
           <div>
-            <h2 className="text-xl font-semibold text-white">User Directory</h2>
-            <p className="mt-1 text-sm text-zinc-400">
+            <h2 className="font-mono text-lg font-bold uppercase tracking-[0.15em] text-white">
+              User Directory
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">
               Handles, permissions, and repository traffic at a glance.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="divide-y divide-white/8">
+      <div className="divide-y divide-zinc-800">
         {users.map((entry) => {
           const isCurrentUser = currentUserId === entry.user.id;
           return (
-            <article key={entry.user.id} className="flex flex-col gap-5 px-6 py-5">
+            <article key={entry.user.id} className="flex flex-col gap-5 bg-black px-6 py-5">
               <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:items-start">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="text-xl font-semibold text-white">
+                    <h3 className="font-mono text-xl font-semibold uppercase text-white">
                       {entry.user.display_name}
                     </h3>
-                    <span className="border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-xs uppercase tracking-[0.18em] text-zinc-400">
+                    <span className="border-2 border-zinc-700 bg-zinc-950 px-2.5 py-1 text-xs uppercase tracking-[0.18em] text-zinc-300">
                       {entry.user.active ? "active" : "disabled"}
                     </span>
                     {isCurrentUser ? (
-                      <span className="border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-xs uppercase tracking-[0.18em] text-zinc-400">
+                      <span className="border-2 border-[var(--theme-accent-lime)] bg-zinc-950 px-2.5 py-1 text-xs uppercase tracking-[0.18em] text-[var(--theme-accent-lime)]">
                         current
                       </span>
                     ) : null}
@@ -93,12 +95,12 @@ export default function UserDirectory({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-zinc-800 pt-4">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t-2 border-zinc-800 pt-4">
                 <div className="flex flex-wrap gap-2">
                   {entry.user.permissions.map((permission) => (
                     <span
                       key={`${entry.user.id}:${permission}`}
-                      className="border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs uppercase tracking-[0.18em] text-zinc-300"
+                      className="border-2 border-zinc-700 bg-zinc-950 px-3 py-1 text-xs uppercase tracking-[0.18em] text-zinc-300"
                     >
                       {permission}
                     </span>
@@ -130,10 +132,10 @@ export default function UserDirectory({
 function CompactMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-2 leading-none">
-      <dt className="self-center text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+      <dt className="self-center font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
         {label}
       </dt>
-      <dd className="self-center text-sm font-medium text-zinc-200">{value}</dd>
+      <dd className="self-center font-mono text-sm font-medium text-zinc-200">{value}</dd>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import PackageDetail from "./PackageDetail";
+import PackageDetail from "../package/PackageDetail";
 
 export default function PackageDetailLoader() {
   const packageName = typeof window !== "undefined"
@@ -6,7 +6,11 @@ export default function PackageDetailLoader() {
     : "";
 
   if (!packageName) {
-    return <div className="text-red-500">Invalid package name</div>;
+    return (
+      <div className="border-2 border-[var(--theme-error-red)] bg-black px-4 py-3 font-mono text-sm text-[var(--theme-error-red)]">
+        Invalid package name
+      </div>
+    );
   }
 
   return <PackageDetail packageName={packageName} />;

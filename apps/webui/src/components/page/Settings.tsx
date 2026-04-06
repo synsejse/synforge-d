@@ -1,11 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { faSave, faServer } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import type { ConfigFieldDescriptor, DaemonConfig } from "../../lib/types";
 import ErrorMessage from "../common/ErrorMessage";
 import LoadingBlock from "../ui/LoadingBlock";
-import PageHeader from "../ui/PageHeader";
-import { faSave, faServer } from "@fortawesome/free-solid-svg-icons";
 import FaIcon from "../ui/FaIcon";
+import Button from "../ui/Button";
+import PageHeader from "../ui/PageHeader";
 
 export default function Settings() {
   const [config, setConfig] = useState<DaemonConfig | null>(null);
@@ -31,7 +32,6 @@ export default function Settings() {
         setLoading(false);
       }
     }
-
     load();
   }, []);
 
@@ -65,82 +65,66 @@ export default function Settings() {
 
   return (
     <div className="space-y-8">
+      {/* Header */}
       <PageHeader
-        eyebrow="Daemon Settings"
+        eyebrow="DAEMON_SETTINGS"
         title="Configuration"
         description="Runtime settings and effective daemon values."
+        color="purple"
         actions={[{ href: "/", label: "Overview", icon: faServer }]}
       />
 
-      <form
-        onSubmit={handleSave}
-        className="border border-zinc-800 bg-black p-6"
-      >
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-white">Runtime Settings</h2>
-          <p className="mt-2 text-sm text-zinc-400">
-            Settings editable from the UI, driven by the backend config schema.
-          </p>
-        </div>
+      {/* Settings Form */}
+      <form onSubmit={handleSave} className="space-y-6">
+        {groupedFields.map((section) => {
+          const runtimeFields = section.fields.filter((field) => field.editable_in_runtime);
+          const readOnlyFields = section.fields.filter((field) => !field.editable_in_runtime);
 
-        <div className="space-y-6">
-          {groupedFields.map((section) => {
-            const runtimeFields = section.fields.filter(
-              (field) => field.editable_in_runtime,
-            );
-            const readOnlyFields = section.fields.filter(
-              (field) => !field.editable_in_runtime,
-            );
+          if (runtimeFields.length === 0 && readOnlyFields.length === 0) {
+            return null;
+          }
 
-            if (runtimeFields.length === 0 && readOnlyFields.length === 0) {
-              return null;
-            }
-
-            return (
-              <section
-                key={section.key}
-                className="border border-zinc-800 bg-black p-5"
-              >
-                <h3 className="text-lg font-semibold text-white">
+          return (
+            <div key={section.key} className="border-2 border-white bg-black">
+              <div className="border-b-2 border-zinc-800 bg-black px-6 py-5">
+                <h2 className="font-mono text-lg font-bold uppercase text-white">
                   {section.label}
-                </h3>
-                <div className="mt-4 grid gap-4 xl:grid-cols-2">
-                  {runtimeFields.map((field) => (
-                    <ConfigFieldInput
-                      key={field.key}
-                      field={field}
-                      value={values[field.key] || ""}
-                      onChange={(next) =>
-                        setValues((current) => ({
-                          ...current,
-                          [field.key]: next,
-                        }))
-                      }
-                    />
-                  ))}
-                  {readOnlyFields.map((field) => (
-                    <ConfigFieldInput
-                      key={field.key}
-                      field={field}
-                      value={values[field.key] || ""}
-                      onChange={() => undefined}
-                      disabled
-                    />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-          <div className="flex items-end xl:col-span-2">
-            <button
-              type="submit"
-              disabled={saving}
-              className="border border-zinc-200 bg-zinc-100 px-5 py-3 text-sm font-semibold text-black transition hover:bg-white disabled:opacity-70"
-            >
-              <FaIcon icon={faSave} className="mr-2" />
-              {saving ? "Saving…" : "Save"}
-            </button>
-          </div>
+                </h2>
+              </div>
+              <div className="grid gap-6 p-6 xl:grid-cols-2">
+                {runtimeFields.map((field) => (
+                  <ConfigFieldInput
+                    key={field.key}
+                    field={field}
+                    value={values[field.key] || ""}
+                    onChange={(next) =>
+                      setValues((current) => ({
+                        ...current,
+                        [field.key]: next,
+                      }))
+                    }
+                  />
+                ))}
+                {readOnlyFields.map((field) => (
+                  <ConfigFieldInput
+                    key={field.key}
+                    field={field}
+                    value={values[field.key] || ""}
+                    onChange={() => undefined}
+                    disabled
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Save Button */}
+        <div className="flex justify-end">
+          <Button type="submit" variant="primary" size="md" disabled={saving}>
+            <FaIcon icon={faSave} className="mr-2" />
+            {saving ? "Saving…" : "Save Settings"}
+          </Button>
         </div>
       </form>
     </div>
@@ -160,7 +144,7 @@ function ConfigFieldInput({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-zinc-300">
+      <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
         {field.label}
       </span>
       <input
@@ -168,13 +152,11 @@ function ConfigFieldInput({
         min={field.min_value}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600 disabled:text-zinc-500 disabled:opacity-80"
+        className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)] disabled:text-zinc-600 disabled:opacity-60"
         required={field.required}
         disabled={disabled}
       />
-      <span className="mt-2 block text-xs text-zinc-500">
-        {field.description}
-      </span>
+      <span className="mt-2 block text-xs text-zinc-600">{field.description}</span>
     </label>
   );
 }

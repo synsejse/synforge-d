@@ -1,17 +1,16 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import api from "../../lib/api";
-import DetailStat from "../ui/DetailStat";
-import ArtifactList from "./ArtifactList";
-import ErrorMessage from "../common/ErrorMessage";
-import FaIcon from "../ui/FaIcon";
-import LoadingBlock from "../ui/LoadingBlock";
-import StatusPill from "../ui/StatusPill";
 import { formatDateTime } from "../../lib/datetime";
 import type { BuildArtifact, BuildJobResponse } from "../../lib/types";
+import ErrorMessage from "../common/ErrorMessage";
+import LoadingBlock from "../ui/LoadingBlock";
+import FaIcon from "../ui/FaIcon";
+import Badge from "../ui/Badge";
+import Button from "../ui/Button";
+import Tabs, { TabsContent } from "../ui/Tabs";
 import {
   faArrowLeft,
-  faCircle,
-  faFolderOpen,
+  faDownload,
   faRotate,
   faTerminal,
   faTrash,
@@ -22,7 +21,7 @@ interface Props {
 }
 
 const POLL_INTERVAL_MS = 2000;
-const TabbedLogViewer = lazy(() => import("./TabbedLogViewer"));
+const TabbedLogViewer = lazy(() => import("../job/TabbedLogViewer"));
 
 export default function JobDetail({ jobId }: Props) {
   const [job, setJob] = useState<BuildJobResponse | null>(null);
@@ -30,14 +29,9 @@ export default function JobDetail({ jobId }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [downloadingArtifactPath, setDownloadingArtifactPath] = useState<
-    string | null
-  >(null);
   const [logsOpen, setLogsOpen] = useState(false);
   const [pageVisible, setPageVisible] = useState(() => {
-    if (typeof document === "undefined") {
-      return true;
-    }
+    if (typeof document === "undefined") return true;
     return document.visibilityState === "visible";
   });
 
@@ -65,9 +59,7 @@ export default function JobDetail({ jobId }: Props) {
   }, [jobId]);
 
   useEffect(() => {
-    if (typeof document === "undefined") {
-      return;
-    }
+    if (typeof document === "undefined") return;
     const updateVisibility = () => {
       setPageVisible(document.visibilityState === "visible");
     };
@@ -79,15 +71,9 @@ export default function JobDetail({ jobId }: Props) {
 
   // Poll for job status updates when live
   useEffect(() => {
-    if (!job) {
-      return;
-    }
-    if (job.job.status !== "pending" && job.job.status !== "running") {
-      return;
-    }
-    if (!pageVisible) {
-      return;
-    }
+    if (!job) return;
+    if (job.job.status !== "pending" && job.job.status !== "running") return;
+    if (!pageVisible) return;
 
     loadJob().catch(() => undefined);
     const timer = window.setInterval(() => {
@@ -98,207 +84,224 @@ export default function JobDetail({ jobId }: Props) {
   }, [job?.job.status, pageVisible]);
 
   async function handleDelete() {
-    if (!job) {
-      return;
-    }
-    if (
-      !confirm(
-        `Delete job ${job.job.id}? This only removes stored history and logs.`,
-      )
-    ) {
-      return;
-    }
-    setDeleting(true);
+    if (!confirm(`Delete job ${jobId}?`)) return;
     try {
-      await api.deleteJob(job.job.id);
+      setDeleting(true);
+      await api.deleteJob(jobId);
       window.location.href = "/jobs/";
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete job");
+      alert(e instanceof Error ? e.message : "Failed to delete job");
       setDeleting(false);
     }
   }
 
-  async function handleArtifactDownload(
-    artifact: BuildArtifact,
-  ) {
+  async function handleRetry() {
+    if (!job) return;
+    if (!confirm(`Retry build for ${job.job.package_name}?`)) return;
     try {
-      setDownloadingArtifactPath(artifact.file);
-      await api.downloadJobArtifact(jobId, artifact);
+      const res = await api.retryJob(jobId);
+      window.location.href = `/jobs/view/?id=${encodeURIComponent(res.job.id)}`;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to download artifact");
-    } finally {
-      setDownloadingArtifactPath(null);
+      alert(e instanceof Error ? e.message : "Failed to retry job");
     }
   }
 
-  const isLive = job?.job.status === "pending" || job?.job.status === "running";
+  const getStatusVariant = (status: string) => {
+    if (status === "completed") return "success";
+    if (status === "failed" || status === "timed_out") return "error";
+    if (status === "running") return "lime";
+    if (status === "pending") return "warning";
+    return "default";
+  };
 
   if (loading) {
-    return <LoadingBlock label="Loading job…" lines={4} />;
+    return <LoadingBlock label="Loading job details…" lines={6} />;
   }
 
   if (error || !job) {
     return <ErrorMessage message={error || "Job not found"} />;
   }
 
+  const isLive = job.job.status === "pending" || job.job.status === "running";
+  const canRetry = job.job.status === "completed" || job.job.status === "failed" || job.job.status === "timed_out";
+
   return (
     <div className="space-y-6">
-      <section className="border border-zinc-800 bg-black p-6">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-          <div className="space-y-3">
-            <a
-              href="/jobs/"
-              className="text-sm text-zinc-400 transition hover:text-zinc-100"
-            >
-              <FaIcon icon={faArrowLeft} className="mr-2" />
-              Back to jobs
-            </a>
-            <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">
-              Job Trace
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-4xl font-semibold tracking-tight text-white">
-                {job.job.package_name}
-              </h1>
-              <StatusPill status={job.job.status} />
-              {isLive && (
-                <span className="inline-flex items-center gap-2 border border-zinc-800 bg-black px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-zinc-200">
-                  <FaIcon
-                    icon={faCircle}
-                    className="text-[10px] text-white/80"
-                  />
-                  Live
-                </span>
-              )}
+      {/* Header */}
+      <section className="border-4 border-[var(--theme-accent-orange)] bg-black p-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-3">
+              <Badge variant={getStatusVariant(job.job.status)} pulse={isLive}>
+                {job.job.status}
+              </Badge>
+              <span className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[var(--theme-accent-orange)]">
+                JOB_DETAILS
+              </span>
             </div>
-            <p className="break-all font-mono text-sm text-zinc-400">
-              {job.job.revision}
-            </p>
+            <h1 className="mt-3 font-mono text-3xl font-bold uppercase text-white">
+              {job.job.package_name}
+            </h1>
+            <div className="mt-3 flex flex-wrap items-center gap-4">
+              <div className="font-mono text-sm text-zinc-400">
+                <span className="text-zinc-600">Target:</span> {job.job.mock_chroot}
+              </div>
+              <div className="font-mono text-sm text-zinc-400">
+                <span className="text-zinc-600">Trigger:</span> {job.job.trigger}
+              </div>
+              <div className="font-mono text-sm text-zinc-400">
+                <span className="text-zinc-600">Created:</span> {formatDateTime(job.job.created_at)}
+              </div>
+            </div>
           </div>
           <div className="flex flex-wrap gap-3">
-            <a
-              href={`/packages/view/?name=${encodeURIComponent(job.job.package_name)}`}
-              className="border border-zinc-800 bg-black px-4 py-2 text-sm font-medium text-zinc-100 transition hover:border-zinc-600 hover:bg-zinc-950"
-            >
-              <FaIcon icon={faFolderOpen} className="mr-2" />
-              Open Package
-            </a>
-            <button
-              onClick={() => {
-                loadJob().catch(() => undefined);
-              }}
-              className="border border-zinc-800 bg-black px-4 py-2 text-sm font-medium text-zinc-100 transition hover:border-zinc-600 hover:bg-zinc-950"
-            >
-              <FaIcon icon={faRotate} className="mr-2" />
-              Refresh
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={deleting || isLive}
-              className="border border-zinc-800 bg-black px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <FaIcon icon={faTrash} className="mr-2" />
-              {deleting ? "Deleting…" : "Delete Job"}
-            </button>
+            <Button variant="ghost" onClick={() => (window.location.href = "/jobs/")}>
+              <FaIcon icon={faArrowLeft} />
+              Back
+            </Button>
+            {canRetry && (
+              <Button variant="primary" onClick={handleRetry}>
+                <FaIcon icon={faRotate} />
+                Retry
+              </Button>
+            )}
+            <Button variant="danger" onClick={handleDelete} disabled={deleting || isLive}>
+              <FaIcon icon={faTrash} />
+              Delete
+            </Button>
           </div>
         </div>
-
-        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <DetailStat label="Trigger" value={job.job.trigger} />
-          <DetailStat label="Target" value={job.job.mock_chroot} />
-          <DetailStat
-            label="Created"
-            value={formatDateTime(job.job.created_at)}
-          />
-          <DetailStat
-            label="Finished"
-            value={formatDateTime(job.job.finished_at, "Still running")}
-          />
-        </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="space-y-4 border border-zinc-800 bg-black p-5">
-          <DetailStat label="Job ID" value={job.job.id} mono />
-          <DetailStat
-            label="Worker Container"
-            value={job.job.worker_container_id || "Not assigned"}
-            mono
-          />
-          <DetailStat label="Spec File" value={job.job.spec_file} mono />
-          {job.job.error_message && (
-            <div className="border border-zinc-800 bg-black p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-                Error
+      {/* Job Metadata */}
+      <div className="border-4 border-[var(--theme-border-strong)] bg-black shadow-[4px_4px_0_rgba(255,255,255,0.1)]">
+        <div className="border-b-4 border-[var(--theme-border-strong)] bg-gradient-to-r from-zinc-900 to-black px-6 py-4">
+          <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white">
+            Build_Metadata
+          </h2>
+        </div>
+        <div className="grid gap-6 p-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="border-l-4 border-[var(--theme-accent-lime)] bg-zinc-950/30 pl-4 pr-3 py-4">
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+              Job ID
+            </div>
+            <div className="mt-2 break-all font-mono text-sm text-white">
+              {job.job.id}
+            </div>
+          </div>
+          <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+              Package
+            </div>
+            <div className="mt-2 font-display text-base font-bold text-white">
+              {job.job.package_name}
+            </div>
+          </div>
+          <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+              Mock Chroot
+            </div>
+            <div className="mt-2 font-mono text-sm text-white">
+              {job.job.mock_chroot}
+            </div>
+          </div>
+          <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+              Revision
+            </div>
+            <div className="mt-2 break-all font-mono text-sm text-white">
+              {job.job.revision}
+            </div>
+          </div>
+          <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+              Created At
+            </div>
+            <div className="mt-2 font-mono text-sm text-white">
+              {formatDateTime(job.job.created_at)}
+            </div>
+          </div>
+          {job.job.finished_at && (
+            <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
+              <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+                Finished At
               </div>
-              <pre className="mt-3 whitespace-pre-wrap text-sm text-zinc-200">
-                {job.job.error_message}
-              </pre>
+              <div className="mt-2 font-mono text-sm text-white">
+                {formatDateTime(job.job.finished_at)}
+              </div>
             </div>
           )}
-        </aside>
+        </div>
+      </div>
 
-        <div className="space-y-6">
-          {job.job.error_message && (
-            <section className="border border-red-700/60 bg-red-500/10 p-5">
-              <div>
-                <div className="text-xs uppercase tracking-[0.18em] text-red-300">
-                  Failure Summary
-                </div>
-                <pre className="mt-3 whitespace-pre-wrap text-sm text-red-100">
-                  {job.job.error_message}
-                </pre>
-              </div>
-            </section>
-          )}
-
-          <section className="border border-zinc-800 bg-black p-5 lg:p-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold text-white">
-                  Build Logs
-                </h2>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Open logs on demand to avoid loading the heavy viewer up
-                  front.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setLogsOpen((current) => !current)}
-                aria-expanded={logsOpen}
-                className="border border-zinc-800 bg-black px-4 py-2 text-sm font-medium text-zinc-100 transition hover:border-zinc-600 hover:bg-zinc-950"
-              >
-                <FaIcon icon={faTerminal} className="mr-2" />
-                {logsOpen ? "Hide Logs" : "Open Logs"}
-              </button>
+      {/* Build Logs */}
+      <div className="border-4 border-[var(--theme-terminal-green)] bg-black shadow-[4px_4px_0_rgba(0,255,65,0.2)]">
+        <div className="border-b-4 border-[var(--theme-terminal-green)] bg-black px-6 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <FaIcon icon={faTerminal} className="text-[var(--theme-terminal-green)]" />
+              <h2 className="font-display text-xl font-bold uppercase tracking-tight text-[var(--theme-terminal-green)]">
+                Build_Logs
+              </h2>
             </div>
+            <Button
+              variant="terminal"
+              size="sm"
+              onClick={() => setLogsOpen(!logsOpen)}
+            >
+              {logsOpen ? "Hide Logs" : "Show Logs"}
+            </Button>
+          </div>
+        </div>
+        {logsOpen && (
+          <div className="bg-black p-6">
+            <Suspense fallback={<LoadingBlock label="Loading logs…" lines={3} />}>
+              <TabbedLogViewer jobId={jobId} />
+            </Suspense>
+          </div>
+        )}
+      </div>
 
-            {logsOpen ? (
-              <div className="mt-5">
-                <Suspense
-                  fallback={
-                    <LoadingBlock label="Loading log viewer…" lines={5} />
-                  }
+      {/* Artifacts */}
+      {artifacts.length > 0 && (
+        <div className="border-4 border-[var(--theme-border-strong)] bg-black shadow-[4px_4px_0_rgba(255,255,255,0.1)]">
+          <div className="border-b-4 border-[var(--theme-border-strong)] bg-gradient-to-r from-zinc-900 to-black px-6 py-4">
+            <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white">
+              Build_Artifacts
+            </h2>
+          </div>
+          <div className="p-6">
+            <div className="grid gap-2">
+              {artifacts.map((artifact) => (
+                <div
+                  key={`${artifact.id}:${artifact.file}`}
+                  className="flex items-center justify-between gap-4 border-2 border-[var(--theme-border)] bg-zinc-950/40 px-5 py-4 transition-all hover:border-[var(--theme-border-strong)] hover:bg-zinc-950"
                 >
-                  <TabbedLogViewer jobId={jobId} isLive={isLive} />
-                </Suspense>
-              </div>
-            ) : (
-              <div className="mt-5 border border-zinc-800 bg-zinc-950/40 p-5 text-sm text-zinc-400">
-                The log viewer and its live polling start only after you open
-                this section.
-              </div>
-            )}
-          </section>
-
-          <ArtifactList
-            artifacts={artifacts}
-            downloadingArtifactPath={downloadingArtifactPath}
-            onDownload={handleArtifactDownload}
-          />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-mono text-sm text-white">
+                      {artifact.file}
+                    </div>
+                    <div className="mt-1 font-mono text-xs text-zinc-600">
+                      {artifact.size_bytes.toLocaleString()} bytes
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const url = `/api/jobs/${encodeURIComponent(jobId)}/artifacts/${encodeURIComponent(artifact.file)}`;
+                      window.open(url, "_blank");
+                    }}
+                  >
+                    <FaIcon icon={faDownload} />
+                    Download
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      </section>
+      )}
     </div>
   );
 }

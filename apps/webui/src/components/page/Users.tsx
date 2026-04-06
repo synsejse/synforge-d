@@ -195,9 +195,10 @@ export default function Users() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Access Control"
+        eyebrow="ACCESS_CONTROL"
         title="Users"
         description="Manage operator accounts, credentials, repository access, and download usage from one screen."
+        color="white"
         actions={[
           {
             onClick: openCreateModal,
@@ -367,8 +368,8 @@ export default function Users() {
               This removes the account, its permissions, and its tracked repo
               download metrics. This action cannot be undone.
             </p>
-            <div className="border border-zinc-800 bg-zinc-950 p-4">
-              <div className="font-medium text-white">
+            <div className="border-2 border-zinc-700 bg-zinc-950 p-4">
+              <div className="font-mono font-semibold uppercase text-white">
                 {modal.user.user.display_name}
               </div>
               <div className="mt-1 font-mono text-sm text-zinc-400">
@@ -380,7 +381,7 @@ export default function Users() {
                 type="button"
                 onClick={closeModal}
                 disabled={submitting}
-                className="border border-zinc-800 bg-black px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
+                className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-200 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
               >
                 Cancel
               </button>
@@ -388,7 +389,7 @@ export default function Users() {
                 type="button"
                 onClick={() => void handleDelete()}
                 disabled={submitting}
-                className="border border-zinc-200 bg-zinc-100 px-4 py-2 text-sm font-semibold text-black transition hover:bg-white disabled:opacity-70"
+                className="border-2 border-[var(--theme-error-red)] bg-[var(--theme-error-red)] px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:brightness-110 disabled:opacity-70"
               >
                 <FaIcon icon={faTrash} className="mr-2" />
                 {submitting ? "Deleting…" : "Delete user"}

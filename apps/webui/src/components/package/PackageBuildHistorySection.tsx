@@ -46,10 +46,10 @@ export default function PackageBuildHistorySection({
   deletingJobId,
 }: PackageBuildHistorySectionProps) {
   return (
-    <section className="border border-zinc-800 bg-black p-6">
+    <section className="border-4 border-white bg-black p-6 shadow-[6px_6px_0_rgba(255,255,255,0.2)]">
       <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-white">Build History</h2>
+          <h2 className="font-mono text-xl font-bold uppercase text-white">Build History</h2>
           <p className="mt-2 text-sm text-zinc-400">
             Build activity for this package, including revisions, outcomes, and
             managed repo ownership.
@@ -57,14 +57,14 @@ export default function PackageBuildHistorySection({
         </div>
         <div className="flex items-center gap-3">
           {buildsLoaded ? (
-            <div className="border border-zinc-800 bg-black px-4 py-2 text-xs uppercase tracking-[0.2em] text-zinc-400">
+            <div className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs uppercase tracking-[0.2em] text-zinc-400">
               {buildsTotal ?? builds.length} total builds
             </div>
           ) : null}
           <button
             type="button"
             onClick={onToggleOpen}
-            className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950"
+            className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
           >
             {buildsOpen ? "Hide History" : "Open History"}
           </button>
@@ -79,9 +79,9 @@ export default function PackageBuildHistorySection({
         <EmptyState>No build history yet.</EmptyState>
       ) : (
         <div className="space-y-4">
-          <div className="overflow-hidden border border-zinc-800">
+          <div className="overflow-hidden border-2 border-zinc-700">
             <table className="w-full">
-              <thead className="bg-zinc-950 text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
+              <thead className="border-b-2 border-zinc-700 bg-zinc-950 text-left font-mono text-xs uppercase tracking-[0.2em] text-zinc-500">
                 <tr>
                   <th className="px-4 py-3">Target</th>
                   <th className="px-4 py-3">Revision</th>
@@ -92,7 +92,7 @@ export default function PackageBuildHistorySection({
                   <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/10 bg-black">
+              <tbody className="divide-y divide-zinc-800 bg-black">
                 {builds.map((entry) => {
                   const publishedFiles = entry.repo_files;
                   const live =
@@ -107,27 +107,27 @@ export default function PackageBuildHistorySection({
                         <div className="font-mono text-sm text-zinc-200">
                           {entry.build.job.revision}
                         </div>
-                        <div className="mt-1 text-xs text-zinc-500">
+                        <div className="mt-1 font-mono text-xs text-zinc-500">
                           {entry.build.job.id}
                         </div>
                       </td>
                       <td className="px-4 py-3">
                         <StatusPill status={entry.build.job.status} />
                       </td>
-                      <td className="px-4 py-3 text-sm text-zinc-400">
+                      <td className="px-4 py-3 font-mono text-sm text-zinc-400">
                         {entry.build.job.trigger}
                       </td>
-                      <td className="px-4 py-3 text-sm text-zinc-400">
+                      <td className="px-4 py-3 font-mono text-sm text-zinc-400">
                         {formatDateTime(entry.build.job.created_at)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-zinc-300">
+                      <td className="px-4 py-3 font-mono text-sm text-zinc-300">
                         {publishedFiles.length}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-3">
                           <a
                             href={`/jobs/view/?id=${encodeURIComponent(entry.build.job.id)}`}
-                            className="text-sm font-medium text-zinc-300 transition hover:text-white"
+                            className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-300 transition hover:text-[var(--theme-accent-lime)]"
                           >
                             <FaIcon icon={faFolderOpen} className="mr-2" />
                             Open Job
@@ -138,7 +138,7 @@ export default function PackageBuildHistorySection({
                                 onClick={() =>
                                   onRefreshTarget(entry.build.job.mock_chroot)
                                 }
-                                className="text-sm font-medium text-zinc-500 transition hover:text-white"
+                                className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition hover:text-white"
                               >
                                 <FaIcon icon={faRotate} className="mr-2" />
                                 Refresh Target
@@ -147,7 +147,7 @@ export default function PackageBuildHistorySection({
                                 onClick={() =>
                                   onRebuildTarget(entry.build.job.mock_chroot)
                                 }
-                                className="text-sm font-medium text-zinc-500 transition hover:text-white"
+                                className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition hover:text-white"
                               >
                                 <FaIcon icon={faHammer} className="mr-2" />
                                 Rebuild Target
@@ -157,7 +157,7 @@ export default function PackageBuildHistorySection({
                           <button
                             onClick={() => onDeleteJob(entry.build.job.id)}
                             disabled={live || deletingJobId === entry.build.job.id}
-                            className="text-sm font-medium text-zinc-500 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                            className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <FaIcon icon={faTrash} className="mr-2" />
                             {deletingJobId === entry.build.job.id
@@ -172,7 +172,7 @@ export default function PackageBuildHistorySection({
               </tbody>
             </table>
           </div>
-          <div className="border border-zinc-800 bg-black px-4 py-3">
+           <div className="border-2 border-zinc-700 bg-black px-4 py-3">
             <PaginationControls
               onPrevious={onLoadPrevious}
               onNext={onLoadNext}

@@ -61,9 +61,9 @@ export default function PackageEditFormSection({
 }: PackageEditFormSectionProps) {
   return (
     <>
-      <form onSubmit={onSubmit} className="border border-zinc-800 bg-black p-6">
+      <form onSubmit={onSubmit} className="border-4 border-white bg-black p-6 shadow-[6px_6px_0_rgba(255,255,255,0.2)]">
         <div className="mb-6">
-          <h2 className="text-xl font-semibold text-white">Edit Package</h2>
+          <h2 className="font-mono text-xl font-bold uppercase text-white">Edit Package</h2>
           <p className="mt-2 text-sm text-zinc-400">
             Update the tracked repository, selected spec path, polling behavior,
             and package state from one place.
@@ -72,19 +72,19 @@ export default function PackageEditFormSection({
 
         <div className="space-y-5">
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-zinc-300">
+            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">
               Git repository URL
             </span>
             <input
               type="url"
               value={form.repoUrl}
               onChange={(event) => onFormChange({ repoUrl: event.target.value })}
-              className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+              className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
               required
             />
           </label>
 
-          <div className="border border-zinc-800 bg-black p-4">
+          <div className="border-2 border-zinc-700 bg-black p-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <span className="block text-sm font-medium text-zinc-300">
@@ -97,7 +97,7 @@ export default function PackageEditFormSection({
               <button
                 type="button"
                 onClick={onOpenSpecPicker}
-                className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950"
+                className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
               >
                 <FaIcon icon={faMagnifyingGlass} className="mr-2" />
                 Browse repository
@@ -108,7 +108,7 @@ export default function PackageEditFormSection({
               value={form.specPath}
               onChange={(event) => onFormChange({ specPath: event.target.value })}
               placeholder="path/to/package.spec"
-              className="mt-4 w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+              className="mt-4 w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
               required
             />
           </div>
@@ -126,7 +126,7 @@ export default function PackageEditFormSection({
                 onChange={(event) =>
                   onFormChange({ pollIntervalSeconds: event.target.value })
                 }
-                className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+                className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
                 required
               />
             </label>
@@ -143,7 +143,7 @@ export default function PackageEditFormSection({
                 onChange={(event) =>
                   onFormChange({ buildTimeoutSeconds: event.target.value })
                 }
-                className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+                className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
                 required
               />
             </label>
@@ -160,12 +160,12 @@ export default function PackageEditFormSection({
                 onChange={(event) =>
                   onFormChange({ packageHistoryCount: event.target.value })
                 }
-                className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+                className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
                 required
               />
             </label>
 
-            <div className="border border-zinc-800 bg-black p-4 md:col-span-2">
+            <div className="border-2 border-zinc-700 bg-black p-4 md:col-span-2">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <span className="block text-sm font-medium text-zinc-300">
@@ -178,19 +178,19 @@ export default function PackageEditFormSection({
                 <button
                   type="button"
                   onClick={onOpenChrootPicker}
-                  className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950"
+                  className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
                 >
                   Choose chroots
                 </button>
               </div>
-              <div className="mt-4 border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-mono text-zinc-200">
+              <div className="mt-4 border-2 border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-mono text-zinc-200">
                 {form.mockChroots.length > 0
                   ? formatMockChroots(form.mockChroots)
                   : "No chroots selected"}
               </div>
             </div>
 
-            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3">
               <span>
                 <span className="block text-sm font-medium text-white">
                   Enabled
@@ -203,11 +203,11 @@ export default function PackageEditFormSection({
                 type="checkbox"
                 checked={form.enabled}
                 onChange={(event) => onFormChange({ enabled: event.target.checked })}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
               />
             </label>
 
-            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3">
               <span>
                 <span className="block text-sm font-medium text-white">
                   Source Polling
@@ -220,11 +220,11 @@ export default function PackageEditFormSection({
                 type="checkbox"
                 checked={form.poll}
                 onChange={(event) => onFormChange({ poll: event.target.checked })}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
               />
             </label>
 
-            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3">
               <span>
                 <span className="block text-sm font-medium text-white">
                   Publish SRPM
@@ -239,11 +239,11 @@ export default function PackageEditFormSection({
                 onChange={(event) =>
                   onFormChange({ publish_srpm: event.target.checked })
                 }
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
               />
             </label>
 
-            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3">
               <span>
                 <span className="block text-sm font-medium text-white">
                   Publish debug packages
@@ -258,11 +258,11 @@ export default function PackageEditFormSection({
                 onChange={(event) =>
                   onFormChange({ publish_debuginfo: event.target.checked })
                 }
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
               />
             </label>
 
-            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3 md:col-span-2">
+            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3 md:col-span-2">
               <span>
                 <span className="block text-sm font-medium text-white">
                   Network access
@@ -277,7 +277,7 @@ export default function PackageEditFormSection({
                 onChange={(event) =>
                   onFormChange({ network_access: event.target.checked })
                 }
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
               />
             </label>
           </div>
@@ -293,7 +293,7 @@ export default function PackageEditFormSection({
               placeholder={
                 "KEY=value\nMESON_ARGS=-Dgallium-drivers=swrast\nRUSTFLAGS=-C debuginfo=1"
               }
-              className="w-full border border-zinc-800 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition focus:border-zinc-600"
+              className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
             />
             <span className="mt-2 block text-xs text-zinc-500">
               One `KEY=value` entry per line. Applied to SRPM creation and mock
@@ -305,7 +305,7 @@ export default function PackageEditFormSection({
             <button
               type="submit"
               disabled={saving}
-              className="border border-zinc-200 bg-zinc-100 px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-white disabled:opacity-70"
+              className="border-2 border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72] disabled:opacity-70"
             >
               <FaIcon icon={faSave} className="mr-2" />
               {saving ? "Saving…" : "Save Changes"}
@@ -325,17 +325,17 @@ export default function PackageEditFormSection({
               type="button"
               onClick={onBrowseRepository}
               disabled={browsing}
-              className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:opacity-60"
+              className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950 disabled:opacity-60"
             >
               <FaIcon icon={faMagnifyingGlass} className="mr-2" />
               {browsing ? "Browsing…" : "Load repository files"}
             </button>
             {browseError ? (
-              <div className="border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-200">
+              <div className="border-2 border-zinc-700 bg-black px-4 py-3 text-sm text-zinc-200">
                 {browseError}
               </div>
             ) : null}
-            <div className="max-h-[50vh] overflow-auto border border-zinc-800 bg-black">
+            <div className="max-h-[50vh] overflow-auto border-2 border-zinc-700 bg-black">
               {selectableFiles.length > 0 ? (
                 selectableFiles.map((file) => (
                   <button
@@ -345,7 +345,7 @@ export default function PackageEditFormSection({
                       onFormChange({ specPath: file });
                       onCloseSpecPicker();
                     }}
-                    className={`block w-full border-b border-zinc-800 px-4 py-2 text-left font-mono text-sm transition last:border-b-0 ${
+                    className={`block w-full border-b-2 border-zinc-800 px-4 py-2 text-left font-mono text-sm transition last:border-b-0 ${
                       form.specPath === file
                         ? "bg-zinc-950 text-white"
                         : "bg-black text-zinc-300 hover:bg-zinc-950"
@@ -370,7 +370,7 @@ export default function PackageEditFormSection({
           subtitle="Select one or more build targets."
           onClose={onCloseChrootPicker}
         >
-          <div className="max-h-[50vh] overflow-y-auto border border-zinc-800 bg-black">
+          <div className="max-h-[50vh] overflow-y-auto border-2 border-zinc-700 bg-black">
             <div className="divide-y divide-white/8">
               {availableChroots.map((chroot) => (
                 <label
@@ -384,7 +384,7 @@ export default function PackageEditFormSection({
                     onChange={(event) =>
                       onToggleChroot(chroot, event.target.checked)
                     }
-                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                    className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
                   />
                 </label>
               ))}

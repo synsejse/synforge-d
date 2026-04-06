@@ -19,13 +19,13 @@ export default function PaginationControls({
     <div
       className={`flex items-center gap-3 ${summary ? "justify-between" : "justify-end"}`}
     >
-      {summary ? <div className="text-sm text-zinc-400">{summary}</div> : null}
+      {summary ? <div className="font-mono text-xs uppercase tracking-[0.12em] text-zinc-400">{summary}</div> : null}
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={onPrevious}
           disabled={previousDisabled}
-          className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
+          className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Previous
         </button>
@@ -33,7 +33,7 @@ export default function PaginationControls({
           type="button"
           onClick={onNext}
           disabled={nextDisabled}
-          className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
+          className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Next
         </button>

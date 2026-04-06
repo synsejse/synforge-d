@@ -1,16 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+import { faCopy, faFolderTree } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import ErrorMessage from "../common/ErrorMessage";
 import LoadingBlock from "../ui/LoadingBlock";
-import PageHeader from "../ui/PageHeader";
 import FaIcon from "../ui/FaIcon";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import {
-  faCopy,
-  faFolderTree,
-  faTerminal,
-} from "@fortawesome/free-solid-svg-icons";
+import Button from "../ui/Button";
 
 export default function RepositorySetup() {
   const [publicBaseUrl, setPublicBaseUrl] = useState("");
@@ -31,21 +25,16 @@ export default function RepositorySetup() {
         setRepoHandle(sessionRes.user.handle);
         setError(null);
       } catch (e) {
-        setError(
-          e instanceof Error ? e.message : "Failed to load repository setup",
-        );
+        setError(e instanceof Error ? e.message : "Failed to load repository setup");
       } finally {
         setLoading(false);
       }
     }
-
     load();
   }, []);
 
   const repoBaseUrl = useMemo(() => {
-    if (!publicBaseUrl) {
-      return "";
-    }
+    if (!publicBaseUrl) return "";
     return `${publicBaseUrl}/repo`;
   }, [publicBaseUrl]);
 
@@ -77,120 +66,111 @@ export default function RepositorySetup() {
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        eyebrow="Repository Access"
-        title="Add Repo To Fedora"
-        description="Repo file and basic DNF usage."
-        actions={[
-          {
-            href: "/repository/",
-            label: "Browse Repository",
-            icon: faFolderTree,
-          },
-        ]}
-      />
+      {/* Header */}
+      <div className="border-4 border-[var(--theme-accent-orange)] bg-black p-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[var(--theme-accent-orange)]">
+              REPOSITORY_ACCESS
+            </div>
+            <h1 className="mt-2 font-mono text-3xl font-bold uppercase text-white">
+              Add Repo To Fedora
+            </h1>
+            <p className="mt-2 text-sm text-zinc-400">
+              Repo file and basic DNF usage.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <a href="/repository/">
+              <Button variant="secondary" size="md">
+                <FaIcon icon={faFolderTree} className="mr-2" />
+                Browse Repository
+              </Button>
+            </a>
+          </div>
+        </div>
+      </div>
 
-      <section className="border border-zinc-800 bg-black p-6">
-        <div>
-          <h2 className="text-xl font-semibold text-white">Repo File</h2>
+      {/* Repo File */}
+      <div className="border-2 border-white bg-black">
+        <div className="border-b-2 border-zinc-800 bg-black px-6 py-5">
+          <h2 className="font-mono text-lg font-bold uppercase text-white">
+            Repo File
+          </h2>
           <p className="mt-2 text-sm text-zinc-400">
             Copy this into{" "}
-            <span className="font-mono text-zinc-200">
+            <span className="font-mono text-[var(--theme-accent-lime)]">
               /etc/yum.repos.d/synforge.repo
             </span>
             . The current account handle is already filled into{" "}
-            <span className="font-mono text-zinc-200">username</span>; replace{" "}
-            <span className="font-mono text-zinc-200">&lt;password&gt;</span>{" "}
+            <span className="font-mono text-[var(--theme-accent-lime)]">username</span>; replace{" "}
+            <span className="font-mono text-[var(--theme-accent-lime)]">&lt;password&gt;</span>{" "}
             with that account's password or another user that has the{" "}
-            <span className="font-mono text-zinc-200">repo</span> permission.
+            <span className="font-mono text-[var(--theme-accent-lime)]">repo</span> permission.
           </p>
         </div>
 
-        <div className="mt-5 border border-zinc-800 bg-zinc-950">
-          <CodeBlock
-            label="synforge.repo"
-            value={repoFileContents}
-            language="ini"
-            copied={copiedLabel === "repo-file"}
-            onCopy={() => copy("repo-file", repoFileContents)}
-          />
-        </div>
-      </section>
-
-      <section className="grid gap-4">
-        <article className="border border-zinc-800 bg-black p-6">
-          <div className="flex items-center gap-2 text-sm font-medium text-white">
-            <FaIcon icon={faTerminal} />
-            Use repo
+        <div className="border-2 border-zinc-800 bg-zinc-950 m-6">
+          <div className="flex items-center justify-between border-b-2 border-zinc-800 bg-black px-4 py-3">
+            <div className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+              synforge.repo
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => copy("repo-file", repoFileContents)}
+            >
+              <FaIcon icon={faCopy} className="mr-2" />
+              {copiedLabel === "repo-file" ? "Copied!" : "Copy"}
+            </Button>
           </div>
-          <div className="mt-4 border border-zinc-800 bg-zinc-950">
-            <CodeBlock
-              label="usage"
-              value={`sudo dnf clean all\nsudo dnf makecache\n${installCommand}`}
-              language="bash"
-              copied={copiedLabel === "usage-command"}
-              onCopy={() =>
+          <div className="overflow-x-auto">
+            <pre className="p-6 font-mono text-sm text-zinc-300">
+              {repoFileContents}
+            </pre>
+          </div>
+        </div>
+      </div>
+
+      {/* Usage Commands */}
+      <div className="border-2 border-white bg-black">
+        <div className="border-b-2 border-zinc-800 bg-black px-6 py-5">
+          <h2 className="font-mono text-lg font-bold uppercase text-white">
+            Use Repo
+          </h2>
+          <p className="mt-2 text-sm text-zinc-400">
+            Commands to refresh DNF cache and install packages from this repository.
+          </p>
+        </div>
+
+        <div className="border-2 border-zinc-800 bg-zinc-950 m-6">
+          <div className="flex items-center justify-between border-b-2 border-zinc-800 bg-black px-4 py-3">
+            <div className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+              usage.sh
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
                 copy(
                   "usage-command",
                   `sudo dnf clean all\nsudo dnf makecache\n${installCommand}`,
                 )
               }
-            />
+            >
+              <FaIcon icon={faCopy} className="mr-2" />
+              {copiedLabel === "usage-command" ? "Copied!" : "Copy"}
+            </Button>
           </div>
-        </article>
-      </section>
-    </div>
-  );
-}
-
-function CodeBlock({
-  label,
-  value,
-  language,
-  copied,
-  onCopy,
-}: {
-  label: string;
-  value: string;
-  language: string;
-  copied: boolean;
-  onCopy: () => void;
-}) {
-  return (
-    <div>
-      <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
-        <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-          {label}
+          <div className="overflow-x-auto">
+            <pre className="p-6 font-mono text-sm text-[var(--theme-terminal-green)]">
+              sudo dnf clean all{"\n"}
+              sudo dnf makecache{"\n"}
+              {installCommand}
+            </pre>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={onCopy}
-          className="border border-zinc-800 bg-black px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
-        >
-          <FaIcon icon={faCopy} className="mr-2" />
-          {copied ? "Copied" : "Copy"}
-        </button>
       </div>
-      <SyntaxHighlighter
-        language={language}
-        style={oneDark}
-        customStyle={{
-          margin: 0,
-          padding: "1rem",
-          background: "transparent",
-          fontSize: "0.875rem",
-          lineHeight: "1.5rem",
-          overflowX: "auto",
-        }}
-        codeTagProps={{
-          style: {
-            fontFamily:
-              'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-          },
-        }}
-      >
-        {value}
-      </SyntaxHighlighter>
     </div>
   );
 }

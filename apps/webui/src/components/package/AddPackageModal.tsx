@@ -194,13 +194,13 @@ export default function AddPackageModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="flex max-h-[calc(100dvh-3rem)] w-full max-w-3xl flex-col border border-zinc-800 bg-black"
+        className="flex max-h-[calc(100dvh-3rem)] w-full max-w-3xl flex-col border-4 border-white bg-black shadow-[6px_6px_0_rgba(255,255,255,0.25)]"
       >
-        <div className="border-b border-zinc-800 px-6 py-5">
-          <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">
+        <div className="border-b-2 border-zinc-800 px-6 py-5">
+          <p className="font-mono text-xs font-bold uppercase tracking-[0.28em] text-[var(--theme-accent-lime)]">
             Package
           </p>
-          <h2 id={titleId} className="mt-2 text-2xl font-semibold text-white">
+          <h2 id={titleId} className="mt-2 font-mono text-2xl font-bold uppercase text-white">
             Add package
           </h2>
         </div>
@@ -219,7 +219,7 @@ export default function AddPackageModal({
               onChange={(event) => setName(event.target.value)}
               placeholder="mesa"
               required
-              className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+              className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
             />
           </label>
 
@@ -233,12 +233,12 @@ export default function AddPackageModal({
               onChange={(event) => setRepoUrl(event.target.value)}
               placeholder="https://github.com/example/repo.git"
               required
-              className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+              className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
             />
           </label>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3">
               <span>
                 <span className="block text-sm font-medium text-white">
                   Enabled
@@ -251,11 +251,11 @@ export default function AddPackageModal({
                 type="checkbox"
                 checked={enabled}
                 onChange={(event) => setEnabled(event.target.checked)}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
               />
             </label>
 
-            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3">
               <span>
                 <span className="block text-sm font-medium text-white">
                   Enable polling
@@ -268,11 +268,11 @@ export default function AddPackageModal({
                 type="checkbox"
                 checked={poll}
                 onChange={(event) => setPoll(event.target.checked)}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
               />
             </label>
 
-            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3">
               <span>
                 <span className="block text-sm font-medium text-white">
                   Publish SRPM
@@ -285,11 +285,11 @@ export default function AddPackageModal({
                 type="checkbox"
                 checked={publishSrpm}
                 onChange={(event) => setPublishSrpm(event.target.checked)}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
               />
             </label>
 
-            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3">
+            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3">
               <span>
                 <span className="block text-sm font-medium text-white">
                   Publish debug packages
@@ -302,11 +302,11 @@ export default function AddPackageModal({
                 type="checkbox"
                 checked={publishDebuginfo}
                 onChange={(event) => setPublishDebuginfo(event.target.checked)}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
               />
             </label>
 
-            <label className="flex items-center justify-between border border-zinc-800 bg-black px-4 py-3 md:col-span-2">
+            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3 md:col-span-2">
               <span>
                 <span className="block text-sm font-medium text-white">
                   Network access
@@ -320,13 +320,13 @@ export default function AddPackageModal({
                 type="checkbox"
                 checked={networkAccess}
                 onChange={(event) => setNetworkAccess(event.target.checked)}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
               />
             </label>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <div className="border border-zinc-800 bg-black p-4 lg:col-span-2">
+            <div className="border-2 border-zinc-700 bg-black p-4 lg:col-span-2">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <span className="block text-sm font-medium text-zinc-300">
@@ -339,12 +339,12 @@ export default function AddPackageModal({
                 <button
                   type="button"
                   onClick={() => setShowChrootPicker(true)}
-                  className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950"
+                  className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
                 >
                   Choose chroots
                 </button>
               </div>
-              <div className="mt-4 border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-mono text-zinc-200">
+              <div className="mt-4 border-2 border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-mono text-zinc-200">
                 {mockChroots.length > 0
                   ? formatMockChroots(mockChroots)
                   : "No chroots selected"}
@@ -361,7 +361,7 @@ export default function AddPackageModal({
                 step="1"
                 value={pollIntervalSeconds}
                 onChange={(event) => setPollIntervalSeconds(event.target.value)}
-                className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+                className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
                 required
               />
             </label>
@@ -376,7 +376,7 @@ export default function AddPackageModal({
                 step="1"
                 value={buildTimeoutSeconds}
                 onChange={(event) => setBuildTimeoutSeconds(event.target.value)}
-                className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+                className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
                 required
               />
             </label>
@@ -391,7 +391,7 @@ export default function AddPackageModal({
                 step="1"
                 value={packageHistoryCount}
                 onChange={(event) => setPackageHistoryCount(event.target.value)}
-                className="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+                className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
                 required
               />
             </label>
@@ -408,7 +408,7 @@ export default function AddPackageModal({
               placeholder={
                 "KEY=value\nMESON_ARGS=-Dgallium-drivers=swrast\nRUSTFLAGS=-C debuginfo=1"
               }
-              className="w-full border border-zinc-800 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition focus:border-zinc-600"
+              className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
             />
             <span className="mt-2 block text-xs text-zinc-500">
               One `KEY=value` entry per line. Applied to SRPM creation and mock
@@ -416,7 +416,7 @@ export default function AddPackageModal({
             </span>
           </label>
 
-          <div className="border border-zinc-800 bg-black p-4">
+           <div className="border-2 border-zinc-700 bg-black p-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <div className="text-sm font-medium text-white">Spec file</div>
@@ -428,7 +428,7 @@ export default function AddPackageModal({
                 type="button"
                 onClick={() => setShowSpecPicker(true)}
                 disabled={browsing}
-                className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:opacity-60"
+                 className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950 disabled:opacity-60"
               >
                 <FaIcon icon={faMagnifyingGlass} className="mr-2" />
                 Browse repository
@@ -441,12 +441,12 @@ export default function AddPackageModal({
               onChange={(event) => setSpecPath(event.target.value)}
               placeholder="path/to/package.spec"
               required
-              className="mt-4 w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+               className="mt-4 w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
             />
           </div>
 
           {error && (
-            <div className="border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-200">
+             <div className="border-2 border-zinc-700 bg-black px-4 py-3 text-sm text-zinc-200">
               {error}
             </div>
           )}
@@ -455,14 +455,14 @@ export default function AddPackageModal({
             <button
               type="button"
               onClick={onClose}
-              className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950"
+               className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="border border-zinc-200 bg-zinc-100 px-4 py-2 text-sm font-semibold text-black transition hover:bg-white disabled:opacity-70"
+               className="border-2 border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72] disabled:opacity-70"
             >
               <FaIcon icon={faPlus} className="mr-2" />
               {submitting ? "Adding…" : "Add Package"}
@@ -482,17 +482,17 @@ export default function AddPackageModal({
               type="button"
               onClick={handleBrowse}
               disabled={browsing}
-              className="border border-zinc-800 bg-black px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:opacity-60"
+               className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950 disabled:opacity-60"
             >
               <FaIcon icon={faMagnifyingGlass} className="mr-2" />
               {browsing ? "Browsing…" : "Load repository files"}
             </button>
             {browseError ? (
-              <div className="border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-200">
+               <div className="border-2 border-zinc-700 bg-black px-4 py-3 text-sm text-zinc-200">
                 {browseError}
               </div>
             ) : null}
-            <div className="max-h-[50vh] overflow-auto border border-zinc-800 bg-black">
+             <div className="max-h-[50vh] overflow-auto border-2 border-zinc-700 bg-black">
               {selectableFiles.length > 0 ? (
                 selectableFiles.map((file) => (
                   <button
@@ -502,7 +502,7 @@ export default function AddPackageModal({
                       setSpecPath(file);
                       setShowSpecPicker(false);
                     }}
-                    className={`block w-full border-b border-zinc-800 px-4 py-2 text-left font-mono text-sm transition last:border-b-0 ${
+                     className={`block w-full border-b-2 border-zinc-800 px-4 py-2 text-left font-mono text-sm transition last:border-b-0 ${
                       specPath === file
                         ? "bg-zinc-950 text-white"
                         : "bg-black text-zinc-300 hover:bg-zinc-950"
@@ -527,7 +527,7 @@ export default function AddPackageModal({
           subtitle="Select one or more build targets."
           onClose={() => setShowChrootPicker(false)}
         >
-          <div className="max-h-[50vh] overflow-y-auto border border-zinc-800 bg-black">
+             <div className="max-h-[50vh] overflow-y-auto border-2 border-zinc-700 bg-black">
             {chrootsLoading ? (
               <div className="px-4 py-3 text-sm text-zinc-400">
                 Loading available chroots…

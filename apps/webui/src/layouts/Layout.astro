@@ -1,12 +1,13 @@
 ---
 import "../styles/global.css";
+import { radixCustomStyles } from "../lib/radix-theme";
 import FaIcon from "../components/ui/FaIcon";
+import Navigation from "../components/ui/Navigation";
 import {
     faArrowDownWideShort,
     faBoxesStacked,
     faBookOpen,
     faChartLine,
-    faCircleHalfStroke,
     faFolderTree,
     faGaugeHigh,
     faSliders,
@@ -19,7 +20,6 @@ interface Props {
 
 const { title } = Astro.props;
 const currentPath = Astro.url.pathname;
-const themeStorageKey = "synforge.theme";
 const publicApiUrl = import.meta.env.PUBLIC_API_URL || "";
 
 const navItems = [
@@ -72,11 +72,6 @@ const navItems = [
         description: "Daemon config",
     },
 ];
-const themes = [
-    { value: "black", label: "Black" },
-    { value: "dark", label: "Dark" },
-    { value: "light", label: "Light" },
-];
 ---
 
 <!doctype html>
@@ -85,6 +80,7 @@ const themes = [
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{title} | Synforge</title>
+        <style set:html={radixCustomStyles} />
     </head>
     <body class="h-full overflow-hidden antialiased">
         <a
@@ -102,14 +98,14 @@ const themes = [
             id="auth-screen"
             class="hidden min-h-full items-center justify-center px-6 py-12"
         >
-            <div class="w-full max-w-md border border-zinc-800 bg-black p-8">
+            <div class="w-full max-w-md border-4 border-white bg-black p-8 shadow-[6px_6px_0_rgba(255,255,255,0.25)]">
                 <div class="mb-8">
                     <p
-                        class="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500"
+                        class="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[var(--theme-accent-lime)]"
                     >
                         Synforge
                     </p>
-                    <h1 class="mt-3 text-3xl font-semibold text-zinc-50">
+                    <h1 class="mt-3 font-mono text-3xl font-bold uppercase text-zinc-50">
                         Authorize WebUI
                     </h1>
                     <p
@@ -124,38 +120,38 @@ const themes = [
                 <form id="auth-form" class="space-y-4">
                     <label class="block">
                         <span
-                            class="mb-2 block text-sm font-medium text-zinc-300"
+                            class="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-300"
                             >Handle</span
                         >
                         <input
                             id="auth-handle"
                             type="text"
-                            class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
+                            class="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-100 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
                             placeholder="admin"
                             autocomplete="username"
                         />
                     </label>
                     <label class="block">
                         <span
-                            class="mb-2 block text-sm font-medium text-zinc-300"
+                            class="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-300"
                             >Password</span
                         >
                         <input
                             id="auth-password"
                             type="password"
-                            class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
+                            class="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-100 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
                             placeholder="Password"
                             autocomplete="current-password"
                         />
                     </label>
                     <p
                         id="auth-error"
-                        class="hidden border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-300"
+                        class="hidden border-2 border-[var(--theme-error-red)] bg-black px-3 py-2 text-sm text-zinc-200"
                     >
                     </p>
                     <button
                         type="submit"
-                        class="w-full border border-zinc-200 bg-zinc-100 px-4 py-3 text-sm font-semibold text-black transition hover:bg-white"
+                        class="w-full border-2 border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72]"
                     >
                         Enter Console
                     </button>
@@ -168,15 +164,15 @@ const themes = [
             class="hidden min-h-full items-start justify-center px-6 py-6 lg:items-center lg:py-12"
         >
             <div
-                class="flex max-h-[calc(100vh-3rem)] w-full max-w-2xl flex-col overflow-hidden border border-zinc-800 bg-black lg:max-h-[calc(100vh-6rem)] xl:max-w-3xl"
+                class="flex max-h-[calc(100vh-3rem)] w-full max-w-2xl flex-col overflow-hidden border-4 border-white bg-black shadow-[6px_6px_0_rgba(255,255,255,0.25)] lg:max-h-[calc(100vh-6rem)] xl:max-w-3xl"
             >
-                <div class="mb-8 shrink-0 px-8 pt-8">
+                <div class="mb-8 shrink-0 border-b-2 border-zinc-800 px-8 pt-8 pb-6">
                     <p
-                        class="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500"
+                        class="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[var(--theme-accent-lime)]"
                     >
                         Synforge
                     </p>
-                    <h1 class="mt-3 text-3xl font-semibold text-zinc-50">
+                    <h1 class="mt-3 font-mono text-3xl font-bold uppercase text-zinc-50">
                         First Run Setup
                     </h1>
                     <p
@@ -188,7 +184,7 @@ const themes = [
                     </p>
                     <p
                         id="setup-step-label"
-                        class="mt-3 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500"
+                        class="mt-3 font-mono text-xs font-bold uppercase tracking-[0.22em] text-zinc-500"
                     >
                         Step 1 of 2 · Configuration
                     </p>
@@ -207,7 +203,7 @@ const themes = [
                             <div class="grid gap-4 xl:grid-cols-2">
                                 <label class="block">
                                     <span
-                                        class="mb-2 block text-sm font-medium text-zinc-300"
+                                        class="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-300"
                                         >Admin handle</span
                                     >
                                     <input
@@ -215,12 +211,12 @@ const themes = [
                                         type="text"
                                         value="admin"
                                         required
-                                        class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
+                                        class="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-100 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
                                     />
                                 </label>
                                 <label class="block">
                                     <span
-                                        class="mb-2 block text-sm font-medium text-zinc-300"
+                                        class="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-300"
                                         >Admin display name</span
                                     >
                                     <input
@@ -228,32 +224,32 @@ const themes = [
                                         type="text"
                                         value="Administrator"
                                         required
-                                        class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
+                                        class="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-100 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
                                     />
                                 </label>
                                 <label class="block xl:col-span-2">
                                     <span
-                                        class="mb-2 block text-sm font-medium text-zinc-300"
+                                        class="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-300"
                                         >Admin password</span
                                     >
                                     <input
                                         id="setup-admin-password"
                                         type="password"
                                         required
-                                        class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
+                                        class="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-100 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
                                         placeholder="Choose a strong password"
                                     />
                                 </label>
                                 <label class="block xl:col-span-2">
                                     <span
-                                        class="mb-2 block text-sm font-medium text-zinc-300"
+                                        class="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-300"
                                         >Confirm password</span
                                     >
                                     <input
                                         id="setup-admin-password-confirm"
                                         type="password"
                                         required
-                                        class="w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
+                                        class="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-100 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
                                         placeholder="Re-enter admin password"
                                     />
                                 </label>
@@ -262,14 +258,14 @@ const themes = [
 
                         <p
                             id="setup-error"
-                            class="mt-4 hidden border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-300"
+                            class="mt-4 hidden border-2 border-[var(--theme-error-red)] bg-black px-3 py-2 text-sm text-zinc-200"
                         >
                         </p>
                         <div class="mt-4 flex items-center justify-between gap-3">
                             <button
                                 id="setup-back-button"
                                 type="button"
-                                class="hidden border border-zinc-800 bg-black px-4 py-3 text-sm font-medium text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
+                                class="hidden border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-200 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
                             >
                                 Back
                             </button>
@@ -277,14 +273,14 @@ const themes = [
                                 <button
                                     id="setup-next-button"
                                     type="button"
-                                    class="border border-zinc-200 bg-zinc-100 px-4 py-3 text-sm font-semibold text-black transition hover:bg-white"
+                                    class="border-2 border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72]"
                                 >
                                     Continue
                                 </button>
                                 <button
                                     id="setup-submit-button"
                                     type="submit"
-                                    class="hidden border border-zinc-200 bg-zinc-100 px-4 py-3 text-sm font-semibold text-black transition hover:bg-white"
+                                    class="hidden border-2 border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72]"
                                 >
                                     Initialize Synforge
                                 </button>
@@ -299,101 +295,36 @@ const themes = [
             id="app-shell"
             class="hidden h-screen box-border px-3 py-3 lg:px-5 lg:py-5"
         >
-            <div class="grid h-full gap-3 xl:grid-cols-[272px_minmax(0,1fr)]">
+            <div class="grid h-full gap-3 xl:grid-cols-[280px_minmax(0,1fr)]">
                 <aside
-                    class="flex min-h-0 flex-col border border-zinc-800 bg-black p-4"
+                    class="flex min-h-0 flex-col border-4 border-white bg-gradient-to-b from-zinc-900 to-black p-0 shadow-[6px_6px_0_rgba(255,255,255,0.2)]"
                 >
-                    <div class="border border-zinc-800 bg-black px-4 py-3">
+                    <div class="border-b-4 border-[var(--theme-border-strong)] bg-black px-6 py-5">
                         <div
-                            class="text-xs uppercase tracking-[0.35em] text-zinc-500"
+                            class="font-mono text-xs font-bold uppercase tracking-[0.35em] text-[var(--theme-accent-lime)]"
                         >
                             Synforge
                         </div>
                         <h1
-                            class="mt-2 text-xl font-semibold tracking-tight text-white"
+                            class="font-display mt-2 text-2xl font-extrabold uppercase tracking-tighter text-white"
                         >
-                            Build Control
+                            Build_Control
                         </h1>
                     </div>
 
-                    <nav
-                        class="mt-4 flex-1 space-y-2 overflow-auto"
-                        aria-label="Primary navigation"
-                    >
-                        {
-                            navItems.map((item) => (
-                                <a
-                                    href={item.href}
-                                    aria-current={
-                                        currentPath === item.href ||
-                                        (item.href !== "/" &&
-                                            currentPath ===
-                                                item.href.slice(0, -1))
-                                            ? "page"
-                                            : undefined
-                                    }
-                                    class:list={[
-                                        "group block border px-4 py-4 transition",
-                                        currentPath === item.href ||
-                                        (item.href !== "/" &&
-                                            currentPath ===
-                                                item.href.slice(0, -1))
-                                            ? "border-zinc-600 bg-zinc-950"
-                                            : "border-transparent bg-transparent hover:border-zinc-800 hover:bg-zinc-950",
-                                    ]}
-                                >
-                                    <div class="flex items-center gap-3">
-                                        <div class="flex h-10 w-10 items-center justify-center border border-zinc-800 bg-black text-lg text-white">
-                                            <FaIcon icon={item.icon} />
-                                        </div>
-                                        <div>
-                                            <div class="text-sm font-semibold text-zinc-100">
-                                                {item.label}
-                                            </div>
-                                            <div class="text-xs text-zinc-500">
-                                                {item.description}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </a>
-                            ))
-                        }
-                    </nav>
+                    <Navigation items={navItems} currentPath={currentPath} client:load />
 
-                    <div class="mt-auto pt-4">
-                        <div class="border border-zinc-800 bg-black p-4">
-                            <div class="mb-4">
-                                <div
-                                    class="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-zinc-500"
-                                >
-                                    <FaIcon icon={faCircleHalfStroke} />
-                                    Theme
-                                </div>
-                                <label class="mt-3 block">
-                                    <span class="sr-only">Select theme</span>
-                                    <select
-                                        id="theme-select"
-                                        class="w-full border border-zinc-800 bg-black px-4 py-2.5 text-sm font-medium text-zinc-200 outline-none transition focus:border-zinc-600"
-                                    >
-                                        {
-                                            themes.map((theme) => (
-                                                <option value={theme.value}>
-                                                    {theme.label}
-                                                </option>
-                                            ))
-                                        }
-                                    </select>
-                                </label>
-                            </div>
+                    <div class="mt-auto border-t-4 border-[var(--theme-border-strong)]">
+                        <div class="bg-black px-5 py-5">
                             <div
-                                class="text-xs uppercase tracking-[0.2em] text-zinc-500"
+                                class="font-mono text-xs font-bold uppercase tracking-[0.25em] text-zinc-500"
                             >
                                 Session
                             </div>
                             <button
                                 id="logout-button"
                                 type="button"
-                                class="mt-3 w-full border border-zinc-800 bg-black px-4 py-2.5 text-left text-sm font-medium text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
+                                class="mt-3 w-full border-2 border-[var(--theme-border-strong)] bg-black px-4 py-2.5 text-left font-mono text-sm font-medium text-zinc-200 transition hover:border-white hover:bg-[var(--theme-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
                             >
                                 Change account
                             </button>
@@ -404,17 +335,17 @@ const themes = [
                 <main
                     id="main-content"
                     tabindex="-1"
-                    class="min-h-0 overflow-auto border border-zinc-800 bg-black p-4 lg:p-6"
+                    class="min-h-0 overflow-auto border-4 border-white bg-black p-6 lg:p-8 shadow-[6px_6px_0_rgba(255,255,255,0.2)]"
                 >
-                    <header class="mb-6 border-b border-white/8 pb-5">
+                    <header class="mb-8 border-b-4 border-[var(--theme-border-strong)] pb-6">
                         <div>
                             <p
-                                class="text-xs uppercase tracking-[0.28em] text-zinc-500"
+                                class="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[var(--theme-accent-lime)]"
                             >
-                                Operations Console
+                                Operations_Console
                             </p>
                             <h2
-                                class="mt-2 text-3xl font-semibold tracking-tight text-white"
+                                class="font-display mt-3 text-4xl font-extrabold uppercase tracking-tighter text-white"
                             >
                                 {title}
                             </h2>
@@ -429,7 +360,6 @@ const themes = [
 
         <script
             define:vars={{
-                themeStorageKey,
                 publicApiUrl,
             }}
         >
@@ -456,20 +386,8 @@ const themes = [
                 "setup-submit-button",
             );
             const logoutButton = document.getElementById("logout-button");
-            const themeSelect = document.getElementById("theme-select");
             let configSchema = [];
             let setupStep = "config";
-
-            function applyTheme(theme) {
-                const normalized = ["black", "dark", "light"].includes(theme)
-                    ? theme
-                    : "dark";
-                document.documentElement.setAttribute("data-theme", normalized);
-                window.localStorage.setItem(themeStorageKey, normalized);
-                if (themeSelect instanceof HTMLSelectElement) {
-                    themeSelect.value = normalized;
-                }
-            }
 
             function apiPath(path) {
                 return `${publicApiUrl}${path}`;
@@ -624,10 +542,11 @@ const themes = [
                 sections.forEach((section) => {
                     const container = document.createElement("section");
                     container.className =
-                        "xl:col-span-2 border border-zinc-800 bg-black p-5";
+                        "xl:col-span-2 border-2 border-zinc-700 bg-black p-5";
 
                     const heading = document.createElement("h2");
-                    heading.className = "text-lg font-semibold text-white";
+                    heading.className =
+                        "font-mono text-lg font-bold uppercase text-white";
                     heading.textContent = section.label;
 
                     const grid = document.createElement("div");
@@ -639,7 +558,7 @@ const themes = [
 
                         const title = document.createElement("span");
                         title.className =
-                            "mb-2 block text-sm font-medium text-zinc-300";
+                            "mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-300";
                         title.textContent = field.label;
 
                         const input = document.createElement("input");
@@ -648,7 +567,7 @@ const themes = [
                         input.value = String(field.default_value ?? "");
                         input.required = Boolean(field.required);
                         input.className =
-                            "w-full border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-600";
+                            "w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-100 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]";
                         input.dataset.setupConfigKey = field.key;
                         if (field.min_value !== undefined) {
                             input.min = String(field.min_value);
@@ -705,12 +624,6 @@ const themes = [
                     });
                 } finally {
                     showAuthScreen("Enter account credentials to continue.");
-                }
-            });
-
-            themeSelect?.addEventListener("change", () => {
-                if (themeSelect instanceof HTMLSelectElement) {
-                    applyTheme(themeSelect.value);
                 }
             });
 
@@ -894,7 +807,6 @@ const themes = [
                 }
             });
 
-            applyTheme(window.localStorage.getItem(themeStorageKey) || "dark");
             Promise.all([loadSetupStatus(), loadConfigSchema()])
                 .then(([status, schema]) => {
                     configSchema = schema.fields || [];

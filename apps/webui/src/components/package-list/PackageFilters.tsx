@@ -17,7 +17,7 @@ export default function PackageFilters({
   onApply,
 }: PackageFiltersProps) {
   return (
-    <section className="grid gap-3 border border-zinc-800 bg-black p-4 md:grid-cols-[minmax(0,1fr)_220px_auto]">
+    <section className="grid gap-3 border-2 border-zinc-700 bg-black p-4 md:grid-cols-[minmax(0,1fr)_220px_auto]">
       <label className="block">
         <span className="sr-only">Search packages</span>
         <input
@@ -25,7 +25,7 @@ export default function PackageFilters({
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search name or description"
-          className="w-full border border-zinc-800 bg-black px-4 py-2.5 text-sm text-white outline-none transition focus:border-zinc-600"
+          className="w-full border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]"
         />
       </label>
       <label className="block">
@@ -35,7 +35,7 @@ export default function PackageFilters({
           onChange={(event) =>
             onEnabledFilterChange(event.target.value as "all" | "true" | "false")
           }
-          className="w-full border border-zinc-800 bg-black px-4 py-2.5 text-sm text-white outline-none transition focus:border-zinc-600"
+          className="w-full border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]"
         >
           <option value="all">All states</option>
           <option value="true">Enabled only</option>
@@ -45,7 +45,7 @@ export default function PackageFilters({
       <button
         type="button"
         onClick={onApply}
-        className="border border-zinc-800 bg-black px-4 py-2.5 text-sm text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950"
+        className="border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-200 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
       >
         <FaIcon icon={faMagnifyingGlass} className="mr-2" />
         Apply

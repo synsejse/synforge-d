@@ -17,7 +17,7 @@ use crate::{AppError, AppState};
 pub(crate) async fn get_effective_config(
     State(state): State<AppState>,
 ) -> Result<Json<EffectiveConfigDto>, AppError> {
-    Ok(Json(state.service.effective_config().await))
+    Ok(Json(state.service.effective_config().await?))
 }
 
 #[utoipa::path(

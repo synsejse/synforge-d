@@ -10,12 +10,13 @@ async fn main() -> anyhow::Result<()> {
     synforge_core::logging::init_tracing();
 
     let config = DaemonConfig::load()?;
-    let service = SynforgeService::new(config.clone()).await?;
-    let listener = tokio::net::TcpListener::bind(&config.listen_addr)
+    let service = SynforgeService::new(config).await?;
+    let listen_addr = service.config().listen_addr.clone();
+    let listener = tokio::net::TcpListener::bind(&listen_addr)
         .await
-        .with_context(|| format!("failed to bind {}", config.listen_addr))?;
+        .with_context(|| format!("failed to bind {listen_addr}"))?;
     let app = synforge_serve::router(Arc::clone(&service));
-    tracing::info!("daemon listening on {}", config.listen_addr);
+    tracing::info!("daemon listening on {}", listen_addr);
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal(Arc::clone(&service)))
         .await?;

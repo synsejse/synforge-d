@@ -175,8 +175,10 @@ impl PackageSyncStore {
         }
 
         let paths = self.config.runtime_paths();
-        tokio::fs::create_dir_all(paths.temp_root()).await?;
         let clone_dir = paths.repo_browse_workspace_dir(uuid::Uuid::now_v7());
+        if let Some(parent) = clone_dir.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
 
         let git_timeout = Duration::from_secs(self.config.git_operation_timeout_seconds);
         let clone_result: anyhow::Result<()> =

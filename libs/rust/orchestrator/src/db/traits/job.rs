@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use synforge_core::{
     api::BuildJobResponse,
-    model::{BuildArtifact, BuildJob, BuildStatus, PublishedRepoFile},
+    model::{ArtifactSignature, BuildArtifact, BuildJob, BuildStatus, PublishedRepoFile},
 };
 use uuid::Uuid;
 
@@ -36,6 +36,7 @@ pub trait JobStore: Send + Sync {
         error_message: Option<&str>,
         artifacts: &[BuildArtifact],
         published_files: &[PublishedRepoFile],
+        artifact_signatures: &[ArtifactSignature],
     ) -> anyhow::Result<()>;
 
     async fn upsert_build_log(&self, job_id: Uuid, file: &str) -> anyhow::Result<()>;

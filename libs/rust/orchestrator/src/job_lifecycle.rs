@@ -1,9 +1,11 @@
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::Context;
+use serde_json::Value;
 use synforge_core::{
     config::DaemonConfig,
-    model::{BuildStatus, PublishedRepoFile, WorkerResult},
+    model::{ArtifactSigningStatus, BuildStatus, PublishedRepoFile, WorkerResult},
     package::PackageDefinition,
 };
 use tracing::{error, info, warn};
@@ -11,6 +13,7 @@ use uuid::Uuid;
 
 use crate::db::{DieselStore, JobStore, RepoStore};
 use crate::repo_manager::FileRepoManager;
+use crate::repo_signing::RepoSigningManager;
 use crate::scheduler::QueuedBuild;
 #[derive(Clone)]
 pub struct JobLifecycle {
@@ -63,6 +66,7 @@ impl JobLifecycle {
                 Some(error_message),
                 &[],
                 &[],
+                &[],
             )
             .await
             .context("failed to persist failed build result")
@@ -73,7 +77,7 @@ impl JobLifecycle {
         build: &QueuedBuild,
         execution: WorkerResult,
     ) -> anyhow::Result<()> {
-        let WorkerResult::Build(build_result) = execution else {
+        let WorkerResult::Build(mut build_result) = execution else {
             anyhow::bail!(
                 "worker returned parse result for build job {}",
                 build.job_id
@@ -83,6 +87,27 @@ impl JobLifecycle {
         let mut status = build_result.status;
         let mut error_message = build_result.message.clone();
         let mut published_files = Vec::new();
+        let mut artifact_signatures = Vec::new();
+        let effective_config = self.load_runtime_overrides().await?;
+
+        if status == BuildStatus::Succeeded {
+            let signing_manager = RepoSigningManager;
+            artifact_signatures = signing_manager
+                .sign_worker_artifacts_for_publication(
+                    &effective_config,
+                    &build.package,
+                    &mut build_result,
+                )
+                .await;
+            if artifact_signatures
+                .iter()
+                .any(|signature| signature.status == ArtifactSigningStatus::Failed)
+            {
+                status = BuildStatus::Failed;
+                error_message =
+                    Some("artifact signing failed for one or more published artifacts".to_string());
+            }
+        }
 
         if status == BuildStatus::Succeeded {
             info!(
@@ -94,7 +119,7 @@ impl JobLifecycle {
             );
             match self
                 .repo_manager
-                .publish_build(&build.package, &build_result, &self.config)
+                .publish_build(&build.package, &build_result, &effective_config)
                 .await
             {
                 Ok(publication) => {
@@ -128,6 +153,7 @@ impl JobLifecycle {
                 error_message.as_deref(),
                 &build_result.artifacts,
                 &published_files,
+                &artifact_signatures,
             )
             .await?;
         info!(
@@ -163,7 +189,7 @@ impl JobLifecycle {
             "removing published repository files"
         );
         self.repo_manager
-            .remove_build_files(files, &self.config)
+            .remove_build_files(files, &self.load_runtime_overrides().await?)
             .await
     }
 
@@ -211,4 +237,87 @@ impl JobLifecycle {
 
         Ok(())
     }
+
+    async fn load_runtime_overrides(&self) -> anyhow::Result<DaemonConfig> {
+        let mut config = self.config.clone();
+        let settings = self.store.list_runtime_settings().await?;
+        apply_bool_setting(
+            &mut config.signing_enabled,
+            settings.get("signing_enabled"),
+            "signing_enabled",
+        )?;
+        apply_optional_string_setting(
+            &mut config.signing_key_id,
+            settings.get("signing_key_id"),
+            "signing_key_id",
+        )?;
+        if config.signing_enabled {
+            self.ensure_signing_key_from_runtime_settings(&mut config, &settings)
+                .await?;
+        }
+        Ok(config)
+    }
+
+    async fn ensure_signing_key_from_runtime_settings(
+        &self,
+        config: &mut DaemonConfig,
+        settings: &BTreeMap<String, Value>,
+    ) -> anyhow::Result<()> {
+        let Some(armored_private_key) = settings
+            .get("signing_private_key_armored")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        else {
+            return Ok(());
+        };
+        let signing_manager = RepoSigningManager;
+        let status = signing_manager.status(config).await?;
+        if status.key_present {
+            return Ok(());
+        }
+        signing_manager.remove_all_keys(config).await?;
+        let imported = signing_manager
+            .import_private_key(config, armored_private_key)
+            .await?;
+        if config.signing_key_id.as_deref() != Some(imported.key_id.as_str()) {
+            config.signing_key_id = Some(imported.key_id.clone());
+            let mut updates = BTreeMap::new();
+            updates.insert("signing_key_id".to_string(), Value::String(imported.key_id));
+            self.store.upsert_runtime_settings(updates).await?;
+        }
+        Ok(())
+    }
+}
+
+fn apply_bool_setting(target: &mut bool, value: Option<&Value>, key: &str) -> anyhow::Result<()> {
+    if let Some(value) = value {
+        let Some(value) = value.as_bool() else {
+            anyhow::bail!("runtime setting must be a boolean: {key}");
+        };
+        *target = value;
+    }
+    Ok(())
+}
+
+fn apply_optional_string_setting(
+    target: &mut Option<String>,
+    value: Option<&Value>,
+    key: &str,
+) -> anyhow::Result<()> {
+    if let Some(value) = value {
+        if value.is_null() {
+            *target = None;
+        } else {
+            let Some(value) = value.as_str() else {
+                anyhow::bail!("runtime setting must be a string or null: {key}");
+            };
+            let value = value.trim();
+            if value.is_empty() {
+                anyhow::bail!("runtime setting must not be empty when provided: {key}");
+            }
+            *target = Some(value.to_string());
+        }
+    }
+    Ok(())
 }

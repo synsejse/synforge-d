@@ -11,6 +11,7 @@ import {
     faChartLine,
     faFolderTree,
     faGaugeHigh,
+    faKey,
     faSliders,
     faUsers,
 } from "@fortawesome/free-solid-svg-icons";
@@ -71,6 +72,12 @@ const navItems = [
         label: "Docs",
         icon: faBookOpen,
         description: "API reference",
+    },
+    {
+        href: "/signing/",
+        label: "Signing",
+        icon: faKey,
+        description: "GPG metadata signing",
     },
     {
         href: "/settings/",
@@ -186,14 +193,14 @@ const navItems = [
                         id="setup-message"
                         class="mt-3 text-sm leading-6 text-zinc-400"
                     >
-                        Create the daemon config file and the initial admin
+                        Configure daemon settings and create the initial admin
                         account.
                     </p>
                     <p
                         id="setup-step-label"
                         class="mt-3 font-mono text-xs font-bold uppercase tracking-[0.22em] text-zinc-500"
                     >
-                        Step 1 of 2 · Configuration
+                        Step 1 of 3 · Configuration
                     </p>
                 </div>
 
@@ -261,6 +268,76 @@ const navItems = [
                                     />
                                 </label>
                             </div>
+                        </div>
+
+                        <div id="setup-step-signing" class="hidden space-y-4">
+                            <section class="border-2 border-zinc-700 bg-black p-5">
+                                <h2 class="font-mono text-lg font-bold uppercase text-white">
+                                    Signing
+                                </h2>
+                                <p class="mt-3 text-sm leading-6 text-zinc-400">
+                                    Configure repository signing before initialization. You can keep
+                                    signing disabled, generate a managed key, or import an existing key file.
+                                </p>
+                                <div class="mt-5 space-y-5">
+                                    <div>
+                                        <p
+                                            class="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-400"
+                                        >
+                                            Signing State
+                                        </p>
+                                        <button
+                                            id="setup-signing-toggle-button"
+                                            type="button"
+                                            class="border-2 border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72]"
+                                        >
+                                            Disable Signing
+                                        </button>
+                                        <p
+                                            id="setup-signing-state-note"
+                                            class="mt-2 font-mono text-xs text-zinc-500"
+                                        >
+                                            Signing will be enabled after initialization.
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <p
+                                            class="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-400"
+                                        >
+                                            Key Lifecycle
+                                        </p>
+                                        <div class="flex flex-wrap gap-3">
+                                            <button
+                                                id="setup-signing-generate-button"
+                                                type="button"
+                                                class="border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-200 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
+                                            >
+                                                Generate Key
+                                            </button>
+                                            <button
+                                                id="setup-signing-import-button"
+                                                type="button"
+                                                class="border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-200 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
+                                            >
+                                                Import Key File
+                                            </button>
+                                        </div>
+                                        <input
+                                            id="setup-signing-import-file"
+                                            type="file"
+                                            accept=".asc,.key,.pgp,.gpg,text/plain"
+                                            class="hidden"
+                                        />
+                                        <p
+                                            id="setup-signing-key-note"
+                                            class="mt-2 font-mono text-xs text-zinc-500"
+                                        >
+                                            Managed key generation is selected.
+                                        </p>
+                                    </div>
+                                </div>
+                            </section>
                         </div>
 
                         <p
@@ -373,14 +450,37 @@ const navItems = [
             );
             const setupStepConfig = document.getElementById("setup-step-config");
             const setupStepAdmin = document.getElementById("setup-step-admin");
+            const setupStepSigning = document.getElementById("setup-step-signing");
             const setupBackButton = document.getElementById("setup-back-button");
             const setupNextButton = document.getElementById("setup-next-button");
             const setupSubmitButton = document.getElementById(
                 "setup-submit-button",
             );
+            const setupSigningToggleButton = document.getElementById(
+                "setup-signing-toggle-button",
+            );
+            const setupSigningStateNote = document.getElementById(
+                "setup-signing-state-note",
+            );
+            const setupSigningGenerateButton = document.getElementById(
+                "setup-signing-generate-button",
+            );
+            const setupSigningImportButton = document.getElementById(
+                "setup-signing-import-button",
+            );
+            const setupSigningImportFileInput = document.getElementById(
+                "setup-signing-import-file",
+            );
+            const setupSigningKeyNote = document.getElementById(
+                "setup-signing-key-note",
+            );
             const logoutButton = document.getElementById("logout-button");
             let configSchema = [];
             let setupStep = "config";
+            let setupSigningEnabled = true;
+            let setupSigningMode = "generate";
+            let setupSigningImportedPrivateKey = "";
+            let setupSigningImportedFilename = "";
 
             function apiPath(path) {
                 return `${publicApiUrl}${path}`;
@@ -401,23 +501,113 @@ const navItems = [
             }
 
             function setSetupStep(step) {
-                setupStep = step === "admin" ? "admin" : "config";
+                if (
+                    step !== "config" &&
+                    step !== "signing" &&
+                    step !== "admin"
+                ) {
+                    setupStep = "config";
+                } else {
+                    setupStep = step;
+                }
+                const inConfigStep = setupStep === "config";
+                const inSigningStep = setupStep === "signing";
                 const inAdminStep = setupStep === "admin";
-                setupStepConfig?.classList.toggle("hidden", inAdminStep);
+
+                setupStepConfig?.classList.toggle("hidden", !inConfigStep);
+                setupStepSigning?.classList.toggle("hidden", !inSigningStep);
                 setupStepAdmin?.classList.toggle("hidden", !inAdminStep);
-                setupBackButton?.classList.toggle("hidden", !inAdminStep);
+                setupBackButton?.classList.toggle("hidden", inConfigStep);
                 setupNextButton?.classList.toggle("hidden", inAdminStep);
                 setupSubmitButton?.classList.toggle("hidden", !inAdminStep);
+
                 if (setupStepLabel) {
-                    setupStepLabel.textContent = inAdminStep
-                        ? "Step 2 of 2 · First account"
-                        : "Step 1 of 2 · Configuration";
+                    if (inConfigStep) {
+                        setupStepLabel.textContent = "Step 1 of 3 · Configuration";
+                    } else if (inSigningStep) {
+                        setupStepLabel.textContent = "Step 2 of 3 · Signing";
+                    } else {
+                        setupStepLabel.textContent = "Step 3 of 3 · First account";
+                    }
                 }
                 if (setupMessage) {
-                    setupMessage.textContent = inAdminStep
-                        ? "Create the first admin account."
-                        : "Configure daemon settings for first run.";
+                    if (inConfigStep) {
+                        setupMessage.textContent =
+                            "Configure daemon settings for first run.";
+                    } else if (inSigningStep) {
+                        setupMessage.textContent =
+                            "Choose whether to enable managed repository signing.";
+                    } else {
+                        setupMessage.textContent =
+                            "Create the first admin account.";
+                    }
                 }
+            }
+
+            function updateSetupSigningUi() {
+                const disabledButtonClass =
+                    "border-zinc-700 bg-black text-zinc-200 hover:border-white hover:bg-zinc-950";
+                const activeButtonClass =
+                    "border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] text-black hover:bg-[#d8ff72]";
+                const buttonBaseClass =
+                    "border-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px]";
+
+                if (setupSigningToggleButton instanceof HTMLButtonElement) {
+                    if (setupSigningEnabled) {
+                        setupSigningToggleButton.textContent = "Disable Signing";
+                        setupSigningToggleButton.className = `${buttonBaseClass} ${activeButtonClass}`;
+                    } else {
+                        setupSigningToggleButton.textContent = "Enable Signing";
+                        setupSigningToggleButton.className = `${buttonBaseClass} ${disabledButtonClass}`;
+                    }
+                }
+                if (setupSigningStateNote) {
+                    setupSigningStateNote.textContent = setupSigningEnabled
+                        ? "Signing will be enabled after initialization."
+                        : "Signing will stay disabled after initialization.";
+                }
+                if (setupSigningGenerateButton instanceof HTMLButtonElement) {
+                    setupSigningGenerateButton.disabled = !setupSigningEnabled;
+                    setupSigningGenerateButton.className = `${buttonBaseClass} ${
+                        setupSigningEnabled && setupSigningMode === "generate"
+                            ? activeButtonClass
+                            : disabledButtonClass
+                    }`;
+                }
+                if (setupSigningImportButton instanceof HTMLButtonElement) {
+                    setupSigningImportButton.disabled = !setupSigningEnabled;
+                    setupSigningImportButton.className = `${buttonBaseClass} ${
+                        setupSigningEnabled && setupSigningMode === "import"
+                            ? activeButtonClass
+                            : disabledButtonClass
+                    }`;
+                }
+                if (setupSigningKeyNote) {
+                    if (!setupSigningEnabled) {
+                        setupSigningKeyNote.textContent =
+                            "Key actions are disabled while signing is disabled.";
+                    } else if (setupSigningMode === "import") {
+                        setupSigningKeyNote.textContent = setupSigningImportedFilename
+                            ? `Import selected: ${setupSigningImportedFilename}`
+                            : "Import mode selected. Choose a private key file.";
+                    } else {
+                        setupSigningKeyNote.textContent =
+                            "Managed key generation is selected.";
+                    }
+                }
+            }
+
+            function validateSetupSigningFields() {
+                if (!setupSigningEnabled) {
+                    return null;
+                }
+                if (
+                    setupSigningMode === "import" &&
+                    setupSigningImportedPrivateKey.trim().length === 0
+                ) {
+                    return "Import mode selected but no key file has been loaded.";
+                }
+                return null;
             }
 
             function validateSetupConfigFields() {
@@ -493,6 +683,14 @@ const navItems = [
                 if (adminPasswordConfirm instanceof HTMLInputElement) {
                     adminPasswordConfirm.value = "";
                 }
+                setupSigningEnabled = true;
+                setupSigningMode = "generate";
+                setupSigningImportedPrivateKey = "";
+                setupSigningImportedFilename = "";
+                if (setupSigningImportFileInput instanceof HTMLInputElement) {
+                    setupSigningImportFileInput.value = "";
+                }
+                updateSetupSigningUi();
             }
 
             function showAppShell() {
@@ -629,11 +827,80 @@ const navItems = [
                 showAuthScreen(message);
             });
 
+            setupSigningToggleButton?.addEventListener("click", () => {
+                clearSetupError();
+                setupSigningEnabled = !setupSigningEnabled;
+                updateSetupSigningUi();
+            });
+
+            setupSigningGenerateButton?.addEventListener("click", () => {
+                clearSetupError();
+                if (!setupSigningEnabled) {
+                    return;
+                }
+                setupSigningMode = "generate";
+                setupSigningImportedPrivateKey = "";
+                setupSigningImportedFilename = "";
+                if (setupSigningImportFileInput instanceof HTMLInputElement) {
+                    setupSigningImportFileInput.value = "";
+                }
+                updateSetupSigningUi();
+            });
+
+            setupSigningImportButton?.addEventListener("click", () => {
+                clearSetupError();
+                if (!setupSigningEnabled) {
+                    return;
+                }
+                setupSigningMode = "import";
+                updateSetupSigningUi();
+                if (setupSigningImportFileInput instanceof HTMLInputElement) {
+                    setupSigningImportFileInput.click();
+                }
+            });
+
+            setupSigningImportFileInput?.addEventListener("change", async (event) => {
+                clearSetupError();
+                const target = event.target;
+                if (!(target instanceof HTMLInputElement)) {
+                    return;
+                }
+                const file = target.files?.[0];
+                if (!file) {
+                    return;
+                }
+                try {
+                    const armoredPrivateKey = await file.text();
+                    setupSigningMode = "import";
+                    setupSigningImportedPrivateKey = armoredPrivateKey;
+                    setupSigningImportedFilename = file.name;
+                    updateSetupSigningUi();
+                } catch {
+                    setupSigningImportedPrivateKey = "";
+                    setupSigningImportedFilename = "";
+                    setSetupError("Failed to read signing key file.");
+                    updateSetupSigningUi();
+                }
+            });
+
             setupNextButton?.addEventListener("click", () => {
                 clearSetupError();
-                const validationError = validateSetupConfigFields();
-                if (validationError) {
-                    setSetupError(validationError);
+                if (setupStep === "config") {
+                    const validationError = validateSetupConfigFields();
+                    if (validationError) {
+                        setSetupError(validationError);
+                        return;
+                    }
+                    setSetupStep("signing");
+                    return;
+                }
+                if (setupStep !== "signing") {
+                    setSetupStep("config");
+                    return;
+                }
+                const signingValidationError = validateSetupSigningFields();
+                if (signingValidationError) {
+                    setSetupError(signingValidationError);
                     return;
                 }
                 setSetupStep("admin");
@@ -645,6 +912,10 @@ const navItems = [
 
             setupBackButton?.addEventListener("click", () => {
                 clearSetupError();
+                if (setupStep === "admin") {
+                    setSetupStep("signing");
+                    return;
+                }
                 setSetupStep("config");
             });
 
@@ -652,9 +923,22 @@ const navItems = [
                 event.preventDefault();
                 clearSetupError();
                 if (setupStep !== "admin") {
-                    const validationError = validateSetupConfigFields();
-                    if (validationError) {
-                        setSetupError(validationError);
+                    if (setupStep === "config") {
+                        const validationError = validateSetupConfigFields();
+                        if (validationError) {
+                            setSetupError(validationError);
+                            return;
+                        }
+                        setSetupStep("signing");
+                        return;
+                    }
+                    if (setupStep !== "signing") {
+                        setSetupStep("config");
+                        return;
+                    }
+                    const signingValidationError = validateSetupSigningFields();
+                    if (signingValidationError) {
+                        setSetupError(signingValidationError);
                         return;
                     }
                     setSetupStep("admin");
@@ -684,6 +968,7 @@ const navItems = [
                     HTMLInputElement
                         ? input("setup-admin-password-confirm").value
                         : "";
+                const enableSigning = setupSigningEnabled;
 
                 if (!adminHandle || !adminDisplayName || !adminPassword) {
                     setSetupError(
@@ -717,6 +1002,11 @@ const navItems = [
                     });
                 const payload = {
                     settings,
+                    enable_signing: enableSigning,
+                    signing_armored_private_key:
+                        enableSigning && setupSigningMode === "import"
+                            ? setupSigningImportedPrivateKey.trim()
+                            : null,
                     admin: {
                         handle: adminHandle,
                         display_name: adminDisplayName,
@@ -806,7 +1096,7 @@ const navItems = [
                     renderSetupConfigFields(configSchema);
                     if (!status.initialized) {
                         showSetupScreen(
-                            "Create the daemon config file and the initial admin account.",
+                            "Configure daemon settings and create the initial admin account.",
                         );
                         return;
                     }

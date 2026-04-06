@@ -113,6 +113,20 @@ export default function JobDetail({ jobId }: Props) {
     return "default";
   };
 
+  const getArtifactSigningBadge = (artifact: BuildArtifact) => {
+    if (artifact.signing_status === "signed") {
+      return { label: "SIGNED", variant: "success" as const };
+    }
+    if (artifact.signing_status === "failed") {
+      return {
+        label: "SIGN FAILED",
+        variant: "error" as const,
+        title: artifact.signing_error_message || "Artifact signing failed",
+      };
+    }
+    return { label: "NOT SIGNED", variant: "warning" as const };
+  };
+
   if (loading) {
     return <LoadingBlock label="Loading job details…" lines={6} />;
   }
@@ -260,32 +274,40 @@ export default function JobDetail({ jobId }: Props) {
           </div>
           <div className="p-6">
             <div className="grid gap-2">
-              {artifacts.map((artifact) => (
-                <div
-                  key={`${artifact.id}:${artifact.file}`}
-                  className="flex items-center justify-between gap-4 border-2 border-[var(--theme-border)] bg-zinc-950/40 px-5 py-4 transition-all hover:border-[var(--theme-border-strong)] hover:bg-zinc-950"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="font-mono text-sm text-white">
-                      {artifact.file}
+              {artifacts.map((artifact) => {
+                const signingBadge = getArtifactSigningBadge(artifact);
+                return (
+                  <div
+                    key={`${artifact.id}:${artifact.file}`}
+                    className="flex items-center justify-between gap-4 border-2 border-[var(--theme-border)] bg-zinc-950/40 px-5 py-4 transition-all hover:border-[var(--theme-border-strong)] hover:bg-zinc-950"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-mono text-sm text-white">
+                        {artifact.file}
+                      </div>
+                      <div className="mt-1 font-mono text-xs text-zinc-600">
+                        {artifact.size_bytes.toLocaleString()} bytes
+                      </div>
                     </div>
-                    <div className="mt-1 font-mono text-xs text-zinc-600">
-                      {artifact.size_bytes.toLocaleString()} bytes
+                    <div className="flex items-center gap-3">
+                      <Badge variant={signingBadge.variant} title={signingBadge.title}>
+                        {signingBadge.label}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const url = `/api/jobs/${encodeURIComponent(jobId)}/artifacts/${encodeURIComponent(artifact.file)}`;
+                          window.open(url, "_blank");
+                        }}
+                      >
+                        <FaIcon icon={faDownload} />
+                        Download
+                      </Button>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      const url = `/api/jobs/${encodeURIComponent(jobId)}/artifacts/${encodeURIComponent(artifact.file)}`;
-                      window.open(url, "_blank");
-                    }}
-                  >
-                    <FaIcon icon={faDownload} />
-                    Download
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

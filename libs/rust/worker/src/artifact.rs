@@ -112,6 +112,8 @@ async fn build_artifact(
         }),
         sha256,
         kind,
+        signing_status: None,
+        signing_error_message: None,
     })
 }
 

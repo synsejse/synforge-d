@@ -16,7 +16,6 @@ ini.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-serde_yml.workspace = true
 sha2.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true

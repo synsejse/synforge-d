@@ -15,17 +15,19 @@ pub(crate) async fn repo_root() -> Result<StatusCode, AppError> {
 }
 
 pub(crate) async fn download_repo_file(
-    Extension(user): Extension<UserAccount>,
+    user: Option<Extension<UserAccount>>,
     State(state): State<AppState>,
     Path(path): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
     let resolved = state.service.resolve_repo_file_path(&path).await?;
     let metadata = tokio::fs::metadata(&resolved).await?;
     let file = tokio::fs::File::open(&resolved).await?;
-    state
-        .service
-        .increment_user_download_bytes(user.id, metadata.len())
-        .await?;
+    if let Some(Extension(user)) = user {
+        state
+            .service
+            .increment_user_download_bytes(user.id, metadata.len())
+            .await?;
+    }
 
     let mut headers = HeaderMap::new();
     headers.insert(

@@ -17,5 +17,6 @@ You connect source repositories, sync updates, run builds, and view results in o
 - Refresh all package sources from one action
 - View build outputs and repository contents
 - Use a dedicated statistics page for system-level insights
+- Optionally enable repository + package signing from the Signing page
 
 For technical details, architecture, and contributor guidance, see `AGENTS.md`.

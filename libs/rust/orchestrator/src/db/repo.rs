@@ -13,6 +13,8 @@ type PublishedRepoRow = (
     i64,
     ArtifactKind,
     String,
+    Option<ArtifactSigningStatus>,
+    Option<String>,
 );
 
 pub(super) async fn list_published_repo_files(
@@ -29,6 +31,10 @@ pub(super) async fn list_published_repo_files(
                 .inner_join(
                     build_artifacts::table
                         .on(published_repo_files::artifact_id.eq(build_artifacts::id)),
+                )
+                .left_join(
+                    artifact_signatures::table
+                        .on(build_artifacts::id.eq(artifact_signatures::artifact_id)),
                 )
                 .into_boxed();
             if let Some(package_name) = package_name.as_deref() {
@@ -58,6 +64,8 @@ pub(super) async fn list_published_repo_files(
                     build_artifacts::size_bytes,
                     build_artifacts::kind,
                     published_repo_files::published_at,
+                    artifact_signatures::status.nullable(),
+                    artifact_signatures::error_message.nullable(),
                 ))
                 .load::<PublishedRepoRow>(conn)?;
             rows.into_iter()
@@ -89,6 +97,10 @@ pub(super) async fn list_published_repo_files_for_package(
                     build_artifacts::table
                         .on(published_repo_files::artifact_id.eq(build_artifacts::id)),
                 )
+                .left_join(
+                    artifact_signatures::table
+                        .on(build_artifacts::id.eq(artifact_signatures::artifact_id)),
+                )
                 .filter(build_artifacts::package_name.eq(package_name.as_str()))
                 .order((
                     published_repo_files::published_at.desc(),
@@ -104,6 +116,8 @@ pub(super) async fn list_published_repo_files_for_package(
                     build_artifacts::size_bytes,
                     build_artifacts::kind,
                     published_repo_files::published_at,
+                    artifact_signatures::status.nullable(),
+                    artifact_signatures::error_message.nullable(),
                 ))
                 .load::<PublishedRepoRow>(conn)?;
             rows.into_iter()
@@ -153,6 +167,10 @@ pub(super) async fn list_recent_published_repo_files(
                     build_artifacts::table
                         .on(published_repo_files::artifact_id.eq(build_artifacts::id)),
                 )
+                .left_join(
+                    artifact_signatures::table
+                        .on(build_artifacts::id.eq(artifact_signatures::artifact_id)),
+                )
                 .order((
                     published_repo_files::published_at.desc(),
                     build_artifacts::file.asc(),
@@ -168,6 +186,8 @@ pub(super) async fn list_recent_published_repo_files(
                     build_artifacts::size_bytes,
                     build_artifacts::kind,
                     published_repo_files::published_at,
+                    artifact_signatures::status.nullable(),
+                    artifact_signatures::error_message.nullable(),
                 ))
                 .load::<PublishedRepoRow>(conn)?;
             rows.into_iter()

@@ -4,6 +4,7 @@ use axum::http::{HeaderMap, Method};
 use axum::middleware::Next;
 use axum::response::Response;
 use base64::Engine;
+use synforge_core::config::DEFAULT_SIGNING_PUBLIC_KEY_NAME;
 use synforge_core::model::{UserAccount, UserPermission};
 
 use super::session::{decode_session_cookie, find_cookie, session_cookie_name};
@@ -18,7 +19,7 @@ pub(crate) async fn authenticate_api_request(
     if is_public_api_route(request.method(), request.uri().path()) {
         return Ok(next.run(request).await);
     }
-    if !is_setup_complete(&state)? {
+    if !is_setup_complete(&state).await? {
         return Err(AppError::unavailable("daemon setup is not complete"));
     }
     let required = required_api_permission(request.method(), request.uri().path());
@@ -33,8 +34,11 @@ pub(crate) async fn authenticate_repo_request(
     mut request: axum::extract::Request,
     next: Next,
 ) -> Result<Response, AppError> {
-    if !is_setup_complete(&state)? {
+    if !is_setup_complete(&state).await? {
         return Err(AppError::unavailable("daemon setup is not complete"));
+    }
+    if is_public_repo_route(request.method(), request.uri().path()) {
+        return Ok(next.run(request).await);
     }
     let user = authenticate_basic_headers(&state, &headers, UserPermission::Repo)
         .await
@@ -49,7 +53,7 @@ pub(crate) async fn authenticate_docs_request(
     request: axum::extract::Request,
     next: Next,
 ) -> Result<Response, AppError> {
-    if !is_setup_complete(&state)? {
+    if !is_setup_complete(&state).await? {
         return Err(AppError::unavailable("daemon setup is not complete"));
     }
     let _user = authenticate_session_headers(&state, &headers, UserPermission::Read).await?;
@@ -113,10 +117,14 @@ fn required_api_permission(method: &Method, path: &str) -> UserPermission {
         return UserPermission::Write;
     }
     match (method, path) {
+        (&Method::GET, "/config/effective") | (&Method::GET, "/signing/export") => {
+            UserPermission::Write
+        }
         (&Method::POST, "/packages")
         | (&Method::POST, "/repositories/browse")
         | (&Method::POST, "/jobs/prune-failed")
         | (&Method::POST, "/config/runtime") => UserPermission::Write,
+        (&Method::POST, path) if path.starts_with("/signing/") => UserPermission::Write,
         (&Method::POST, path) if path.ends_with("/rebuild") || path.ends_with("/refresh") => {
             UserPermission::Write
         }
@@ -125,7 +133,8 @@ fn required_api_permission(method: &Method, path: &str) -> UserPermission {
         (&Method::DELETE, path)
             if path.starts_with("/packages/")
                 || path.starts_with("/jobs/")
-                || path.starts_with("/users/") =>
+                || path.starts_with("/users/")
+                || path.starts_with("/signing/") =>
         {
             UserPermission::Write
         }
@@ -145,10 +154,20 @@ fn is_public_api_route(method: &Method, path: &str) -> bool {
     )
 }
 
-fn is_setup_complete(state: &AppState) -> Result<bool, AppError> {
-    Ok(
-        synforge_core::config::DaemonConfig::load_from_file(&state.config_path)
-            .map(|config| config.bootstrap_completed)
-            .unwrap_or(false),
-    )
+async fn is_setup_complete(state: &AppState) -> Result<bool, AppError> {
+    Ok(state
+        .service
+        .effective_config()
+        .await?
+        .config
+        .bootstrap_completed)
+}
+
+fn is_public_repo_route(method: &Method, path: &str) -> bool {
+    if *method != Method::GET {
+        return false;
+    }
+    let normalized_path = path.trim_start_matches('/');
+    normalized_path == DEFAULT_SIGNING_PUBLIC_KEY_NAME
+        || normalized_path == format!("repo/{}", DEFAULT_SIGNING_PUBLIC_KEY_NAME)
 }

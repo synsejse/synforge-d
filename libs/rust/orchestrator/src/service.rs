@@ -1,19 +1,23 @@
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Instant;
 
-use crate::db::{DieselStore, JobStore};
+use crate::db::{DieselStore, JobStore, UserStore};
 use crate::job_lifecycle::JobLifecycle;
 use crate::packages::PackageSyncStore;
 use crate::registry::PackageRegistry;
 use crate::repo_manager::FileRepoManager;
+use crate::repo_signing::RepoSigningManager;
 use crate::runner::BuildRunner;
 use crate::scheduler::BuildScheduler;
+use crate::service::config::apply_config_settings;
 use crate::sessions::WorkerSessionBroker;
 use crate::sync_tracker::SyncStatusTracker;
 use crate::worker_socket::start_worker_listener;
 use crate::workers::DockerWorkerLauncher;
+use serde_json::Value;
 use synforge_core::{
-    api::{MockChrootListResponse, PageInfo},
+    api::{MockChrootListResponse, PageInfo, RepoSigningReconcileProgressView},
     config::DaemonConfig,
     model::UserPermission,
 };
@@ -30,6 +34,7 @@ mod jobs;
 mod logs;
 mod packages;
 mod repo;
+mod signing;
 mod sync;
 mod users;
 
@@ -46,6 +51,7 @@ pub struct SynforgeService {
     queue_tx: mpsc::Sender<crate::scheduler::QueuedBuild>,
     shutdown_tx: watch::Sender<bool>,
     mock_chroot_cache: Arc<Mutex<MockChrootCacheState>>,
+    signing_reconcile_progress: Arc<Mutex<Option<RepoSigningReconcileProgressView>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -78,10 +84,11 @@ impl SynforgeService {
         Ok(())
     }
 
-    pub async fn new(config: DaemonConfig) -> anyhow::Result<Arc<Self>> {
+    pub async fn new(mut config: DaemonConfig) -> anyhow::Result<Arc<Self>> {
         info!("initializing synforge service");
-        let paths = config.runtime_paths();
         let store = DieselStore::new(&config.database_url, config.db_pool_size).await?;
+        apply_startup_runtime_overrides(&store, &mut config).await?;
+        let paths = config.runtime_paths();
         let sessions = WorkerSessionBroker::new(paths.jobs_root().to_path_buf());
         let repo_manager = Arc::new(FileRepoManager);
         let lifecycle = Arc::new(JobLifecycle::new(
@@ -126,7 +133,6 @@ impl SynforgeService {
         tokio::fs::create_dir_all(paths.packages_dir()).await?;
         tokio::fs::create_dir_all(paths.repo_dir()).await?;
         tokio::fs::create_dir_all(paths.jobs_root()).await?;
-        tokio::fs::create_dir_all(paths.temp_root()).await?;
         repo_manager.ensure_repo(&config).await?;
         store
             .abort_unfinished_jobs("daemon restarted before job completed")
@@ -162,6 +168,7 @@ impl SynforgeService {
             queue_tx,
             shutdown_tx,
             mock_chroot_cache: Arc::new(Mutex::new(MockChrootCacheState::default())),
+            signing_reconcile_progress: Arc::new(Mutex::new(None)),
         });
         start_worker_listener(
             WORKER_LISTEN_ADDR.to_string(),
@@ -276,6 +283,65 @@ impl SynforgeService {
             }
         });
     }
+}
+
+async fn apply_startup_runtime_overrides(
+    store: &DieselStore,
+    config: &mut DaemonConfig,
+) -> anyhow::Result<()> {
+    let settings = store.list_runtime_settings().await?;
+    apply_config_settings(config, &settings, true)?;
+    let mut updates = BTreeMap::new();
+    if !settings.contains_key("session_secret") {
+        updates.insert(
+            "session_secret".to_string(),
+            Value::String(config.session_secret.clone()),
+        );
+    }
+    if !config.bootstrap_completed && store.user_count().await? > 0 {
+        config.bootstrap_completed = true;
+        updates.insert("bootstrap_completed".to_string(), Value::Bool(true));
+    } else if config.bootstrap_completed && !settings.contains_key("bootstrap_completed") {
+        updates.insert("bootstrap_completed".to_string(), Value::Bool(true));
+    }
+    if !updates.is_empty() {
+        store.upsert_runtime_settings(updates).await?;
+    }
+    config
+        .validate()
+        .map_err(|error| anyhow::anyhow!(error.to_string()))?;
+
+    if !config.signing_enabled {
+        return Ok(());
+    }
+
+    let signing_manager = RepoSigningManager;
+    let status = signing_manager.status(config).await?;
+    if status.key_present {
+        return Ok(());
+    }
+
+    let Some(armored_private_key) = settings
+        .get("signing_private_key_armored")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return Ok(());
+    };
+
+    signing_manager.remove_all_keys(config).await?;
+    let imported = signing_manager
+        .import_private_key(config, armored_private_key)
+        .await?;
+    if config.signing_key_id.as_deref() != Some(imported.key_id.as_str()) {
+        config.signing_key_id = Some(imported.key_id.clone());
+        let mut updates = BTreeMap::new();
+        updates.insert("signing_key_id".to_string(), Value::String(imported.key_id));
+        store.upsert_runtime_settings(updates).await?;
+    }
+
+    Ok(())
 }
 
 fn normalize_pagination(limit: Option<usize>, offset: Option<usize>) -> (usize, usize) {

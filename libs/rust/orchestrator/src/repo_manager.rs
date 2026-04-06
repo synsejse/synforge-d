@@ -15,6 +15,8 @@ use tokio::process::Command;
 use tracing::{info, warn};
 use uuid::Uuid;
 
+use crate::repo_signing::RepoSigningManager;
+
 fn should_skip_artifact(artifact: &BuildArtifact, package: &PackageDefinition) -> bool {
     match artifact.kind {
         ArtifactKind::Srpm => !package.publish_srpm,
@@ -32,7 +34,7 @@ impl FileRepoManager {
             repo_dir = %config.runtime_paths().repo_dir().display(),
             "ensuring repository metadata exists"
         );
-        regenerate_metadata(config.runtime_paths().repo_dir()).await
+        regenerate_metadata(config).await
     }
 
     pub async fn publish_build(
@@ -105,9 +107,11 @@ impl FileRepoManager {
                 size_bytes: artifact.size_bytes,
                 kind: artifact.kind,
                 published_at,
+                signing_status: artifact.signing_status,
+                signing_error_message: artifact.signing_error_message.clone(),
             });
         }
-        regenerate_metadata(paths.repo_dir()).await?;
+        regenerate_metadata(config).await?;
         info!(
             job_id = %worker_result.job_id,
             package_name = %package.name,
@@ -145,7 +149,7 @@ impl FileRepoManager {
                 }
             }
         }
-        regenerate_metadata(paths.repo_dir()).await?;
+        regenerate_metadata(config).await?;
         if !files.is_empty() {
             info!(
                 file_count = files.len(),
@@ -172,7 +176,9 @@ fn build_repo_build_dir(
         .join(job_id.to_string())
 }
 
-async fn regenerate_metadata(repo_dir: &Path) -> anyhow::Result<()> {
+async fn regenerate_metadata(config: &DaemonConfig) -> anyhow::Result<()> {
+    let paths = config.runtime_paths();
+    let repo_dir = paths.repo_dir();
     tokio::fs::create_dir_all(repo_dir).await?;
     info!(repo_dir = %repo_dir.display(), "regenerating repository metadata");
     let output = Command::new("createrepo_c")
@@ -180,7 +186,7 @@ async fn regenerate_metadata(repo_dir: &Path) -> anyhow::Result<()> {
         .arg(repo_dir)
         .output()
         .await;
-    match output {
+    let createrepo_result: anyhow::Result<()> = match output {
         Ok(output) if output.status.success() => Ok(()),
         Ok(output) => Err(anyhow::anyhow!(
             "createrepo_c failed: {}",
@@ -201,7 +207,19 @@ async fn regenerate_metadata(repo_dir: &Path) -> anyhow::Result<()> {
             Ok(())
         }
         Err(error) => Err(error.into()),
-    }
+    };
+    createrepo_result?;
+    let signing_manager = RepoSigningManager;
+    signing_manager
+        .reconcile_repo_metadata_signature(config, repo_dir)
+        .await
+        .with_context(|| {
+            format!(
+                "failed to reconcile repository metadata signing for {}",
+                repo_dir.display()
+            )
+        })?;
+    Ok(())
 }
 
 async fn prune_empty_parents(path: &Path, repo_root: &Path) -> anyhow::Result<()> {

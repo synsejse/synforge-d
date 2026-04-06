@@ -63,9 +63,30 @@ export interface EffectiveConfigResponse {
 export type ConfigFieldType = ApiSchema["ConfigFieldType"];
 export type ConfigFieldDescriptor = ApiSchema["ConfigFieldDescriptor"];
 export type ConfigSchemaResponse = ApiSchema["ConfigSchemaResponse"];
+export type RepoSigningStatusView = ApiSchema["RepoSigningStatusView"];
+export type RepoSigningStatusResponse = ApiSchema["RepoSigningStatusResponse"];
+export type RepoSigningReconcileMode = ApiSchema["RepoSigningReconcileMode"];
+export type RepoSigningReconcileState = ApiSchema["RepoSigningReconcileState"];
+export type RepoSigningReconcileProgressView =
+  ApiSchema["RepoSigningReconcileProgressView"];
+export type RepoSigningReconcileProgressResponse =
+  ApiSchema["RepoSigningReconcileProgressResponse"];
+export type UpdateRepoSigningConfigRequest =
+  ApiSchema["UpdateRepoSigningConfigRequest"];
+export type GenerateRepoSigningKeyResponse =
+  ApiSchema["GenerateRepoSigningKeyResponse"];
+export type ImportRepoSigningKeyRequest =
+  ApiSchema["ImportRepoSigningKeyRequest"];
+export type ImportRepoSigningKeyResponse =
+  ApiSchema["ImportRepoSigningKeyResponse"];
+export type TestRepoSigningResponse = ApiSchema["TestRepoSigningResponse"];
+export type ExportRepoSigningKeyResponse =
+  ApiSchema["ExportRepoSigningKeyResponse"];
+export type ExportRepoSigningPublicKeyResponse =
+  ApiSchema["ExportRepoSigningPublicKeyResponse"];
 
 export type UpdateRuntimeSettingsRequest = {
-  settings: Record<string, string | number>;
+  settings: Record<string, string | number | boolean>;
 };
 
 export type ApiError = ApiSchema["ApiError"];

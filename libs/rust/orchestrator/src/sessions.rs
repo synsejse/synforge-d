@@ -157,6 +157,8 @@ impl WorkerSessionBroker {
             sha256: format!("{:x}", hasher.finalize()),
             size_bytes,
             kind,
+            signing_status: None,
+            signing_error_message: None,
         };
         entry.artifacts.lock().await.push(artifact.clone());
         Ok(artifact)

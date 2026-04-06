@@ -4,7 +4,6 @@ pub mod openapi;
 mod repo_files;
 mod system_routes;
 
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::auth::middleware::{
@@ -28,14 +27,11 @@ use utoipa_swagger_ui::SwaggerUi;
 #[derive(Clone)]
 pub struct AppState {
     pub service: Arc<SynforgeService>,
-    pub config_path: PathBuf,
 }
 
 pub fn router(service: Arc<SynforgeService>) -> Router {
-    let config_path = synforge_core::config::DaemonConfig::config_path();
     let state = AppState {
         service: Arc::clone(&service),
-        config_path,
     };
     let api =
         api::router(state.clone())

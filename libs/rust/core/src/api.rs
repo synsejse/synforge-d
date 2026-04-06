@@ -378,6 +378,10 @@ pub struct SetupAdminRequest {
 pub struct SetupInitializeRequest {
     #[serde(default)]
     pub settings: BTreeMap<String, Value>,
+    #[serde(default = "default_setup_enable_signing")]
+    pub enable_signing: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signing_armored_private_key: Option<String>,
     pub admin: SetupAdminRequest,
 }
 
@@ -414,6 +418,10 @@ fn default_user_active() -> bool {
     true
 }
 
+fn default_setup_enable_signing() -> bool {
+    true
+}
+
 // --- Common API errors ---
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct ApiError {
@@ -424,8 +432,6 @@ pub struct ApiError {
 // --- Runtime configuration ---
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct EffectiveConfigView {
-    #[schema(value_type = String)]
-    pub config_path: std::path::PathBuf,
     pub bootstrap_completed: bool,
     pub listen_addr: String,
     #[schema(value_type = String)]
@@ -438,6 +444,8 @@ pub struct EffectiveConfigView {
     #[schema(value_type = String)]
     pub jobs_root: std::path::PathBuf,
     pub worker_image: String,
+    pub signing_enabled: bool,
+    pub signing_key_id: Option<String>,
     pub max_concurrent_builds: usize,
     pub db_pool_size: u32,
     pub queue_buffer_size: usize,
@@ -467,6 +475,7 @@ pub struct UpdateRuntimeSettingsRequest {
 pub enum ConfigFieldType {
     String,
     Number,
+    Boolean,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
@@ -489,6 +498,104 @@ pub struct ConfigFieldDescriptor {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct ConfigSchemaResponse {
     pub fields: Vec<ConfigFieldDescriptor>,
+}
+
+// --- Repository signing ---
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct RepoSigningStatusView {
+    pub enabled: bool,
+    pub configured_key_id: Option<String>,
+    #[schema(value_type = String)]
+    pub keyring_dir: std::path::PathBuf,
+    #[schema(value_type = String)]
+    pub repo_public_key_path: std::path::PathBuf,
+    pub key_present: bool,
+    pub active_fingerprint: Option<String>,
+    pub can_export_private_key: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct RepoSigningStatusResponse {
+    pub status: RepoSigningStatusView,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct UpdateRepoSigningConfigRequest {
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct ImportRepoSigningKeyRequest {
+    pub armored_private_key: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct ImportRepoSigningKeyResponse {
+    pub key_id: String,
+    pub fingerprint: String,
+    pub status: RepoSigningStatusView,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct GenerateRepoSigningKeyResponse {
+    pub key_id: String,
+    pub fingerprint: String,
+    pub status: RepoSigningStatusView,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct TestRepoSigningResponse {
+    pub signed: bool,
+    #[schema(value_type = String)]
+    pub signature_path: std::path::PathBuf,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct ExportRepoSigningKeyResponse {
+    pub key_id: String,
+    pub fingerprint: String,
+    pub armored_private_key: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct ExportRepoSigningPublicKeyResponse {
+    pub key_id: String,
+    pub fingerprint: String,
+    pub public_key_name: String,
+    pub armored_public_key: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum RepoSigningReconcileMode {
+    Sign,
+    Unsign,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum RepoSigningReconcileState {
+    Running,
+    Completed,
+    Failed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct RepoSigningReconcileProgressView {
+    pub operation_id: uuid::Uuid,
+    pub mode: RepoSigningReconcileMode,
+    pub state: RepoSigningReconcileState,
+    pub total_artifacts: u64,
+    pub processed_artifacts: u64,
+    pub failed_artifacts: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct RepoSigningReconcileProgressResponse {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub operation: Option<RepoSigningReconcileProgressView>,
 }
 
 // --- Logs ---

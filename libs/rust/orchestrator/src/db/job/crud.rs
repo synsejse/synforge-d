@@ -57,11 +57,13 @@ pub(in crate::db) async fn finish_job(
     error_message: Option<&str>,
     artifacts: &[BuildArtifact],
     published_files: &[PublishedRepoFile],
+    artifact_signatures: &[ArtifactSignature],
 ) -> anyhow::Result<()> {
     let job_id = job_id.to_string();
     let error_message = error_message.map(ToOwned::to_owned);
     let artifacts = artifacts.to_vec();
     let published_files = published_files.to_vec();
+    let artifact_signatures = artifact_signatures.to_vec();
     store
         .with_connection(move |conn| {
             conn.transaction::<(), diesel::result::Error, _>(|conn| {
@@ -100,6 +102,24 @@ pub(in crate::db) async fn finish_job(
                         })
                         .collect::<Vec<_>>();
                     diesel::insert_into(build_artifacts::table)
+                        .values(&rows)
+                        .execute(conn)?;
+                }
+
+                if !artifact_signatures.is_empty() {
+                    let rows = artifact_signatures
+                        .iter()
+                        .map(|signature| NewArtifactSignatureRecord {
+                            artifact_id: signature.artifact_id.to_string(),
+                            status: signature.status,
+                            signed_at: signature.signed_at.map(format_timestamp),
+                            key_id: signature.key_id.clone(),
+                            fingerprint: signature.fingerprint.clone(),
+                            error_message: signature.error_message.clone(),
+                            updated_at: now.clone(),
+                        })
+                        .collect::<Vec<_>>();
+                    diesel::insert_into(artifact_signatures::table)
                         .values(&rows)
                         .execute(conn)?;
                 }

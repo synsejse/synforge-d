@@ -46,6 +46,31 @@ pub struct BuildArtifact {
     pub sha256: String,
     pub size_bytes: u64,
     pub kind: ArtifactKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signing_status: Option<ArtifactSigningStatus>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signing_error_message: Option<String>,
+}
+
+#[derive(
+    Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow, ToSchema,
+)]
+#[serde(rename_all = "snake_case")]
+#[diesel(sql_type = Text)]
+pub enum ArtifactSigningStatus {
+    Signed,
+    Failed,
+    Skipped,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct ArtifactSignature {
+    pub artifact_id: Uuid,
+    pub status: ArtifactSigningStatus,
+    pub signed_at: Option<OffsetDateTime>,
+    pub key_id: Option<String>,
+    pub fingerprint: Option<String>,
+    pub error_message: Option<String>,
 }
 
 impl BuildArtifact {
@@ -66,6 +91,10 @@ pub struct PublishedRepoFile {
     pub size_bytes: u64,
     pub kind: ArtifactKind,
     pub published_at: OffsetDateTime,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signing_status: Option<ArtifactSigningStatus>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signing_error_message: Option<String>,
 }
 
 #[derive(
@@ -168,6 +197,12 @@ impl_text_enum!(ArtifactKind {
     Debugsource => ["debugsource"],
     Log => ["log"],
     Other => ["other"],
+});
+
+impl_text_enum!(ArtifactSigningStatus {
+    Signed => ["signed"],
+    Failed => ["failed"],
+    Skipped => ["skipped"],
 });
 
 impl_text_enum!(UserPermission {

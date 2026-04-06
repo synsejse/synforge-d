@@ -52,6 +52,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    artifact_signatures (artifact_id) {
+        artifact_id -> Text,
+        status -> Text,
+        signed_at -> Nullable<Text>,
+        key_id -> Nullable<Text>,
+        fingerprint -> Nullable<Text>,
+        error_message -> Nullable<Text>,
+        updated_at -> Text,
+    }
+}
+
+diesel::table! {
     build_logs (job_id, file) {
         job_id -> Text,
         file -> Text,
@@ -114,10 +126,19 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    runtime_settings (key) {
+        key -> Text,
+        value_json -> Text,
+        updated_at -> Text,
+    }
+}
+
 diesel::allow_tables_to_appear_in_same_query!(
     packages,
     build_jobs,
     build_artifacts,
+    artifact_signatures,
     build_logs,
     users,
     user_permissions,
@@ -125,4 +146,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     published_repo_files,
     sync_operations,
     git_mirror_cache_states,
+    runtime_settings,
 );

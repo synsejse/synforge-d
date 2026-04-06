@@ -15,6 +15,7 @@ import Button from "../ui/Button";
 import Select from "../ui/Select";
 import MetricCard from "../ui/MetricCard";
 import PageHeader from "../ui/PageHeader";
+import Badge from "../ui/Badge";
 
 const PAGE_SIZE = 50;
 
@@ -41,6 +42,20 @@ export default function RepositoryBrowser() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const getSigningState = (file: PublishedRepoFile) => {
+    if (file.signing_status === "signed") {
+      return { label: "SIGNED", variant: "success" as const };
+    }
+    if (file.signing_status === "failed") {
+      return {
+        label: "SIGN FAILED",
+        variant: "error" as const,
+        title: file.signing_error_message || "Artifact signing failed",
+      };
+    }
+    return { label: "NOT SIGNED", variant: "warning" as const };
+  };
 
   async function load(
     nextOffset = offset,
@@ -222,12 +237,15 @@ export default function RepositoryBrowser() {
                 <th className="px-6 py-4 text-right font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
                   Size
                 </th>
+                <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                  Signing
+                </th>
               </tr>
             </thead>
             <tbody>
               {files.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
+                  <td colSpan={6} className="px-6 py-12 text-center">
                     <p className="font-mono text-sm text-zinc-500">
                       No files match the current filters.
                     </p>
@@ -236,6 +254,7 @@ export default function RepositoryBrowser() {
               ) : (
                 files.map((file) => {
                   const fileName = file.path.split("/").pop() || file.path;
+                  const signingState = getSigningState(file);
                   return (
                     <tr
                       key={`${file.job_id}:${file.path}`}
@@ -260,6 +279,11 @@ export default function RepositoryBrowser() {
                       </td>
                       <td className="px-6 py-4 text-right font-mono text-sm text-zinc-400">
                         {formatBytes(file.size_bytes)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant={signingState.variant} title={signingState.title}>
+                          {signingState.label}
+                        </Badge>
                       </td>
                     </tr>
                   );

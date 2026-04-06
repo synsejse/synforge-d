@@ -13,6 +13,18 @@ use crate::auth::{hash_password, verify_password};
 use crate::db::UserStore;
 
 impl SynforgeService {
+    pub(crate) async fn is_bootstrap_admin_user(&self, user_id: Uuid) -> anyhow::Result<bool> {
+        let users = self.store.list_users().await?;
+        let Some(first_user) = users
+            .iter()
+            .min_by_key(|summary| summary.user.created_at)
+            .map(|summary| &summary.user)
+        else {
+            return Ok(false);
+        };
+        Ok(first_user.id == user_id)
+    }
+
     pub async fn authenticate_user(
         &self,
         handle: &str,

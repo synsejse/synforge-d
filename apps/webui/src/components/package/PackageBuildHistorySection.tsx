@@ -11,6 +11,7 @@ import EmptyState from "../ui/EmptyState";
 import FaIcon from "../ui/FaIcon";
 import LoadingBlock from "../ui/LoadingBlock";
 import StatusPill from "../ui/StatusPill";
+import Badge from "../ui/Badge";
 
 interface PackageBuildHistorySectionProps {
   buildsLoaded: boolean;
@@ -41,6 +42,26 @@ export default function PackageBuildHistorySection({
   onDeleteJob,
   deletingJobId,
 }: PackageBuildHistorySectionProps) {
+  const getBuildSigningSummary = (entry: PackageBuildInventoryEntry) => {
+    const signableFiles = entry.repo_files.filter(
+      (file) =>
+        file.kind === "rpm" ||
+        file.kind === "srpm" ||
+        file.kind === "debuginfo" ||
+        file.kind === "debugsource",
+    );
+    if (signableFiles.length === 0) {
+      return { label: "NOT SIGNED", variant: "warning" as const };
+    }
+    if (signableFiles.some((file) => file.signing_status === "failed")) {
+      return { label: "SIGN FAILED", variant: "error" as const };
+    }
+    if (signableFiles.every((file) => file.signing_status === "signed")) {
+      return { label: "SIGNED", variant: "success" as const };
+    }
+    return { label: "NOT SIGNED", variant: "warning" as const };
+  };
+
   return (
     <section className="border-4 border-white bg-black p-6 shadow-[6px_6px_0_rgba(255,255,255,0.2)]">
       <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
@@ -74,12 +95,14 @@ export default function PackageBuildHistorySection({
                   <th className="px-4 py-3">Trigger</th>
                   <th className="px-4 py-3">Created</th>
                   <th className="px-4 py-3">Repo Files</th>
+                  <th className="px-4 py-3">Signing</th>
                   <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800 bg-black">
                 {builds.map((entry) => {
                   const publishedFiles = entry.repo_files;
+                  const signingSummary = getBuildSigningSummary(entry);
                   const live =
                     entry.build.job.status === "pending" ||
                     entry.build.job.status === "running";
@@ -107,6 +130,11 @@ export default function PackageBuildHistorySection({
                       </td>
                       <td className="px-4 py-3 font-mono text-sm text-zinc-300">
                         {publishedFiles.length}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={signingSummary.variant}>
+                          {signingSummary.label}
+                        </Badge>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-3">

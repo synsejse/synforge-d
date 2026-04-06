@@ -21,19 +21,24 @@ Generated artifacts: `target/`, `apps/webui/dist/`, `apps/webui/node_modules/`.
 
 - Overview dashboard is intentionally reduced to high-signal cards; detailed system metrics moved to `/statistics`.
 - Packages page supports **Refresh All** (manual source refresh queueing across enabled packages).
+- Dedicated **Signing** page (`/signing`) manages optional repository/package signing state and key lifecycle.
 - Permission model is API-centric:
   - `write` implies `read` for session/API access checks.
   - `repo` remains separate for repository consumption/auth use-cases.
 - WebUI deauth trigger is narrow by design: only session endpoint auth failures (`/api/v1/session` 401) force auth reset.
 - Git mirror cache state persistence is DB-backed (`git_mirror_cache_states`) instead of file metadata.
 - Repo summary/stat queries were optimized to DB aggregates (Diesel query builder `COUNT DISTINCT`/`SUM` style paths), replacing in-memory aggregation loops.
+- Repository metadata signing is optional and default-off. When enabled, `repodata/repomd.xml` is signed and `repomd.xml.asc` is emitted.
+- Published RPM/SRPM/debug artifacts can be signed during successful build finalization; per-artifact signing state is persisted in DB (`artifact_signatures`).
 
 ## Database and Migrations
 
 - Migrations live in `libs/rust/orchestrator/migrations/`.
 - Performance index migration exists: `00000000000006_performance_indexes`.
+- Artifact signature/runtime settings migration exists: `00000000000007_artifact_signatures_and_runtime_settings`.
 - Migration execution now logs whether migrations were applied and prints applied migration versions at startup.
 - Prefer Diesel query builder patterns over raw SQL strings for application query logic.
+- Dynamic runtime settings are DB-backed (`runtime_settings`) and overlaid on top of static config-file defaults.
 
 ## Build/Test/Validation
 

@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{error::SynforgeError, runtime::RuntimePaths};
 
+pub const DEFAULT_SIGNING_PUBLIC_KEY_NAME: &str = "gpg.key";
+
 fn default_listen_addr() -> String {
     "0.0.0.0:8080".to_string()
 }
@@ -63,7 +65,11 @@ fn default_git_mirror_max_unused_seconds() -> u64 {
 }
 
 fn default_session_secret() -> String {
-    "synforge-dev-session-secret-change-me".to_string()
+    env_string("SYNFORGE_SESSION_SECRET").unwrap_or_else(generate_session_secret)
+}
+
+fn default_signing_enabled() -> bool {
+    false
 }
 
 fn default_bootstrap_completed() -> bool {
@@ -82,6 +88,10 @@ pub struct DaemonConfig {
     pub worker_image: String,
     #[serde(default = "default_session_secret")]
     pub session_secret: String,
+    #[serde(default = "default_signing_enabled")]
+    pub signing_enabled: bool,
+    #[serde(default)]
+    pub signing_key_id: Option<String>,
     #[serde(default = "default_bootstrap_completed")]
     pub bootstrap_completed: bool,
     #[serde(default = "default_max_concurrent_builds")]
@@ -116,6 +126,8 @@ impl Default for DaemonConfig {
             database_url: default_database_url(),
             worker_image: default_worker_image(),
             session_secret: default_session_secret(),
+            signing_enabled: default_signing_enabled(),
+            signing_key_id: None,
             bootstrap_completed: default_bootstrap_completed(),
             max_concurrent_builds: default_max_concurrent_builds(),
             db_pool_size: default_db_pool_size(),
@@ -134,55 +146,11 @@ impl Default for DaemonConfig {
 
 impl DaemonConfig {
     pub fn load() -> anyhow::Result<Self> {
-        let path = Self::config_path();
-        let mut config = if path.exists() {
-            Self::load_from_file(&path)?
-        } else {
-            let config = Self {
-                session_secret: generate_session_secret(),
-                ..Self::default()
-            };
-            config.save_to_file(&path)?;
-            config
-        };
-        if session_secret_needs_generation(&config.session_secret) {
-            config.session_secret = generate_session_secret();
-            config.save_to_file(&path)?;
-        }
+        let config = Self::default();
         config
             .validate()
             .map_err(|error| anyhow::anyhow!(error.to_string()))?;
         Ok(config)
-    }
-
-    pub fn load_from_file(path: &std::path::Path) -> anyhow::Result<Self> {
-        let raw = std::fs::read_to_string(path)?;
-        let mut config: Self = serde_yml::from_str(&raw)?;
-        if config.runtime_root.as_os_str().is_empty() {
-            config.runtime_root = default_runtime_root();
-        }
-        Ok(config)
-    }
-
-    pub fn save(&self) -> anyhow::Result<()> {
-        self.save_to_file(&Self::config_path())
-    }
-
-    pub fn save_to_file(&self, path: &std::path::Path) -> anyhow::Result<()> {
-        self.validate()
-            .map_err(|error| anyhow::anyhow!(error.to_string()))?;
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        let contents = serde_yml::to_string(self)?;
-        write_config_atomically(path, &contents)
-    }
-
-    pub fn config_path() -> PathBuf {
-        if let Some(value) = env_string("SYNFORGE_CONFIG_PATH") {
-            return PathBuf::from(value);
-        }
-        default_runtime_root().join("config/config.yaml")
     }
 
     pub fn validate(&self) -> Result<(), SynforgeError> {
@@ -241,6 +209,13 @@ impl DaemonConfig {
                 "session_secret must not be empty".to_string(),
             ));
         }
+        if let Some(key_id) = self.signing_key_id.as_ref() {
+            if key_id.trim().is_empty() {
+                return Err(SynforgeError::Config(
+                    "signing_key_id must not be empty when provided".to_string(),
+                ));
+            }
+        }
         if self.mock_chroot_cache_ttl_seconds == 0 {
             return Err(SynforgeError::Config(
                 "mock_chroot_cache_ttl_seconds must be greater than zero".to_string(),
@@ -274,21 +249,9 @@ fn generate_session_secret() -> String {
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
-fn session_secret_needs_generation(value: &str) -> bool {
-    let value = value.trim();
-    value.is_empty() || value == default_session_secret()
-}
-
 fn env_string(name: &str) -> Option<String> {
     std::env::var(name)
         .ok()
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
-}
-
-fn write_config_atomically(path: &std::path::Path, contents: &str) -> anyhow::Result<()> {
-    let temp_path = path.with_extension("yaml.tmp");
-    std::fs::write(&temp_path, contents)?;
-    std::fs::rename(&temp_path, path)?;
-    Ok(())
 }

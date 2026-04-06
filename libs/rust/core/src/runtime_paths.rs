@@ -8,6 +8,7 @@ pub struct RuntimePaths {
     repo_dir: PathBuf,
     jobs_root: PathBuf,
     temp_root: PathBuf,
+    signing_root: PathBuf,
 }
 
 impl RuntimePaths {
@@ -17,6 +18,7 @@ impl RuntimePaths {
             repo_dir: runtime_root.join("repo"),
             jobs_root: runtime_root.join("jobs"),
             temp_root: runtime_root.join("tmp"),
+            signing_root: runtime_root.join("signing"),
         }
     }
 
@@ -50,6 +52,14 @@ impl RuntimePaths {
 
     pub fn temp_root(&self) -> PathBuf {
         self.temp_root.clone()
+    }
+
+    pub fn signing_root(&self) -> PathBuf {
+        self.signing_root.clone()
+    }
+
+    pub fn signing_public_key_path(&self, file_name: &str) -> PathBuf {
+        self.signing_root.join(sanitize_relative_path(file_name))
     }
 
     pub fn spec_parse_workspace_dir(&self, job_id: Uuid) -> PathBuf {

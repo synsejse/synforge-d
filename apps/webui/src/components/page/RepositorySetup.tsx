@@ -9,6 +9,8 @@ import Button from "../ui/Button";
 export default function RepositorySetup() {
   const [publicBaseUrl, setPublicBaseUrl] = useState("");
   const [repoHandle, setRepoHandle] = useState("");
+  const [repoSigningEnabled, setRepoSigningEnabled] = useState(false);
+  const repoPublicKeyName = "gpg.key";
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
@@ -17,12 +19,14 @@ export default function RepositorySetup() {
     async function load() {
       try {
         setLoading(true);
-        const [configRes, sessionRes] = await Promise.all([
+        const [configRes, sessionRes, signingRes] = await Promise.all([
           api.getConfig(),
           api.getSession(),
+          api.getRepoSigningStatus(),
         ]);
         setPublicBaseUrl(normalizeBaseUrl(configRes.config.public_base_url));
         setRepoHandle(sessionRes.user.handle);
+        setRepoSigningEnabled(signingRes.status.enabled);
         setError(null);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load repository setup");
@@ -39,8 +43,8 @@ export default function RepositorySetup() {
   }, [publicBaseUrl]);
 
   const repoFileContents = useMemo(
-    () => buildRepoFile(repoBaseUrl, repoHandle),
-    [repoBaseUrl, repoHandle],
+    () => buildRepoFile(repoBaseUrl, repoHandle, repoSigningEnabled, repoPublicKeyName),
+    [repoBaseUrl, repoHandle, repoSigningEnabled, repoPublicKeyName],
   );
   const installCommand = "sudo dnf install <package-name>";
 
@@ -107,6 +111,7 @@ export default function RepositorySetup() {
             <span className="font-mono text-[var(--theme-accent-lime)]">&lt;password&gt;</span>{" "}
             with that account's password or another user that has the{" "}
             <span className="font-mono text-[var(--theme-accent-lime)]">repo</span> permission.
+            Repository signing settings are reflected automatically in the snippet below.
           </p>
         </div>
 
@@ -191,15 +196,25 @@ export default function RepositorySetup() {
   );
 }
 
-function buildRepoFile(repoBaseUrl: string, repoHandle: string) {
+function buildRepoFile(
+  repoBaseUrl: string,
+  repoHandle: string,
+  repoSigningEnabled: boolean,
+  repoPublicKeyName: string,
+) {
+  const signingLines = repoSigningEnabled
+    ? `gpgcheck=1
+repo_gpgcheck=0
+gpgkey=${repoBaseUrl}/${encodeURIComponent(repoPublicKeyName)}`
+    : `gpgcheck=0
+repo_gpgcheck=0`;
   return `[synforge]
 name=Synforge Managed Repository
 baseurl=${repoBaseUrl}
 username=${repoHandle || "<handle>"}
 password=<password>
 enabled=1
-gpgcheck=0
-repo_gpgcheck=0
+${signingLines}
 metadata_expire=30s`;
 }
 

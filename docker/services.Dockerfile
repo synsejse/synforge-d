@@ -53,7 +53,9 @@ RUN dnf -y upgrade-minimal \
         createrepo_c \
         curl \
         git \
+        gnupg2 \
         mariadb-connector-c \
+        rpm-sign \
     && dnf clean all
 
 COPY --from=rust-builder /out/daemon /usr/local/bin/daemon

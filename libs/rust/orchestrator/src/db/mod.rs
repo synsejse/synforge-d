@@ -6,7 +6,7 @@ mod sync;
 mod traits;
 mod user;
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
@@ -18,9 +18,10 @@ use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use synforge_core::{
     api::{BuildJobResponse, PackageResponse, RepoTargetSummary},
     model::{
-        ArtifactKind, BuildArtifact, BuildJob, BuildStatus, BuildTrigger, PackageRuntimeState,
-        PackageTargetRuntimeState, PublishedRepoFile, UserAccount, UserPermission, UserRepoMetrics,
-        UserSummary, format_timestamp, now_utc,
+        ArtifactKind, ArtifactSignature, ArtifactSigningStatus, BuildArtifact, BuildJob,
+        BuildStatus, BuildTrigger, PackageRuntimeState, PackageTargetRuntimeState,
+        PublishedRepoFile, UserAccount, UserPermission, UserRepoMetrics, UserSummary,
+        format_timestamp, now_utc,
     },
     package::{BuildEnvVar, PackageDefinition, SpecSource},
 };
@@ -29,8 +30,8 @@ use tracing::info;
 use uuid::Uuid;
 
 use crate::schema::{
-    build_artifacts, build_jobs, build_logs, packages, published_repo_files, user_permissions,
-    user_repo_metrics, users,
+    artifact_signatures, build_artifacts, build_jobs, build_logs, packages, published_repo_files,
+    runtime_settings, user_permissions, user_repo_metrics, users,
 };
 
 pub use traits::{
@@ -85,6 +86,126 @@ impl DieselStore {
     pub async fn health_check(&self) -> anyhow::Result<()> {
         self.with_connection(|conn| {
             packages::table.count().get_result::<i64>(conn)?;
+            Ok(())
+        })
+        .await
+    }
+
+    pub async fn list_runtime_settings(
+        &self,
+    ) -> anyhow::Result<BTreeMap<String, serde_json::Value>> {
+        self.with_connection(|conn| {
+            let rows = runtime_settings::table
+                .select((runtime_settings::key, runtime_settings::value_json))
+                .load::<(String, String)>(conn)?;
+            let mut settings = BTreeMap::new();
+            for (key, value_json) in rows {
+                let value = serde_json::from_str::<serde_json::Value>(&value_json)
+                    .with_context(|| format!("invalid runtime setting JSON for key {}", key))?;
+                settings.insert(key, value);
+            }
+            Ok(settings)
+        })
+        .await
+    }
+
+    pub async fn upsert_runtime_settings(
+        &self,
+        settings: BTreeMap<String, serde_json::Value>,
+    ) -> anyhow::Result<()> {
+        self.with_connection(move |conn| {
+            let updated_at = format_timestamp(now_utc());
+            for (key, value) in settings {
+                let value_json = serde_json::to_string(&value)
+                    .with_context(|| format!("failed to serialize runtime setting {}", key))?;
+                let existing = runtime_settings::table
+                    .find(key.as_str())
+                    .select(runtime_settings::key)
+                    .first::<String>(conn)
+                    .optional()?;
+                if existing.is_some() {
+                    diesel::update(runtime_settings::table.find(key.as_str()))
+                        .set((
+                            runtime_settings::value_json.eq(value_json.as_str()),
+                            runtime_settings::updated_at.eq(updated_at.as_str()),
+                        ))
+                        .execute(conn)?;
+                } else {
+                    let row = NewRuntimeSettingRecord {
+                        key: key.as_str(),
+                        value_json: value_json.as_str(),
+                        updated_at: updated_at.as_str(),
+                    };
+                    diesel::insert_into(runtime_settings::table)
+                        .values(&row)
+                        .execute(conn)?;
+                }
+            }
+            Ok(())
+        })
+        .await
+    }
+
+    pub async fn update_build_artifact_metadata(
+        &self,
+        artifact_id: Uuid,
+        sha256: String,
+        size_bytes: u64,
+    ) -> anyhow::Result<()> {
+        let artifact_id = artifact_id.to_string();
+        self.with_connection(move |conn| {
+            diesel::update(build_artifacts::table.find(artifact_id.as_str()))
+                .set((
+                    build_artifacts::sha256.eq(sha256.as_str()),
+                    build_artifacts::size_bytes.eq(size_bytes as i64),
+                ))
+                .execute(conn)?;
+            Ok(())
+        })
+        .await
+    }
+
+    pub async fn upsert_artifact_signatures(
+        &self,
+        signatures: Vec<ArtifactSignature>,
+    ) -> anyhow::Result<()> {
+        self.with_connection(move |conn| {
+            let updated_at = format_timestamp(now_utc());
+            for signature in signatures {
+                let artifact_id = signature.artifact_id.to_string();
+                let existing = artifact_signatures::table
+                    .find(artifact_id.as_str())
+                    .select(artifact_signatures::artifact_id)
+                    .first::<String>(conn)
+                    .optional()?;
+                if existing.is_some() {
+                    diesel::update(artifact_signatures::table.find(artifact_id.as_str()))
+                        .set((
+                            artifact_signatures::status.eq(signature.status),
+                            artifact_signatures::signed_at
+                                .eq(signature.signed_at.map(format_timestamp)),
+                            artifact_signatures::key_id.eq(signature.key_id.as_deref()),
+                            artifact_signatures::fingerprint.eq(signature.fingerprint.as_deref()),
+                            artifact_signatures::error_message
+                                .eq(signature.error_message.as_deref()),
+                            artifact_signatures::updated_at.eq(updated_at.as_str()),
+                        ))
+                        .execute(conn)?;
+                } else {
+                    let row = NewArtifactSignatureRecord {
+                        artifact_id,
+                        status: signature.status,
+                        signed_at: signature.signed_at.map(format_timestamp),
+                        key_id: signature.key_id,
+                        fingerprint: signature.fingerprint,
+                        error_message: signature.error_message,
+                        updated_at: updated_at.clone(),
+                    };
+                    diesel::insert_into(artifact_signatures::table)
+                        .values(&row)
+                        .execute(conn)?;
+                }
+            }
             Ok(())
         })
         .await
@@ -161,6 +282,7 @@ impl JobStore for DieselStore {
         error_message: Option<&str>,
         artifacts: &[BuildArtifact],
         published_files: &[PublishedRepoFile],
+        artifact_signatures: &[ArtifactSignature],
     ) -> anyhow::Result<()> {
         job::finish_job(
             self,
@@ -169,6 +291,7 @@ impl JobStore for DieselStore {
             error_message,
             artifacts,
             published_files,
+            artifact_signatures,
         )
         .await
     }
@@ -601,6 +724,18 @@ pub(crate) struct NewArtifactRecord {
 }
 
 #[derive(Insertable)]
+#[diesel(table_name = artifact_signatures)]
+pub(crate) struct NewArtifactSignatureRecord {
+    pub(crate) artifact_id: String,
+    pub(crate) status: ArtifactSigningStatus,
+    pub(crate) signed_at: Option<String>,
+    pub(crate) key_id: Option<String>,
+    pub(crate) fingerprint: Option<String>,
+    pub(crate) error_message: Option<String>,
+    pub(crate) updated_at: String,
+}
+
+#[derive(Insertable)]
 #[diesel(table_name = build_logs)]
 pub(crate) struct NewBuildLogRecord<'a> {
     pub(crate) job_id: &'a str,
@@ -677,6 +812,14 @@ pub(crate) struct UserRepoMetricsRecord {
 pub(crate) struct NewUserRepoMetricsRecord<'a> {
     pub(crate) user_id: &'a str,
     pub(crate) downloaded_bytes: i64,
+    pub(crate) updated_at: &'a str,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = runtime_settings)]
+pub(crate) struct NewRuntimeSettingRecord<'a> {
+    pub(crate) key: &'a str,
+    pub(crate) value_json: &'a str,
     pub(crate) updated_at: &'a str,
 }
 
@@ -841,6 +984,9 @@ pub(crate) fn load_published_repo_files_for_job(
         .inner_join(
             build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
         )
+        .left_join(
+            artifact_signatures::table.on(build_artifacts::id.eq(artifact_signatures::artifact_id)),
+        )
         .filter(build_artifacts::job_id.eq(job_id))
         .order(build_artifacts::file.asc())
         .select((
@@ -853,6 +999,8 @@ pub(crate) fn load_published_repo_files_for_job(
             build_artifacts::size_bytes,
             build_artifacts::kind,
             published_repo_files::published_at,
+            artifact_signatures::status.nullable(),
+            artifact_signatures::error_message.nullable(),
         ))
         .load::<(
             String,
@@ -864,6 +1012,8 @@ pub(crate) fn load_published_repo_files_for_job(
             i64,
             ArtifactKind,
             String,
+            Option<ArtifactSigningStatus>,
+            Option<String>,
         )>(conn)?;
     rows.into_iter()
         .map(published_repo_file_from_record)
@@ -881,6 +1031,8 @@ pub(crate) fn published_repo_file_from_record(
         i64,
         ArtifactKind,
         String,
+        Option<ArtifactSigningStatus>,
+        Option<String>,
     ),
 ) -> anyhow::Result<PublishedRepoFile> {
     let (
@@ -893,6 +1045,8 @@ pub(crate) fn published_repo_file_from_record(
         size_bytes,
         kind,
         published_at,
+        signing_status,
+        signing_error_message,
     ) = row;
     let job_id = Uuid::parse_str(&job_id)?;
     let path = build_published_repo_path(
@@ -911,6 +1065,8 @@ pub(crate) fn published_repo_file_from_record(
         size_bytes: size_bytes.max(0) as u64,
         kind,
         published_at: parse_timestamp(&published_at)?,
+        signing_status,
+        signing_error_message,
     })
 }
 

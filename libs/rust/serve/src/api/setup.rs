@@ -15,9 +15,12 @@ use crate::{AppError, AppState};
 pub(crate) async fn get_setup_status(
     State(state): State<AppState>,
 ) -> Result<Json<SetupStatusResponse>, AppError> {
-    let initialized = synforge_core::config::DaemonConfig::load_from_file(&state.config_path)
-        .map(|config| config.bootstrap_completed)
-        .unwrap_or(false);
+    let initialized = state
+        .service
+        .effective_config()
+        .await?
+        .config
+        .bootstrap_completed;
     Ok(Json(SetupStatusResponse { initialized }))
 }
 
@@ -27,7 +30,7 @@ pub(crate) async fn get_setup_status(
     tag = "Setup",
     request_body = SetupInitializeRequest,
     responses(
-        (status = 200, description = "Initialize daemon configuration and first admin", body = EffectiveConfigDto),
+        (status = 200, description = "Initialize daemon and first admin", body = EffectiveConfigDto),
         (status = 400, body = synforge_core::api::ApiError),
         (status = 409, body = synforge_core::api::ApiError)
     )

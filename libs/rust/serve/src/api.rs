@@ -12,6 +12,7 @@ pub(crate) mod packages;
 pub(crate) mod repo;
 pub(crate) mod session;
 pub(crate) mod setup;
+pub(crate) mod signing;
 pub(crate) mod sync;
 pub(crate) mod users;
 pub(crate) use artifacts::{download_job_artifact, get_job_artifact_meta, list_job_artifacts};
@@ -31,6 +32,11 @@ pub(crate) use packages::{
 pub(crate) use repo::{browse_repository, get_repo_inventory, get_repo_summary};
 pub(crate) use session::{get_session, login_session, logout_session};
 pub(crate) use setup::{get_setup_status, initialize_setup};
+pub(crate) use signing::{
+    export_repo_signing_key, export_repo_signing_public_key, generate_repo_signing_key,
+    get_repo_signing_reconcile_progress, get_repo_signing_status, import_repo_signing_key,
+    remove_repo_signing_key, test_repo_signing, update_repo_signing_config,
+};
 pub(crate) use sync::{get_sync_metrics, list_package_sync_operations, list_sync_operations};
 pub(crate) use users::{
     change_user_password, create_user, delete_user, get_user_metrics, list_users, update_user,
@@ -93,6 +99,24 @@ pub fn router(_state: AppState) -> Router<AppState> {
         .route("/jobs/{id}/artifacts/{file}", get(download_job_artifact))
         .route("/repo/files", get(get_repo_inventory))
         .route("/repo/summary", get(get_repo_summary))
+        .route("/signing/status", get(get_repo_signing_status))
+        .route(
+            "/signing/reconcile/progress",
+            get(get_repo_signing_reconcile_progress),
+        )
+        .route("/signing/export", get(export_repo_signing_key))
+        .route(
+            "/signing/export/public",
+            get(export_repo_signing_public_key),
+        )
+        .route("/signing/generate", post(generate_repo_signing_key))
+        .route("/signing/config", post(update_repo_signing_config))
+        .route("/signing/import", post(import_repo_signing_key))
+        .route(
+            "/signing/key",
+            axum::routing::delete(remove_repo_signing_key),
+        )
+        .route("/signing/test", post(test_repo_signing))
         .route("/sync/operations", get(list_sync_operations))
         .route("/sync/metrics", get(get_sync_metrics))
         .route("/cache/stats", get(get_cache_stats))

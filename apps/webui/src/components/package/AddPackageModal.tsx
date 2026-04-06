@@ -210,7 +210,7 @@ export default function AddPackageModal({
           className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-6 py-6"
         >
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-zinc-300">
+            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
               Package name
             </span>
             <input
@@ -219,12 +219,12 @@ export default function AddPackageModal({
               onChange={(event) => setName(event.target.value)}
               placeholder="mesa"
               required
-              className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+              className="w-full border-2 border-zinc-700 bg-zinc-950 px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]"
             />
           </label>
 
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-zinc-300">
+            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
               Git repository URL
             </span>
             <input
@@ -233,17 +233,17 @@ export default function AddPackageModal({
               onChange={(event) => setRepoUrl(event.target.value)}
               placeholder="https://github.com/example/repo.git"
               required
-              className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+              className="w-full border-2 border-zinc-700 bg-zinc-950 px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]"
             />
           </label>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3">
+            <label className="flex items-center justify-between border-2 border-zinc-700 bg-zinc-950 px-4 py-3">
               <span>
-                <span className="block text-sm font-medium text-white">
+                <span className="block font-mono text-xs font-bold uppercase tracking-[0.1em] text-white">
                   Enabled
                 </span>
-                <span className="mt-1 block text-xs text-zinc-400">
+                <span className="mt-1 block text-xs text-zinc-500">
                   Allow new builds for this package.
                 </span>
               </span>
@@ -251,16 +251,15 @@ export default function AddPackageModal({
                 type="checkbox"
                 checked={enabled}
                 onChange={(event) => setEnabled(event.target.checked)}
-                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
               />
             </label>
 
-            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3">
+            <label className="flex items-center justify-between border-2 border-zinc-700 bg-zinc-950 px-4 py-3">
               <span>
-                <span className="block text-sm font-medium text-white">
+                <span className="block font-mono text-xs font-bold uppercase tracking-[0.1em] text-white">
                   Enable polling
                 </span>
-                <span className="mt-1 block text-xs text-zinc-400">
+                <span className="mt-1 block text-xs text-zinc-500">
                   Automatically watch the source for updates.
                 </span>
               </span>
@@ -268,16 +267,15 @@ export default function AddPackageModal({
                 type="checkbox"
                 checked={poll}
                 onChange={(event) => setPoll(event.target.checked)}
-                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
               />
             </label>
 
-            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3">
+            <label className="flex items-center justify-between border-2 border-zinc-700 bg-zinc-950 px-4 py-3">
               <span>
-                <span className="block text-sm font-medium text-white">
+                <span className="block font-mono text-xs font-bold uppercase tracking-[0.1em] text-white">
                   Publish SRPM
                 </span>
-                <span className="mt-1 block text-xs text-zinc-400">
+                <span className="mt-1 block text-xs text-zinc-500">
                   Keep source RPM publication enabled for this package.
                 </span>
               </span>
@@ -285,16 +283,15 @@ export default function AddPackageModal({
                 type="checkbox"
                 checked={publishSrpm}
                 onChange={(event) => setPublishSrpm(event.target.checked)}
-                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
               />
             </label>
 
-            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3">
+            <label className="flex items-center justify-between border-2 border-zinc-700 bg-zinc-950 px-4 py-3">
               <span>
-                <span className="block text-sm font-medium text-white">
+                <span className="block font-mono text-xs font-bold uppercase tracking-[0.1em] text-white">
                   Publish debug packages
                 </span>
-                <span className="mt-1 block text-xs text-zinc-400">
+                <span className="mt-1 block text-xs text-zinc-500">
                   Include debuginfo and debugsource RPMs in repository.
                 </span>
               </span>
@@ -302,16 +299,15 @@ export default function AddPackageModal({
                 type="checkbox"
                 checked={publishDebuginfo}
                 onChange={(event) => setPublishDebuginfo(event.target.checked)}
-                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
               />
             </label>
 
-            <label className="flex items-center justify-between border-2 border-zinc-700 bg-black px-4 py-3 md:col-span-2">
+            <label className="flex items-center justify-between border-2 border-zinc-700 bg-zinc-950 px-4 py-3 md:col-span-2">
               <span>
-                <span className="block text-sm font-medium text-white">
+                <span className="block font-mono text-xs font-bold uppercase tracking-[0.1em] text-white">
                   Network access
                 </span>
-                <span className="mt-1 block text-xs text-zinc-400">
+                <span className="mt-1 block text-xs text-zinc-500">
                   Allow mock builds to access the network for packages that
                   cannot build fully offline.
                 </span>
@@ -320,16 +316,15 @@ export default function AddPackageModal({
                 type="checkbox"
                 checked={networkAccess}
                 onChange={(event) => setNetworkAccess(event.target.checked)}
-                className="h-4 w-4 border-2 border-zinc-500 bg-black accent-[var(--theme-accent-lime)]"
               />
             </label>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <div className="border-2 border-zinc-700 bg-black p-4 lg:col-span-2">
+            <div className="border-2 border-zinc-700 bg-zinc-950 p-4 lg:col-span-2">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <span className="block text-sm font-medium text-zinc-300">
+                  <span className="block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
                     Mock chroots
                   </span>
                   <span className="mt-1 block text-xs text-zinc-500">
@@ -352,7 +347,7 @@ export default function AddPackageModal({
             </div>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">
+              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
                 Poll interval (seconds)
               </span>
               <input
@@ -361,13 +356,13 @@ export default function AddPackageModal({
                 step="1"
                 value={pollIntervalSeconds}
                 onChange={(event) => setPollIntervalSeconds(event.target.value)}
-                className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+                className="w-full border-2 border-zinc-700 bg-zinc-950 px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]"
                 required
               />
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">
+              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
                 Build timeout (seconds)
               </span>
               <input
@@ -376,13 +371,13 @@ export default function AddPackageModal({
                 step="1"
                 value={buildTimeoutSeconds}
                 onChange={(event) => setBuildTimeoutSeconds(event.target.value)}
-                className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+                className="w-full border-2 border-zinc-700 bg-zinc-950 px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]"
                 required
               />
             </label>
 
             <label className="block lg:col-span-2">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">
+              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
                 History count
               </span>
               <input
@@ -391,14 +386,14 @@ export default function AddPackageModal({
                 step="1"
                 value={packageHistoryCount}
                 onChange={(event) => setPackageHistoryCount(event.target.value)}
-                className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+                className="w-full border-2 border-zinc-700 bg-zinc-950 px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]"
                 required
               />
             </label>
           </div>
 
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-zinc-300">
+            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
               Build environment
             </span>
             <textarea
@@ -408,7 +403,7 @@ export default function AddPackageModal({
               placeholder={
                 "KEY=value\nMESON_ARGS=-Dgallium-drivers=swrast\nRUSTFLAGS=-C debuginfo=1"
               }
-              className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+              className="w-full border-2 border-zinc-700 bg-zinc-950 px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]"
             />
             <span className="mt-2 block text-xs text-zinc-500">
               One `KEY=value` entry per line. Applied to SRPM creation and mock
@@ -416,11 +411,11 @@ export default function AddPackageModal({
             </span>
           </label>
 
-           <div className="border-2 border-zinc-700 bg-black p-4">
+           <div className="border-2 border-zinc-700 bg-zinc-950 p-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <div className="text-sm font-medium text-white">Spec file</div>
-                <div className="mt-1 text-xs text-zinc-400">
+                <div className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">Spec file</div>
+                <div className="mt-1 text-xs text-zinc-500">
                   Browse the repository and select the `.spec` file to build.
                 </div>
               </div>

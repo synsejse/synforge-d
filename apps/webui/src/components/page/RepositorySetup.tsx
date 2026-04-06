@@ -110,9 +110,9 @@ export default function RepositorySetup() {
           </p>
         </div>
 
-        <div className="border-2 border-zinc-800 bg-zinc-950 m-6">
-          <div className="flex items-center justify-between border-b-2 border-zinc-800 bg-black px-4 py-3">
-            <div className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+        <div className="border-2 border-[var(--theme-accent-lime)] bg-black m-6">
+          <div className="flex items-center justify-between border-b-2 border-zinc-800 bg-zinc-950 px-4 py-3">
+            <div className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-[var(--theme-accent-lime)]">
               synforge.repo
             </div>
             <Button
@@ -125,8 +125,24 @@ export default function RepositorySetup() {
             </Button>
           </div>
           <div className="overflow-x-auto">
-            <pre className="p-6 font-mono text-sm text-zinc-300">
-              {repoFileContents}
+            <pre className="p-6 font-mono text-sm leading-7 text-zinc-100">
+              {repoFileContents.split('\n').map((line, i) => {
+                if (line.startsWith('[')) {
+                  return <div key={i} className="text-[var(--theme-accent-orange)]">{line}</div>;
+                }
+                if (line.includes('=')) {
+                  const [key, ...rest] = line.split('=');
+                  const value = rest.join('=');
+                  return (
+                    <div key={i}>
+                      <span className="text-cyan-400">{key}</span>
+                      <span className="text-zinc-500">=</span>
+                      <span className="text-[var(--theme-accent-lime)]">{value}</span>
+                    </div>
+                  );
+                }
+                return <div key={i}>{line}</div>;
+              })}
             </pre>
           </div>
         </div>
@@ -143,9 +159,9 @@ export default function RepositorySetup() {
           </p>
         </div>
 
-        <div className="border-2 border-zinc-800 bg-zinc-950 m-6">
-          <div className="flex items-center justify-between border-b-2 border-zinc-800 bg-black px-4 py-3">
-            <div className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+        <div className="border-2 border-[var(--theme-terminal-green)] bg-black m-6">
+          <div className="flex items-center justify-between border-b-2 border-zinc-800 bg-zinc-950 px-4 py-3">
+            <div className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-[var(--theme-terminal-green)]">
               usage.sh
             </div>
             <Button
@@ -163,10 +179,10 @@ export default function RepositorySetup() {
             </Button>
           </div>
           <div className="overflow-x-auto">
-            <pre className="p-6 font-mono text-sm text-[var(--theme-terminal-green)]">
-              sudo dnf clean all{"\n"}
-              sudo dnf makecache{"\n"}
-              {installCommand}
+            <pre className="p-6 font-mono text-sm leading-7">
+              <div><span className="text-[var(--theme-accent-orange)]">$</span> <span className="text-cyan-400">sudo</span> <span className="text-zinc-100">dnf clean all</span></div>
+              <div><span className="text-[var(--theme-accent-orange)]">$</span> <span className="text-cyan-400">sudo</span> <span className="text-zinc-100">dnf makecache</span></div>
+              <div><span className="text-[var(--theme-accent-orange)]">$</span> <span className="text-cyan-400">sudo</span> <span className="text-zinc-100">dnf install</span> <span className="text-[var(--theme-terminal-green)]">&lt;package-name&gt;</span></div>
             </pre>
           </div>
         </div>

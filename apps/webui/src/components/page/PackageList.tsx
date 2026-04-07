@@ -6,9 +6,12 @@ import {
   faTrash,
   faFolderOpen,
 } from "@fortawesome/free-solid-svg-icons";
-import api, { ApiClientError } from "../../lib/api";
+import api from "../../lib/api";
 import { summarizePackageAction } from "../../lib/package-actions";
-import type { PackageResponse } from "../../lib/types";
+import type {
+  PackageResponse,
+  RefreshAllPackagesProgressView,
+} from "../../lib/types";
 import AddPackageModal from "../package/AddPackageModal";
 import ErrorMessage from "../common/ErrorMessage";
 import LoadingBlock from "../ui/LoadingBlock";
@@ -17,6 +20,7 @@ import Badge from "../ui/Badge";
 import Button from "../ui/Button";
 import Select from "../ui/Select";
 import PageHeader from "../ui/PageHeader";
+import ProgressOverlayDialog from "../ui/ProgressOverlayDialog";
 
 export default function PackageList() {
   const [packages, setPackages] = useState<PackageResponse[]>([]);
@@ -44,6 +48,13 @@ export default function PackageList() {
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [refreshingAll, setRefreshingAll] = useState(false);
+  const [refreshingPackageName, setRefreshingPackageName] = useState<string | null>(null);
+  const [refreshOverlayOpen, setRefreshOverlayOpen] = useState(false);
+  const [refreshOverlayTitle, setRefreshOverlayTitle] = useState("Refreshing packages");
+  const [refreshOverlayDetail, setRefreshOverlayDetail] = useState(
+    "Preparing package refresh…",
+  );
+  const [refreshOverlayProgress, setRefreshOverlayProgress] = useState(0);
   const pageSize = 50;
 
   async function load(
@@ -100,35 +111,70 @@ export default function PackageList() {
   }
 
   async function trigger(name: string, action: "refresh" | "rebuild") {
+    const isRefresh = action === "refresh";
+    if (isRefresh && refreshingPackageName === name) {
+      return;
+    }
+    if (isRefresh) {
+      setRefreshingPackageName(name);
+    }
     try {
       const response =
-        action === "refresh"
+        isRefresh
           ? await api.refreshPackage(name)
           : await api.rebuildPackage(name);
       alert(summarizePackageAction(response));
       await load();
     } catch (e) {
       alert(e instanceof Error ? e.message : `Failed to ${action} package`);
+    } finally {
+      if (isRefresh) {
+        setRefreshingPackageName((current) => (current === name ? null : current));
+      }
     }
   }
 
-  async function listAllEnabledPackageNames(): Promise<string[]> {
-    const names: string[] = [];
-    let nextOffset = 0;
-    const batchSize = 200;
-
-    while (true) {
-      const res = await api.listPackagesPage(batchSize, nextOffset, {
-        enabled: true,
-      });
-      names.push(...res.packages.map((entry) => entry.package.name));
-      if (!res.page.has_more) {
-        break;
-      }
-      nextOffset += batchSize;
+  function applyRefreshAllProgress(operation: RefreshAllPackagesProgressView) {
+    if (operation.state === "running") {
+      setRefreshOverlayTitle("Refreshing enabled packages");
+    } else if (operation.state === "failed") {
+      setRefreshOverlayTitle("Refresh all failed");
+    } else {
+      setRefreshOverlayTitle("Refresh all complete");
     }
 
-    return names;
+    if (operation.total_packages === 0) {
+      setRefreshOverlayProgress(operation.state === "running" ? 0 : 100);
+      setRefreshOverlayDetail(operation.message ?? "Preparing package refresh…");
+      return;
+    }
+
+    const progressPercent = Math.min(
+      100,
+      Math.round((operation.processed_packages / operation.total_packages) * 100),
+    );
+    setRefreshOverlayProgress(progressPercent);
+    const detail = [
+      `${operation.processed_packages}/${operation.total_packages} packages`,
+      `queued ${operation.queued_packages}`,
+      `skipped ${operation.skipped_packages}`,
+      `blocked ${operation.blocked_packages}`,
+      `failed ${operation.failed_packages}`,
+      `queued targets ${operation.queued_targets}`,
+      `skipped targets ${operation.skipped_targets}`,
+      `blocked targets ${operation.blocked_targets}`,
+    ].join(" · ");
+    setRefreshOverlayDetail(
+      operation.message ? `${detail} · ${operation.message}` : detail,
+    );
+  }
+
+  async function pollRefreshAllProgress() {
+    const progress = await api.getRefreshAllPackagesProgress();
+    if (!progress.operation) {
+      return;
+    }
+    applyRefreshAllProgress(progress.operation);
   }
 
   async function handleRefreshAllPackages() {
@@ -139,65 +185,31 @@ export default function PackageList() {
       return;
     }
 
+    let progressTicker: number | null = null;
     try {
       setRefreshingAll(true);
-      const packageNames = await listAllEnabledPackageNames();
-      if (packageNames.length === 0) {
-        alert("No enabled packages found to refresh.");
-        return;
-      }
-
-      let queuedPackages = 0;
-      let skippedPackages = 0;
-      let blockedPackages = 0;
-      let failedPackages = 0;
-      let queuedTargets = 0;
-      let skippedTargets = 0;
-      let blockedTargets = 0;
-
-      for (const packageName of packageNames) {
-        try {
-          const response = await api.refreshPackage(packageName);
-          queuedPackages += 1;
-          for (const result of response.results) {
-            if (result.disposition === "queued") {
-              queuedTargets += 1;
-            } else if (result.disposition === "skipped") {
-              skippedTargets += 1;
-            } else if (result.disposition === "blocked") {
-              blockedTargets += 1;
-            }
-          }
-        } catch (e) {
-          if (e instanceof ApiClientError) {
-            const message = e.error.message.toLowerCase();
-            if (message.includes("no source changes")) {
-              skippedPackages += 1;
-            } else if (message.includes("already queued")) {
-              blockedPackages += 1;
-            } else {
-              failedPackages += 1;
-            }
-          } else {
-            failedPackages += 1;
-          }
-        }
-      }
-
-      alert(
-        [
-          `Refresh all complete for ${packageNames.length} package(s).`,
-          `Queued packages: ${queuedPackages}`,
-          `Skipped packages: ${skippedPackages}`,
-          `Blocked packages: ${blockedPackages}`,
-          `Failed packages: ${failedPackages}`,
-          `Queued targets: ${queuedTargets}`,
-          `Skipped targets: ${skippedTargets}`,
-          `Blocked targets: ${blockedTargets}`,
-        ].join("\n"),
-      );
+      setError(null);
+      setRefreshOverlayOpen(true);
+      setRefreshOverlayProgress(0);
+      setRefreshOverlayTitle("Refreshing enabled packages");
+      setRefreshOverlayDetail("Preparing package refresh…");
+      progressTicker = window.setInterval(() => {
+        void pollRefreshAllProgress().catch(() => undefined);
+      }, 500);
+      await pollRefreshAllProgress().catch(() => undefined);
+      const response = await api.refreshAllPackages();
+      applyRefreshAllProgress(response.operation);
+      await pollRefreshAllProgress().catch(() => undefined);
       await load();
+    } catch (e) {
+      const message =
+        e instanceof Error ? e.message : "Failed to refresh enabled packages";
+      setRefreshOverlayTitle("Refresh all failed");
+      setRefreshOverlayDetail(message);
     } finally {
+      if (progressTicker !== null) {
+        window.clearInterval(progressTicker);
+      }
       setRefreshingAll(false);
     }
   }
@@ -298,6 +310,8 @@ export default function PackageList() {
               onRefresh={(name) => void trigger(name, "refresh")}
               onRebuild={(name) => void trigger(name, "rebuild")}
               onDelete={(name) => void handleDelete(name)}
+              refreshing={refreshingPackageName === entry.package.name}
+              refreshDisabled={refreshingAll}
             />
           ))}
         </div>
@@ -337,6 +351,15 @@ export default function PackageList() {
           }}
         />
       )}
+
+      <ProgressOverlayDialog
+        open={refreshOverlayOpen}
+        title={refreshOverlayTitle}
+        detail={refreshOverlayDetail}
+        progress={refreshOverlayProgress}
+        onClose={() => setRefreshOverlayOpen(false)}
+        closeDisabled={refreshingAll}
+      />
     </div>
   );
 }
@@ -346,9 +369,18 @@ interface PackageCardProps {
   onRefresh: (name: string) => void;
   onRebuild: (name: string) => void;
   onDelete: (name: string) => void;
+  refreshing: boolean;
+  refreshDisabled: boolean;
 }
 
-function PackageCard({ entry, onRefresh, onRebuild, onDelete }: PackageCardProps) {
+function PackageCard({
+  entry,
+  onRefresh,
+  onRebuild,
+  onDelete,
+  refreshing,
+  refreshDisabled,
+}: PackageCardProps) {
   const pkg = entry.package;
   const status = pkg.enabled
     ? entry.builds_pending || entry.builds_running
@@ -410,9 +442,16 @@ function PackageCard({ entry, onRefresh, onRebuild, onDelete }: PackageCardProps
       </div>
 
       <div className="flex flex-wrap gap-2 border-t-2 border-zinc-800 bg-black px-6 py-4">
-        <Button variant="secondary" size="sm" onClick={() => onRefresh(pkg.name)}>
-          <FaIcon icon={faRotate} className="mr-2" />
-          Refresh
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => onRefresh(pkg.name)}
+          disabled={refreshDisabled || refreshing}
+          aria-busy={refreshing || undefined}
+        >
+          <FaIcon icon={faRotate} className={refreshing ? "mr-2 animate-spin" : "mr-2"} />
+          {refreshing ? "Refreshing…" : "Refresh"}
         </Button>
         <Button variant="secondary" size="sm" onClick={() => onRebuild(pkg.name)}>
           <FaIcon icon={faHammer} className="mr-2" />

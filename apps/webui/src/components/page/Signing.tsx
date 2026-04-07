@@ -7,6 +7,7 @@ import Button from "../ui/Button";
 import FaIcon from "../ui/FaIcon";
 import LoadingBlock from "../ui/LoadingBlock";
 import PageHeader from "../ui/PageHeader";
+import ProgressOverlayDialog from "../ui/ProgressOverlayDialog";
 
 export default function Signing() {
   const importFileRef = useRef<HTMLInputElement | null>(null);
@@ -105,7 +106,6 @@ export default function Signing() {
     } finally {
       window.clearInterval(progressTicker);
       setOverlayProgress(100);
-      window.setTimeout(() => setOverlayOpen(false), 250);
       setSaving(false);
     }
   }
@@ -393,31 +393,14 @@ export default function Signing() {
         </article>
       </section>
 
-      {overlayOpen ? (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 p-6">
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="w-full max-w-xl border-2 border-white bg-black p-6 shadow-[8px_8px_0_rgba(255,255,255,0.25)]"
-          >
-            <h3 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
-              {overlayTitle}
-            </h3>
-            <p className="mt-3 font-mono text-xs uppercase tracking-[0.16em] text-zinc-400">
-              {overlayDetail}
-            </p>
-            <div className="mt-4 h-3 w-full overflow-hidden border border-zinc-600 bg-zinc-900">
-              <div
-                className="h-full bg-[var(--theme-terminal-green)] transition-[width] duration-300"
-                style={{ width: `${overlayProgress}%` }}
-              />
-            </div>
-            <p className="mt-2 text-right font-mono text-xs text-zinc-300">
-              {overlayProgress}%
-            </p>
-          </div>
-        </div>
-      ) : null}
+      <ProgressOverlayDialog
+        open={overlayOpen}
+        title={overlayTitle}
+        detail={overlayDetail}
+        progress={overlayProgress}
+        onClose={() => setOverlayOpen(false)}
+        closeDisabled={saving}
+      />
     </div>
   );
 }

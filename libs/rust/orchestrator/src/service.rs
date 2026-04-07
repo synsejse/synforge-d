@@ -17,7 +17,10 @@ use crate::worker_socket::start_worker_listener;
 use crate::workers::DockerWorkerLauncher;
 use serde_json::Value;
 use synforge_core::{
-    api::{MockChrootListResponse, PageInfo, RepoSigningReconcileProgressView},
+    api::{
+        MockChrootListResponse, PageInfo, RefreshAllPackagesProgressView,
+        RepoSigningReconcileProgressView,
+    },
     config::DaemonConfig,
     constants::DEFAULT_DAEMON_WORKER_LISTEN_ADDR,
     model::UserPermission,
@@ -51,6 +54,7 @@ pub struct SynforgeService {
     queue_tx: mpsc::Sender<crate::scheduler::QueuedBuild>,
     shutdown_tx: watch::Sender<bool>,
     mock_chroot_cache: Arc<Mutex<MockChrootCacheState>>,
+    refresh_all_packages_progress: Arc<Mutex<Option<RefreshAllPackagesProgressView>>>,
     signing_reconcile_progress: Arc<Mutex<Option<RepoSigningReconcileProgressView>>>,
 }
 
@@ -168,6 +172,7 @@ impl SynforgeService {
             queue_tx,
             shutdown_tx,
             mock_chroot_cache: Arc::new(Mutex::new(MockChrootCacheState::default())),
+            refresh_all_packages_progress: Arc::new(Mutex::new(None)),
             signing_reconcile_progress: Arc::new(Mutex::new(None)),
         });
         start_worker_listener(

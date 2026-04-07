@@ -121,6 +121,7 @@ fn required_api_permission(method: &Method, path: &str) -> UserPermission {
             UserPermission::Write
         }
         (&Method::POST, "/packages")
+        | (&Method::POST, "/packages/refresh-all")
         | (&Method::POST, "/repositories/browse")
         | (&Method::POST, "/jobs/prune-failed")
         | (&Method::POST, "/config/runtime") => UserPermission::Write,

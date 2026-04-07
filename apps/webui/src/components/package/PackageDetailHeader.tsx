@@ -1,10 +1,12 @@
 import { faArrowLeft, faHammer, faRotate, faTrash } from "@fortawesome/free-solid-svg-icons";
+import Button from "../ui/Button";
 import FaIcon from "../ui/FaIcon";
 
 interface PackageDetailHeaderProps {
   packageName: string;
   description: string;
   deleting: boolean;
+  refreshing: boolean;
   onRefresh: () => void;
   onRebuild: () => void;
   onDelete: () => void;
@@ -14,6 +16,7 @@ export default function PackageDetailHeader({
   packageName,
   description,
   deleting,
+  refreshing,
   onRefresh,
   onRebuild,
   onDelete,
@@ -42,13 +45,17 @@ export default function PackageDetailHeader({
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <button
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
             onClick={onRefresh}
-            className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-100 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
+            disabled={deleting || refreshing}
+            aria-busy={refreshing || undefined}
           >
-            <FaIcon icon={faRotate} className="mr-2" />
-            Refresh
-          </button>
+            <FaIcon icon={faRotate} className={refreshing ? "mr-2 animate-spin" : "mr-2"} />
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </Button>
           <button
             onClick={onRebuild}
             className="border-2 border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72]"

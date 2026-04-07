@@ -140,6 +140,42 @@ pub struct PackageActionResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum RefreshAllPackagesState {
+    Running,
+    Completed,
+    Failed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct RefreshAllPackagesProgressView {
+    pub operation_id: uuid::Uuid,
+    pub state: RefreshAllPackagesState,
+    pub total_packages: u64,
+    pub processed_packages: u64,
+    pub queued_packages: u64,
+    pub skipped_packages: u64,
+    pub blocked_packages: u64,
+    pub failed_packages: u64,
+    pub queued_targets: u64,
+    pub skipped_targets: u64,
+    pub blocked_targets: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct RefreshAllPackagesProgressResponse {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub operation: Option<RefreshAllPackagesProgressView>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct RefreshAllPackagesResponse {
+    pub operation: RefreshAllPackagesProgressView,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct PackageResponse {
     pub package: PackageDefinition,
     pub state: PackageRuntimeState,

@@ -25,9 +25,10 @@ pub(crate) use logs::{
     get_job_log_chunk_by_source, get_job_log_manifest, get_job_log_meta_by_source,
 };
 pub(crate) use packages::{
-    create_package, delete_package, get_package, get_package_builds, list_mock_chroots,
-    list_packages, trigger_rebuild, trigger_refresh, trigger_target_rebuild,
-    trigger_target_refresh, update_package,
+    create_package, delete_package, get_package, get_package_builds,
+    get_refresh_all_packages_progress, list_mock_chroots, list_packages, trigger_rebuild,
+    trigger_refresh, trigger_refresh_all_packages, trigger_target_rebuild, trigger_target_refresh,
+    update_package,
 };
 pub(crate) use repo::{browse_repository, get_repo_inventory, get_repo_summary};
 pub(crate) use session::{get_session, login_session, logout_session};
@@ -54,6 +55,11 @@ pub fn router(_state: AppState) -> Router<AppState> {
         .route("/packages/{name}/builds", get(get_package_builds))
         .route("/packages/{name}/rebuild", post(trigger_rebuild))
         .route("/packages/{name}/refresh", post(trigger_refresh))
+        .route("/packages/refresh-all", post(trigger_refresh_all_packages))
+        .route(
+            "/packages/refresh-all/progress",
+            get(get_refresh_all_packages_progress),
+        )
         .route(
             "/packages/{name}/targets/{mock_chroot}/rebuild",
             post(trigger_target_rebuild),

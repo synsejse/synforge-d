@@ -8,6 +8,8 @@ import type {
   PackageBuildHistoryResponse,
   PackageListResponse,
   PackageResponse,
+  RefreshAllPackagesProgressResponse,
+  RefreshAllPackagesResponse,
   RepoInventoryResponse,
   RepoSummaryResponse,
   UpdatePackageRequest,
@@ -128,6 +130,14 @@ export class PackageApiClient extends BaseApiClient {
       `/api/v1/packages/${encodeURIComponent(name)}/refresh`,
       {},
     );
+  }
+
+  async refreshAllPackages(): Promise<RefreshAllPackagesResponse> {
+    return this.request("POST", "/api/v1/packages/refresh-all", {});
+  }
+
+  async getRefreshAllPackagesProgress(): Promise<RefreshAllPackagesProgressResponse> {
+    return this.request("GET", "/api/v1/packages/refresh-all/progress");
   }
 
   async rebuildPackageTarget(

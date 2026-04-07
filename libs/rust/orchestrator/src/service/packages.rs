@@ -9,8 +9,11 @@ use synforge_core::{
         BrowseRepositoryRequest, BrowseRepositoryResponse, CreatePackageRequest,
         MockChrootListResponse, PackageActionResponse, PackageActionTargetResult,
         PackageBuildHistoryResponse, PackageBuildInventoryEntry, PackageListResponse,
-        PackageResponse, RebuildRequest, RefreshRequest, UpdatePackageRequest,
+        PackageResponse, RebuildRequest, RefreshAllPackagesProgressResponse,
+        RefreshAllPackagesProgressView, RefreshAllPackagesResponse, RefreshAllPackagesState,
+        RefreshRequest, UpdatePackageRequest,
     },
+    error::SynforgeError,
     model::{BuildStatus, BuildTrigger, PublishedRepoFile, now_utc},
     package::parse_mock_chroot,
 };
@@ -42,6 +45,149 @@ impl SynforgeService {
 
     pub async fn get_package(&self, package_name: &str) -> anyhow::Result<PackageResponse> {
         self.registry.get_package(package_name).await
+    }
+
+    pub async fn get_refresh_all_packages_progress(
+        &self,
+    ) -> anyhow::Result<RefreshAllPackagesProgressResponse> {
+        let progress = self.refresh_all_packages_progress.lock().await.clone();
+        Ok(RefreshAllPackagesProgressResponse {
+            operation: progress,
+        })
+    }
+
+    pub async fn trigger_refresh_all_packages(&self) -> anyhow::Result<RefreshAllPackagesResponse> {
+        {
+            let progress = self.refresh_all_packages_progress.lock().await;
+            if let Some(operation) = progress.as_ref()
+                && operation.state == RefreshAllPackagesState::Running
+            {
+                return Err(anyhow::anyhow!(SynforgeError::Conflict(
+                    "refresh-all operation is already running".to_string()
+                )));
+            }
+        }
+
+        let operation_id = Uuid::now_v7();
+        let mut progress = RefreshAllPackagesProgressView {
+            operation_id,
+            state: RefreshAllPackagesState::Running,
+            total_packages: 0,
+            processed_packages: 0,
+            queued_packages: 0,
+            skipped_packages: 0,
+            blocked_packages: 0,
+            failed_packages: 0,
+            queued_targets: 0,
+            skipped_targets: 0,
+            blocked_targets: 0,
+            message: Some("collecting enabled packages".to_string()),
+        };
+        self.update_refresh_all_packages_progress(progress.clone())
+            .await;
+
+        let package_names = match self.list_all_enabled_package_names().await {
+            Ok(package_names) => package_names,
+            Err(error) => {
+                progress.state = RefreshAllPackagesState::Failed;
+                progress.message = Some(error.to_string());
+                self.update_refresh_all_packages_progress(progress).await;
+                return Err(error);
+            }
+        };
+
+        progress.total_packages = package_names.len() as u64;
+        progress.message = None;
+        self.update_refresh_all_packages_progress(progress.clone())
+            .await;
+
+        if package_names.is_empty() {
+            progress.state = RefreshAllPackagesState::Completed;
+            progress.message = Some("no enabled packages found to refresh".to_string());
+            self.update_refresh_all_packages_progress(progress.clone())
+                .await;
+            return Ok(RefreshAllPackagesResponse {
+                operation: progress,
+            });
+        }
+
+        for package_name in package_names {
+            match self
+                .scheduler
+                .enqueue_package_action(
+                    &package_name,
+                    BuildTrigger::ManualRefresh,
+                    false,
+                    &self.queue_tx,
+                )
+                .await
+            {
+                Ok(response) => {
+                    let mut package_has_queued = false;
+                    let mut package_has_skipped = false;
+                    let mut package_has_blocked = false;
+                    for result in response.results {
+                        match result.disposition {
+                            synforge_core::api::PackageActionDisposition::Queued => {
+                                progress.queued_targets += 1;
+                                package_has_queued = true;
+                            }
+                            synforge_core::api::PackageActionDisposition::Skipped => {
+                                progress.skipped_targets += 1;
+                                package_has_skipped = true;
+                            }
+                            synforge_core::api::PackageActionDisposition::Blocked => {
+                                progress.blocked_targets += 1;
+                                package_has_blocked = true;
+                            }
+                        }
+                    }
+
+                    if package_has_queued {
+                        progress.queued_packages += 1;
+                    } else if package_has_blocked {
+                        progress.blocked_packages += 1;
+                    } else if package_has_skipped {
+                        progress.skipped_packages += 1;
+                    } else {
+                        progress.skipped_packages += 1;
+                    }
+                }
+                Err(error) => {
+                    progress.failed_packages += 1;
+                    if progress.message.is_none() {
+                        progress.message = Some(format!(
+                            "first failed package: {} ({})",
+                            package_name, error
+                        ));
+                    }
+                    warn!(
+                        package_name,
+                        error = %error,
+                        "refresh-all package action failed"
+                    );
+                }
+            }
+
+            progress.processed_packages += 1;
+            self.update_refresh_all_packages_progress(progress.clone())
+                .await;
+        }
+
+        progress.state = RefreshAllPackagesState::Completed;
+        if progress.failed_packages == 0 {
+            progress.message = None;
+        } else {
+            progress.message = Some(format!(
+                "{} package(s) failed to refresh",
+                progress.failed_packages
+            ));
+        }
+        self.update_refresh_all_packages_progress(progress.clone())
+            .await;
+        Ok(RefreshAllPackagesResponse {
+            operation: progress,
+        })
     }
 
     pub async fn get_package_build_history(
@@ -364,6 +510,31 @@ impl SynforgeService {
             "manual target rebuild scheduled"
         );
         Ok(result)
+    }
+
+    async fn list_all_enabled_package_names(&self) -> anyhow::Result<Vec<String>> {
+        const PAGE_SIZE: usize = 200;
+        let mut package_names = Vec::new();
+        let mut offset = 0;
+
+        loop {
+            let page = self
+                .store
+                .list_packages(PAGE_SIZE, offset, None, Some(true))
+                .await?;
+            if page.is_empty() {
+                break;
+            }
+            offset += page.len();
+            package_names.extend(page.into_iter().map(|entry| entry.package.name));
+        }
+
+        Ok(package_names)
+    }
+
+    async fn update_refresh_all_packages_progress(&self, progress: RefreshAllPackagesProgressView) {
+        let mut slot = self.refresh_all_packages_progress.lock().await;
+        *slot = Some(progress);
     }
 }
 

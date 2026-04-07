@@ -40,6 +40,12 @@ export type JobArtifactMetaResponse = ApiSchema["JobArtifactMetaResponse"];
 export type PackageActionDisposition = ApiSchema["PackageActionDisposition"];
 export type PackageActionTargetResult = ApiSchema["PackageActionTargetResult"];
 export type PackageActionResponse = ApiSchema["PackageActionResponse"];
+export type RefreshAllPackagesState = ApiSchema["RefreshAllPackagesState"];
+export type RefreshAllPackagesProgressView =
+  ApiSchema["RefreshAllPackagesProgressView"];
+export type RefreshAllPackagesProgressResponse =
+  ApiSchema["RefreshAllPackagesProgressResponse"];
+export type RefreshAllPackagesResponse = ApiSchema["RefreshAllPackagesResponse"];
 
 export type BuildJobListResponse = ApiSchema["BuildJobListResponse"];
 export type PackageBuildInventoryEntry = ApiSchema["PackageBuildInventoryEntry"];

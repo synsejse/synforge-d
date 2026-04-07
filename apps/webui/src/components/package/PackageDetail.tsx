@@ -68,6 +68,7 @@ export default function PackageDetail({ packageName }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
   const [availableChroots, setAvailableChroots] = useState<string[]>([]);
   const [showSpecPicker, setShowSpecPicker] = useState(false);
@@ -259,6 +260,12 @@ export default function PackageDetail({ packageName }: Props) {
   }
 
   async function trigger(action: "rebuild" | "refresh") {
+    if (action === "refresh" && refreshing) {
+      return;
+    }
+    if (action === "refresh") {
+      setRefreshing(true);
+    }
     try {
       const response =
         action === "rebuild"
@@ -268,6 +275,10 @@ export default function PackageDetail({ packageName }: Props) {
       await refreshVisibleData();
     } catch (e) {
       setError(e instanceof Error ? e.message : `Failed to ${action}`);
+    } finally {
+      if (action === "refresh") {
+        setRefreshing(false);
+      }
     }
   }
 
@@ -361,6 +372,7 @@ export default function PackageDetail({ packageName }: Props) {
         packageName={pkg.package.name}
         description={pkg.package.description || "No description"}
         deleting={deleting}
+        refreshing={refreshing}
         onRefresh={() => void trigger("refresh")}
         onRebuild={() => void trigger("rebuild")}
         onDelete={() => void handleDelete()}

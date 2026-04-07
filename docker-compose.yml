@@ -43,6 +43,7 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: mysql://${SYNFORGE_DB_USER:-synforge}:${SYNFORGE_DB_PASSWORD:?set SYNFORGE_DB_PASSWORD in .env}@mariadb:3306/${SYNFORGE_DB_NAME:-synforge}
+      SYNFORGE_WORKER_JOBS_PATH: ${SYNFORGE_WORKER_JOBS_PATH:-./data/worker-jobs}
     expose:
       - "8080"
       - "8090"

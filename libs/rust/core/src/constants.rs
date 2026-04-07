@@ -1,4 +1,5 @@
 pub const DATABASE_URL_ENV_VAR: &str = "DATABASE_URL";
+pub const WORKER_JOBS_HOST_PATH_ENV_VAR: &str = "SYNFORGE_WORKER_JOBS_PATH";
 pub const DEFAULT_LOG_ENV_FILTER: &str = "info,synforge=debug";
 
 pub const DEFAULT_DAEMON_LISTEN_ADDR: &str = "0.0.0.0:8080";

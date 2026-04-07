@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     constants::{
         DAEMON_RUNTIME_ROOT, DAEMON_WORKER_JOBS_ROOT, DATABASE_URL_ENV_VAR,
-        DEFAULT_DAEMON_LISTEN_ADDR, DEFAULT_DAEMON_PUBLIC_BASE_URL,
+        DEFAULT_DAEMON_LISTEN_ADDR, DEFAULT_DAEMON_PUBLIC_BASE_URL, WORKER_JOBS_HOST_PATH_ENV_VAR,
     },
     error::SynforgeError,
     runtime::RuntimePaths,
@@ -234,6 +234,15 @@ impl DaemonConfig {
 
     pub fn worker_jobs_root(&self) -> PathBuf {
         PathBuf::from(DAEMON_WORKER_JOBS_ROOT)
+    }
+
+    /// Returns the host-side path for worker jobs, used for Docker bind mounts.
+    /// This is required when daemon runs in a container but spawns workers via Docker API.
+    pub fn worker_jobs_host_path(&self) -> Option<PathBuf> {
+        std::env::var(WORKER_JOBS_HOST_PATH_ENV_VAR)
+            .ok()
+            .filter(|s| !s.is_empty())
+            .map(PathBuf::from)
     }
 }
 

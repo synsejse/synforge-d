@@ -226,29 +226,45 @@ impl DockerWorkerLauncher {
         let WorkerAction::Build(_) = &payload.action else {
             return Ok(None);
         };
-        let worker_jobs_root = config.worker_jobs_root();
 
-        let host_mock_root = worker_jobs_root
-            .join(payload.job_id.to_string())
-            .join("mock");
+        // Use host path for bind mounts (required when daemon is containerized)
+        let Some(host_jobs_root) = config.worker_jobs_host_path() else {
+            warn!(
+                job_id = %payload.job_id,
+                "SYNFORGE_WORKER_JOBS_HOST_PATH not set; workers will run without dedicated mock bind mounts"
+            );
+            return Ok(None);
+        };
+
+        let host_mock_root = host_jobs_root.join(payload.job_id.to_string()).join("mock");
         let host_mock_lib = host_mock_root.join("lib");
         let host_mock_cache = host_mock_root.join("cache");
-        tokio::fs::create_dir_all(&host_mock_lib).await?;
-        tokio::fs::create_dir_all(&host_mock_cache).await?;
 
-        let container_mock_root = payload.workspace_dir.join("mock");
-        let container_mock_lib = container_mock_root.join("lib");
-        let container_mock_cache = container_mock_root.join("cache");
+        // Create directories in container's view of the path
+        let container_jobs_root = config.worker_jobs_root();
+        let container_mock_root = container_jobs_root
+            .join(payload.job_id.to_string())
+            .join("mock");
+        let container_mock_lib_dir = container_mock_root.join("lib");
+        let container_mock_cache_dir = container_mock_root.join("cache");
+        tokio::fs::create_dir_all(&container_mock_lib_dir).await?;
+        tokio::fs::create_dir_all(&container_mock_cache_dir).await?;
+
+        // Worker container mount targets
+        let worker_mock_root = payload.workspace_dir.join("mock");
+        let worker_mock_lib = worker_mock_root.join("lib");
+        let worker_mock_cache = worker_mock_root.join("cache");
+
         Ok(Some(vec![
             format!(
                 "{}:{}:rw,z",
                 host_mock_lib.display(),
-                container_mock_lib.display()
+                worker_mock_lib.display()
             ),
             format!(
                 "{}:{}:rw,z",
                 host_mock_cache.display(),
-                container_mock_cache.display()
+                worker_mock_cache.display()
             ),
         ]))
     }

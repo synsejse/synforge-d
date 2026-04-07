@@ -755,8 +755,8 @@ const navItems = [
                         const input = document.createElement("input");
                         input.type =
                             field.type === "number" ? "number" : "text";
-                        // Auto-detect public_base_url from current URL
-                        const defaultValue = field.key === "public_base_url" && !field.default_value
+                        // Auto-detect public_base_url from current URL (always override)
+                        const defaultValue = field.key === "public_base_url"
                             ? window.location.origin
                             : String(field.default_value ?? "");
                         input.value = defaultValue;

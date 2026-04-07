@@ -755,7 +755,11 @@ const navItems = [
                         const input = document.createElement("input");
                         input.type =
                             field.type === "number" ? "number" : "text";
-                        input.value = String(field.default_value ?? "");
+                        // Auto-detect public_base_url from current URL
+                        const defaultValue = field.key === "public_base_url" && !field.default_value
+                            ? window.location.origin
+                            : String(field.default_value ?? "");
+                        input.value = defaultValue;
                         input.required = Boolean(field.required);
                         input.className =
                             "w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-100 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]";

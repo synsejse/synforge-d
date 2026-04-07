@@ -4,7 +4,8 @@ use std::process::Stdio;
 use anyhow::Context;
 use sha2::{Digest, Sha256};
 use synforge_core::{
-    config::{DEFAULT_SIGNING_PUBLIC_KEY_NAME, DaemonConfig},
+    config::DaemonConfig,
+    constants::DEFAULT_SIGNING_PUBLIC_KEY_NAME,
     model::{ArtifactKind, ArtifactSignature, ArtifactSigningStatus, WorkerBuildResult, now_utc},
     package::PackageDefinition,
 };

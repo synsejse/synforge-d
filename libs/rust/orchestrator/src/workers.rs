@@ -8,6 +8,7 @@ use bollard::query_parameters::CreateContainerOptionsBuilder;
 use futures_util::StreamExt;
 use synforge_core::{
     config::DaemonConfig,
+    constants::DEFAULT_DAEMON_WORKER_SOCKET_PORT,
     model::{WorkerAction, WorkerJobPayload, WorkerResult},
 };
 use tracing::{info, warn};
@@ -56,9 +57,15 @@ impl DockerWorkerLauncher {
         tokio::fs::create_dir_all(&payload.workspace_dir).await?;
         tokio::fs::create_dir_all(config.runtime_paths().job_logs_dir(payload.job_id)).await?;
         tokio::fs::create_dir_all(config.runtime_paths().git_mirror_root()).await?;
+        let repo_url = payload_repo_url(payload).map(str::to_string);
+        let mirror_key = repo_url.as_deref().map(GitMirrorCache::mirror_key);
+        let mut worker_payload = payload.clone();
+        worker_payload.git_mirror_reference = mirror_key
+            .as_ref()
+            .map(|key| format!("{WORKER_MIRROR_MOUNT_PATH}/{key}"));
         let session = self
             .sessions
-            .create_session(payload.job_id, payload.clone())
+            .create_session(payload.job_id, worker_payload)
             .await?;
         info!(
             job_id = %payload.job_id,
@@ -67,8 +74,6 @@ impl DockerWorkerLauncher {
         );
 
         let container_name = format!("synforge-worker-{}", payload.job_id);
-        let repo_url = payload_repo_url(payload).map(str::to_string);
-        let mirror_key = repo_url.as_deref().map(GitMirrorCache::mirror_key);
         let mirror_bind = format!(
             "{}:{}:ro",
             config.runtime_paths().git_mirror_root().display(),
@@ -91,11 +96,9 @@ impl DockerWorkerLauncher {
                 ),
                 worker_container_body(
                     config,
-                    payload,
                     &session.worker_id,
                     self.network_mode.clone(),
                     Some(vec![mirror_bind.clone()]),
-                    mirror_key.clone(),
                 ),
             )
             .await;
@@ -118,10 +121,8 @@ impl DockerWorkerLauncher {
                         ),
                         worker_container_body(
                             config,
-                            payload,
                             &session.worker_id,
                             self.network_mode.clone(),
-                            None,
                             None,
                         ),
                     )
@@ -172,7 +173,15 @@ impl DockerWorkerLauncher {
             None::<bollard::query_parameters::WaitContainerOptions>,
         );
         while let Some(next) = wait.next().await {
-            next?;
+            if let Err(error) = next {
+                warn!(
+                    job_id = %payload.job_id,
+                    container_id = %container_id,
+                    error = %error,
+                    "worker container wait stream returned error; continuing to uploaded result check"
+                );
+                break;
+            }
         }
         info!(
             job_id = %payload.job_id,
@@ -242,36 +251,23 @@ impl DockerWorkerLauncher {
     }
 }
 
-fn worker_env(payload: &WorkerJobPayload, config: &DaemonConfig, worker_id: &str) -> Vec<String> {
-    vec![
-        format!("SYNFORGE_WORKER_ID={worker_id}"),
-        format!("SYNFORGE_WORKER_CONNECT_ADDR={}:8090", daemon_hostname()),
-        format!(
-            "SYNFORGE_WORKER_SOCKET_TIMEOUT_SECONDS={}",
-            config.worker_socket_timeout_seconds
-        ),
-        format!("SYNFORGE_JOB_ID={}", payload.job_id),
-    ]
-}
-
 fn worker_container_body(
     config: &DaemonConfig,
-    payload: &WorkerJobPayload,
     worker_id: &str,
     network_mode: Option<String>,
     binds: Option<Vec<String>>,
-    mirror_key: Option<String>,
 ) -> ContainerCreateBody {
-    let mut env = worker_env(payload, config, worker_id);
-    if let Some(mirror_key) = mirror_key {
-        env.push(format!(
-            "SYNFORGE_GIT_MIRROR_ROOT={WORKER_MIRROR_MOUNT_PATH}"
-        ));
-        env.push(format!("SYNFORGE_GIT_MIRROR_KEY={mirror_key}"));
-    }
+    let cmd = vec![
+        "--worker-id".to_string(),
+        worker_id.to_string(),
+        "--connect-addr".to_string(),
+        format!("daemon:{}", DEFAULT_DAEMON_WORKER_SOCKET_PORT),
+        "--socket-timeout-seconds".to_string(),
+        config.worker_socket_timeout_seconds.to_string(),
+    ];
     ContainerCreateBody {
         image: Some(config.worker_image.clone()),
-        env: Some(env),
+        cmd: Some(cmd),
         host_config: Some(HostConfig {
             auto_remove: Some(true),
             privileged: Some(true),
@@ -285,16 +281,8 @@ fn worker_container_body(
     }
 }
 
-fn daemon_hostname() -> String {
-    std::env::var("HOSTNAME")
-        .ok()
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-        .unwrap_or_else(|| "daemon".to_string())
-}
-
 async fn detect_daemon_network(docker: &Docker) -> Option<String> {
-    let hostname = std::env::var("HOSTNAME").ok()?;
+    let hostname = daemon_container_hostname()?;
     let inspect = docker
         .inspect_container(
             &hostname,
@@ -310,6 +298,13 @@ async fn detect_daemon_network(docker: &Docker) -> Option<String> {
         })
         .cloned()
         .or_else(|| networks.keys().next().cloned())
+}
+
+fn daemon_container_hostname() -> Option<String> {
+    std::fs::read_to_string("/etc/hostname")
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
 }
 
 fn job_descriptor(payload: &WorkerJobPayload) -> (&'static str, &str, &str) {

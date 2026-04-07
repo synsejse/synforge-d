@@ -19,6 +19,7 @@ use serde_json::Value;
 use synforge_core::{
     api::{MockChrootListResponse, PageInfo, RepoSigningReconcileProgressView},
     config::DaemonConfig,
+    constants::DEFAULT_DAEMON_WORKER_LISTEN_ADDR,
     model::UserPermission,
 };
 use tokio::sync::{Mutex, Semaphore, mpsc, watch};
@@ -26,7 +27,6 @@ use tokio_util::task::TaskTracker;
 use tracing::{error, info, warn};
 const DEFAULT_PAGE_SIZE: usize = 50;
 const MAX_PAGE_SIZE: usize = 200;
-const WORKER_LISTEN_ADDR: &str = "0.0.0.0:8090";
 
 mod cache;
 mod config;
@@ -171,14 +171,14 @@ impl SynforgeService {
             signing_reconcile_progress: Arc::new(Mutex::new(None)),
         });
         start_worker_listener(
-            WORKER_LISTEN_ADDR.to_string(),
+            DEFAULT_DAEMON_WORKER_LISTEN_ADDR.to_string(),
             service.store.clone(),
             service.sessions.clone(),
             service.task_tracker.clone(),
             shutdown_rx.clone(),
         );
         info!(
-            worker_listener = WORKER_LISTEN_ADDR,
+            worker_listener = DEFAULT_DAEMON_WORKER_LISTEN_ADDR,
             "worker socket listener started"
         );
         service.start_queue_runner(queue_rx, shutdown_rx.clone());

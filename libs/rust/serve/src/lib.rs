@@ -11,13 +11,15 @@ use crate::auth::middleware::{
 };
 pub(crate) use crate::auth::session::{clear_session_cookie, create_session_cookie};
 use crate::repo_files::{download_repo_file, repo_root};
-use crate::system_routes::{add_security_headers, healthz, readyz};
+use crate::system_routes::{healthz, readyz};
 use axum::http::StatusCode;
 use axum::http::header::{self, HeaderValue};
 use axum::middleware;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
+use axum_helmet::{Helmet, HelmetLayer};
+use helmet_core::{CrossOriginOpenerPolicy, ReferrerPolicy, XContentTypeOptions, XFrameOptions};
 use synforge_core::{api::ApiError, error::SynforgeError};
 use synforge_orchestrator::SynforgeService;
 use tower_http::trace::TraceLayer;
@@ -33,6 +35,13 @@ pub fn router(service: Arc<SynforgeService>) -> Router {
     let state = AppState {
         service: Arc::clone(&service),
     };
+    let security_layer: HelmetLayer = Helmet::new()
+        .add(XContentTypeOptions::nosniff())
+        .add(XFrameOptions::deny())
+        .add(ReferrerPolicy::no_referrer())
+        .add(CrossOriginOpenerPolicy::same_origin())
+        .try_into()
+        .expect("failed to construct HelmetLayer");
     let api =
         api::router(state.clone())
             .with_state(state.clone())
@@ -62,7 +71,7 @@ pub fn router(service: Arc<SynforgeService>) -> Router {
         .merge(docs)
         .nest("/api/v1", api)
         .nest("/repo", repo)
-        .layer(middleware::map_response(add_security_headers))
+        .layer(security_layer)
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }

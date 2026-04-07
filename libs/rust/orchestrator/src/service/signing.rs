@@ -324,7 +324,7 @@ impl SynforgeService {
         Ok(ExportRepoSigningPublicKeyResponse {
             key_id,
             fingerprint,
-            public_key_name: synforge_core::config::DEFAULT_SIGNING_PUBLIC_KEY_NAME.to_string(),
+            public_key_name: synforge_core::constants::DEFAULT_SIGNING_PUBLIC_KEY_NAME.to_string(),
             armored_public_key,
         })
     }

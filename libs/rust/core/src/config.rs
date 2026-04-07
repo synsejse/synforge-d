@@ -3,12 +3,14 @@ use std::path::PathBuf;
 use rand_core::{OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 
-use crate::{error::SynforgeError, runtime::RuntimePaths};
-
-pub const DEFAULT_SIGNING_PUBLIC_KEY_NAME: &str = "gpg.key";
+use crate::{
+    constants::{DATABASE_URL_ENV_VAR, DEFAULT_DAEMON_LISTEN_ADDR, DEFAULT_DAEMON_PUBLIC_BASE_URL},
+    error::SynforgeError,
+    runtime::RuntimePaths,
+};
 
 fn default_listen_addr() -> String {
-    "0.0.0.0:8080".to_string()
+    DEFAULT_DAEMON_LISTEN_ADDR.to_string()
 }
 
 fn default_runtime_root() -> PathBuf {
@@ -16,7 +18,7 @@ fn default_runtime_root() -> PathBuf {
 }
 
 fn default_database_url() -> String {
-    std::env::var("DATABASE_URL")
+    std::env::var(DATABASE_URL_ENV_VAR)
         .unwrap_or_else(|_| "mysql://synforge:synforge_dev@localhost:3306/synforge".to_string())
 }
 
@@ -49,7 +51,7 @@ fn default_git_operation_timeout_seconds() -> u64 {
 }
 
 fn default_public_base_url() -> String {
-    "http://localhost:8080".to_string()
+    DEFAULT_DAEMON_PUBLIC_BASE_URL.to_string()
 }
 
 fn default_mock_chroot_cache_ttl_seconds() -> u64 {
@@ -65,7 +67,7 @@ fn default_git_mirror_max_unused_seconds() -> u64 {
 }
 
 fn default_session_secret() -> String {
-    env_string("SYNFORGE_SESSION_SECRET").unwrap_or_else(generate_session_secret)
+    generate_session_secret()
 }
 
 fn default_signing_enabled() -> bool {
@@ -247,11 +249,4 @@ fn generate_session_secret() -> String {
     let mut bytes = [0u8; 32];
     OsRng.fill_bytes(&mut bytes);
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
-}
-
-fn env_string(name: &str) -> Option<String> {
-    std::env::var(name)
-        .ok()
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
 }

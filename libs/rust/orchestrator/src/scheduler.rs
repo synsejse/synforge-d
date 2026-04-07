@@ -69,7 +69,7 @@ impl BuildScheduler {
         queue_tx: &tokio::sync::mpsc::Sender<QueuedBuild>,
     ) -> anyhow::Result<()> {
         for package in self.registry.list_definitions().await? {
-            if !package.enabled || !package.source.polling_enabled() {
+            if !package.enabled || !package.source.poll {
                 continue;
             }
             if !self.package_is_due(&package.name, package.poll_interval_seconds) {
@@ -113,44 +113,48 @@ impl BuildScheduler {
         queue_tx: &tokio::sync::mpsc::Sender<QueuedBuild>,
     ) -> anyhow::Result<BuildJobResponse> {
         let package = self.registry.get_definition(package_name).await?;
-
-        let result = self
+        let plan = self
             .prepare_package_action(package, None, trigger, force)
-            .await;
+            .await?;
 
-        match result {
-            Ok(plan) => {
-                let package_name = plan.package_name;
-                let trigger = plan.trigger;
-                let jobs = plan.jobs;
-                let queued_builds = plan.queued_builds;
-                let queued_targets = queued_builds.len();
-                let response_job_id = jobs
-                    .first()
-                    .map(|job| job.id)
-                    .ok_or_else(|| anyhow::anyhow!("no build jobs were created"))?;
-
-                for job in &jobs {
-                    self.store.insert_job(job).await?;
-                }
-                for queued in queued_builds {
-                    if let Err(error) = queue_tx.send(queued).await {
-                        return Err(anyhow::anyhow!("failed to queue build: {}", error));
-                    }
-                }
-                info!(
-                    package_name = %package_name,
-                    trigger = ?trigger,
-                    queued_targets,
-                    created_jobs = jobs.len(),
-                    "scheduled package build jobs"
-                );
-                self.store.get_job(response_job_id).await?.ok_or_else(|| {
-                    anyhow::anyhow!(SynforgeError::NotFound(response_job_id.to_string()))
-                })
-            }
-            Err(error) => Err(error),
+        let (_, _, blocked_count) = count_dispositions(&plan.results);
+        if plan.queued_builds.is_empty() {
+            return if blocked_count > 0 {
+                Err(SchedulerError::AlreadyQueued(plan.package_name.clone()).into())
+            } else {
+                Err(SchedulerError::NoSourceChanges.into())
+            };
         }
+
+        let package_name = plan.package_name;
+        let trigger = plan.trigger;
+        let jobs = plan.jobs;
+        let queued_builds = plan.queued_builds;
+        let queued_targets = queued_builds.len();
+        let response_job_id = jobs
+            .first()
+            .map(|job| job.id)
+            .ok_or_else(|| anyhow::anyhow!("no build jobs were created"))?;
+
+        for job in &jobs {
+            self.store.insert_job(job).await?;
+        }
+        for queued in queued_builds {
+            if let Err(error) = queue_tx.send(queued).await {
+                return Err(anyhow::anyhow!("failed to queue build: {}", error));
+            }
+        }
+        info!(
+            package_name = %package_name,
+            trigger = ?trigger,
+            queued_targets,
+            created_jobs = jobs.len(),
+            "scheduled package build jobs"
+        );
+        self.store
+            .get_job(response_job_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(response_job_id.to_string())))
     }
 
     pub async fn enqueue_package_action(
@@ -270,7 +274,6 @@ impl BuildScheduler {
             None => package.mock_chroots.clone(),
         };
         let mut queued_chroots = Vec::new();
-        let mut blocked_by_active_job = false;
         let mut results = Vec::new();
         for mock_chroot in &build_chroots {
             if self
@@ -278,7 +281,6 @@ impl BuildScheduler {
                 .has_active_job_for_target(&package.name, mock_chroot)
                 .await?
             {
-                blocked_by_active_job = true;
                 results.push(PackageActionTargetResult {
                     package_name: package.name.clone(),
                     mock_chroot: mock_chroot.clone(),
@@ -306,13 +308,6 @@ impl BuildScheduler {
                 });
             }
         }
-        if queued_chroots.is_empty() {
-            if blocked_by_active_job {
-                return Err(SchedulerError::AlreadyQueued(package.name.clone()).into());
-            }
-            return Err(SchedulerError::NoSourceChanges.into());
-        }
-
         let updated_package = self
             .registry
             .materialize_inspected_source(

@@ -9,8 +9,10 @@ mod spec;
 use std::time::Duration;
 
 use synforge_core::{
+    constants::DEFAULT_WORKER_HEARTBEAT_INTERVAL_SECONDS,
     error::SynforgeError,
     model::{WorkerAction, WorkerBuildResult, WorkerJobPayload, WorkerResult},
+    validation::{PackageDefinitionValidator, Validator},
 };
 use tracing::{info, warn};
 
@@ -34,21 +36,20 @@ impl<E> WorkerRuntime<E>
 where
     E: BuildExecutor,
 {
-    pub async fn run_from_env(&self) -> anyhow::Result<WorkerResult> {
-        let worker_id = env_required("SYNFORGE_WORKER_ID")?;
-        let connect_addr =
-            env_string("SYNFORGE_WORKER_CONNECT_ADDR").unwrap_or_else(|| "daemon:8090".to_string());
-        let socket_timeout = env_u64("SYNFORGE_WORKER_SOCKET_TIMEOUT_SECONDS").unwrap_or(30);
+    pub async fn run_remote(
+        &self,
+        worker_id: &str,
+        connect_addr: &str,
+        socket_timeout_seconds: u64,
+    ) -> anyhow::Result<WorkerResult> {
         info!(
             worker_id,
-            connect_addr,
-            socket_timeout_seconds = socket_timeout,
-            "connecting worker runtime to daemon"
+            connect_addr, socket_timeout_seconds, "connecting worker runtime to daemon"
         );
         let transport = WorkerTransportHandle::connect(
-            &connect_addr,
-            &worker_id,
-            std::time::Duration::from_secs(socket_timeout),
+            connect_addr,
+            worker_id,
+            std::time::Duration::from_secs(socket_timeout_seconds),
         )
         .await?;
         info!(worker_id, "worker connected; waiting for assignment");
@@ -88,7 +89,7 @@ where
         let heartbeat_task = transport.as_ref().map(|transport| {
             let transport = transport.clone();
             tokio::spawn(async move {
-                let interval = Duration::from_secs(10);
+                let interval = Duration::from_secs(DEFAULT_WORKER_HEARTBEAT_INTERVAL_SECONDS);
                 loop {
                     tokio::time::sleep(interval).await;
                     if let Err(error) = transport.send_heartbeat().await {
@@ -104,9 +105,8 @@ where
                 WorkerResult::Parse(spec::execute_spec_parse(&payload, parse).await?)
             }
             WorkerAction::Build(build) => {
-                build
-                    .package
-                    .validate()
+                PackageDefinitionValidator
+                    .validate(&build.package)
                     .map_err(|error: SynforgeError| anyhow::anyhow!(error.to_string()))?;
                 WorkerResult::Build(
                     self.executor
@@ -142,21 +142,6 @@ where
         .await?;
         Ok(local_result)
     }
-}
-
-fn env_required(name: &str) -> anyhow::Result<String> {
-    std::env::var(name).map_err(|_| anyhow::anyhow!("missing required env var {}", name))
-}
-
-fn env_string(name: &str) -> Option<String> {
-    std::env::var(name)
-        .ok()
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-}
-
-fn env_u64(name: &str) -> Option<u64> {
-    std::env::var(name).ok()?.trim().parse::<u64>().ok()
 }
 
 async fn publish_worker_result(

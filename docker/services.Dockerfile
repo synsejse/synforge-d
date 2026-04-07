@@ -94,10 +94,6 @@ RUN dnf -y upgrade-minimal \
 COPY --from=rust-builder /out/synforge-webui /usr/local/bin/synforge-webui
 COPY --from=webui-builder /app/apps/webui/dist /opt/synforge/webui
 
-ENV SYNFORGE_WEBUI_LISTEN_ADDR=0.0.0.0:80
-ENV SYNFORGE_WEBUI_DAEMON_URL=http://daemon:8080
-ENV SYNFORGE_WEBUI_STATIC_DIR=/opt/synforge/webui
-
 EXPOSE 80
 
 ENTRYPOINT ["/usr/local/bin/synforge-webui"]

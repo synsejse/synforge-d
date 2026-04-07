@@ -51,6 +51,7 @@ impl BuildRunner {
             job_id: build.job_id,
             workspace_dir: job_root,
             timeout_seconds: build.package.build_timeout_seconds,
+            git_mirror_reference: None,
             action: WorkerAction::Build(Box::new(WorkerBuildPayload {
                 package_name: build.package.name.clone(),
                 package: build.package.clone(),

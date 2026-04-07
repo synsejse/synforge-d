@@ -5,11 +5,16 @@ use axum::body::{Body, to_bytes};
 use axum::extract::{DefaultBodyLimit, Request, State};
 use axum::http::header::{self, HeaderName};
 use axum::http::{HeaderMap, HeaderValue, Response, StatusCode};
-use axum::middleware;
 use axum::response::Redirect;
 use axum::routing::any;
 use axum::{Router, routing::get};
+use axum_helmet::{Helmet, HelmetLayer};
+use helmet_core::{CrossOriginOpenerPolicy, ReferrerPolicy, XContentTypeOptions, XFrameOptions};
 use reqwest::Client;
+use synforge_core::constants::{
+    DEFAULT_DAEMON_HTTP_PORT, DEFAULT_WEBUI_LISTEN_ADDR, DEFAULT_WEBUI_MAX_REQUEST_BODY_BYTES,
+    DEFAULT_WEBUI_STATIC_DIR,
+};
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
@@ -19,27 +24,27 @@ struct AppState {
     client: Client,
 }
 
-const MAX_REQUEST_BODY_BYTES: usize = 8 * 1024 * 1024;
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     synforge_core::logging::init_tracing();
 
-    let listen_addr =
-        env_string("SYNFORGE_WEBUI_LISTEN_ADDR").unwrap_or_else(|| "0.0.0.0:80".to_string());
-    let daemon_base_url = normalize_base_url(
-        &env_string("SYNFORGE_WEBUI_DAEMON_URL")
-            .unwrap_or_else(|| "http://daemon:8080".to_string()),
-    );
-    let static_dir = env_string("SYNFORGE_WEBUI_STATIC_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("/opt/synforge/webui"));
+    let listen_addr = DEFAULT_WEBUI_LISTEN_ADDR.to_string();
+    let daemon_base_url =
+        normalize_base_url(&format!("http://daemon:{}", DEFAULT_DAEMON_HTTP_PORT));
+    let static_dir = PathBuf::from(DEFAULT_WEBUI_STATIC_DIR);
     let index_path = static_dir.join("index.html");
 
     let state = AppState {
         daemon_base_url,
         client: Client::builder().build()?,
     };
+    let security_layer: HelmetLayer = Helmet::new()
+        .add(XContentTypeOptions::nosniff())
+        .add(XFrameOptions::deny())
+        .add(ReferrerPolicy::no_referrer())
+        .add(CrossOriginOpenerPolicy::same_origin())
+        .try_into()
+        .expect("failed to construct HelmetLayer");
 
     let app = Router::new()
         .route("/healthz", get(proxy_to_daemon))
@@ -58,8 +63,8 @@ async fn main() -> anyhow::Result<()> {
         .route("/repo", any(proxy_to_daemon))
         .route("/repo/{*path}", any(proxy_to_daemon))
         .fallback_service(ServeDir::new(static_dir).not_found_service(ServeFile::new(index_path)))
-        .layer(middleware::map_response(add_security_headers))
-        .layer(DefaultBodyLimit::max(MAX_REQUEST_BODY_BYTES))
+        .layer(security_layer)
+        .layer(DefaultBodyLimit::max(DEFAULT_WEBUI_MAX_REQUEST_BODY_BYTES))
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
@@ -104,13 +109,6 @@ async fn swagger_docs_redirect() -> Redirect {
     Redirect::permanent("/docs/")
 }
 
-fn env_string(name: &str) -> Option<String> {
-    std::env::var(name)
-        .ok()
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-}
-
 fn normalize_base_url(value: &str) -> String {
     value.trim_end_matches('/').to_string()
 }
@@ -130,7 +128,7 @@ async fn proxy_to_daemon(
         builder = builder.header(name, value);
     }
 
-    let body = to_bytes(body, MAX_REQUEST_BODY_BYTES)
+    let body = to_bytes(body, DEFAULT_WEBUI_MAX_REQUEST_BODY_BYTES)
         .await
         .map_err(|error| (StatusCode::PAYLOAD_TOO_LARGE, error.to_string()))?;
     if !body.is_empty() {
@@ -197,25 +195,4 @@ fn is_hop_by_hop_header(name: &HeaderName) -> bool {
             | "transfer-encoding"
             | "upgrade"
     )
-}
-
-async fn add_security_headers(mut response: Response<Body>) -> Response<Body> {
-    let headers = response.headers_mut();
-    headers.insert(
-        HeaderName::from_static("x-content-type-options"),
-        HeaderValue::from_static("nosniff"),
-    );
-    headers.insert(
-        HeaderName::from_static("x-frame-options"),
-        HeaderValue::from_static("DENY"),
-    );
-    headers.insert(
-        HeaderName::from_static("referrer-policy"),
-        HeaderValue::from_static("no-referrer"),
-    );
-    headers.insert(
-        HeaderName::from_static("cross-origin-opener-policy"),
-        HeaderValue::from_static("same-origin"),
-    );
-    response
 }

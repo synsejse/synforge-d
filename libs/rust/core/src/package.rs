@@ -1,13 +1,9 @@
 use std::fmt;
 use std::path::PathBuf;
 
+use idna::domain_to_ascii_strict;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-
-use crate::error::SynforgeError;
-use crate::validation::{
-    BuildEnvVarValidator, PackageDefinitionValidator, SpecSourceValidator, Validator,
-};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct PackageDefinition {
@@ -107,48 +103,6 @@ fn default_true() -> bool {
     true
 }
 
-impl PackageDefinition {
-    pub fn validate(&self) -> Result<(), SynforgeError> {
-        PackageDefinitionValidator.validate(self)
-    }
-
-    pub fn revision(&self) -> SpecRevision {
-        SpecRevision {
-            version: self.version.clone(),
-            release: self.release.clone(),
-            content_digest: None,
-            source_commit: None,
-        }
-    }
-}
-
-impl BuildEnvVar {
-    pub fn validate(&self) -> Result<(), SynforgeError> {
-        BuildEnvVarValidator.validate(self)
-    }
-}
-
-impl SpecSource {
-    pub fn validate(&self) -> Result<(), SynforgeError> {
-        SpecSourceValidator.validate(self)
-    }
-
-    pub fn polling_enabled(&self) -> bool {
-        self.poll
-    }
-}
-
-impl ParsedSpec {
-    pub fn revision(&self) -> SpecRevision {
-        SpecRevision {
-            version: self.version.clone(),
-            release: self.release.clone(),
-            content_digest: None,
-            source_commit: None,
-        }
-    }
-}
-
 impl SpecRevision {
     pub fn new(
         version: impl Into<String>,
@@ -198,52 +152,28 @@ impl fmt::Display for SpecRevision {
 }
 
 pub fn is_dns_label(value: &str) -> bool {
-    if value.is_empty() || value.len() > 63 {
+    if value.is_empty() {
         return false;
     }
-    let bytes = value.as_bytes();
-    if !bytes[0].is_ascii_lowercase() && !bytes[0].is_ascii_digit() {
+
+    let Ok(ascii) = domain_to_ascii_strict(value) else {
         return false;
-    }
-    if !bytes[bytes.len() - 1].is_ascii_lowercase() && !bytes[bytes.len() - 1].is_ascii_digit() {
-        return false;
-    }
-    value
-        .bytes()
-        .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+    };
+
+    ascii == value && !ascii.contains('.') && ascii.len() <= 63
 }
 
-pub fn normalize_package_name(value: &str) -> String {
-    let mut normalized = String::with_capacity(value.len());
-    let mut last_was_dash = false;
+#[cfg(test)]
+mod tests {
+    use super::is_dns_label;
 
-    for ch in value.chars() {
-        let mapped = match ch {
-            'a'..='z' | '0'..='9' => Some(ch),
-            'A'..='Z' => Some(ch.to_ascii_lowercase()),
-            '-' | '_' | '.' | '+' => Some('-'),
-            _ => None,
-        };
-
-        let Some(mapped) = mapped else {
-            continue;
-        };
-
-        if mapped == '-' {
-            if normalized.is_empty() || last_was_dash {
-                continue;
-            }
-            last_was_dash = true;
-        } else {
-            last_was_dash = false;
-        }
-
-        normalized.push(mapped);
+    #[test]
+    fn dns_label_validation_is_strict_and_ascii() {
+        assert!(is_dns_label("nginx-1"));
+        assert!(!is_dns_label("Nginx-1"));
+        assert!(!is_dns_label("nginx_1"));
+        assert!(!is_dns_label("-nginx"));
+        assert!(!is_dns_label("nginx-"));
+        assert!(!is_dns_label("nginx.prod"));
     }
-
-    while normalized.ends_with('-') {
-        normalized.pop();
-    }
-
-    normalized
 }

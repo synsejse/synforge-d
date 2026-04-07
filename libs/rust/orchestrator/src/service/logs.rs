@@ -126,50 +126,24 @@ impl SynforgeService {
     }
 }
 
-/// Find a safe UTF-8 boundary in a byte slice.
-/// Returns the largest index <= buffer.len() that doesn't split a UTF-8 character.
 fn find_utf8_boundary(buffer: &[u8]) -> usize {
-    if buffer.is_empty() {
+    let len = buffer.len();
+    if len == 0 {
         return 0;
     }
 
-    // Start from the end and work backwards to find a valid boundary
-    let mut end = buffer.len();
-
-    // Check if we're in the middle of a UTF-8 sequence
-    // UTF-8 continuation bytes have the pattern 10xxxxxx (0x80-0xBF)
-    while end > 0 {
-        let byte = buffer[end - 1];
-
-        // If this byte is ASCII or a UTF-8 start byte, we're at a valid boundary
-        if byte < 0x80 {
-            // ASCII byte - valid boundary
-            break;
-        } else if byte >= 0xC0 {
-            // UTF-8 start byte (110xxxxx, 1110xxxx, or 11110xxx)
-            // Check if there's enough room for the full character
-            let char_len = if byte >= 0xF0 {
-                4
-            } else if byte >= 0xE0 {
-                3
-            } else {
-                2
-            };
-
-            if end + char_len - 1 <= buffer.len() {
-                // Full character fits, include it
-                break;
-            } else {
-                // Character is truncated, exclude it
-                end -= 1;
-            }
-        } else {
-            // Continuation byte (10xxxxxx) - go back to find start
-            end -= 1;
+    // Inspect at most the last UTF-8 scalar width window and trim only trailing
+    // incomplete code points. Invalid bytes inside the chunk are preserved and
+    // handled by lossy decoding.
+    for start in (len.saturating_sub(4)..len).rev() {
+        match std::str::from_utf8(&buffer[start..]) {
+            Ok(_) => return len,
+            Err(error) if error.error_len().is_none() => return start + error.valid_up_to(),
+            Err(_) => continue,
         }
     }
 
-    end
+    len
 }
 
 async fn count_lines_before(path: &std::path::Path, end_offset: u64) -> anyhow::Result<u64> {
@@ -200,4 +174,34 @@ async fn count_lines_before(path: &std::path::Path, end_offset: u64) -> anyhow::
     }
 
     Ok(line_count + 1)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::find_utf8_boundary;
+
+    #[test]
+    fn keeps_full_valid_utf8_chunks() {
+        assert_eq!(find_utf8_boundary("hello".as_bytes()), 5);
+        assert_eq!(find_utf8_boundary("cafe".as_bytes()), 4);
+        assert_eq!(find_utf8_boundary("cafe\u{00e9}".as_bytes()), 6);
+    }
+
+    #[test]
+    fn trims_trailing_incomplete_utf8_sequences() {
+        let truncated_two_byte = b"caf\xc3";
+        assert_eq!(find_utf8_boundary(truncated_two_byte), 3);
+
+        let truncated_three_byte = b"hello\xe2\x82";
+        assert_eq!(find_utf8_boundary(truncated_three_byte), 5);
+    }
+
+    #[test]
+    fn preserves_invalid_bytes_inside_chunk() {
+        let invalid_tail = [b'a', 0xff];
+        assert_eq!(find_utf8_boundary(&invalid_tail), invalid_tail.len());
+
+        let invalid_then_truncated = [0xff, b'a', 0xe2, 0x82];
+        assert_eq!(find_utf8_boundary(&invalid_then_truncated), 2);
+    }
 }

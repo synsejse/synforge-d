@@ -1,7 +1,8 @@
 use crate::{
     error::SynforgeError,
-    package::{is_dns_label, normalize_package_name, parse_mock_chroot},
+    package::{is_dns_label, parse_mock_chroot},
 };
+use slug::slugify;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DnsLabel(String);
@@ -86,7 +87,7 @@ impl MockChroot {
 
 impl PackageName {
     pub fn new(value: &str) -> Result<Self, SynforgeError> {
-        let normalized = normalize_package_name(value);
+        let normalized = slugify(value);
         if normalized.is_empty() {
             return Err(SynforgeError::Spec(
                 "package name must not be empty".to_string(),
@@ -100,5 +101,31 @@ impl PackageName {
 
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PackageName;
+
+    #[test]
+    fn package_name_is_normalized_with_slug_rules() {
+        assert_eq!(
+            PackageName::new("Hello.World+RPM")
+                .expect("package name should normalize")
+                .as_str(),
+            "hello-world-rpm"
+        );
+        assert_eq!(
+            PackageName::new("Æúű--cool?")
+                .expect("unicode package name should normalize")
+                .as_str(),
+            "aeuu-cool"
+        );
+    }
+
+    #[test]
+    fn package_name_rejects_empty_normalization() {
+        assert!(PackageName::new("$$$").is_err());
     }
 }

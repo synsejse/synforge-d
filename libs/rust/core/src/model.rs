@@ -1,15 +1,15 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use diesel::backend::Backend;
-use diesel::deserialize::{self, FromSql, FromSqlRow};
+use diesel::deserialize::FromSqlRow;
 use diesel::expression::AsExpression;
-use diesel::serialize::{self, Output, ToSql};
 use diesel::sql_types::Text;
 use serde::{Deserialize, Serialize};
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use utoipa::ToSchema;
 use uuid::Uuid;
+
+use crate::text_enum::impl_text_enum;
 
 #[derive(
     Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow, ToSchema,
@@ -133,48 +133,6 @@ pub enum UserPermission {
     Repo,
 }
 
-macro_rules! impl_text_enum {
-    ($name:ident {
-        $($variant:ident => [$primary:literal $(, $alias:literal)*]),+ $(,)?
-    }) => {
-        impl $name {
-            fn db_text(self) -> &'static str {
-                match self {
-                    $(Self::$variant => $primary,)+
-                }
-            }
-
-            fn from_db_text(value: &str) -> deserialize::Result<Self> {
-                match value {
-                    $($primary $(| $alias)* => Ok(Self::$variant),)+
-                    _ => Err(format!("invalid {} value: {}", stringify!($name), value).into()),
-                }
-            }
-        }
-
-        impl<DB> ToSql<Text, DB> for $name
-        where
-            DB: Backend,
-            str: ToSql<Text, DB>,
-        {
-            fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, DB>) -> serialize::Result {
-                self.db_text().to_sql(out)
-            }
-        }
-
-        impl<DB> FromSql<Text, DB> for $name
-        where
-            DB: Backend,
-            String: FromSql<Text, DB>,
-        {
-            fn from_sql(value: DB::RawValue<'_>) -> deserialize::Result<Self> {
-                let value = String::from_sql(value)?;
-                Self::from_db_text(&value)
-            }
-        }
-    };
-}
-
 impl_text_enum!(BuildTrigger {
     Poll => ["poll"],
     ManualRefresh => ["manual_refresh", "manualrefresh"],
@@ -292,6 +250,8 @@ pub struct WorkerJobPayload {
     pub job_id: Uuid,
     pub workspace_dir: PathBuf,
     pub timeout_seconds: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub git_mirror_reference: Option<String>,
     pub action: WorkerAction,
 }
 

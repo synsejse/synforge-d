@@ -12,6 +12,7 @@ pub(crate) async fn clone_repository(
     source: &SpecSource,
     destination: &Path,
     commit: Option<&str>,
+    git_mirror_reference: Option<&str>,
 ) -> anyhow::Result<()> {
     info!(
         repo_url = %source.repo_url,
@@ -37,10 +38,16 @@ pub(crate) async fn clone_repository(
         .arg("clone")
         .arg("--depth")
         .arg(SHALLOW_CLONE_DEPTH);
-    if let Some(mirror_reference) = git_mirror_reference_path().await {
+    if let Some(mirror_reference) = git_mirror_reference
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        && tokio::fs::try_exists(mirror_reference)
+            .await
+            .unwrap_or(false)
+    {
         clone_command
             .arg("--reference-if-able")
-            .arg(mirror_reference.as_str());
+            .arg(mirror_reference);
     }
     clone_command.arg(&source.repo_url).arg(destination);
     run_command(&mut clone_command)
@@ -76,22 +83,6 @@ pub(crate) async fn clone_repository(
         "repository clone prepared"
     );
     Ok(())
-}
-
-async fn git_mirror_reference_path() -> Option<String> {
-    let root = std::env::var("SYNFORGE_GIT_MIRROR_ROOT").ok()?;
-    let key = std::env::var("SYNFORGE_GIT_MIRROR_KEY").ok()?;
-    let root = root.trim();
-    let key = key.trim();
-    if root.is_empty() || key.is_empty() {
-        return None;
-    }
-    let reference = Path::new(root).join(key);
-    if tokio::fs::try_exists(&reference).await.ok()? {
-        Some(reference.to_string_lossy().to_string())
-    } else {
-        None
-    }
 }
 
 pub(crate) async fn git_rev_parse(repo_dir: &Path, rev: &str) -> anyhow::Result<String> {

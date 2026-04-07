@@ -67,6 +67,7 @@ async fn execute_spec_build(
         &package.source,
         &repo_dir,
         build_payload.checkout_commit.as_deref(),
+        payload.git_mirror_reference.as_deref(),
     )
     .await?;
     info!(

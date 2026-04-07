@@ -8,6 +8,7 @@ use synforge_core::{
     config::DaemonConfig,
     model::{WorkerAction, WorkerJobPayload, WorkerParsePayload, WorkerResult},
     package::{BuildEnvVar, PackageDefinition, SpecRevision, SpecSource},
+    validation::{PackageDefinitionValidator, Validator},
 };
 use tokio::process::Command;
 use tracing::instrument;
@@ -96,6 +97,7 @@ impl PackageSyncStore {
             job_id,
             workspace_dir,
             timeout_seconds,
+            git_mirror_reference: None,
             action: WorkerAction::Parse(WorkerParsePayload {
                 package_name: package_name.to_string(),
                 source: source.clone(),
@@ -150,7 +152,7 @@ impl PackageSyncStore {
             version: inspected.revision.version.clone(),
             release: inspected.revision.release.clone(),
         };
-        package.validate()?;
+        PackageDefinitionValidator.validate(&package)?;
         Ok(package)
     }
 

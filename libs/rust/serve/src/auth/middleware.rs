@@ -4,7 +4,7 @@ use axum::http::{HeaderMap, Method};
 use axum::middleware::Next;
 use axum::response::Response;
 use base64::Engine;
-use synforge_core::config::DEFAULT_SIGNING_PUBLIC_KEY_NAME;
+use synforge_core::constants::DEFAULT_SIGNING_PUBLIC_KEY_NAME;
 use synforge_core::model::{UserAccount, UserPermission};
 
 use super::session::{decode_session_cookie, find_cookie, session_cookie_name};

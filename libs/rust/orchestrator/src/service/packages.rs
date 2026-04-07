@@ -57,17 +57,6 @@ impl SynforgeService {
     }
 
     pub async fn trigger_refresh_all_packages(&self) -> anyhow::Result<RefreshAllPackagesResponse> {
-        {
-            let progress = self.refresh_all_packages_progress.lock().await;
-            if let Some(operation) = progress.as_ref()
-                && operation.state == RefreshAllPackagesState::Running
-            {
-                return Err(anyhow::anyhow!(SynforgeError::Conflict(
-                    "refresh-all operation is already running".to_string()
-                )));
-            }
-        }
-
         let operation_id = Uuid::now_v7();
         let mut progress = RefreshAllPackagesProgressView {
             operation_id,
@@ -83,8 +72,17 @@ impl SynforgeService {
             blocked_targets: 0,
             message: Some("collecting enabled packages".to_string()),
         };
-        self.update_refresh_all_packages_progress(progress.clone())
-            .await;
+        {
+            let mut slot = self.refresh_all_packages_progress.lock().await;
+            if let Some(operation) = slot.as_ref()
+                && operation.state == RefreshAllPackagesState::Running
+            {
+                return Err(anyhow::anyhow!(SynforgeError::Conflict(
+                    "refresh-all operation is already running".to_string()
+                )));
+            }
+            *slot = Some(progress.clone());
+        }
 
         let package_names = match self.list_all_enabled_package_names().await {
             Ok(package_names) => package_names,

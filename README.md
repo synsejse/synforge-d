@@ -6,10 +6,13 @@ You connect source repositories, sync updates, run builds, and view results in o
 
 ## Quick start
 
-1. Start the stack with Docker Compose.
-2. Open the web app.
-3. Complete first-time setup and create an admin user.
-4. Add packages and start syncing/building.
+1. Copy `.env.example` to `.env` and set database credentials.
+2. Start the stack with Docker Compose.
+3. Open the web app.
+4. Complete first-time setup and create an admin user.
+5. Add packages and start syncing/building.
+
+`phpMyAdmin` is available only when started with the `dev-tools` profile.
 
 ## What you can do
 

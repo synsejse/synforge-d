@@ -12,6 +12,7 @@ use synforge_core::{
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
+use tokio_util::io::ReaderStream;
 
 #[derive(Clone)]
 pub struct WorkerTransportHandle {
@@ -75,8 +76,10 @@ impl WorkerTransportHandle {
             kind: artifact.kind,
         })
         .await?;
-        let bytes = tokio::fs::read(artifact_root.join(storage_path)).await?;
-        for chunk in bytes.chunks(64 * 1024) {
+        let file = tokio::fs::File::open(artifact_root.join(storage_path)).await?;
+        let mut reader = ReaderStream::with_capacity(file, 64 * 1024);
+        while let Some(next_chunk) = reader.next().await {
+            let chunk = next_chunk?;
             self.send_message(WorkerWireMessage::ArtifactChunk {
                 bytes: chunk.to_vec(),
             })

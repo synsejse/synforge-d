@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::time::Duration;
 
 use anyhow::Context;
 use axum::body::{Body, to_bytes};
@@ -13,7 +14,7 @@ use helmet_core::{CrossOriginOpenerPolicy, ReferrerPolicy, XContentTypeOptions, 
 use reqwest::Client;
 use synforge_core::constants::{
     DEFAULT_DAEMON_HTTP_PORT, DEFAULT_WEBUI_LISTEN_ADDR, DEFAULT_WEBUI_MAX_REQUEST_BODY_BYTES,
-    DEFAULT_WEBUI_STATIC_DIR,
+    DEFAULT_WEBUI_PROXY_REQUEST_TIMEOUT_SECONDS, DEFAULT_WEBUI_STATIC_DIR,
 };
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
@@ -36,7 +37,11 @@ async fn main() -> anyhow::Result<()> {
 
     let state = AppState {
         daemon_base_url,
-        client: Client::builder().build()?,
+        client: Client::builder()
+            .timeout(Duration::from_secs(
+                DEFAULT_WEBUI_PROXY_REQUEST_TIMEOUT_SECONDS,
+            ))
+            .build()?,
     };
     let security_layer: HelmetLayer = Helmet::new()
         .add(XContentTypeOptions::nosniff())
@@ -142,10 +147,7 @@ async fn proxy_to_daemon(
 
     let status = upstream.status();
     let headers = upstream.headers().clone();
-    let body = upstream
-        .bytes()
-        .await
-        .map_err(|error| (StatusCode::BAD_GATEWAY, error.to_string()))?;
+    let body = upstream.bytes_stream();
 
     let mut response = Response::builder().status(status);
     for (name, value) in forward_response_headers(&headers) {
@@ -153,7 +155,7 @@ async fn proxy_to_daemon(
     }
 
     response
-        .body(Body::from(body))
+        .body(Body::from_stream(body))
         .map_err(|error| (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))
 }
 

@@ -48,7 +48,9 @@ export default function PackageList() {
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [refreshingAll, setRefreshingAll] = useState(false);
-  const [refreshingPackageName, setRefreshingPackageName] = useState<string | null>(null);
+  const [refreshingPackageNames, setRefreshingPackageNames] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [refreshOverlayOpen, setRefreshOverlayOpen] = useState(false);
   const [refreshOverlayTitle, setRefreshOverlayTitle] = useState("Refreshing packages");
   const [refreshOverlayDetail, setRefreshOverlayDetail] = useState(
@@ -112,11 +114,15 @@ export default function PackageList() {
 
   async function trigger(name: string, action: "refresh" | "rebuild") {
     const isRefresh = action === "refresh";
-    if (isRefresh && refreshingPackageName === name) {
+    if (isRefresh && refreshingPackageNames.has(name)) {
       return;
     }
     if (isRefresh) {
-      setRefreshingPackageName(name);
+      setRefreshingPackageNames((current) => {
+        const next = new Set(current);
+        next.add(name);
+        return next;
+      });
     }
     try {
       const response =
@@ -129,7 +135,14 @@ export default function PackageList() {
       alert(e instanceof Error ? e.message : `Failed to ${action} package`);
     } finally {
       if (isRefresh) {
-        setRefreshingPackageName((current) => (current === name ? null : current));
+        setRefreshingPackageNames((current) => {
+          if (!current.has(name)) {
+            return current;
+          }
+          const next = new Set(current);
+          next.delete(name);
+          return next;
+        });
       }
     }
   }
@@ -310,7 +323,7 @@ export default function PackageList() {
               onRefresh={(name) => void trigger(name, "refresh")}
               onRebuild={(name) => void trigger(name, "rebuild")}
               onDelete={(name) => void handleDelete(name)}
-              refreshing={refreshingPackageName === entry.package.name}
+              refreshing={refreshingPackageNames.has(entry.package.name)}
               refreshDisabled={refreshingAll}
             />
           ))}

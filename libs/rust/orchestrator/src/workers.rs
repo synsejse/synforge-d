@@ -230,22 +230,35 @@ impl DockerWorkerLauncher {
                 "stopping active worker containers during shutdown"
             );
         }
+        let mut first_error: Option<anyhow::Error> = None;
         for session in sessions {
-            self.docker
+            match self
+                .docker
                 .kill_container(
                     &session.container_id,
                     None::<bollard::query_parameters::KillContainerOptions>,
                 )
                 .await
-                .map_err(|error| {
+            {
+                Ok(()) => self.sessions.remove_session(session.job_id),
+                Err(error) => {
                     warn!(
-                        "failed to kill worker container {} during shutdown: {}",
-                        session.container_id, error
+                        container_id = %session.container_id,
+                        error = %error,
+                        "failed to kill worker container during shutdown"
                     );
-                    error
-                })
-                .ok();
-            self.sessions.remove_session(session.job_id);
+                    if first_error.is_none() {
+                        first_error = Some(anyhow::anyhow!(
+                            "failed to kill worker container {} during shutdown: {}",
+                            session.container_id,
+                            error
+                        ));
+                    }
+                }
+            }
+        }
+        if let Some(error) = first_error {
+            return Err(error);
         }
         Ok(())
     }

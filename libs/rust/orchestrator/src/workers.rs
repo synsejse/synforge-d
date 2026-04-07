@@ -12,6 +12,7 @@ use synforge_core::{
     model::{WorkerAction, WorkerJobPayload, WorkerResult},
 };
 use tracing::{info, warn};
+use uuid::Uuid;
 
 use crate::job_lifecycle::JobLifecycle;
 use crate::sessions::WorkerSessionBroker;
@@ -169,13 +170,17 @@ impl DockerWorkerLauncher {
                 "worker build job completed"
             ),
         }
-        self.sessions.remove_session(payload.job_id);
-        info!(
-            job_id = %payload.job_id,
-            "worker session removed after completion"
-        );
+        // NOTE: Session is NOT removed here - caller must call cleanup_session()
+        // AFTER finalization to avoid cleanup race conditions.
 
         Ok(result)
+    }
+
+    /// Removes the session for a completed job. Call this AFTER finalization
+    /// to avoid race conditions with the runtime cleanup worker.
+    pub fn cleanup_session(&self, job_id: Uuid) {
+        self.sessions.remove_session(job_id);
+        info!(job_id = %job_id, "worker session cleaned up after finalization");
     }
 
     pub async fn shutdown(&self) -> anyhow::Result<()> {

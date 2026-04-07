@@ -63,7 +63,7 @@ impl BuildRunner {
             })),
         };
         let execution = self.worker_launcher.run_job(&payload, &self.config).await;
-        match execution {
+        let result = match execution {
             Ok(execution) => {
                 if let WorkerResult::Build(build_result) = &execution {
                     info!(
@@ -87,6 +87,9 @@ impl BuildRunner {
                 );
                 self.lifecycle.fail_launch(&build, &error.to_string()).await
             }
-        }
+        };
+        // Clean up session AFTER finalization to avoid cleanup race conditions
+        self.worker_launcher.cleanup_session(build.job_id);
+        result
     }
 }

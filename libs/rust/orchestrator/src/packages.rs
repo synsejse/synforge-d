@@ -107,7 +107,6 @@ impl PackageSyncStore {
             job_id,
             workspace_dir,
             timeout_seconds,
-            git_mirror_reference: None,
             action: WorkerAction::Parse(WorkerParsePayload {
                 package_name: package_name.to_string(),
                 source: source.clone(),

@@ -250,8 +250,6 @@ pub struct WorkerJobPayload {
     pub job_id: Uuid,
     pub workspace_dir: PathBuf,
     pub timeout_seconds: u64,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub git_mirror_reference: Option<String>,
     pub action: WorkerAction,
 }
 

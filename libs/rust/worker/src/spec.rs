@@ -17,13 +17,7 @@ pub(crate) async fn execute_spec_parse(
     payload: &WorkerParsePayload,
 ) -> anyhow::Result<WorkerParseResult> {
     let repo_dir = job_payload.workspace_dir.join("repo");
-    clone_repository(
-        &payload.source,
-        &repo_dir,
-        None,
-        job_payload.git_mirror_reference.as_deref(),
-    )
-    .await?;
+    clone_repository(&payload.source, &repo_dir, None).await?;
     let spec_file = repo_dir.join(&payload.source.spec_file);
     if !tokio::fs::try_exists(&spec_file).await? {
         anyhow::bail!(

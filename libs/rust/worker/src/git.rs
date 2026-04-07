@@ -12,7 +12,6 @@ pub(crate) async fn clone_repository(
     source: &SpecSource,
     destination: &Path,
     commit: Option<&str>,
-    git_mirror_reference: Option<&str>,
 ) -> anyhow::Result<()> {
     info!(
         repo_url = %source.repo_url,
@@ -37,19 +36,9 @@ pub(crate) async fn clone_repository(
     clone_command
         .arg("clone")
         .arg("--depth")
-        .arg(SHALLOW_CLONE_DEPTH);
-    if let Some(mirror_reference) = git_mirror_reference
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        && tokio::fs::try_exists(mirror_reference)
-            .await
-            .unwrap_or(false)
-    {
-        clone_command
-            .arg("--reference-if-able")
-            .arg(mirror_reference);
-    }
-    clone_command.arg(&source.repo_url).arg(destination);
+        .arg(SHALLOW_CLONE_DEPTH)
+        .arg(&source.repo_url)
+        .arg(destination);
     run_command(&mut clone_command)
         .await
         .with_context(|| format!("failed to clone {}", source.repo_url))?;

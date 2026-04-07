@@ -16,11 +16,6 @@ fn default_listen_addr() -> String {
     DEFAULT_DAEMON_LISTEN_ADDR.to_string()
 }
 
-fn default_database_url() -> String {
-    std::env::var(DATABASE_URL_ENV_VAR)
-        .unwrap_or_else(|_| "mysql://synforge:synforge_dev@localhost:3306/synforge".to_string())
-}
-
 fn default_max_concurrent_builds() -> usize {
     2
 }
@@ -81,7 +76,6 @@ fn default_bootstrap_completed() -> bool {
 pub struct DaemonConfig {
     #[serde(default = "default_listen_addr")]
     pub listen_addr: String,
-    #[serde(default = "default_database_url")]
     pub database_url: String,
     #[serde(default = "default_worker_image")]
     pub worker_image: String,
@@ -121,7 +115,7 @@ impl Default for DaemonConfig {
     fn default() -> Self {
         Self {
             listen_addr: default_listen_addr(),
-            database_url: default_database_url(),
+            database_url: String::new(),
             worker_image: default_worker_image(),
             session_secret: default_session_secret(),
             signing_enabled: default_signing_enabled(),
@@ -144,7 +138,14 @@ impl Default for DaemonConfig {
 
 impl DaemonConfig {
     pub fn load() -> anyhow::Result<Self> {
-        let config = Self::default();
+        let database_url = std::env::var(DATABASE_URL_ENV_VAR).map_err(|_| {
+            anyhow::anyhow!(
+                "{} environment variable is required but not set",
+                DATABASE_URL_ENV_VAR
+            )
+        })?;
+        let mut config = Self::default();
+        config.database_url = database_url;
         config
             .validate()
             .map_err(|error| anyhow::anyhow!(error.to_string()))?;

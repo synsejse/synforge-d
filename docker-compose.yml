@@ -8,7 +8,7 @@ services:
       MARIADB_PASSWORD: ${SYNFORGE_DB_PASSWORD:?set SYNFORGE_DB_PASSWORD in .env}
       MARIADB_ROOT_PASSWORD: ${SYNFORGE_DB_ROOT_PASSWORD:?set SYNFORGE_DB_ROOT_PASSWORD in .env}
     volumes:
-      - ${SYNFORGE_DB_PATH:-./data/db}:/var/lib/mysql:rw,z
+      - ${SYNFORGE_DB_PATH:-/data/db}:/var/lib/mysql:rw,z
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
@@ -43,7 +43,7 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: mysql://${SYNFORGE_DB_USER:-synforge}:${SYNFORGE_DB_PASSWORD:?set SYNFORGE_DB_PASSWORD in .env}@mariadb:3306/${SYNFORGE_DB_NAME:-synforge}
-      SYNFORGE_WORKER_JOBS_PATH: ${SYNFORGE_WORKER_JOBS_PATH:-./data/worker-jobs}
+      SYNFORGE_WORKER_JOBS_PATH: ${SYNFORGE_WORKER_JOBS_PATH:-/data/worker-jobs}
     expose:
       - "8080"
       - "8090"
@@ -60,8 +60,8 @@ services:
     cpus: 1.5
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro,z
-      - ${SYNFORGE_RUNTIME_PATH:-./data/runtime}:/var/lib/synforge:rw,z
-      - ${SYNFORGE_WORKER_JOBS_PATH:-./data/worker-jobs}:/var/lib/synforge-worker-jobs:rw,z
+      - ${SYNFORGE_RUNTIME_PATH:-/data/runtime}:/var/lib/synforge:rw,z
+      - ${SYNFORGE_WORKER_JOBS_PATH:-/data/worker-jobs}:/var/lib/synforge-worker-jobs:rw,z
 
   webui:
     build:

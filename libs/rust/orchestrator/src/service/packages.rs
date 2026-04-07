@@ -6,10 +6,10 @@ use bollard::query_parameters::{CreateContainerOptionsBuilder, LogsOptionsBuilde
 use futures_util::StreamExt;
 use synforge_core::{
     api::{
-        BrowseRepositoryRequest, BrowseRepositoryResponse, CreatePackageRequest,
-        MockChrootListResponse, PackageActionResponse, PackageActionTargetResult,
-        PackageBuildHistoryResponse, PackageBuildInventoryEntry, PackageListResponse,
-        PackageResponse, RebuildRequest, RefreshAllPackagesProgressResponse,
+        BrowseRepositoryProgressResponse, BrowseRepositoryRequest, BrowseRepositoryResponse,
+        CreatePackageRequest, MockChrootListResponse, PackageActionResponse,
+        PackageActionTargetResult, PackageBuildHistoryResponse, PackageBuildInventoryEntry,
+        PackageListResponse, PackageResponse, RebuildRequest, RefreshAllPackagesProgressResponse,
         RefreshAllPackagesProgressView, RefreshAllPackagesResponse, RefreshAllPackagesState,
         RefreshRequest, UpdatePackageRequest,
     },
@@ -379,6 +379,14 @@ impl SynforgeService {
         request: BrowseRepositoryRequest,
     ) -> anyhow::Result<BrowseRepositoryResponse> {
         self.registry.browse_repository(&request.repo_url).await
+    }
+
+    pub async fn get_browse_repository_progress(
+        &self,
+    ) -> anyhow::Result<BrowseRepositoryProgressResponse> {
+        Ok(BrowseRepositoryProgressResponse {
+            operation: self.registry.browse_repository_progress().await,
+        })
     }
 
     pub async fn update_package(

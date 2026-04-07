@@ -43,6 +43,7 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: mysql://${SYNFORGE_DB_USER:-synforge}:${SYNFORGE_DB_PASSWORD:?set SYNFORGE_DB_PASSWORD in .env}@mariadb:3306/${SYNFORGE_DB_NAME:-synforge}
+      SYNFORGE_WORKER_JOBS_ROOT: ${SYNFORGE_WORKER_JOBS_ROOT:-/var/lib/synforge-worker-jobs}
     expose:
       - "8080"
       - "8090"
@@ -60,6 +61,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro,z
       - synforge-runtime:/var/lib/synforge
+      - ${SYNFORGE_WORKER_JOBS_ROOT:-/var/lib/synforge-worker-jobs}:${SYNFORGE_WORKER_JOBS_ROOT:-/var/lib/synforge-worker-jobs}:rw,z
 
   webui:
     build:

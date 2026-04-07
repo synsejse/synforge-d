@@ -12,6 +12,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import type {
+  BrowseRepositoryProgressView,
   BuildEnvVar,
   CreatePackageRequest,
   SpecSource,
@@ -49,6 +50,37 @@ function parseBuildEnv(input: string): BuildEnvVar[] {
     });
 }
 
+function stateLabel(state: BrowseRepositoryProgressView["state"]): string {
+  switch (state) {
+    case "completed":
+      return "Completed";
+    case "failed":
+      return "Failed";
+    default:
+      return "Cloning";
+  }
+}
+
+function MockTargetCheckIndicator({ label }: { label: string }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-mono text-xs uppercase tracking-[0.15em] text-zinc-300">
+          {label}
+        </span>
+        <span className="flex items-center gap-1" aria-hidden="true">
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--theme-accent-lime)] animate-pulse" />
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--theme-accent-lime)] animate-pulse [animation-delay:150ms]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--theme-accent-lime)] animate-pulse [animation-delay:300ms]" />
+        </span>
+      </div>
+      <div className="h-2 w-full overflow-hidden border border-zinc-700 bg-zinc-900">
+        <div className="h-full w-full animate-pulse bg-[var(--theme-accent-lime)]/65" />
+      </div>
+    </div>
+  );
+}
+
 export default function AddPackageModal({
   onClose,
   onSuccess,
@@ -69,6 +101,11 @@ export default function AddPackageModal({
   const [browsing, setBrowsing] = useState(false);
   const [browseError, setBrowseError] = useState<string | null>(null);
   const [browseFiles, setBrowseFiles] = useState<string[]>([]);
+  const [browseProgress, setBrowseProgress] =
+    useState<BrowseRepositoryProgressView | null>(null);
+  const [browseProgressIssue, setBrowseProgressIssue] = useState<string | null>(
+    null,
+  );
   const [availableChroots, setAvailableChroots] = useState<string[]>([]);
   const [chrootsLoading, setChrootsLoading] = useState(true);
   const [showSpecPicker, setShowSpecPicker] = useState(false);
@@ -82,6 +119,20 @@ export default function AddPackageModal({
     () => browseFiles.filter((file) => file.endsWith(".spec")),
     [browseFiles],
   );
+  const activeBrowseProgress = useMemo(() => {
+    const trimmedRepoUrl = repoUrl.trim();
+    if (!browseProgress || !trimmedRepoUrl) {
+      return null;
+    }
+    if (browseProgress.repo_url !== trimmedRepoUrl) {
+      return null;
+    }
+    return browseProgress;
+  }, [browseProgress, repoUrl]);
+  const browseProgressPercent = activeBrowseProgress?.progress_percent ?? (browsing ? 2 : 0);
+  const browseProgressState = activeBrowseProgress?.state ?? "running";
+  const browseProgressMessage =
+    activeBrowseProgress?.message ?? "Preparing repository clone…";
 
   useEffect(() => {
     async function loadChroots() {
@@ -114,15 +165,60 @@ export default function AddPackageModal({
     firstFocusable?.focus();
   }, []);
 
+  useEffect(() => {
+    if (!browsing) {
+      return;
+    }
+    const currentRepoUrl = repoUrl.trim();
+    if (!currentRepoUrl) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const response = await api.getBrowseRepositoryProgress();
+        if (cancelled) {
+          return;
+        }
+        if (response.operation && response.operation.repo_url === currentRepoUrl) {
+          setBrowseProgress(response.operation);
+          setBrowseProgressIssue(null);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setBrowseProgressIssue(
+            "Clone is running, but live progress updates are temporarily unavailable.",
+          );
+          console.warn("Failed to poll repository browse progress", e);
+        }
+      }
+    };
+
+    void poll();
+    const intervalId = window.setInterval(() => {
+      void poll();
+    }, 700);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [browsing, repoUrl]);
+
   async function handleBrowse() {
-    if (!repoUrl.trim()) {
+    const trimmedRepoUrl = repoUrl.trim();
+    if (!trimmedRepoUrl) {
       setBrowseError("Repository URL is required before browsing.");
       return;
     }
     setBrowsing(true);
     setBrowseError(null);
+    setBrowseProgressIssue(null);
+    setBrowseProgress(null);
     try {
-      const response = await api.browseRepository({ repo_url: repoUrl.trim() });
+      const response = await api.browseRepository({ repo_url: trimmedRepoUrl });
       setBrowseFiles(response.files);
       if (!specPath && response.spec_files.length > 0) {
         setSpecPath(response.spec_files[0]);
@@ -132,6 +228,17 @@ export default function AddPackageModal({
         e instanceof Error ? e.message : "Failed to browse repository",
       );
     } finally {
+      try {
+        const progressResponse = await api.getBrowseRepositoryProgress();
+        if (
+          progressResponse.operation &&
+          progressResponse.operation.repo_url === trimmedRepoUrl
+        ) {
+          setBrowseProgress(progressResponse.operation);
+        }
+      } catch (e) {
+        console.warn("Failed to load final browse progress", e);
+      }
       setBrowsing(false);
     }
   }
@@ -340,9 +447,13 @@ export default function AddPackageModal({
                 </button>
               </div>
               <div className="mt-4 border-2 border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-mono text-zinc-200">
-                {mockChroots.length > 0
-                  ? formatMockChroots(mockChroots)
-                  : "No chroots selected"}
+                {chrootsLoading ? (
+                  <MockTargetCheckIndicator label="Checking mock targets…" />
+                ) : mockChroots.length > 0 ? (
+                  formatMockChroots(mockChroots)
+                ) : (
+                  "No chroots selected"
+                )}
               </div>
             </div>
 
@@ -477,13 +588,43 @@ export default function AddPackageModal({
               type="button"
               onClick={handleBrowse}
               disabled={browsing}
-               className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950 disabled:opacity-60"
+                className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950 disabled:opacity-60"
             >
               <FaIcon icon={faMagnifyingGlass} className="mr-2" />
-              {browsing ? "Browsing…" : "Load repository files"}
+              {browsing ? "Cloning repository…" : "Load repository files"}
             </button>
+            {(browsing || activeBrowseProgress) && (
+              <div className="border-2 border-zinc-700 bg-zinc-950 px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300">
+                    Git clone progress
+                  </span>
+                  <span className="font-mono text-xs text-zinc-300">
+                    {Math.round(browseProgressPercent)}%
+                  </span>
+                </div>
+                <div className="mt-3 h-2 w-full overflow-hidden border border-zinc-700 bg-zinc-900">
+                  <div
+                    className={`h-full transition-[width] duration-300 ${
+                      browseProgressState === "failed"
+                        ? "bg-red-500"
+                        : browseProgressState === "completed"
+                          ? "bg-[var(--theme-terminal-green)]"
+                          : "bg-[var(--theme-accent-lime)]"
+                    }`}
+                    style={{ width: `${Math.max(0, Math.min(100, browseProgressPercent))}%` }}
+                  />
+                </div>
+                <p className="mt-2 font-mono text-xs uppercase tracking-[0.12em] text-zinc-400">
+                  {stateLabel(browseProgressState)} · {browseProgressMessage}
+                </p>
+                {browseProgressIssue ? (
+                  <p className="mt-2 text-xs text-zinc-500">{browseProgressIssue}</p>
+                ) : null}
+              </div>
+            )}
             {browseError ? (
-               <div className="border-2 border-zinc-700 bg-black px-4 py-3 text-sm text-zinc-200">
+                <div className="border-2 border-zinc-700 bg-black px-4 py-3 text-sm text-zinc-200">
                 {browseError}
               </div>
             ) : null}
@@ -524,8 +665,8 @@ export default function AddPackageModal({
         >
              <div className="max-h-[50vh] overflow-y-auto border-2 border-zinc-700 bg-black">
             {chrootsLoading ? (
-              <div className="px-4 py-3 text-sm text-zinc-400">
-                Loading available chroots…
+              <div className="px-4 py-3">
+                <MockTargetCheckIndicator label="Checking mock targets…" />
               </div>
             ) : availableChroots.length === 0 ? (
               <div className="px-4 py-3 text-sm text-zinc-400">

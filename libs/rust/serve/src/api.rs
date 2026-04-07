@@ -30,7 +30,9 @@ pub(crate) use packages::{
     trigger_refresh, trigger_refresh_all_packages, trigger_target_rebuild, trigger_target_refresh,
     update_package,
 };
-pub(crate) use repo::{browse_repository, get_repo_inventory, get_repo_summary};
+pub(crate) use repo::{
+    browse_repository, get_browse_repository_progress, get_repo_inventory, get_repo_summary,
+};
 pub(crate) use session::{get_session, login_session, logout_session};
 pub(crate) use setup::{get_setup_status, initialize_setup};
 pub(crate) use signing::{
@@ -48,6 +50,10 @@ pub fn router(_state: AppState) -> Router<AppState> {
         .route("/packages", get(list_packages).post(create_package))
         .route("/mock/chroots", get(list_mock_chroots))
         .route("/repositories/browse", post(browse_repository))
+        .route(
+            "/repositories/browse/progress",
+            get(get_browse_repository_progress),
+        )
         .route(
             "/packages/{name}",
             get(get_package).put(update_package).delete(delete_package),

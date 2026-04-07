@@ -169,7 +169,6 @@ impl SynforgeService {
             .delete_job(job_id)
             .await?
             .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(job_id.to_string())))?;
-        self.lifecycle.remove_job_runtime(job_id).await?;
         Ok(deleted)
     }
 

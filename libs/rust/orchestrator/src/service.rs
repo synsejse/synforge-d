@@ -37,6 +37,7 @@ mod jobs;
 mod logs;
 mod packages;
 mod repo;
+mod runtime_cleanup;
 mod signing;
 mod sync;
 mod users;
@@ -187,7 +188,8 @@ impl SynforgeService {
             "worker socket listener started"
         );
         service.start_queue_runner(queue_rx, shutdown_rx.clone());
-        service.start_poller(shutdown_rx);
+        service.start_poller(shutdown_rx.clone());
+        service.start_runtime_cleanup_worker(shutdown_rx);
         info!("synforge service background workers started");
         Ok(service)
     }

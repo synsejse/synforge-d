@@ -22,6 +22,12 @@ export type UpdatePackageRequest = ApiSchema["UpdatePackageRequest"];
 
 export type BrowseRepositoryRequest = ApiSchema["BrowseRepositoryRequest"];
 export type BrowseRepositoryResponse = ApiSchema["BrowseRepositoryResponse"];
+export type BrowseRepositoryProgressState =
+  ApiSchema["BrowseRepositoryProgressState"];
+export type BrowseRepositoryProgressView =
+  ApiSchema["BrowseRepositoryProgressView"];
+export type BrowseRepositoryProgressResponse =
+  ApiSchema["BrowseRepositoryProgressResponse"];
 
 export type MockChrootListResponse = ApiSchema["MockChrootListResponse"];
 

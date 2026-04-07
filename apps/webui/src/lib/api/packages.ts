@@ -1,4 +1,5 @@
 import type {
+  BrowseRepositoryProgressResponse,
   BrowseRepositoryRequest,
   BrowseRepositoryResponse,
   CreatePackageRequest,
@@ -51,6 +52,10 @@ export class PackageApiClient extends BaseApiClient {
     req: BrowseRepositoryRequest,
   ): Promise<BrowseRepositoryResponse> {
     return this.request("POST", "/api/v1/repositories/browse", req);
+  }
+
+  async getBrowseRepositoryProgress(): Promise<BrowseRepositoryProgressResponse> {
+    return this.request("GET", "/api/v1/repositories/browse/progress");
   }
 
   async listMockChroots(): Promise<MockChrootListResponse> {

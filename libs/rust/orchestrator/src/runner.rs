@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use synforge_core::{
     config::DaemonConfig,
+    constants::DEFAULT_WORKER_WORKSPACE_ROOT,
     model::{WorkerAction, WorkerBuildPayload, WorkerJobPayload, WorkerResult},
 };
 use tracing::{error, info, instrument};
@@ -44,12 +45,13 @@ impl BuildRunner {
             "starting queued build"
         );
         let paths = self.config.runtime_paths();
-        let job_root = paths.job_root(build.job_id);
         tokio::fs::create_dir_all(paths.job_artifacts_dir(build.job_id)).await?;
+        let worker_workspace =
+            std::path::Path::new(DEFAULT_WORKER_WORKSPACE_ROOT).join(build.job_id.to_string());
 
         let payload = WorkerJobPayload {
             job_id: build.job_id,
-            workspace_dir: job_root,
+            workspace_dir: worker_workspace,
             timeout_seconds: build.package.build_timeout_seconds,
             git_mirror_reference: None,
             action: WorkerAction::Build(Box::new(WorkerBuildPayload {

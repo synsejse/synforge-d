@@ -193,16 +193,6 @@ impl JobLifecycle {
             .await
     }
 
-    pub async fn remove_job_runtime(&self, job_id: Uuid) -> anyhow::Result<()> {
-        let workspace_dir = self.config.runtime_paths().job_root(job_id);
-        if workspace_dir.exists() {
-            tokio::fs::remove_dir_all(&workspace_dir)
-                .await
-                .with_context(|| format!("failed to remove {}", workspace_dir.display()))?;
-        }
-        Ok(())
-    }
-
     pub async fn abort_unfinished_jobs(&self, message: &str) -> anyhow::Result<()> {
         warn!(reason = message, "aborting unfinished jobs");
         self.store.abort_unfinished_jobs(message).await
@@ -232,7 +222,6 @@ impl JobLifecycle {
             let published_files = self.store.list_published_repo_files_for_job(job_id).await?;
             self.remove_published_files(&published_files).await?;
             let _ = self.store.delete_job(job_id).await?;
-            self.remove_job_runtime(job_id).await?;
         }
 
         Ok(())

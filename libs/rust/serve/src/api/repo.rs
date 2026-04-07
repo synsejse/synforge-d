@@ -1,8 +1,8 @@
 use axum::Json;
 use axum::extract::{Query, State};
 use synforge_core::api::{
-    BrowseRepositoryRequest, BrowseRepositoryResponse, RepoInventoryQuery, RepoInventoryResponse,
-    RepoSummaryResponse,
+    BrowseRepositoryProgressResponse, BrowseRepositoryRequest, BrowseRepositoryResponse,
+    RepoInventoryQuery, RepoInventoryResponse, RepoSummaryResponse,
 };
 
 use crate::{AppError, AppState};
@@ -24,6 +24,22 @@ pub(crate) async fn browse_repository(
     Json(request): Json<BrowseRepositoryRequest>,
 ) -> Result<Json<BrowseRepositoryResponse>, AppError> {
     Ok(Json(state.service.browse_repository(request).await?))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/repositories/browse/progress",
+    tag = "Repository",
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "Get latest repository browse clone progress", body = BrowseRepositoryProgressResponse),
+        (status = 401, body = synforge_core::api::ApiError)
+    )
+)]
+pub(crate) async fn get_browse_repository_progress(
+    State(state): State<AppState>,
+) -> Result<Json<BrowseRepositoryProgressResponse>, AppError> {
+    Ok(Json(state.service.get_browse_repository_progress().await?))
 }
 
 #[utoipa::path(

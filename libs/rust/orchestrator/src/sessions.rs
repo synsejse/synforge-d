@@ -105,6 +105,10 @@ impl WorkerSessionBroker {
         sessions
     }
 
+    pub fn active_job_ids(&self) -> Vec<Uuid> {
+        self.state.iter().map(|entry| *entry.key()).collect()
+    }
+
     pub fn artifact_storage_path(&self, job_id: Uuid, relative_path: &str) -> PathBuf {
         let relative = Path::new(relative_path);
         let sanitized = relative

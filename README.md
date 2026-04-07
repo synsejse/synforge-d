@@ -6,7 +6,7 @@ You connect source repositories, sync updates, run builds, and view results in o
 
 ## Quick start
 
-1. Copy `.env.example` to `.env` and set database credentials.
+1. Copy `.env.example` to `.env`, set database credentials, and set `SYNFORGE_WORKER_JOBS_ROOT` to a large-disk path when available.
 2. Start the stack with Docker Compose.
 3. Open the web app.
 4. Complete first-time setup and create an admin user.

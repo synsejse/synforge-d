@@ -12,8 +12,6 @@ use tracing::info;
 
 use crate::db::{DieselStore, GitCacheStore};
 
-pub const WORKER_MIRROR_MOUNT_PATH: &str = "/synforge-git-mirrors";
-
 #[derive(Clone)]
 pub struct GitMirrorCache {
     store: DieselStore,

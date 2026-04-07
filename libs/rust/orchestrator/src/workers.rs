@@ -13,7 +13,6 @@ use synforge_core::{
 };
 use tracing::{info, warn};
 
-use crate::git_cache::{GitMirrorCache, WORKER_MIRROR_MOUNT_PATH};
 use crate::job_lifecycle::JobLifecycle;
 use crate::sessions::WorkerSessionBroker;
 
@@ -54,18 +53,12 @@ impl DockerWorkerLauncher {
             timeout_seconds = payload.timeout_seconds,
             "launching worker job"
         );
-        tokio::fs::create_dir_all(&payload.workspace_dir).await?;
-        tokio::fs::create_dir_all(config.runtime_paths().job_logs_dir(payload.job_id)).await?;
-        tokio::fs::create_dir_all(config.runtime_paths().git_mirror_root()).await?;
-        let repo_url = payload_repo_url(payload).map(str::to_string);
-        let mirror_key = repo_url.as_deref().map(GitMirrorCache::mirror_key);
-        let mut worker_payload = payload.clone();
-        worker_payload.git_mirror_reference = mirror_key
-            .as_ref()
-            .map(|key| format!("{WORKER_MIRROR_MOUNT_PATH}/{key}"));
+        let runtime_paths = config.runtime_paths();
+        tokio::fs::create_dir_all(runtime_paths.job_logs_dir(payload.job_id)).await?;
+        let binds = Self::mock_mount_binds(payload, config).await?;
         let session = self
             .sessions
-            .create_session(payload.job_id, worker_payload)
+            .create_session(payload.job_id, payload.clone())
             .await?;
         info!(
             job_id = %payload.job_id,
@@ -74,19 +67,15 @@ impl DockerWorkerLauncher {
         );
 
         let container_name = format!("synforge-worker-{}", payload.job_id);
-        let mirror_bind = format!(
-            "{}:{}:ro",
-            config.runtime_paths().git_mirror_root().display(),
-            WORKER_MIRROR_MOUNT_PATH
-        );
         info!(
             job_id = %payload.job_id,
             container_name = %container_name,
             worker_image = %config.worker_image,
             network_mode = ?self.network_mode,
+            worker_jobs_root = ?config.worker_jobs_root,
             "creating worker container"
         );
-        let container_with_bind = self
+        let container = self
             .docker
             .create_container(
                 Some(
@@ -94,44 +83,10 @@ impl DockerWorkerLauncher {
                         .name(container_name.as_str())
                         .build(),
                 ),
-                worker_container_body(
-                    config,
-                    &session.worker_id,
-                    self.network_mode.clone(),
-                    Some(vec![mirror_bind.clone()]),
-                ),
+                worker_container_body(config, &session.worker_id, self.network_mode.clone(), binds),
             )
-            .await;
-        let container = match container_with_bind {
-            Ok(container) => container,
-            Err(error) => {
-                warn!(
-                    job_id = %payload.job_id,
-                    container_name = %container_name,
-                    bind = %mirror_bind,
-                    error = %error,
-                    "failed to create worker container with git mirror bind; retrying without mirror cache mount"
-                );
-                self.docker
-                    .create_container(
-                        Some(
-                            CreateContainerOptionsBuilder::default()
-                                .name(container_name.as_str())
-                                .build(),
-                        ),
-                        worker_container_body(
-                            config,
-                            &session.worker_id,
-                            self.network_mode.clone(),
-                            None,
-                        ),
-                    )
-                    .await
-                    .with_context(|| {
-                        format!("failed to create worker container {}", container_name)
-                    })?
-            }
-        };
+            .await
+            .with_context(|| format!("failed to create worker container {}", container_name))?;
 
         let container_id = container.id;
         info!(
@@ -262,6 +217,46 @@ impl DockerWorkerLauncher {
         }
         Ok(())
     }
+
+    async fn mock_mount_binds(
+        payload: &WorkerJobPayload,
+        config: &DaemonConfig,
+    ) -> anyhow::Result<Option<Vec<String>>> {
+        let WorkerAction::Build(_) = &payload.action else {
+            return Ok(None);
+        };
+        let Some(worker_jobs_root) = config.worker_jobs_root.as_ref() else {
+            warn!(
+                job_id = %payload.job_id,
+                "worker_jobs_root is unset; build container will run without dedicated mock bind mounts"
+            );
+            return Ok(None);
+        };
+
+        let host_mock_root = worker_jobs_root
+            .join(payload.job_id.to_string())
+            .join("mock");
+        let host_mock_lib = host_mock_root.join("lib");
+        let host_mock_cache = host_mock_root.join("cache");
+        tokio::fs::create_dir_all(&host_mock_lib).await?;
+        tokio::fs::create_dir_all(&host_mock_cache).await?;
+
+        let container_mock_root = payload.workspace_dir.join("mock");
+        let container_mock_lib = container_mock_root.join("lib");
+        let container_mock_cache = container_mock_root.join("cache");
+        Ok(Some(vec![
+            format!(
+                "{}:{}:rw,z",
+                host_mock_lib.display(),
+                container_mock_lib.display()
+            ),
+            format!(
+                "{}:{}:rw,z",
+                host_mock_cache.display(),
+                container_mock_cache.display()
+            ),
+        ]))
+    }
 }
 
 fn worker_container_body(
@@ -328,12 +323,5 @@ fn job_descriptor(payload: &WorkerJobPayload) -> (&'static str, &str, &str) {
             build.package_name.as_str(),
             build.mock_chroot.as_str(),
         ),
-    }
-}
-
-fn payload_repo_url(payload: &WorkerJobPayload) -> Option<&str> {
-    match &payload.action {
-        WorkerAction::Parse(parse) => Some(parse.source.repo_url.as_str()),
-        WorkerAction::Build(build) => Some(build.package.source.repo_url.as_str()),
     }
 }

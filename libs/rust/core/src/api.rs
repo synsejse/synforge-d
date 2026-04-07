@@ -101,6 +101,30 @@ pub struct BrowseRepositoryResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum BrowseRepositoryProgressState {
+    Running,
+    Completed,
+    Failed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct BrowseRepositoryProgressView {
+    pub operation_id: uuid::Uuid,
+    pub repo_url: String,
+    pub state: BrowseRepositoryProgressState,
+    pub progress_percent: u8,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct BrowseRepositoryProgressResponse {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub operation: Option<BrowseRepositoryProgressView>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct MockChrootListResponse {
     pub chroots: Vec<String>,
 }
@@ -480,6 +504,8 @@ pub struct EffectiveConfigView {
     #[schema(value_type = String)]
     pub jobs_root: std::path::PathBuf,
     pub worker_image: String,
+    #[schema(value_type = Option<String>)]
+    pub worker_jobs_root: Option<std::path::PathBuf>,
     pub signing_enabled: bool,
     pub signing_key_id: Option<String>,
     pub max_concurrent_builds: usize,

@@ -4,7 +4,10 @@ use rand_core::{OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    constants::{DATABASE_URL_ENV_VAR, DEFAULT_DAEMON_LISTEN_ADDR, DEFAULT_DAEMON_PUBLIC_BASE_URL},
+    constants::{
+        DATABASE_URL_ENV_VAR, DEFAULT_DAEMON_LISTEN_ADDR, DEFAULT_DAEMON_PUBLIC_BASE_URL,
+        WORKER_JOBS_ROOT_ENV_VAR,
+    },
     error::SynforgeError,
     runtime::RuntimePaths,
 };
@@ -44,6 +47,14 @@ fn default_worker_result_timeout_seconds() -> u64 {
 
 fn default_worker_socket_timeout_seconds() -> u64 {
     30
+}
+
+fn default_worker_jobs_root() -> Option<PathBuf> {
+    std::env::var(WORKER_JOBS_ROOT_ENV_VAR)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
 }
 
 fn default_git_operation_timeout_seconds() -> u64 {
@@ -108,6 +119,8 @@ pub struct DaemonConfig {
     pub worker_result_timeout_seconds: u64,
     #[serde(default = "default_worker_socket_timeout_seconds")]
     pub worker_socket_timeout_seconds: u64,
+    #[serde(default = "default_worker_jobs_root")]
+    pub worker_jobs_root: Option<PathBuf>,
     #[serde(default = "default_git_operation_timeout_seconds")]
     pub git_operation_timeout_seconds: u64,
     #[serde(default = "default_public_base_url")]
@@ -137,6 +150,7 @@ impl Default for DaemonConfig {
             poller_tick_seconds: default_poller_tick_seconds(),
             worker_result_timeout_seconds: default_worker_result_timeout_seconds(),
             worker_socket_timeout_seconds: default_worker_socket_timeout_seconds(),
+            worker_jobs_root: default_worker_jobs_root(),
             git_operation_timeout_seconds: default_git_operation_timeout_seconds(),
             public_base_url: default_public_base_url(),
             mock_chroot_cache_ttl_seconds: default_mock_chroot_cache_ttl_seconds(),
@@ -194,6 +208,13 @@ impl DaemonConfig {
         if self.worker_socket_timeout_seconds == 0 {
             return Err(SynforgeError::Config(
                 "worker_socket_timeout_seconds must be greater than zero".to_string(),
+            ));
+        }
+        if let Some(worker_jobs_root) = self.worker_jobs_root.as_ref()
+            && !worker_jobs_root.is_absolute()
+        {
+            return Err(SynforgeError::Config(
+                "worker_jobs_root must be an absolute path when provided".to_string(),
             ));
         }
         if self.git_operation_timeout_seconds == 0 {

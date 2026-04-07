@@ -1,6 +1,9 @@
 use anyhow::Context;
 use synforge_core::{
-    api::{BrowseRepositoryResponse, CreatePackageRequest, PackageResponse, UpdatePackageRequest},
+    api::{
+        BrowseRepositoryProgressView, BrowseRepositoryResponse, CreatePackageRequest,
+        PackageResponse, UpdatePackageRequest,
+    },
     error::SynforgeError,
     package::{PackageDefinition, SpecRevision, SpecSource},
     sync::SyncTriggerType,
@@ -259,6 +262,10 @@ impl PackageRegistry {
         repo_url: &str,
     ) -> anyhow::Result<BrowseRepositoryResponse> {
         self.package_store.browse_repository(repo_url).await
+    }
+
+    pub async fn browse_repository_progress(&self) -> Option<BrowseRepositoryProgressView> {
+        self.package_store.browse_repository_progress().await
     }
 
     pub async fn git_cache_stats(&self) -> anyhow::Result<GitMirrorCacheStatsSnapshot> {

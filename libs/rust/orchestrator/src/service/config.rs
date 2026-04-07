@@ -63,6 +63,7 @@ impl SynforgeService {
                 repo_dir: paths.repo_dir().to_path_buf(),
                 jobs_root: paths.jobs_root().to_path_buf(),
                 worker_image: current.worker_image.clone(),
+                worker_jobs_root: current.worker_jobs_root.clone(),
                 signing_enabled: current.signing_enabled,
                 signing_key_id: current.signing_key_id.clone(),
                 max_concurrent_builds: current.max_concurrent_builds,
@@ -245,6 +246,19 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
             "Worker image",
             "Docker image used for spawned worker containers.",
             "synforge-worker-fedora:latest",
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: true,
+            },
+        ),
+        config_optional_string_field(
+            ConfigSection {
+                key: "worker",
+                label: "Worker",
+            },
+            "worker_jobs_root",
+            "Worker jobs root",
+            "Host path used for per-job worker mock bind mounts.",
             ConfigEditability {
                 in_setup: true,
                 in_runtime: true,
@@ -551,6 +565,10 @@ pub(super) fn apply_config_settings(
     if let Some(value) = settings.get("worker_image") {
         config.worker_image = parse_string_setting(value, "worker_image")?;
     }
+    if let Some(value) = settings.get("worker_jobs_root") {
+        config.worker_jobs_root =
+            parse_optional_string_setting(value, "worker_jobs_root")?.map(PathBuf::from);
+    }
     if let Some(value) = settings.get("signing_enabled") {
         config.signing_enabled = parse_bool_setting(value, "signing_enabled")?;
     }
@@ -650,6 +668,14 @@ fn daemon_config_runtime_settings(config: &DaemonConfig) -> BTreeMap<String, Val
     settings.insert(
         "worker_image".to_string(),
         Value::String(config.worker_image.clone()),
+    );
+    settings.insert(
+        "worker_jobs_root".to_string(),
+        config
+            .worker_jobs_root
+            .as_ref()
+            .map(|value| Value::String(value.display().to_string()))
+            .unwrap_or(Value::Null),
     );
     settings.insert(
         "signing_enabled".to_string(),

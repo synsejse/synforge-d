@@ -107,6 +107,7 @@ async fn execute_spec_build(
             build_source_rpm(package, &spec_file, &package_dir, &source_topdir, &logger).await?;
         let mut artifacts = Vec::new();
         let arch_topdir = topdir.join(&build_payload.mock_chroot);
+        let mock_runtime_root = payload.workspace_dir.join("mock");
         logger.section("Build packages").await?;
         logger
             .line(format!("Target: {}", build_payload.mock_chroot))
@@ -116,6 +117,7 @@ async fn execute_spec_build(
             &build_payload.mock_chroot,
             &srpm_path,
             &arch_topdir,
+            &mock_runtime_root,
             &logger,
         )
         .await?;
@@ -294,9 +296,14 @@ async fn run_mock_build(
     mock_chroot: &str,
     srpm_path: &Path,
     topdir: &Path,
+    mock_runtime_root: &Path,
     logger: &BuildLogger,
 ) -> anyhow::Result<()> {
     tokio::fs::create_dir_all(topdir).await?;
+    let mock_lib_dir = mock_runtime_root.join("lib");
+    let mock_cache_dir = mock_runtime_root.join("cache");
+    tokio::fs::create_dir_all(&mock_lib_dir).await?;
+    tokio::fs::create_dir_all(&mock_cache_dir).await?;
     logger.section("Run mock rebuild").await?;
     logger.line(format!("Target: {}", mock_chroot)).await?;
     let mut command = Command::new("mock");
@@ -305,6 +312,10 @@ async fn run_mock_build(
         .arg(mock_chroot)
         .arg("--config-opts")
         .arg("use_bootstrap=False")
+        .arg("--config-opts")
+        .arg(format!("basedir={}", mock_lib_dir.display()))
+        .arg("--config-opts")
+        .arg(format!("cache_topdir={}", mock_cache_dir.display()))
         .arg("--isolation=simple")
         .arg("--resultdir")
         .arg(topdir);

@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     constants::{
-        DATABASE_URL_ENV_VAR, DEFAULT_DAEMON_LISTEN_ADDR, DEFAULT_DAEMON_PUBLIC_BASE_URL,
-        WORKER_JOBS_ROOT_ENV_VAR,
+        DAEMON_RUNTIME_ROOT, DAEMON_WORKER_JOBS_ROOT, DATABASE_URL_ENV_VAR,
+        DEFAULT_DAEMON_LISTEN_ADDR, DEFAULT_DAEMON_PUBLIC_BASE_URL,
     },
     error::SynforgeError,
     runtime::RuntimePaths,
@@ -14,10 +14,6 @@ use crate::{
 
 fn default_listen_addr() -> String {
     DEFAULT_DAEMON_LISTEN_ADDR.to_string()
-}
-
-fn default_runtime_root() -> PathBuf {
-    PathBuf::from("/var/lib/synforge")
 }
 
 fn default_database_url() -> String {
@@ -47,14 +43,6 @@ fn default_worker_result_timeout_seconds() -> u64 {
 
 fn default_worker_socket_timeout_seconds() -> u64 {
     30
-}
-
-fn default_worker_jobs_root() -> Option<PathBuf> {
-    std::env::var(WORKER_JOBS_ROOT_ENV_VAR)
-        .ok()
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-        .map(PathBuf::from)
 }
 
 fn default_git_operation_timeout_seconds() -> u64 {
@@ -93,8 +81,6 @@ fn default_bootstrap_completed() -> bool {
 pub struct DaemonConfig {
     #[serde(default = "default_listen_addr")]
     pub listen_addr: String,
-    #[serde(default = "default_runtime_root")]
-    pub runtime_root: PathBuf,
     #[serde(default = "default_database_url")]
     pub database_url: String,
     #[serde(default = "default_worker_image")]
@@ -119,8 +105,6 @@ pub struct DaemonConfig {
     pub worker_result_timeout_seconds: u64,
     #[serde(default = "default_worker_socket_timeout_seconds")]
     pub worker_socket_timeout_seconds: u64,
-    #[serde(default = "default_worker_jobs_root")]
-    pub worker_jobs_root: Option<PathBuf>,
     #[serde(default = "default_git_operation_timeout_seconds")]
     pub git_operation_timeout_seconds: u64,
     #[serde(default = "default_public_base_url")]
@@ -137,7 +121,6 @@ impl Default for DaemonConfig {
     fn default() -> Self {
         Self {
             listen_addr: default_listen_addr(),
-            runtime_root: default_runtime_root(),
             database_url: default_database_url(),
             worker_image: default_worker_image(),
             session_secret: default_session_secret(),
@@ -150,7 +133,6 @@ impl Default for DaemonConfig {
             poller_tick_seconds: default_poller_tick_seconds(),
             worker_result_timeout_seconds: default_worker_result_timeout_seconds(),
             worker_socket_timeout_seconds: default_worker_socket_timeout_seconds(),
-            worker_jobs_root: default_worker_jobs_root(),
             git_operation_timeout_seconds: default_git_operation_timeout_seconds(),
             public_base_url: default_public_base_url(),
             mock_chroot_cache_ttl_seconds: default_mock_chroot_cache_ttl_seconds(),
@@ -173,11 +155,6 @@ impl DaemonConfig {
         if self.listen_addr.trim().is_empty() {
             return Err(SynforgeError::Config(
                 "listen_addr must not be empty".to_string(),
-            ));
-        }
-        if self.runtime_root.as_os_str().is_empty() {
-            return Err(SynforgeError::Config(
-                "runtime_root must not be empty".to_string(),
             ));
         }
         if self.max_concurrent_builds == 0 {
@@ -208,13 +185,6 @@ impl DaemonConfig {
         if self.worker_socket_timeout_seconds == 0 {
             return Err(SynforgeError::Config(
                 "worker_socket_timeout_seconds must be greater than zero".to_string(),
-            ));
-        }
-        if let Some(worker_jobs_root) = self.worker_jobs_root.as_ref()
-            && !worker_jobs_root.is_absolute()
-        {
-            return Err(SynforgeError::Config(
-                "worker_jobs_root must be an absolute path when provided".to_string(),
             ));
         }
         if self.git_operation_timeout_seconds == 0 {
@@ -258,7 +228,11 @@ impl DaemonConfig {
     }
 
     pub fn runtime_paths(&self) -> RuntimePaths {
-        RuntimePaths::new(self.runtime_root.clone())
+        RuntimePaths::new(PathBuf::from(DAEMON_RUNTIME_ROOT))
+    }
+
+    pub fn worker_jobs_root(&self) -> PathBuf {
+        PathBuf::from(DAEMON_WORKER_JOBS_ROOT)
     }
 }
 

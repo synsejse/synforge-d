@@ -52,10 +52,9 @@ impl SynforgeService {
         self.cleanup_orphan_job_dirs_under(&jobs_root, &active_job_ids, "runtime")
             .await?;
 
-        if let Some(worker_jobs_root) = self.config.worker_jobs_root.as_ref()
-            && worker_jobs_root.as_path() != jobs_root.as_path()
-        {
-            self.cleanup_orphan_job_dirs_under(worker_jobs_root, &active_job_ids, "worker")
+        let worker_jobs_root = self.config.worker_jobs_root();
+        if worker_jobs_root.as_path() != jobs_root.as_path() {
+            self.cleanup_orphan_job_dirs_under(&worker_jobs_root, &active_job_ids, "worker")
                 .await?;
         }
         Ok(())

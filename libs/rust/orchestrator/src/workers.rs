@@ -67,12 +67,13 @@ impl DockerWorkerLauncher {
         );
 
         let container_name = format!("synforge-worker-{}", payload.job_id);
+        let worker_jobs_root = config.worker_jobs_root();
         info!(
             job_id = %payload.job_id,
             container_name = %container_name,
             worker_image = %config.worker_image,
             network_mode = ?self.network_mode,
-            worker_jobs_root = ?config.worker_jobs_root,
+            worker_jobs_root = ?worker_jobs_root,
             "creating worker container"
         );
         let container = self
@@ -225,13 +226,7 @@ impl DockerWorkerLauncher {
         let WorkerAction::Build(_) = &payload.action else {
             return Ok(None);
         };
-        let Some(worker_jobs_root) = config.worker_jobs_root.as_ref() else {
-            warn!(
-                job_id = %payload.job_id,
-                "worker_jobs_root is unset; build container will run without dedicated mock bind mounts"
-            );
-            return Ok(None);
-        };
+        let worker_jobs_root = config.worker_jobs_root();
 
         let host_mock_root = worker_jobs_root
             .join(payload.job_id.to_string())

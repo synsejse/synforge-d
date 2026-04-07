@@ -494,8 +494,6 @@ pub struct ApiError {
 pub struct EffectiveConfigView {
     pub bootstrap_completed: bool,
     pub listen_addr: String,
-    #[schema(value_type = String)]
-    pub runtime_root: std::path::PathBuf,
     pub database_url: String,
     #[schema(value_type = String)]
     pub packages_dir: std::path::PathBuf,
@@ -504,8 +502,6 @@ pub struct EffectiveConfigView {
     #[schema(value_type = String)]
     pub jobs_root: std::path::PathBuf,
     pub worker_image: String,
-    #[schema(value_type = Option<String>)]
-    pub worker_jobs_root: Option<std::path::PathBuf>,
     pub signing_enabled: bool,
     pub signing_key_id: Option<String>,
     pub max_concurrent_builds: usize,

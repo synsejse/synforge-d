@@ -1,5 +1,4 @@
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 
 use serde_json::Value;
 use synforge_core::{
@@ -57,13 +56,11 @@ impl SynforgeService {
             config: EffectiveConfigView {
                 bootstrap_completed: current.bootstrap_completed,
                 listen_addr: current.listen_addr.clone(),
-                runtime_root: current.runtime_root.clone(),
                 database_url: current.database_url.clone(),
                 packages_dir: paths.packages_dir().to_path_buf(),
                 repo_dir: paths.repo_dir().to_path_buf(),
                 jobs_root: paths.jobs_root().to_path_buf(),
                 worker_image: current.worker_image.clone(),
-                worker_jobs_root: current.worker_jobs_root.clone(),
                 signing_enabled: current.signing_enabled,
                 signing_key_id: current.signing_key_id.clone(),
                 max_concurrent_builds: current.max_concurrent_builds,
@@ -211,20 +208,6 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
         ),
         config_string_field(
             ConfigSection {
-                key: "storage",
-                label: "Storage",
-            },
-            "runtime_root",
-            "Runtime root",
-            "Root directory for database, package metadata, repo files, and jobs.",
-            "/var/lib/synforge",
-            ConfigEditability {
-                in_setup: true,
-                in_runtime: false,
-            },
-        ),
-        config_string_field(
-            ConfigSection {
                 key: "server",
                 label: "Server",
             },
@@ -246,19 +229,6 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
             "Worker image",
             "Docker image used for spawned worker containers.",
             "synforge-worker-fedora:latest",
-            ConfigEditability {
-                in_setup: true,
-                in_runtime: true,
-            },
-        ),
-        config_optional_string_field(
-            ConfigSection {
-                key: "worker",
-                label: "Worker",
-            },
-            "worker_jobs_root",
-            "Worker jobs root",
-            "Host path used for per-job worker mock bind mounts.",
             ConfigEditability {
                 in_setup: true,
                 in_runtime: true,
@@ -556,18 +526,11 @@ pub(super) fn apply_config_settings(
     if let Some(value) = settings.get("listen_addr") {
         config.listen_addr = parse_string_setting(value, "listen_addr")?;
     }
-    if let Some(value) = settings.get("runtime_root") {
-        config.runtime_root = PathBuf::from(parse_string_setting(value, "runtime_root")?);
-    }
     if let Some(value) = settings.get("public_base_url") {
         config.public_base_url = parse_string_setting(value, "public_base_url")?;
     }
     if let Some(value) = settings.get("worker_image") {
         config.worker_image = parse_string_setting(value, "worker_image")?;
-    }
-    if let Some(value) = settings.get("worker_jobs_root") {
-        config.worker_jobs_root =
-            parse_optional_string_setting(value, "worker_jobs_root")?.map(PathBuf::from);
     }
     if let Some(value) = settings.get("signing_enabled") {
         config.signing_enabled = parse_bool_setting(value, "signing_enabled")?;
@@ -658,24 +621,12 @@ fn daemon_config_runtime_settings(config: &DaemonConfig) -> BTreeMap<String, Val
         Value::String(config.listen_addr.clone()),
     );
     settings.insert(
-        "runtime_root".to_string(),
-        Value::String(config.runtime_root.display().to_string()),
-    );
-    settings.insert(
         "public_base_url".to_string(),
         Value::String(config.public_base_url.clone()),
     );
     settings.insert(
         "worker_image".to_string(),
         Value::String(config.worker_image.clone()),
-    );
-    settings.insert(
-        "worker_jobs_root".to_string(),
-        config
-            .worker_jobs_root
-            .as_ref()
-            .map(|value| Value::String(value.display().to_string()))
-            .unwrap_or(Value::Null),
     );
     settings.insert(
         "signing_enabled".to_string(),

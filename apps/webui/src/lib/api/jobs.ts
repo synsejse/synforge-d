@@ -181,6 +181,10 @@ export class JobApiClient extends PackageApiClient {
     return this.request("POST", `/api/v1/jobs/${encodeURIComponent(id)}/kill`, {});
   }
 
+  async retryJob(id: string): Promise<BuildJobResponse> {
+    return this.request("POST", `/api/v1/jobs/${encodeURIComponent(id)}/retry`, {});
+  }
+
   async pruneFailedJobs(): Promise<PruneJobsResponse> {
     return this.request("POST", "/api/v1/jobs/prune-failed", {});
   }

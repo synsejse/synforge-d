@@ -140,6 +140,29 @@ pub(crate) async fn kill_job(
 }
 
 #[utoipa::path(
+    post,
+    path = "/api/v1/jobs/{id}/retry",
+    tag = "Jobs",
+    params(
+        ("id" = Uuid, Path, description = "Job identifier")
+    ),
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "Retry a finished job", body = BuildJobResponse),
+        (status = 400, body = synforge_core::api::ApiError),
+        (status = 401, body = synforge_core::api::ApiError),
+        (status = 404, body = synforge_core::api::ApiError),
+        (status = 409, body = synforge_core::api::ApiError)
+    )
+)]
+pub(crate) async fn retry_job(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<BuildJobResponse>, AppError> {
+    Ok(Json(state.service.retry_job(id).await?))
+}
+
+#[utoipa::path(
     delete,
     path = "/api/v1/jobs/{id}",
     tag = "Jobs",

@@ -4,10 +4,10 @@ use anyhow::Context;
 use synforge_core::{
     api::{
         BuildJobListResponse, BuildJobResponse, JobArtifactListResponse, JobArtifactMetaResponse,
-        PruneJobsResponse,
+        PackageActionDisposition, PruneJobsResponse,
     },
     error::SynforgeError,
-    model::BuildStatus,
+    model::{BuildStatus, BuildTrigger},
 };
 use uuid::Uuid;
 
@@ -161,6 +161,55 @@ impl SynforgeService {
             .get_job(job_id)
             .await?
             .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(job_id.to_string())))
+    }
+
+    pub async fn retry_job(&self, job_id: Uuid) -> anyhow::Result<BuildJobResponse> {
+        let job = self
+            .store
+            .get_job(job_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(job_id.to_string())))?;
+        if matches!(job.job.status, BuildStatus::Pending | BuildStatus::Running) {
+            return Err(anyhow::anyhow!(SynforgeError::Conflict(format!(
+                "job {} is still active; use kill before retry",
+                job_id
+            ))));
+        }
+
+        let result = self
+            .scheduler
+            .enqueue_target_action(
+                &job.job.package_name,
+                &job.job.mock_chroot,
+                BuildTrigger::ManualRebuild,
+                true,
+                &self.queue_tx,
+            )
+            .await?;
+
+        match result.disposition {
+            PackageActionDisposition::Queued => {
+                let new_job_id = result.job_id.ok_or_else(|| {
+                    anyhow::anyhow!(SynforgeError::Internal(
+                        "queued retry action returned without job id".to_string()
+                    ))
+                })?;
+                self.store
+                    .get_job(new_job_id)
+                    .await?
+                    .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(new_job_id.to_string())))
+            }
+            PackageActionDisposition::Blocked => Err(anyhow::anyhow!(SynforgeError::Conflict(
+                result
+                    .reason
+                    .unwrap_or_else(|| "retry target is already queued or running".to_string()),
+            ))),
+            PackageActionDisposition::Skipped => Err(anyhow::anyhow!(SynforgeError::BadRequest(
+                result
+                    .reason
+                    .unwrap_or_else(|| "retry was skipped".to_string()),
+            ))),
+        }
     }
 
     pub async fn get_job_artifacts(&self, job_id: Uuid) -> anyhow::Result<JobArtifactListResponse> {

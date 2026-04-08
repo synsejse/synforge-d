@@ -50,6 +50,7 @@ impl Modify for SecurityAddon {
         api::jobs::list_active_jobs,
         api::jobs::list_completed_jobs,
         api::jobs::get_job,
+        api::jobs::kill_job,
         api::artifacts::list_job_artifacts,
         api::artifacts::get_job_artifact_meta,
         api::jobs::delete_job,

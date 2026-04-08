@@ -15,6 +15,8 @@ const buttonVariants = cva(
           "bg-transparent text-[var(--theme-text-strong)] border-[var(--theme-border-strong)] hover:bg-[var(--theme-surface-hover)] hover:border-[var(--theme-text-muted)]",
         danger:
           "border-[var(--theme-error-red)] bg-[var(--theme-error-red)] text-white shadow-[2px_2px_0_rgba(0,0,0,0.8)] hover:translate-x-[-2px] hover:translate-y-[-2px]",
+        warning:
+          "border-[var(--theme-accent-orange)] bg-[var(--theme-accent-orange)] text-black shadow-[2px_2px_0_rgba(0,0,0,0.8)] hover:translate-x-[-2px] hover:translate-y-[-2px]",
         terminal:
           "bg-black text-[var(--theme-terminal-green)] border-[var(--theme-terminal-green)] font-mono hover:bg-[var(--theme-terminal-green)] hover:text-black",
       },

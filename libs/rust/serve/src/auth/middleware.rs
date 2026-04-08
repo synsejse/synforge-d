@@ -125,6 +125,9 @@ fn required_api_permission(method: &Method, path: &str) -> UserPermission {
         | (&Method::POST, "/repositories/browse")
         | (&Method::POST, "/jobs/prune-failed")
         | (&Method::POST, "/config/runtime") => UserPermission::Write,
+        (&Method::POST, path) if path.starts_with("/jobs/") && path.ends_with("/kill") => {
+            UserPermission::Write
+        }
         (&Method::POST, path) if path.starts_with("/signing/") => UserPermission::Write,
         (&Method::POST, path) if path.ends_with("/rebuild") || path.ends_with("/refresh") => {
             UserPermission::Write

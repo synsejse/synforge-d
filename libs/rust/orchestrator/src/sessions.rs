@@ -10,8 +10,8 @@ use uuid::Uuid;
 
 use synforge_core::{
     model::{
-        ArtifactKind, BuildArtifact, WorkerAction, WorkerBuildResult, WorkerJobPayload,
-        WorkerResult,
+        ArtifactKind, BuildArtifact, BuildStatus, WorkerAction, WorkerBuildResult,
+        WorkerJobPayload, WorkerResult,
     },
     package::parse_mock_chroot,
 };
@@ -77,6 +77,11 @@ impl WorkerSessionBroker {
         if let Some(entry) = self.state.get(&job_id) {
             *entry.container_id.lock().await = Some(container_id);
         }
+    }
+
+    pub async fn container_id_for_job(&self, job_id: Uuid) -> Option<String> {
+        let entry = self.state.get(&job_id)?;
+        entry.container_id.lock().await.clone()
     }
 
     pub async fn connect_worker(
@@ -196,6 +201,30 @@ impl WorkerSessionBroker {
         *entry.result.lock().await = Some(merge_result(result, &artifacts));
         entry.notify.notify_waiters();
         Ok(())
+    }
+
+    pub async fn fail_build_result(&self, job_id: Uuid, message: &str) -> anyhow::Result<bool> {
+        let package_name = {
+            let Some(entry) = self.state.get(&job_id) else {
+                return Ok(false);
+            };
+            let WorkerAction::Build(build) = &entry.payload.action else {
+                return Ok(false);
+            };
+            build.package_name.clone()
+        };
+        self.complete(
+            job_id,
+            WorkerResult::Build(WorkerBuildResult {
+                job_id,
+                package_name,
+                status: BuildStatus::Failed,
+                artifacts: Vec::new(),
+                message: Some(message.to_string()),
+            }),
+        )
+        .await?;
+        Ok(true)
     }
 
     pub async fn wait_for_result(

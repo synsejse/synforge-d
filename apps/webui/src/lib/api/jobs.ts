@@ -177,6 +177,10 @@ export class JobApiClient extends PackageApiClient {
     return this.request("DELETE", `/api/v1/jobs/${encodeURIComponent(id)}`);
   }
 
+  async killJob(id: string): Promise<BuildJobResponse> {
+    return this.request("POST", `/api/v1/jobs/${encodeURIComponent(id)}/kill`, {});
+  }
+
   async pruneFailedJobs(): Promise<PruneJobsResponse> {
     return this.request("POST", "/api/v1/jobs/prune-failed", {});
   }

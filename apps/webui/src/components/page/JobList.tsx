@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { faChartLine, faTrash, faFilter } from "@fortawesome/free-solid-svg-icons";
+import {
+  faChartLine,
+  faFilter,
+  faStop,
+  faTrash,
+} from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import type { BuildJobResponse } from "../../lib/types";
 import { formatDateTime, formatDurationBetween } from "../../lib/datetime";
@@ -34,6 +39,7 @@ export default function JobList() {
   const [packageFilter, setPackageFilter] = useState("");
   const [targetFilter, setTargetFilter] = useState("");
   const [pruning, setPruning] = useState(false);
+  const [killingJobId, setKillingJobId] = useState<string | null>(null);
   const pageSize = 50;
 
   async function load(
@@ -115,6 +121,25 @@ export default function JobList() {
       alert(e instanceof Error ? e.message : "Failed to prune failed jobs");
     } finally {
       setPruning(false);
+    }
+  }
+
+  async function handleKill(job: BuildJobResponse) {
+    if (
+      !confirm(
+        `Kill active job ${job.job.id} (${job.job.package_name} / ${job.job.mock_chroot})?`,
+      )
+    ) {
+      return;
+    }
+    try {
+      setKillingJobId(job.job.id);
+      await api.killJob(job.job.id);
+      await load();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to kill job");
+    } finally {
+      setKillingJobId(null);
     }
   }
 
@@ -339,14 +364,28 @@ export default function JobList() {
                           >
                             Open
                           </Button>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => handleDelete(entry)}
-                            disabled={isLive}
-                          >
-                            <FaIcon icon={faTrash} />
-                          </Button>
+                          {mode === "active" && isLive && (
+                            <Button
+                              variant="warning"
+                              size="sm"
+                              onClick={() => handleKill(entry)}
+                              disabled={killingJobId === entry.job.id}
+                            >
+                              <FaIcon icon={faStop} />
+                              Kill Active
+                            </Button>
+                          )}
+                          {mode !== "active" && (
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleDelete(entry)}
+                              disabled={isLive}
+                            >
+                              <FaIcon icon={faTrash} />
+                              Delete
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>

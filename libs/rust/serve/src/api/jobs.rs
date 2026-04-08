@@ -118,6 +118,28 @@ pub(crate) async fn get_job(
 }
 
 #[utoipa::path(
+    post,
+    path = "/api/v1/jobs/{id}/kill",
+    tag = "Jobs",
+    params(
+        ("id" = Uuid, Path, description = "Job identifier")
+    ),
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "Kill active job", body = BuildJobResponse),
+        (status = 401, body = synforge_core::api::ApiError),
+        (status = 404, body = synforge_core::api::ApiError),
+        (status = 409, body = synforge_core::api::ApiError)
+    )
+)]
+pub(crate) async fn kill_job(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<BuildJobResponse>, AppError> {
+    Ok(Json(state.service.kill_job(id).await?))
+}
+
+#[utoipa::path(
     delete,
     path = "/api/v1/jobs/{id}",
     tag = "Jobs",

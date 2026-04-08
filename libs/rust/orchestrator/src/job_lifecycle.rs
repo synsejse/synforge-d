@@ -47,6 +47,13 @@ impl JobLifecycle {
             .with_context(|| format!("failed to persist running state for {}", job_id))
     }
 
+    pub async fn should_run_job(&self, job_id: Uuid) -> anyhow::Result<bool> {
+        let Some(job) = self.store.get_job(job_id).await? else {
+            return Ok(false);
+        };
+        Ok(job.job.status == BuildStatus::Pending)
+    }
+
     pub async fn fail_launch(
         &self,
         build: &QueuedBuild,

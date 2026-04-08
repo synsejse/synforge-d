@@ -37,6 +37,15 @@ impl BuildRunner {
     }
 
     async fn process_build_inner(&self, build: QueuedBuild) -> anyhow::Result<()> {
+        if !self.lifecycle.should_run_job(build.job_id).await? {
+            info!(
+                job_id = %build.job_id,
+                package_name = %build.package.name,
+                mock_chroot = %build.mock_chroot,
+                "skipping queued build because job is no longer pending"
+            );
+            return Ok(());
+        }
         info!(
             job_id = %build.job_id,
             package_name = %build.package.name,

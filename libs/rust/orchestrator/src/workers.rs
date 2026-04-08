@@ -183,6 +183,72 @@ impl DockerWorkerLauncher {
         info!(job_id = %job_id, "worker session cleaned up after finalization");
     }
 
+    pub async fn kill_job(
+        &self,
+        job_id: Uuid,
+        container_id: Option<String>,
+        reason: &str,
+    ) -> anyhow::Result<()> {
+        let session_marked_failed = self.sessions.fail_build_result(job_id, reason).await?;
+        let resolved_container_id = match container_id {
+            Some(value) => Some(value),
+            None => self.sessions.container_id_for_job(job_id).await,
+        };
+        let Some(container_id) = resolved_container_id else {
+            if session_marked_failed {
+                info!(
+                    job_id = %job_id,
+                    "kill requested; no container id available, but worker session was marked failed"
+                );
+            } else {
+                warn!(
+                    job_id = %job_id,
+                    "kill requested for active job without container/session state"
+                );
+            }
+            return Ok(());
+        };
+
+        info!(
+            job_id = %job_id,
+            container_id = %container_id,
+            "killing worker container for job"
+        );
+        match self
+            .docker
+            .kill_container(
+                &container_id,
+                None::<bollard::query_parameters::KillContainerOptions>,
+            )
+            .await
+        {
+            Ok(()) => {
+                info!(
+                    job_id = %job_id,
+                    container_id = %container_id,
+                    "worker container killed"
+                );
+                Ok(())
+            }
+            Err(bollard::errors::Error::DockerResponseServerError {
+                status_code: 404, ..
+            }) => {
+                warn!(
+                    job_id = %job_id,
+                    container_id = %container_id,
+                    "worker container already exited before kill request"
+                );
+                Ok(())
+            }
+            Err(error) => Err(anyhow::anyhow!(
+                "failed to kill worker container {} for {}: {}",
+                container_id,
+                job_id,
+                error
+            )),
+        }
+    }
+
     pub async fn shutdown(&self) -> anyhow::Result<()> {
         let sessions = self.sessions.active_container_sessions().await;
         if !sessions.is_empty() {
@@ -236,7 +302,7 @@ impl DockerWorkerLauncher {
         let Some(host_jobs_root) = config.worker_jobs_host_path() else {
             warn!(
                 job_id = %payload.job_id,
-                "SYNFORGE_WORKER_JOBS_HOST_PATH not set; workers will run without dedicated mock bind mounts"
+                "SYNFORGE_WORKER_JOBS_PATH not set; workers will run without dedicated mock bind mounts"
             );
             return Ok(None);
         };

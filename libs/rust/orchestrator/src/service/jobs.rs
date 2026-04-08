@@ -137,6 +137,32 @@ impl SynforgeService {
             .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(job_id.to_string())))
     }
 
+    pub async fn kill_job(&self, job_id: Uuid) -> anyhow::Result<BuildJobResponse> {
+        let job = self
+            .store
+            .get_job(job_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(job_id.to_string())))?;
+        if !matches!(job.job.status, BuildStatus::Pending | BuildStatus::Running) {
+            return Err(anyhow::anyhow!(SynforgeError::Conflict(format!(
+                "job {} is not active",
+                job_id
+            ))));
+        }
+
+        let reason = "job killed by user request";
+        self.worker_launcher
+            .kill_job(job_id, job.job.worker_container_id.clone(), reason)
+            .await?;
+        self.store
+            .finish_job(job_id, BuildStatus::Failed, Some(reason), &[], &[], &[])
+            .await?;
+        self.store
+            .get_job(job_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(job_id.to_string())))
+    }
+
     pub async fn get_job_artifacts(&self, job_id: Uuid) -> anyhow::Result<JobArtifactListResponse> {
         let job = self.get_job(job_id).await?;
         Ok(JobArtifactListResponse {

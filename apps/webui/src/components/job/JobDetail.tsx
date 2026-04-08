@@ -12,6 +12,7 @@ import {
   faArrowLeft,
   faDownload,
   faRotate,
+  faStop,
   faTerminal,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
@@ -29,6 +30,7 @@ export default function JobDetail({ jobId }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [killing, setKilling] = useState(false);
   const [pageVisible, setPageVisible] = useState(() => {
     if (typeof document === "undefined") return true;
     return document.visibilityState === "visible";
@@ -105,6 +107,19 @@ export default function JobDetail({ jobId }: Props) {
     }
   }
 
+  async function handleKill() {
+    if (!confirm(`Kill active job ${jobId}?`)) return;
+    try {
+      setKilling(true);
+      await api.killJob(jobId);
+      await loadJob();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to kill job");
+    } finally {
+      setKilling(false);
+    }
+  }
+
   const getStatusVariant = (status: string) => {
     if (status === "completed") return "success";
     if (status === "failed" || status === "timed_out") return "error";
@@ -178,7 +193,13 @@ export default function JobDetail({ jobId }: Props) {
                 Retry
               </Button>
             )}
-            <Button variant="danger" onClick={handleDelete} disabled={deleting || isLive}>
+            {isLive && (
+              <Button variant="warning" onClick={handleKill} disabled={killing}>
+                <FaIcon icon={faStop} />
+                Kill Active
+              </Button>
+            )}
+            <Button variant="danger" onClick={handleDelete} disabled={deleting || killing || isLive}>
               <FaIcon icon={faTrash} />
               Delete
             </Button>

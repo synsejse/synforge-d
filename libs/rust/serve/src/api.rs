@@ -19,7 +19,8 @@ pub(crate) use artifacts::{download_job_artifact, get_job_artifact_meta, list_jo
 pub(crate) use cache::get_cache_stats;
 pub(crate) use config::{get_config_schema, get_effective_config, update_runtime_settings};
 pub(crate) use jobs::{
-    delete_job, get_job, list_active_jobs, list_completed_jobs, list_jobs, prune_failed_jobs,
+    delete_job, get_job, kill_job, list_active_jobs, list_completed_jobs, list_jobs,
+    prune_failed_jobs,
 };
 pub(crate) use logs::{
     get_job_log_chunk_by_source, get_job_log_manifest, get_job_log_meta_by_source,
@@ -82,6 +83,7 @@ pub fn router(_state: AppState) -> Router<AppState> {
         .route("/jobs/active", get(list_active_jobs))
         .route("/jobs/completed", get(list_completed_jobs))
         .route("/jobs/prune-failed", post(prune_failed_jobs))
+        .route("/jobs/{id}/kill", post(kill_job))
         .route("/session", get(get_session))
         .route("/session/login", post(login_session))
         .route("/session/logout", post(logout_session))

@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
 use thiserror::Error;
+use time::OffsetDateTime;
 use tracing::{info, warn};
 use uuid::Uuid;
 
@@ -46,6 +47,11 @@ struct PackageActionPlan {
     jobs: Vec<BuildJob>,
     queued_builds: Vec<QueuedBuild>,
     results: Vec<PackageActionTargetResult>,
+}
+
+#[derive(Debug, Clone)]
+struct BackoffDecision {
+    wait_seconds: u64,
 }
 
 #[derive(Clone)]
@@ -291,6 +297,21 @@ impl BuildScheduler {
                 });
                 continue;
             }
+            if trigger == BuildTrigger::Poll
+                && let Some(backoff) = self
+                    .backoff_decision_for_target(&package.name, mock_chroot)
+                    .await?
+            {
+                results.push(PackageActionTargetResult {
+                    package_name: package.name.clone(),
+                    mock_chroot: mock_chroot.clone(),
+                    disposition: PackageActionDisposition::Skipped,
+                    reason: Some(format!("backoff:{}s", backoff.wait_seconds)),
+                    job_id: None,
+                    revision: Some(revision_key.clone()),
+                });
+                continue;
+            }
             let previous_revision = self
                 .store
                 .get_last_successful_revision(&package.name, mock_chroot)
@@ -376,6 +397,26 @@ impl BuildScheduler {
             queued_builds: queued,
             results,
         })
+    }
+
+    async fn backoff_decision_for_target(
+        &self,
+        package_name: &str,
+        mock_chroot: &str,
+    ) -> anyhow::Result<Option<BackoffDecision>> {
+        let Some(backoff) = self
+            .store
+            .get_target_build_backoff(package_name, mock_chroot)
+            .await?
+        else {
+            return Ok(None);
+        };
+        let now = OffsetDateTime::now_utc();
+        if backoff.next_eligible_at <= now {
+            return Ok(None);
+        }
+        let wait_seconds = (backoff.next_eligible_at - now).whole_seconds().max(1) as u64;
+        Ok(Some(BackoffDecision { wait_seconds }))
     }
 }
 

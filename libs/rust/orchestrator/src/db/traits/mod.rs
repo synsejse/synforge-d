@@ -6,7 +6,7 @@ mod sync;
 mod user;
 
 pub use cache::{GitCacheStore, GitMirrorCacheState};
-pub use job::JobStore;
+pub use job::{BuildFailureBackoffState, JobStore};
 pub use package::PackageStore;
 pub use repo::RepoStore;
 pub use sync::SyncStore;

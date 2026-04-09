@@ -74,6 +74,8 @@ impl SynforgeService {
                 mock_chroot_cache_ttl_seconds: current.mock_chroot_cache_ttl_seconds,
                 git_mirror_refresh_ttl_seconds: current.git_mirror_refresh_ttl_seconds,
                 git_mirror_max_unused_seconds: current.git_mirror_max_unused_seconds,
+                build_failure_backoff_base_seconds: current.build_failure_backoff_base_seconds,
+                build_failure_backoff_max_seconds: current.build_failure_backoff_max_seconds,
             },
         })
     }
@@ -401,6 +403,34 @@ fn editable_config_fields() -> Vec<ConfigFieldDescriptor> {
                 in_runtime: true,
             },
         ),
+        config_number_field(
+            ConfigSection {
+                key: "scheduler",
+                label: "Scheduler",
+            },
+            "build_failure_backoff_base_seconds",
+            "Build failure backoff base seconds",
+            "Base delay for failure backoff; each consecutive failure doubles this delay.",
+            300,
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: true,
+            },
+        ),
+        config_number_field(
+            ConfigSection {
+                key: "scheduler",
+                label: "Scheduler",
+            },
+            "build_failure_backoff_max_seconds",
+            "Build failure backoff max seconds",
+            "Maximum delay cap for exponential failure backoff.",
+            21_600,
+            ConfigEditability {
+                in_setup: true,
+                in_runtime: true,
+            },
+        ),
     ]
 }
 
@@ -574,6 +604,14 @@ pub(super) fn apply_config_settings(
         config.git_mirror_max_unused_seconds =
             parse_u64_setting(value, "git_mirror_max_unused_seconds")?;
     }
+    if let Some(value) = settings.get("build_failure_backoff_base_seconds") {
+        config.build_failure_backoff_base_seconds =
+            parse_u64_setting(value, "build_failure_backoff_base_seconds")?;
+    }
+    if let Some(value) = settings.get("build_failure_backoff_max_seconds") {
+        config.build_failure_backoff_max_seconds =
+            parse_u64_setting(value, "build_failure_backoff_max_seconds")?;
+    }
     if let Some(value) = settings.get("session_secret") {
         if !allow_internal_runtime_settings {
             anyhow::bail!("config setting is not editable at runtime: session_secret");
@@ -679,6 +717,14 @@ fn daemon_config_runtime_settings(config: &DaemonConfig) -> BTreeMap<String, Val
     settings.insert(
         "git_mirror_max_unused_seconds".to_string(),
         Value::from(config.git_mirror_max_unused_seconds),
+    );
+    settings.insert(
+        "build_failure_backoff_base_seconds".to_string(),
+        Value::from(config.build_failure_backoff_base_seconds),
+    );
+    settings.insert(
+        "build_failure_backoff_max_seconds".to_string(),
+        Value::from(config.build_failure_backoff_max_seconds),
     );
     settings.insert(
         "session_secret".to_string(),

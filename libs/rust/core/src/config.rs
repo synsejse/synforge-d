@@ -60,6 +60,14 @@ fn default_git_mirror_max_unused_seconds() -> u64 {
     604_800
 }
 
+fn default_build_failure_backoff_base_seconds() -> u64 {
+    300
+}
+
+fn default_build_failure_backoff_max_seconds() -> u64 {
+    21_600
+}
+
 fn default_session_secret() -> String {
     generate_session_secret()
 }
@@ -109,6 +117,10 @@ pub struct DaemonConfig {
     pub git_mirror_refresh_ttl_seconds: u64,
     #[serde(default = "default_git_mirror_max_unused_seconds")]
     pub git_mirror_max_unused_seconds: u64,
+    #[serde(default = "default_build_failure_backoff_base_seconds")]
+    pub build_failure_backoff_base_seconds: u64,
+    #[serde(default = "default_build_failure_backoff_max_seconds")]
+    pub build_failure_backoff_max_seconds: u64,
 }
 
 impl Default for DaemonConfig {
@@ -132,6 +144,8 @@ impl Default for DaemonConfig {
             mock_chroot_cache_ttl_seconds: default_mock_chroot_cache_ttl_seconds(),
             git_mirror_refresh_ttl_seconds: default_git_mirror_refresh_ttl_seconds(),
             git_mirror_max_unused_seconds: default_git_mirror_max_unused_seconds(),
+            build_failure_backoff_base_seconds: default_build_failure_backoff_base_seconds(),
+            build_failure_backoff_max_seconds: default_build_failure_backoff_max_seconds(),
         }
     }
 }
@@ -223,6 +237,21 @@ impl DaemonConfig {
         if self.git_mirror_max_unused_seconds == 0 {
             return Err(SynforgeError::Config(
                 "git_mirror_max_unused_seconds must be greater than zero".to_string(),
+            ));
+        }
+        if self.build_failure_backoff_base_seconds == 0 {
+            return Err(SynforgeError::Config(
+                "build_failure_backoff_base_seconds must be greater than zero".to_string(),
+            ));
+        }
+        if self.build_failure_backoff_max_seconds == 0 {
+            return Err(SynforgeError::Config(
+                "build_failure_backoff_max_seconds must be greater than zero".to_string(),
+            ));
+        }
+        if self.build_failure_backoff_max_seconds < self.build_failure_backoff_base_seconds {
+            return Err(SynforgeError::Config(
+                "build_failure_backoff_max_seconds must be greater than or equal to build_failure_backoff_base_seconds".to_string(),
             ));
         }
         Ok(())

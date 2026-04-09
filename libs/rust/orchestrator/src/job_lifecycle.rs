@@ -76,7 +76,16 @@ impl JobLifecycle {
                 &[],
             )
             .await
-            .context("failed to persist failed build result")
+            .context("failed to persist failed build result")?;
+        self.store
+            .update_build_failure_backoff(
+                build.job_id,
+                BuildStatus::Failed,
+                self.config.build_failure_backoff_base_seconds,
+                self.config.build_failure_backoff_max_seconds,
+            )
+            .await?;
+        Ok(())
     }
 
     pub async fn finalize_execution(
@@ -161,6 +170,14 @@ impl JobLifecycle {
                 &build_result.artifacts,
                 &published_files,
                 &artifact_signatures,
+            )
+            .await?;
+        self.store
+            .update_build_failure_backoff(
+                build.job_id,
+                status,
+                self.config.build_failure_backoff_base_seconds,
+                self.config.build_failure_backoff_max_seconds,
             )
             .await?;
         info!(

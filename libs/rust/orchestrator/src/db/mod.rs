@@ -30,12 +30,13 @@ use tracing::info;
 use uuid::Uuid;
 
 use crate::schema::{
-    artifact_signatures, build_artifacts, build_jobs, build_logs, packages, published_repo_files,
-    runtime_settings, user_permissions, user_repo_metrics, users,
+    artifact_signatures, build_artifacts, build_failure_backoff, build_jobs, build_logs, packages,
+    published_repo_files, runtime_settings, user_permissions, user_repo_metrics, users,
 };
 
 pub use traits::{
-    GitCacheStore, GitMirrorCacheState, JobStore, PackageStore, RepoStore, SyncStore, UserStore,
+    BuildFailureBackoffState, GitCacheStore, GitMirrorCacheState, JobStore, PackageStore, RepoStore, SyncStore,
+    UserStore,
 };
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
@@ -273,6 +274,40 @@ impl JobStore for DieselStore {
         worker_container_id: Option<&str>,
     ) -> anyhow::Result<()> {
         job::set_job_running(self, job_id, worker_container_id).await
+    }
+
+    async fn reset_job_for_retry(
+        &self,
+        job_id: Uuid,
+        trigger: BuildTrigger,
+        revision: &str,
+    ) -> anyhow::Result<()> {
+        job::reset_job_for_retry(self, job_id, trigger, revision).await
+    }
+
+    async fn update_build_failure_backoff(
+        &self,
+        job_id: Uuid,
+        status: BuildStatus,
+        base_backoff_seconds: u64,
+        max_backoff_seconds: u64,
+    ) -> anyhow::Result<()> {
+        job::update_build_failure_backoff(
+            self,
+            job_id,
+            status,
+            base_backoff_seconds,
+            max_backoff_seconds,
+        )
+        .await
+    }
+
+    async fn get_target_build_backoff(
+        &self,
+        package_name: &str,
+        mock_chroot: &str,
+    ) -> anyhow::Result<Option<BuildFailureBackoffState>> {
+        job::get_target_build_backoff(self, package_name, mock_chroot).await
     }
 
     async fn finish_job(
@@ -740,6 +775,27 @@ pub(crate) struct NewArtifactSignatureRecord {
 pub(crate) struct NewBuildLogRecord<'a> {
     pub(crate) job_id: &'a str,
     pub(crate) file: &'a str,
+    pub(crate) updated_at: &'a str,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Queryable, Selectable)]
+#[diesel(table_name = build_failure_backoff)]
+pub(crate) struct BuildFailureBackoffRecord {
+    pub(crate) package_name: String,
+    pub(crate) mock_chroot: String,
+    pub(crate) consecutive_failures: i32,
+    pub(crate) next_eligible_at: String,
+    pub(crate) updated_at: String,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = build_failure_backoff)]
+pub(crate) struct NewBuildFailureBackoffRecord<'a> {
+    pub(crate) package_name: &'a str,
+    pub(crate) mock_chroot: &'a str,
+    pub(crate) consecutive_failures: i32,
+    pub(crate) next_eligible_at: &'a str,
     pub(crate) updated_at: &'a str,
 }
 

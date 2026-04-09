@@ -1,10 +1,12 @@
 use std::path::PathBuf;
 
 use anyhow::Context;
+use std::path::Path;
+
 use synforge_core::{
     api::{
         BuildJobListResponse, BuildJobResponse, JobArtifactListResponse, JobArtifactMetaResponse,
-        PackageActionDisposition, PruneJobsResponse,
+        PruneJobsResponse,
     },
     error::SynforgeError,
     model::{BuildStatus, BuildTrigger},
@@ -13,6 +15,8 @@ use uuid::Uuid;
 
 use super::SynforgeService;
 use crate::db::{JobStore, RepoStore};
+use crate::scheduler::QueuedBuild;
+use crate::sync_tracker::sync_trigger_from_build_trigger;
 
 impl SynforgeService {
     pub async fn resolve_job_artifact_path(
@@ -176,40 +180,58 @@ impl SynforgeService {
             ))));
         }
 
-        let result = self
-            .scheduler
-            .enqueue_target_action(
-                &job.job.package_name,
-                &job.job.mock_chroot,
-                BuildTrigger::ManualRebuild,
-                true,
-                &self.queue_tx,
-            )
+        let trigger = BuildTrigger::ManualRebuild;
+        let package = self.registry.get_definition(&job.job.package_name).await?;
+        let (_, revision) = self
+            .registry
+            .sync_existing_source_tracked(&package, sync_trigger_from_build_trigger(&trigger))
             .await?;
 
-        match result.disposition {
-            PackageActionDisposition::Queued => {
-                let new_job_id = result.job_id.ok_or_else(|| {
-                    anyhow::anyhow!(SynforgeError::Internal(
-                        "queued retry action returned without job id".to_string()
-                    ))
-                })?;
-                self.store
-                    .get_job(new_job_id)
-                    .await?
-                    .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(new_job_id.to_string())))
-            }
-            PackageActionDisposition::Blocked => Err(anyhow::anyhow!(SynforgeError::Conflict(
-                result
-                    .reason
-                    .unwrap_or_else(|| "retry target is already queued or running".to_string()),
-            ))),
-            PackageActionDisposition::Skipped => Err(anyhow::anyhow!(SynforgeError::BadRequest(
-                result
-                    .reason
-                    .unwrap_or_else(|| "retry was skipped".to_string()),
-            ))),
+        if self
+            .store
+            .has_active_job_for_target(&job.job.package_name, &job.job.mock_chroot)
+            .await?
+        {
+            return Err(anyhow::anyhow!(SynforgeError::Conflict(
+                "retry target is already queued or running".to_string(),
+            )));
         }
+
+        let published_files = self.store.list_published_repo_files_for_job(job_id).await?;
+        self.lifecycle.remove_published_files(&published_files).await?;
+        self.worker_launcher.cleanup_session(job_id);
+        self.cleanup_retry_runtime_dirs(job_id).await?;
+        self.store
+            .reset_job_for_retry(job_id, trigger, &revision.comparison_key())
+            .await?;
+
+        self.queue_tx
+            .send(QueuedBuild {
+                package,
+                mock_chroot: job.job.mock_chroot.clone(),
+                revision,
+                trigger,
+                job_id,
+            })
+            .await
+            .map_err(|error| anyhow::anyhow!("failed to queue retry build: {}", error))?;
+
+        self.store
+            .get_job(job_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(job_id.to_string())))
+    }
+
+    async fn cleanup_retry_runtime_dirs(&self, job_id: Uuid) -> anyhow::Result<()> {
+        let runtime_root = self.config.runtime_paths().job_root(job_id);
+        remove_retry_runtime_dir(&runtime_root).await?;
+
+        let worker_root = self.config.worker_jobs_root().join(job_id.to_string());
+        if worker_root != runtime_root {
+            remove_retry_runtime_dir(&worker_root).await?;
+        }
+
+        Ok(())
     }
 
     pub async fn get_job_artifacts(&self, job_id: Uuid) -> anyhow::Result<JobArtifactListResponse> {
@@ -260,4 +282,13 @@ impl SynforgeService {
         }
         Ok(PruneJobsResponse { deleted_jobs })
     }
+}
+
+async fn remove_retry_runtime_dir(path: &Path) -> anyhow::Result<()> {
+    if !tokio::fs::try_exists(path).await? {
+        return Ok(());
+    }
+    tokio::fs::remove_dir_all(path)
+        .await
+        .with_context(|| format!("failed to clean retry runtime directory {}", path.display()))
 }

@@ -515,6 +515,8 @@ pub struct EffectiveConfigView {
     pub mock_chroot_cache_ttl_seconds: u64,
     pub git_mirror_refresh_ttl_seconds: u64,
     pub git_mirror_max_unused_seconds: u64,
+    pub build_failure_backoff_base_seconds: u64,
+    pub build_failure_backoff_max_seconds: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

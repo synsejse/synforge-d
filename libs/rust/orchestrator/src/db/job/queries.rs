@@ -1,4 +1,5 @@
 use super::*;
+use crate::db::traits::BuildFailureBackoffState;
 
 pub(in crate::db) async fn get_last_successful_revision(
     store: &DieselStore,
@@ -272,6 +273,32 @@ pub(in crate::db) async fn get_build_log_for_job_source(
                 .select((build_logs::file,))
                 .first(conn)
                 .optional()?)
+        })
+        .await
+}
+
+pub(in crate::db) async fn get_target_build_backoff(
+    store: &DieselStore,
+    package_name: &str,
+    mock_chroot: &str,
+) -> anyhow::Result<Option<BuildFailureBackoffState>> {
+    let package_name = package_name.to_string();
+    let mock_chroot = mock_chroot.to_string();
+    store
+        .with_connection(move |conn| {
+            let record = build_failure_backoff::table
+                .find((package_name.as_str(), mock_chroot.as_str()))
+                .select(BuildFailureBackoffRecord::as_select())
+                .first(conn)
+                .optional()?;
+            record
+                .map(|record| {
+                    Ok(BuildFailureBackoffState {
+                        consecutive_failures: record.consecutive_failures as u32,
+                        next_eligible_at: parse_timestamp(&record.next_eligible_at)?,
+                    })
+                })
+                .transpose()
         })
         .await
 }

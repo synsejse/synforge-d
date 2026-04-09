@@ -72,6 +72,16 @@ diesel::table! {
 }
 
 diesel::table! {
+    build_failure_backoff (package_name, mock_chroot) {
+        package_name -> Text,
+        mock_chroot -> Text,
+        consecutive_failures -> Integer,
+        next_eligible_at -> Text,
+        updated_at -> Text,
+    }
+}
+
+diesel::table! {
     users (id) {
         id -> Text,
         handle -> Text,
@@ -140,6 +150,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     build_artifacts,
     artifact_signatures,
     build_logs,
+    build_failure_backoff,
     users,
     user_permissions,
     user_repo_metrics,

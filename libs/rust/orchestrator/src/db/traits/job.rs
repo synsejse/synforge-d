@@ -1,11 +1,20 @@
 use async_trait::async_trait;
 use synforge_core::{
     api::BuildJobResponse,
-    model::{ArtifactSignature, BuildArtifact, BuildJob, BuildStatus, PublishedRepoFile},
+    model::{
+        ArtifactSignature, BuildArtifact, BuildJob, BuildStatus, BuildTrigger, PublishedRepoFile,
+    },
 };
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 use super::super::BuildLogRecord;
+
+#[derive(Debug, Clone)]
+pub struct BuildFailureBackoffState {
+    pub consecutive_failures: u32,
+    pub next_eligible_at: OffsetDateTime,
+}
 
 #[async_trait]
 pub trait JobStore: Send + Sync {
@@ -28,6 +37,27 @@ pub trait JobStore: Send + Sync {
         job_id: Uuid,
         worker_container_id: Option<&str>,
     ) -> anyhow::Result<()>;
+
+    async fn reset_job_for_retry(
+        &self,
+        job_id: Uuid,
+        trigger: BuildTrigger,
+        revision: &str,
+    ) -> anyhow::Result<()>;
+
+    async fn update_build_failure_backoff(
+        &self,
+        job_id: Uuid,
+        status: BuildStatus,
+        base_backoff_seconds: u64,
+        max_backoff_seconds: u64,
+    ) -> anyhow::Result<()>;
+
+    async fn get_target_build_backoff(
+        &self,
+        package_name: &str,
+        mock_chroot: &str,
+    ) -> anyhow::Result<Option<BuildFailureBackoffState>>;
 
     async fn finish_job(
         &self,

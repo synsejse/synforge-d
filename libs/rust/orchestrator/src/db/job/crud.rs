@@ -1,4 +1,6 @@
 use super::*;
+use std::cmp::min;
+use time::Duration;
 
 pub(in crate::db) async fn insert_job(store: &DieselStore, job: &BuildJob) -> anyhow::Result<()> {
     let job = job.clone();
@@ -45,6 +47,55 @@ pub(in crate::db) async fn set_job_running(
                     build_jobs::worker_container_id.eq(worker_container_id.as_deref()),
                 ))
                 .execute(conn)?;
+            Ok(())
+        })
+        .await
+}
+
+pub(in crate::db) async fn reset_job_for_retry(
+    store: &DieselStore,
+    job_id: Uuid,
+    trigger: BuildTrigger,
+    revision: &str,
+) -> anyhow::Result<()> {
+    let job_id = job_id.to_string();
+    let revision = revision.to_string();
+    let now = format_timestamp(now_utc());
+    store
+        .with_connection(move |conn| {
+            conn.transaction::<(), anyhow::Error, _>(|conn| {
+                diesel::delete(
+                    published_repo_files::table.filter(
+                        published_repo_files::artifact_id.eq_any(
+                            build_artifacts::table
+                                .filter(build_artifacts::job_id.eq(job_id.as_str()))
+                                .select(build_artifacts::id),
+                        ),
+                    ),
+                )
+                .execute(conn)?;
+
+                diesel::delete(
+                    build_artifacts::table.filter(build_artifacts::job_id.eq(job_id.as_str())),
+                )
+                .execute(conn)?;
+
+                diesel::delete(build_logs::table.filter(build_logs::job_id.eq(job_id.as_str())))
+                    .execute(conn)?;
+
+                diesel::update(build_jobs::table.find(job_id.as_str()))
+                    .set((
+                        build_jobs::trigger.eq(trigger),
+                        build_jobs::revision.eq(revision.as_str()),
+                        build_jobs::status.eq(BuildStatus::Pending),
+                        build_jobs::worker_container_id.eq::<Option<&str>>(None),
+                        build_jobs::updated_at.eq(now.as_str()),
+                        build_jobs::finished_at.eq::<Option<&str>>(None),
+                        build_jobs::error_message.eq::<Option<&str>>(None),
+                    ))
+                    .execute(conn)?;
+                Ok(())
+            })?;
             Ok(())
         })
         .await
@@ -256,6 +307,88 @@ pub(in crate::db) async fn upsert_build_log(
                     .values(&row)
                     .execute(conn)?;
             }
+            Ok(())
+        })
+        .await
+}
+
+pub(in crate::db) async fn update_build_failure_backoff(
+    store: &DieselStore,
+    job_id: Uuid,
+    status: BuildStatus,
+    base_backoff_seconds: u64,
+    max_backoff_seconds: u64,
+) -> anyhow::Result<()> {
+    let job_id = job_id.to_string();
+    let base_backoff_seconds = i64::try_from(base_backoff_seconds)
+        .map_err(|_| anyhow::anyhow!("base backoff seconds out of range"))?;
+    let max_backoff_seconds = i64::try_from(max_backoff_seconds)
+        .map_err(|_| anyhow::anyhow!("max backoff seconds out of range"))?;
+    store
+        .with_connection(move |conn| {
+            conn.transaction::<(), anyhow::Error, _>(|conn| {
+                let job = build_jobs::table
+                    .find(job_id.as_str())
+                    .select((build_jobs::package_name, build_jobs::mock_chroot))
+                    .first::<(String, String)>(conn)?;
+
+                let now = now_utc();
+                let now_text = format_timestamp(now);
+                if status == BuildStatus::Succeeded {
+                    diesel::delete(
+                        build_failure_backoff::table
+                            .find((job.0.as_str(), job.1.as_str())),
+                    )
+                    .execute(conn)?;
+                    return Ok(());
+                }
+
+                let should_backoff = matches!(status, BuildStatus::Failed | BuildStatus::TimedOut);
+                if !should_backoff {
+                    return Ok(());
+                }
+
+                let existing = build_failure_backoff::table
+                    .find((job.0.as_str(), job.1.as_str()))
+                    .select(BuildFailureBackoffRecord::as_select())
+                    .first(conn)
+                    .optional()?;
+                let next_failures = existing
+                    .as_ref()
+                    .map_or(1_i32, |record| record.consecutive_failures.saturating_add(1))
+                    .clamp(1, 31);
+                let exponent = (next_failures - 1) as u32;
+                let backoff_seconds = min(
+                    base_backoff_seconds.saturating_mul(1_i64 << exponent),
+                    max_backoff_seconds,
+                );
+                let next_eligible = now + Duration::seconds(backoff_seconds);
+                let next_eligible_text = format_timestamp(next_eligible);
+
+                if existing.is_some() {
+                    diesel::update(
+                        build_failure_backoff::table.find((job.0.as_str(), job.1.as_str())),
+                    )
+                    .set((
+                        build_failure_backoff::consecutive_failures.eq(next_failures),
+                        build_failure_backoff::next_eligible_at.eq(next_eligible_text.as_str()),
+                        build_failure_backoff::updated_at.eq(now_text.as_str()),
+                    ))
+                    .execute(conn)?;
+                } else {
+                    let row = NewBuildFailureBackoffRecord {
+                        package_name: job.0.as_str(),
+                        mock_chroot: job.1.as_str(),
+                        consecutive_failures: next_failures,
+                        next_eligible_at: next_eligible_text.as_str(),
+                        updated_at: now_text.as_str(),
+                    };
+                    diesel::insert_into(build_failure_backoff::table)
+                        .values(&row)
+                        .execute(conn)?;
+                }
+                Ok(())
+            })?;
             Ok(())
         })
         .await

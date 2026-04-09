@@ -237,8 +237,12 @@ export default function Dashboard() {
                   <a
                     key={entry.job.id}
                     href={`/jobs/view/?id=${encodeURIComponent(entry.job.id)}`}
-                    className="block border-2 border-[var(--theme-border)] bg-zinc-950/40 px-5 py-4 transition-all duration-100 ease-linear hover:border-[var(--theme-terminal-green)] hover:bg-zinc-950"
+                    className="group relative block overflow-hidden border-2 border-[var(--theme-border)] bg-zinc-950/40 px-5 py-4 transition-all duration-100 ease-linear hover:border-[var(--theme-terminal-green)] hover:bg-zinc-950"
                   >
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-y-0 left-0 w-1 bg-[var(--theme-terminal-green)] opacity-0 transition-opacity duration-100 group-hover:opacity-100"
+                    />
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">

@@ -1,7 +1,8 @@
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use synforge_core::api::{
-    BuildJobListResponse, BuildJobResponse, JobListQuery, JobListScope, PruneJobsResponse,
+    BuildJobListResponse, BuildJobResponse, JobListQuery, JobListScope,
+    JobResourceUsageListResponse, JobResourceUsageResponse, PruneJobsResponse,
 };
 use uuid::Uuid;
 
@@ -39,7 +40,12 @@ pub(crate) async fn list_jobs(
         JobListScope::Active => {
             state
                 .service
-                .list_active_jobs(query.limit, query.offset, query.package_name, query.mock_chroot)
+                .list_active_jobs(
+                    query.limit,
+                    query.offset,
+                    query.package_name,
+                    query.mock_chroot,
+                )
                 .await?
         }
         JobListScope::Completed => {
@@ -77,6 +83,42 @@ pub(crate) async fn get_job(
     Path(id): Path<Uuid>,
 ) -> Result<Json<BuildJobResponse>, AppError> {
     Ok(Json(state.service.get_job(id).await?))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/jobs/usage",
+    tag = "Jobs",
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "List live usage for active jobs", body = JobResourceUsageListResponse),
+        (status = 401, body = synforge_core::api::ApiError)
+    )
+)]
+pub(crate) async fn list_job_usage(
+    State(state): State<AppState>,
+) -> Result<Json<JobResourceUsageListResponse>, AppError> {
+    Ok(Json(state.service.list_job_resource_usage().await?))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/jobs/{id}/usage",
+    tag = "Jobs",
+    params(
+        ("id" = Uuid, Path, description = "Job identifier")
+    ),
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "Get live usage for one job", body = JobResourceUsageResponse),
+        (status = 401, body = synforge_core::api::ApiError)
+    )
+)]
+pub(crate) async fn get_job_usage(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<JobResourceUsageResponse>, AppError> {
+    Ok(Json(state.service.get_job_resource_usage(id).await?))
 }
 
 #[utoipa::path(

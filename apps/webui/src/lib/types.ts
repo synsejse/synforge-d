@@ -38,6 +38,9 @@ export type BuildJob = ApiSchema["BuildJob"];
 export type BuildJobResponse = ApiSchema["BuildJobResponse"];
 export type JobArtifactListResponse = ApiSchema["JobArtifactListResponse"];
 export type JobArtifactMetaResponse = ApiSchema["JobArtifactMetaResponse"];
+export type JobResourceUsageSample = ApiSchema["JobResourceUsageSample"];
+export type JobResourceUsageListResponse = ApiSchema["JobResourceUsageListResponse"];
+export type JobResourceUsageResponse = ApiSchema["JobResourceUsageResponse"];
 
 export type PackageActionDisposition = ApiSchema["PackageActionDisposition"];
 export type PackageActionTargetResult = ApiSchema["PackageActionTargetResult"];
@@ -129,3 +132,4 @@ export type SyncMetricsResponse = ApiSchema["SyncMetricsResponse"];
 export type MockChrootCacheStats = ApiSchema["MockChrootCacheStats"];
 export type GitMirrorCacheStats = ApiSchema["GitMirrorCacheStats"];
 export type CacheStatsResponse = ApiSchema["CacheStatsResponse"];
+export type ServerHardwareResponse = ApiSchema["ServerHardwareResponse"];

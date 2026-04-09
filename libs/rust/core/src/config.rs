@@ -158,8 +158,10 @@ impl DaemonConfig {
                 DATABASE_URL_ENV_VAR
             )
         })?;
-        let mut config = Self::default();
-        config.database_url = database_url;
+        let config = Self {
+            database_url,
+            ..Self::default()
+        };
         config
             .validate()
             .map_err(|error| anyhow::anyhow!(error.to_string()))?;

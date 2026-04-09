@@ -5,6 +5,8 @@ import type {
   BuildJobResponse,
   JobArtifactListResponse,
   JobArtifactMetaResponse,
+  JobResourceUsageListResponse,
+  JobResourceUsageResponse,
   LogChunkResponse,
   LogManifestResponse,
   LogMetaResponse,
@@ -67,6 +69,14 @@ export class JobApiClient extends PackageApiClient {
 
   async getJob(id: string): Promise<BuildJobResponse> {
     return this.request("GET", `/api/v1/jobs/${encodeURIComponent(id)}`);
+  }
+
+  async listJobUsage(): Promise<JobResourceUsageListResponse> {
+    return this.request("GET", "/api/v1/jobs/usage");
+  }
+
+  async getJobUsage(id: string): Promise<JobResourceUsageResponse> {
+    return this.request("GET", `/api/v1/jobs/${encodeURIComponent(id)}/usage`);
   }
 
   async listJobArtifacts(id: string): Promise<JobArtifactListResponse> {

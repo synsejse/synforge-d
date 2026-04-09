@@ -28,6 +28,10 @@ pub struct PackageDefinition {
     pub build_timeout_seconds: u64,
     #[serde(default = "default_package_history_count")]
     pub package_history_count: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cpu_limit_millicores: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory_limit_mb: Option<u64>,
     #[serde(default)]
     pub build_env: Vec<BuildEnvVar>,
     #[schema(value_type = String)]

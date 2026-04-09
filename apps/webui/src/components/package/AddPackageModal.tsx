@@ -16,6 +16,7 @@ import type {
   BrowseRepositoryProgressView,
   BuildEnvVar,
   CreatePackageRequest,
+  ServerHardwareResponse,
   SpecSource,
 } from "../../lib/types";
 import FaIcon from "../ui/FaIcon";
@@ -45,6 +46,25 @@ function parseBuildEnv(input: string): BuildEnvVar[] {
         value: line.slice(separator + 1),
       };
     });
+}
+
+function parseOptionalCpuLimit(
+  value: string,
+  maxCpuCores: number | null,
+): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return undefined;
+  }
+  const millicores = Math.floor(parsed * 1000);
+  if (!maxCpuCores || maxCpuCores <= 0) {
+    return millicores;
+  }
+  return Math.min(millicores, Math.floor(maxCpuCores * 1000));
 }
 
 function stateLabel(state: BrowseRepositoryProgressView["state"]): string {
@@ -94,10 +114,16 @@ export default function AddPackageModal({
   const [pollIntervalSeconds, setPollIntervalSeconds] = useState("900");
   const [buildTimeoutSeconds, setBuildTimeoutSeconds] = useState("7200");
   const [packageHistoryCount, setPackageHistoryCount] = useState("3");
+  const [cpuLimitCores, setCpuLimitCores] = useState("");
+  const [cpuLimitEnabled, setCpuLimitEnabled] = useState(false);
+  const [memoryLimitEnabled, setMemoryLimitEnabled] = useState(false);
+  const [memoryLimitMb, setMemoryLimitMb] = useState("1024");
   const [buildEnv, setBuildEnv] = useState(encodeBuildEnv([]));
   const [browsing, setBrowsing] = useState(false);
   const [browseError, setBrowseError] = useState<string | null>(null);
   const [browseFiles, setBrowseFiles] = useState<string[]>([]);
+  const [serverHardware, setServerHardware] =
+    useState<ServerHardwareResponse | null>(null);
   const [browseProgress, setBrowseProgress] =
     useState<BrowseRepositoryProgressView | null>(null);
   const [browseProgressIssue, setBrowseProgressIssue] = useState<string | null>(
@@ -130,6 +156,28 @@ export default function AddPackageModal({
   const browseProgressState = activeBrowseProgress?.state ?? "running";
   const browseProgressMessage =
     activeBrowseProgress?.message ?? "Preparing repository clone…";
+  const maxCpuCores = serverHardware?.cpu_cores ?? null;
+  const CPU_MIN_CORES = 1;
+  const CPU_STEP_CORES = 1;
+  const cpuSliderMax = Math.max(CPU_MIN_CORES, maxCpuCores ?? 64);
+  const CPU_DEFAULT_CORES = Math.min(4, cpuSliderMax);
+  const cpuSliderValue = Math.min(
+    cpuSliderMax,
+    Math.max(CPU_MIN_CORES, Math.floor(Number(cpuLimitCores) || CPU_DEFAULT_CORES)),
+  );
+  const MEMORY_MIN_MB = 256;
+  const MEMORY_STEP_MB = 256;
+  const memorySliderMax = Math.max(
+    MEMORY_MIN_MB,
+    serverHardware?.total_memory_mb
+      ? Math.floor(serverHardware.total_memory_mb / MEMORY_STEP_MB) * MEMORY_STEP_MB
+      : 32768,
+  );
+  const MEMORY_DEFAULT_MB = Math.min(1024, memorySliderMax);
+  const memorySliderValue = Math.min(
+    memorySliderMax,
+    Math.max(MEMORY_MIN_MB, Number(memoryLimitMb) || MEMORY_DEFAULT_MB),
+  );
 
   useEffect(() => {
     async function loadChroots() {
@@ -153,6 +201,13 @@ export default function AddPackageModal({
     }
 
     loadChroots();
+  }, []);
+
+  useEffect(() => {
+    api
+      .getServerHardware()
+      .then((response) => setServerHardware(response))
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -262,6 +317,10 @@ export default function AddPackageModal({
       poll_interval_seconds: Number(pollIntervalSeconds),
       build_timeout_seconds: Number(buildTimeoutSeconds),
       package_history_count: Number(packageHistoryCount),
+      cpu_limit_millicores: cpuLimitEnabled
+        ? parseOptionalCpuLimit(cpuLimitCores, maxCpuCores)
+        : undefined,
+      memory_limit_mb: memoryLimitEnabled ? memorySliderValue : undefined,
       build_env: parseBuildEnv(buildEnv),
     };
 
@@ -498,6 +557,100 @@ export default function AddPackageModal({
                 required
               />
             </label>
+
+            <div className="border-2 border-zinc-700 bg-zinc-950 p-4 lg:col-span-2">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+                  CPU limit (cores)
+                </span>
+                <label className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={cpuLimitEnabled}
+                    onChange={(event) => {
+                      const nextEnabled = event.target.checked;
+                      setCpuLimitEnabled(nextEnabled);
+                      if (nextEnabled && !cpuLimitCores) {
+                        setCpuLimitCores(String(CPU_DEFAULT_CORES));
+                      }
+                    }}
+                  />
+                  Limit CPU
+                </label>
+              </div>
+              <div
+                className={`mt-4 border-2 border-zinc-800 px-3 py-4 transition ${
+                  cpuLimitEnabled ? "bg-black" : "bg-zinc-900/60 opacity-70"
+                }`}
+              >
+                <input
+                  type="range"
+                  min={CPU_MIN_CORES}
+                  max={cpuSliderMax}
+                  step={CPU_STEP_CORES}
+                  value={cpuSliderValue}
+                  onChange={(event) => setCpuLimitCores(event.target.value)}
+                  disabled={!cpuLimitEnabled}
+                  aria-label="CPU limit in cores"
+                  className="h-3 w-full cursor-pointer appearance-none bg-zinc-900 accent-[var(--theme-accent-lime)] disabled:cursor-not-allowed [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-black [&::-moz-range-thumb]:bg-[var(--theme-accent-lime)] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-black [&::-webkit-slider-thumb]:bg-[var(--theme-accent-lime)]"
+                />
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-3 font-mono text-xs font-bold uppercase tracking-[0.12em]">
+                <span className="text-[var(--theme-accent-lime)]">
+                  {cpuLimitEnabled ? `${cpuSliderValue} cores` : "Unlimited"}
+                </span>
+                <span className="text-zinc-500">
+                  {CPU_MIN_CORES} - {cpuSliderMax} cores
+                </span>
+              </div>
+            </div>
+
+            <div className="border-2 border-zinc-700 bg-zinc-950 p-4 lg:col-span-2">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+                  Memory limit (MB)
+                </span>
+                <label className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={memoryLimitEnabled}
+                    onChange={(event) => {
+                      const nextEnabled = event.target.checked;
+                      setMemoryLimitEnabled(nextEnabled);
+                      if (nextEnabled && !memoryLimitMb) {
+                        setMemoryLimitMb(String(MEMORY_DEFAULT_MB));
+                      }
+                    }}
+                  />
+                  Limit RAM
+                </label>
+              </div>
+              <div
+                className={`mt-4 border-2 border-zinc-800 px-3 py-4 transition ${
+                  memoryLimitEnabled ? "bg-black" : "bg-zinc-900/60 opacity-70"
+                }`}
+              >
+                <input
+                  type="range"
+                  min={MEMORY_MIN_MB}
+                  max={memorySliderMax}
+                  step={MEMORY_STEP_MB}
+                  value={memorySliderValue}
+                  onChange={(event) => setMemoryLimitMb(event.target.value)}
+                  disabled={!memoryLimitEnabled}
+                  aria-label="Memory limit in megabytes"
+                  className="h-3 w-full cursor-pointer appearance-none bg-zinc-900 accent-[var(--theme-accent-lime)] disabled:cursor-not-allowed [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-black [&::-moz-range-thumb]:bg-[var(--theme-accent-lime)] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-black [&::-webkit-slider-thumb]:bg-[var(--theme-accent-lime)]"
+                />
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-3 font-mono text-xs font-bold uppercase tracking-[0.12em]">
+                <span className="text-[var(--theme-accent-lime)]">
+                  {memoryLimitEnabled ? `${memorySliderValue} MB` : "Unlimited"}
+                </span>
+                <span className="text-zinc-500">
+                  {MEMORY_MIN_MB} - {memorySliderMax} MB
+                </span>
+              </div>
+            </div>
           </div>
 
           <label className="block">

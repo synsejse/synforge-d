@@ -35,8 +35,8 @@ use crate::schema::{
 };
 
 pub use traits::{
-    BuildFailureBackoffState, GitCacheStore, GitMirrorCacheState, JobStore, PackageStore, RepoStore, SyncStore,
-    UserStore,
+    BuildFailureBackoffState, GitCacheStore, GitMirrorCacheState, JobStore, PackageStore,
+    RepoStore, SyncStore, UserStore,
 };
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
@@ -669,6 +669,8 @@ pub(crate) struct PackageRecord {
     pub(crate) poll_interval_seconds: i64,
     pub(crate) build_timeout_seconds: i64,
     pub(crate) package_history_count: i64,
+    pub(crate) cpu_limit_millicores: Option<i64>,
+    pub(crate) memory_limit_mb: Option<i64>,
     pub(crate) build_env_json: String,
     pub(crate) spec_file: String,
     pub(crate) version: String,
@@ -692,6 +694,8 @@ pub(crate) struct NewPackageRecord<'a> {
     pub(crate) poll_interval_seconds: i64,
     pub(crate) build_timeout_seconds: i64,
     pub(crate) package_history_count: i64,
+    pub(crate) cpu_limit_millicores: Option<i64>,
+    pub(crate) memory_limit_mb: Option<i64>,
     pub(crate) build_env_json: &'a str,
     pub(crate) spec_file: &'a str,
     pub(crate) version: &'a str,
@@ -901,6 +905,14 @@ pub(crate) fn package_response_from_record(
         poll_interval_seconds: record.poll_interval_seconds as u64,
         build_timeout_seconds: record.build_timeout_seconds as u64,
         package_history_count: record.package_history_count as u64,
+        cpu_limit_millicores: record
+            .cpu_limit_millicores
+            .and_then(|value| u64::try_from(value).ok())
+            .filter(|value| *value > 0),
+        memory_limit_mb: record
+            .memory_limit_mb
+            .and_then(|value| u64::try_from(value).ok())
+            .filter(|value| *value > 0),
         build_env: serde_json::from_str::<Vec<BuildEnvVar>>(&record.build_env_json)
             .unwrap_or_default(),
         spec_file: PathBuf::from(record.spec_file),
@@ -968,7 +980,9 @@ pub(crate) fn compute_package_state(
             ))
             .first::<(i32, String)>(conn)
             .optional()?;
-        let backoff_until = backoff.as_ref().map(|(_, next_eligible_at)| next_eligible_at.clone());
+        let backoff_until = backoff
+            .as_ref()
+            .map(|(_, next_eligible_at)| next_eligible_at.clone());
         let backoff_remaining_seconds = backoff
             .as_ref()
             .and_then(|(_, next_eligible_at)| parse_timestamp(next_eligible_at).ok())

@@ -6,7 +6,11 @@ import {
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
-import type { BuildJobResponse } from "../../lib/types";
+import type {
+  BuildJobResponse,
+  JobResourceUsageSample,
+  ServerHardwareResponse,
+} from "../../lib/types";
 import {
   HISTORY_BUILD_STATUS_LABELS,
   isHistoryBuildStatus,
@@ -22,6 +26,9 @@ import Select from "../ui/Select";
 import PageHeader from "../ui/PageHeader";
 
 type JobViewMode = "active" | "history";
+
+const USAGE_POLL_INTERVAL_MS = 1000;
+
 function normalizeStatusFilter(value: string | null): "all" | HistoryBuildStatus {
   if (!value || value === "all") {
     return "all";
@@ -52,6 +59,12 @@ export default function JobList() {
   const [targetFilter, setTargetFilter] = useState("");
   const [pruning, setPruning] = useState(false);
   const [killingJobId, setKillingJobId] = useState<string | null>(null);
+  const [pageVisible, setPageVisible] = useState(() => {
+    if (typeof document === "undefined") return true;
+    return document.visibilityState === "visible";
+  });
+  const [usageByJob, setUsageByJob] = useState<Record<string, JobResourceUsageSample>>({});
+  const [serverHardware, setServerHardware] = useState<ServerHardwareResponse | null>(null);
   const pageSize = 50;
 
   async function load(
@@ -85,6 +98,9 @@ export default function JobList() {
       setFilter(nextFilter);
       setPackageFilter(nextPackageFilter);
       setTargetFilter(nextTargetFilter);
+      if (nextMode !== "active") {
+        setUsageByJob({});
+      }
       setError(null);
 
       // Update URL
@@ -108,6 +124,50 @@ export default function JobList() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    api
+      .getServerHardware()
+      .then((hardware) => setServerHardware(hardware))
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const updateVisibility = () => {
+      setPageVisible(document.visibilityState === "visible");
+    };
+    document.addEventListener("visibilitychange", updateVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", updateVisibility);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (mode !== "active" || !pageVisible) return;
+    let cancelled = false;
+    const pollUsage = async () => {
+      try {
+        const response = await api.listJobUsage();
+        if (cancelled) return;
+        const next: Record<string, JobResourceUsageSample> = {};
+        for (const sample of response.samples) {
+          next[sample.job_id] = sample;
+        }
+        setUsageByJob(next);
+      } catch {
+        // Keep existing values when a poll fails.
+      }
+    };
+    void pollUsage();
+    const timer = window.setInterval(() => {
+      void pollUsage();
+    }, USAGE_POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [mode, pageVisible]);
 
   async function handleDelete(job: BuildJobResponse) {
     if (!confirm(`Delete job ${job.job.id}?`)) return;
@@ -161,6 +221,13 @@ export default function JobList() {
     if (status === "running") return "lime";
     if (status === "pending") return "warning";
     return "default";
+  };
+
+  const formatMemory = (bytes: number) => {
+    if (bytes >= 1024 * 1024 * 1024) {
+      return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GiB`;
+    }
+    return `${(bytes / (1024 * 1024)).toFixed(0)} MiB`;
   };
 
   if (loading && jobs.length === 0) {
@@ -305,6 +372,7 @@ export default function JobList() {
               <div className="space-y-3 p-4 md:hidden">
                 {jobs.map((entry) => {
                   const isLive = entry.job.status === "pending" || entry.job.status === "running";
+                  const latestUsage = usageByJob[entry.job.id] ?? null;
                   return (
                     <article key={`mobile:${entry.job.id}`} className="border-2 border-zinc-700 bg-black p-4">
                       <div className="flex items-start justify-between gap-3">
@@ -340,6 +408,17 @@ export default function JobList() {
                           <span className="text-zinc-500">Created:</span>{" "}
                           {formatDateTime(entry.job.created_at)}
                         </div>
+                        {mode === "active" && isLive && (
+                          <div className="space-y-3 border-2 border-zinc-700 bg-zinc-950 px-3 py-3">
+                            <UsageBarRow
+                              label="RAM"
+                              value={formatMemoryUsage(latestUsage, serverHardware, formatMemory)}
+                              percent={memoryUsagePercent(latestUsage, serverHardware)}
+                              fillClass="bg-amber-400"
+                              valueClass="text-amber-300"
+                            />
+                          </div>
+                        )}
                       </div>
                       <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap">
                         <Button
@@ -401,6 +480,11 @@ export default function JobList() {
                       <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
                         Created
                       </th>
+                      {mode === "active" && (
+                        <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                          Live Usage
+                        </th>
+                      )}
                       <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
                         Actions
                       </th>
@@ -409,6 +493,7 @@ export default function JobList() {
                   <tbody>
                     {jobs.map((entry, idx) => {
                       const isLive = entry.job.status === "pending" || entry.job.status === "running";
+                      const latestUsage = usageByJob[entry.job.id] ?? null;
                       return (
                         <tr
                           key={entry.job.id}
@@ -448,6 +533,23 @@ export default function JobList() {
                           <td className="px-5 py-4 font-mono text-sm text-zinc-400">
                             {formatDateTime(entry.job.created_at)}
                           </td>
+                          {mode === "active" && (
+                            <td className="px-5 py-4">
+                              {isLive && latestUsage ? (
+                                <div className="min-w-[320px] border-2 border-zinc-700 bg-zinc-950 p-3">
+                                  <UsageBarRow
+                                    label="RAM"
+                                    value={formatMemoryUsage(latestUsage, serverHardware, formatMemory)}
+                                    percent={memoryUsagePercent(latestUsage, serverHardware)}
+                                    fillClass="bg-amber-400"
+                                    valueClass="text-amber-300"
+                                  />
+                                </div>
+                              ) : (
+                                <span className="font-mono text-xs text-zinc-600">-</span>
+                              )}
+                            </td>
+                          )}
                           <td className="px-5 py-4">
                             <div className="flex flex-wrap gap-2">
                               <Button
@@ -519,6 +621,77 @@ export default function JobList() {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function clampPercent(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, value));
+}
+
+function resolveMemoryCapacityBytes(
+  sample: JobResourceUsageSample,
+  hardware: ServerHardwareResponse | null,
+): number | null {
+  if (sample.memory_limit_bytes > 0) {
+    return sample.memory_limit_bytes;
+  }
+  if (hardware && hardware.total_memory_mb > 0) {
+    return hardware.total_memory_mb * 1024 * 1024;
+  }
+  return null;
+}
+
+function memoryUsagePercent(
+  sample: JobResourceUsageSample | null,
+  hardware: ServerHardwareResponse | null,
+): number {
+  if (!sample) return 0;
+  const memoryCapacityBytes = resolveMemoryCapacityBytes(sample, hardware);
+  if (!memoryCapacityBytes || memoryCapacityBytes <= 0) return 0;
+  return clampPercent((sample.memory_usage_bytes / memoryCapacityBytes) * 100);
+}
+
+function formatMemoryUsage(
+  sample: JobResourceUsageSample | null,
+  hardware: ServerHardwareResponse | null,
+  formatter: (bytes: number) => string,
+): string {
+  if (!sample) return "-";
+  const memoryCapacityBytes = resolveMemoryCapacityBytes(sample, hardware);
+  if (memoryCapacityBytes && memoryCapacityBytes > 0) {
+    return `${formatter(sample.memory_usage_bytes)} / ${formatter(memoryCapacityBytes)}`;
+  }
+  return formatter(sample.memory_usage_bytes);
+}
+
+function UsageBarRow({
+  label,
+  value,
+  percent,
+  fillClass,
+  valueClass,
+}: {
+  label: string;
+  value: string;
+  percent: number;
+  fillClass: string;
+  valueClass: string;
+}) {
+  const hasSample = value !== "-";
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3 font-mono text-xs uppercase tracking-[0.12em]">
+        <span className="text-zinc-500">{label}</span>
+        <span className={valueClass}>{value}</span>
+      </div>
+      <div className="h-5 border-2 border-zinc-700 bg-black p-[3px]">
+        <div
+          className={`h-full transition-all duration-700 ${fillClass}`}
+          style={{ width: `${hasSample ? percent : 0}%` }}
+        />
       </div>
     </div>
   );

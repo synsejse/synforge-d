@@ -122,7 +122,6 @@ impl SynforgeService {
             {
                 Ok(response) => {
                     let mut package_has_queued = false;
-                    let mut package_has_skipped = false;
                     let mut package_has_blocked = false;
                     for result in response.results {
                         match result.disposition {
@@ -132,7 +131,6 @@ impl SynforgeService {
                             }
                             synforge_core::api::PackageActionDisposition::Skipped => {
                                 progress.skipped_targets += 1;
-                                package_has_skipped = true;
                             }
                             synforge_core::api::PackageActionDisposition::Blocked => {
                                 progress.blocked_targets += 1;
@@ -145,8 +143,6 @@ impl SynforgeService {
                         progress.queued_packages += 1;
                     } else if package_has_blocked {
                         progress.blocked_packages += 1;
-                    } else if package_has_skipped {
-                        progress.skipped_packages += 1;
                     } else {
                         progress.skipped_packages += 1;
                     }

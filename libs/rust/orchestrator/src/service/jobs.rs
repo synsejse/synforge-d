@@ -198,7 +198,9 @@ impl SynforgeService {
         }
 
         let published_files = self.store.list_published_repo_files_for_job(job_id).await?;
-        self.lifecycle.remove_published_files(&published_files).await?;
+        self.lifecycle
+            .remove_published_files(&published_files)
+            .await?;
         self.worker_launcher.cleanup_session(job_id);
         self.cleanup_retry_runtime_dirs(job_id).await?;
         self.store

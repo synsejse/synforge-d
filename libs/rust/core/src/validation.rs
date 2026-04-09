@@ -51,6 +51,20 @@ impl Validator<PackageDefinition> for PackageDefinitionValidator {
                 "package_history_count must be greater than zero".to_string(),
             ));
         }
+        if let Some(cpu_limit_millicores) = value.cpu_limit_millicores
+            && cpu_limit_millicores == 0
+        {
+            return Err(SynforgeError::Spec(
+                "cpu_limit_millicores must be greater than zero when set".to_string(),
+            ));
+        }
+        if let Some(memory_limit_mb) = value.memory_limit_mb
+            && memory_limit_mb == 0
+        {
+            return Err(SynforgeError::Spec(
+                "memory_limit_mb must be greater than zero when set".to_string(),
+            ));
+        }
         for entry in &value.build_env {
             BuildEnvVarValidator.validate(entry)?;
         }

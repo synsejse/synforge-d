@@ -336,8 +336,7 @@ pub(in crate::db) async fn update_build_failure_backoff(
                 let now_text = format_timestamp(now);
                 if status == BuildStatus::Succeeded {
                     diesel::delete(
-                        build_failure_backoff::table
-                            .find((job.0.as_str(), job.1.as_str())),
+                        build_failure_backoff::table.find((job.0.as_str(), job.1.as_str())),
                     )
                     .execute(conn)?;
                     return Ok(());
@@ -355,7 +354,9 @@ pub(in crate::db) async fn update_build_failure_backoff(
                     .optional()?;
                 let next_failures = existing
                     .as_ref()
-                    .map_or(1_i32, |record| record.consecutive_failures.saturating_add(1))
+                    .map_or(1_i32, |record| {
+                        record.consecutive_failures.saturating_add(1)
+                    })
                     .clamp(1, 31);
                 let exponent = (next_failures - 1) as u32;
                 let backoff_seconds = min(

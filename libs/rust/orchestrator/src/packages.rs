@@ -39,6 +39,8 @@ pub struct MaterializePackageOptions {
     pub poll_interval_seconds: u64,
     pub build_timeout_seconds: u64,
     pub package_history_count: u64,
+    pub cpu_limit_millicores: Option<u64>,
+    pub memory_limit_mb: Option<u64>,
     pub build_env: Vec<BuildEnvVar>,
 }
 
@@ -156,6 +158,8 @@ impl PackageSyncStore {
             poll_interval_seconds: options.poll_interval_seconds,
             build_timeout_seconds: options.build_timeout_seconds,
             package_history_count: options.package_history_count,
+            cpu_limit_millicores: options.cpu_limit_millicores,
+            memory_limit_mb: options.memory_limit_mb,
             build_env: options.build_env,
             spec_file: PathBuf::from(&source.spec_file),
             version: inspected.revision.version.clone(),

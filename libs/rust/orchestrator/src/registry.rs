@@ -81,6 +81,8 @@ impl PackageRegistry {
                     poll_interval_seconds: request.poll_interval_seconds,
                     build_timeout_seconds: request.build_timeout_seconds,
                     package_history_count: request.package_history_count,
+                    cpu_limit_millicores: request.cpu_limit_millicores.filter(|value| *value > 0),
+                    memory_limit_mb: request.memory_limit_mb.filter(|value| *value > 0),
                     build_env: request.build_env,
                 },
             )
@@ -111,6 +113,16 @@ impl PackageRegistry {
         let package_history_count = request
             .package_history_count
             .unwrap_or(existing.package.package_history_count);
+        let cpu_limit_millicores = match request.cpu_limit_millicores {
+            Some(0) => None,
+            Some(value) => Some(value),
+            None => existing.package.cpu_limit_millicores,
+        };
+        let memory_limit_mb = match request.memory_limit_mb {
+            Some(0) => None,
+            Some(value) => Some(value),
+            None => existing.package.memory_limit_mb,
+        };
         let build_env = request
             .build_env
             .unwrap_or_else(|| existing.package.build_env.clone());
@@ -140,6 +152,8 @@ impl PackageRegistry {
                     poll_interval_seconds,
                     build_timeout_seconds,
                     package_history_count,
+                    cpu_limit_millicores,
+                    memory_limit_mb,
                     build_env,
                 },
             )
@@ -227,6 +241,8 @@ impl PackageRegistry {
                     poll_interval_seconds: package.poll_interval_seconds,
                     build_timeout_seconds: package.build_timeout_seconds,
                     package_history_count: package.package_history_count,
+                    cpu_limit_millicores: package.cpu_limit_millicores,
+                    memory_limit_mb: package.memory_limit_mb,
                     build_env: package.build_env.clone(),
                 },
             )

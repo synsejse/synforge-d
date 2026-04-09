@@ -42,6 +42,10 @@ pub struct CreatePackageRequest {
     pub build_timeout_seconds: u64,
     #[serde(default = "default_package_history_count")]
     pub package_history_count: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cpu_limit_millicores: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory_limit_mb: Option<u64>,
     #[serde(default)]
     pub build_env: Vec<BuildEnvVar>,
 }
@@ -67,6 +71,10 @@ pub struct UpdatePackageRequest {
     pub build_timeout_seconds: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub package_history_count: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cpu_limit_millicores: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory_limit_mb: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub build_env: Option<Vec<BuildEnvVar>>,
 }
@@ -262,6 +270,26 @@ pub struct PruneJobsResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct JobResourceUsageSample {
+    pub job_id: uuid::Uuid,
+    pub container_id: String,
+    pub memory_usage_bytes: u64,
+    pub memory_limit_bytes: u64,
+    pub collected_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct JobResourceUsageListResponse {
+    pub samples: Vec<JobResourceUsageSample>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct JobResourceUsageResponse {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sample: Option<JobResourceUsageSample>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct PackageBuildInventoryEntry {
     pub build: BuildJobResponse,
     pub repo_files: Vec<PublishedRepoFile>,
@@ -389,6 +417,13 @@ pub struct CacheStatsResponse {
     pub collected_at: String,
     pub mock_chroot_cache: MockChrootCacheStats,
     pub git_mirror_cache: GitMirrorCacheStats,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct ServerHardwareResponse {
+    pub cpu_cores: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_memory_mb: Option<u64>,
 }
 
 // --- Users, Session, Setup ---

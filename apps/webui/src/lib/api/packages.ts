@@ -13,6 +13,7 @@ import type {
   RefreshAllPackagesResponse,
   RepoInventoryResponse,
   RepoSummaryResponse,
+  ServerHardwareResponse,
   UpdatePackageRequest,
 } from "../types";
 import { BaseApiClient } from "./client";
@@ -119,6 +120,10 @@ export class PackageApiClient extends BaseApiClient {
 
   async getRepoSummary(): Promise<RepoSummaryResponse> {
     return this.request("GET", "/api/v1/repo/summary");
+  }
+
+  async getServerHardware(): Promise<ServerHardwareResponse> {
+    return this.request("GET", "/api/v1/system/hardware");
   }
 
   async rebuildPackage(name: string): Promise<PackageActionResponse> {

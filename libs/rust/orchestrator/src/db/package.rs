@@ -87,6 +87,16 @@ pub(super) async fn upsert_package(
             let spec_file = package.spec_file.to_string_lossy().to_string();
             let build_env_json = serde_json::to_string(&package.build_env)?;
             let mock_chroots_json = serde_json::to_string(&package.mock_chroots)?;
+            let cpu_limit_millicores = package
+                .cpu_limit_millicores
+                .map(i64::try_from)
+                .transpose()
+                .context("cpu_limit_millicores exceeds database range")?;
+            let memory_limit_mb = package
+                .memory_limit_mb
+                .map(i64::try_from)
+                .transpose()
+                .context("memory_limit_mb exceeds database range")?;
             let new_row = NewPackageRecord {
                 name: package.name.as_str(),
                 description: package.description.as_str(),
@@ -102,6 +112,8 @@ pub(super) async fn upsert_package(
                 poll_interval_seconds: package.poll_interval_seconds as i64,
                 build_timeout_seconds: package.build_timeout_seconds as i64,
                 package_history_count: package.package_history_count as i64,
+                cpu_limit_millicores,
+                memory_limit_mb,
                 build_env_json: build_env_json.as_str(),
                 spec_file: spec_file.as_str(),
                 version: package.version.as_str(),
@@ -125,6 +137,8 @@ pub(super) async fn upsert_package(
                     packages::poll_interval_seconds.eq(new_row.poll_interval_seconds),
                     packages::build_timeout_seconds.eq(new_row.build_timeout_seconds),
                     packages::package_history_count.eq(new_row.package_history_count),
+                    packages::cpu_limit_millicores.eq(new_row.cpu_limit_millicores),
+                    packages::memory_limit_mb.eq(new_row.memory_limit_mb),
                     packages::build_env_json.eq(new_row.build_env_json),
                     packages::spec_file.eq(new_row.spec_file),
                     packages::version.eq(new_row.version),

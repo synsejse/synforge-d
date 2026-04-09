@@ -2,7 +2,12 @@ import { Suspense, lazy, useEffect, useState } from "react";
 import api from "../../lib/api";
 import { API_BASE } from "../../lib/api/client";
 import { formatDateTime } from "../../lib/datetime";
-import type { BuildArtifact, BuildJobResponse } from "../../lib/types";
+import type {
+  BuildArtifact,
+  BuildJobResponse,
+  JobResourceUsageSample,
+  ServerHardwareResponse,
+} from "../../lib/types";
 import ErrorMessage from "../common/ErrorMessage";
 import LoadingBlock from "../ui/LoadingBlock";
 import FaIcon from "../ui/FaIcon";
@@ -22,6 +27,7 @@ interface Props {
 }
 
 const POLL_INTERVAL_MS = 2000;
+const USAGE_POLL_INTERVAL_MS = 1000;
 const TabbedLogViewer = lazy(() => import("../job/TabbedLogViewer"));
 
 export default function JobDetail({ jobId }: Props) {
@@ -31,6 +37,8 @@ export default function JobDetail({ jobId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [killing, setKilling] = useState(false);
+  const [latestUsage, setLatestUsage] = useState<JobResourceUsageSample | null>(null);
+  const [serverHardware, setServerHardware] = useState<ServerHardwareResponse | null>(null);
   const [pageVisible, setPageVisible] = useState(() => {
     if (typeof document === "undefined") return true;
     return document.visibilityState === "visible";
@@ -60,6 +68,13 @@ export default function JobDetail({ jobId }: Props) {
   }, [jobId]);
 
   useEffect(() => {
+    api
+      .getServerHardware()
+      .then((hardware) => setServerHardware(hardware))
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
     if (typeof document === "undefined") return;
     const updateVisibility = () => {
       setPageVisible(document.visibilityState === "visible");
@@ -83,6 +98,30 @@ export default function JobDetail({ jobId }: Props) {
 
     return () => window.clearInterval(timer);
   }, [job?.job.status, pageVisible]);
+
+  useEffect(() => {
+    if (!job) return;
+    if (job.job.status !== "pending" && job.job.status !== "running") return;
+    if (!pageVisible) return;
+    let cancelled = false;
+    const pollUsage = async () => {
+      try {
+        const response = await api.getJobUsage(jobId);
+        if (cancelled) return;
+        setLatestUsage(response.sample ?? null);
+      } catch {
+        // keep last value when one poll fails
+      }
+    };
+    void pollUsage();
+    const timer = window.setInterval(() => {
+      void pollUsage();
+    }, USAGE_POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [job?.job.status, jobId, pageVisible]);
 
   async function handleDelete() {
     if (!confirm(`Delete job ${jobId}?`)) return;
@@ -271,6 +310,25 @@ export default function JobDetail({ jobId }: Props) {
         </div>
       </div>
 
+      {isLive && (
+        <div className="border-4 border-[var(--theme-accent-lime)] bg-black shadow-[4px_4px_0_rgba(180,255,130,0.2)]">
+          <div className="border-b-4 border-[var(--theme-accent-lime)] bg-zinc-950 px-6 py-4">
+            <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white">
+              Live_Resource_Usage
+            </h2>
+          </div>
+          <div className="p-6">
+            <UsageBar
+              label="Memory"
+              value={formatMemoryUsage(latestUsage, serverHardware)}
+              percent={memoryUsagePercent(latestUsage, serverHardware)}
+              colorClass="bg-amber-400"
+              accentClass="text-amber-300"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Build Logs */}
       <div className="border-4 border-[var(--theme-terminal-green)] bg-black shadow-[4px_4px_0_rgba(0,255,65,0.2)]">
         <div className="border-b-4 border-[var(--theme-terminal-green)] bg-black px-4 py-4 sm:px-6">
@@ -341,6 +399,90 @@ export default function JobDetail({ jobId }: Props) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function formatMemory(bytes: number): string {
+  if (bytes >= 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GiB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(0)} MiB`;
+}
+
+function formatMemoryUsage(
+  sample?: JobResourceUsageSample | null,
+  hardware?: ServerHardwareResponse | null,
+): string {
+  if (!sample) return "-";
+  const capacityBytes = resolveMemoryCapacityBytes(sample, hardware);
+  if (capacityBytes && capacityBytes > 0) {
+    return `${formatMemory(sample.memory_usage_bytes)} / ${formatMemory(capacityBytes)}`;
+  }
+  return formatMemory(sample.memory_usage_bytes);
+}
+
+function clampPercent(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, value));
+}
+
+function resolveMemoryCapacityBytes(
+  sample: JobResourceUsageSample,
+  hardware?: ServerHardwareResponse | null,
+): number | null {
+  if (sample.memory_limit_bytes > 0) {
+    return sample.memory_limit_bytes;
+  }
+  if (hardware && hardware.total_memory_mb > 0) {
+    return hardware.total_memory_mb * 1024 * 1024;
+  }
+  return null;
+}
+
+function memoryUsagePercent(
+  sample?: JobResourceUsageSample | null,
+  hardware?: ServerHardwareResponse | null,
+): number {
+  if (!sample) return 0;
+  const capacityBytes = resolveMemoryCapacityBytes(sample, hardware);
+  if (!capacityBytes || capacityBytes <= 0) return 0;
+  return clampPercent((sample.memory_usage_bytes / capacityBytes) * 100);
+}
+
+function UsageBar({
+  label,
+  value,
+  percent,
+  colorClass,
+  accentClass,
+}: {
+  label: string;
+  value: string;
+  percent: number;
+  colorClass: string;
+  accentClass: string;
+}) {
+  const hasSample = value !== "-";
+  return (
+    <div className="space-y-3 border-2 border-zinc-700 bg-zinc-950 p-5">
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-500">
+          {label}
+        </span>
+        <span className={`font-mono text-sm font-bold uppercase tracking-[0.12em] ${accentClass}`}>
+          {value}
+        </span>
+      </div>
+      <div className="h-10 border-2 border-zinc-700 bg-black p-1">
+        <div
+          className={`h-full ${colorClass} transition-all duration-700`}
+          style={{ width: `${hasSample ? percent : 0}%` }}
+        />
+      </div>
+      <div className="font-mono text-xs uppercase tracking-[0.1em] text-zinc-500">
+        {hasSample ? `${percent.toFixed(1)}%` : "WAITING_FOR_SAMPLE"}
+      </div>
     </div>
   );
 }

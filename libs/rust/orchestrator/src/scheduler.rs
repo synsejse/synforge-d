@@ -343,6 +343,8 @@ impl BuildScheduler {
                     poll_interval_seconds: package.poll_interval_seconds,
                     build_timeout_seconds: package.build_timeout_seconds,
                     package_history_count: package.package_history_count,
+                    cpu_limit_millicores: package.cpu_limit_millicores,
+                    memory_limit_mb: package.memory_limit_mb,
                     build_env: package.build_env.clone(),
                 },
             )

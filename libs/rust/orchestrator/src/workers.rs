@@ -17,6 +17,14 @@ use uuid::Uuid;
 use crate::job_lifecycle::JobLifecycle;
 use crate::sessions::WorkerSessionBroker;
 
+#[derive(Debug, Clone, Copy, Default)]
+struct WorkerResourceLimits {
+    cpu_limit_millicores: Option<u64>,
+    memory_limit_mb: Option<u64>,
+    nano_cpus: Option<i64>,
+    memory_bytes: Option<i64>,
+}
+
 #[derive(Clone)]
 pub struct DockerWorkerLauncher {
     docker: Docker,
@@ -57,6 +65,7 @@ impl DockerWorkerLauncher {
         let runtime_paths = config.runtime_paths();
         tokio::fs::create_dir_all(runtime_paths.job_logs_dir(payload.job_id)).await?;
         let binds = Self::mock_mount_binds(payload, config).await?;
+        let resource_limits = worker_resource_limits(payload)?;
         let session = self
             .sessions
             .create_session(payload.job_id, payload.clone())
@@ -75,6 +84,8 @@ impl DockerWorkerLauncher {
             worker_image = %config.worker_image,
             network_mode = ?self.network_mode,
             worker_jobs_root = ?worker_jobs_root,
+            cpu_limit_millicores = ?resource_limits.cpu_limit_millicores,
+            memory_limit_mb = ?resource_limits.memory_limit_mb,
             "creating worker container"
         );
         let container = self
@@ -85,7 +96,13 @@ impl DockerWorkerLauncher {
                         .name(container_name.as_str())
                         .build(),
                 ),
-                worker_container_body(config, &session.worker_id, self.network_mode.clone(), binds),
+                worker_container_body(
+                    config,
+                    &session.worker_id,
+                    self.network_mode.clone(),
+                    binds,
+                    resource_limits,
+                ),
             )
             .await
             .with_context(|| format!("failed to create worker container {}", container_name))?;
@@ -346,6 +363,7 @@ fn worker_container_body(
     worker_id: &str,
     network_mode: Option<String>,
     binds: Option<Vec<String>>,
+    resource_limits: WorkerResourceLimits,
 ) -> ContainerCreateBody {
     let cmd = vec![
         "--worker-id".to_string(),
@@ -364,11 +382,50 @@ fn worker_container_body(
             extra_hosts: Some(vec!["host.docker.internal:host-gateway".to_string()]),
             network_mode,
             binds,
+            nano_cpus: resource_limits.nano_cpus,
+            memory: resource_limits.memory_bytes,
             ..Default::default()
         }),
         working_dir: Some("/synforge".to_string()),
         ..Default::default()
     }
+}
+
+fn worker_resource_limits(payload: &WorkerJobPayload) -> anyhow::Result<WorkerResourceLimits> {
+    let WorkerAction::Build(build) = &payload.action else {
+        return Ok(WorkerResourceLimits::default());
+    };
+    let cpu_limit_millicores = build
+        .package
+        .cpu_limit_millicores
+        .filter(|value| *value > 0);
+    let memory_limit_mb = build.package.memory_limit_mb.filter(|value| *value > 0);
+    let nano_cpus = cpu_limit_millicores
+        .map(|value| {
+            value
+                .checked_mul(1_000_000)
+                .ok_or_else(|| anyhow::anyhow!("cpu limit is too large: {}", value))
+        })
+        .transpose()?
+        .map(i64::try_from)
+        .transpose()
+        .context("cpu limit exceeds i64 range")?;
+    let memory_bytes = memory_limit_mb
+        .map(|value| {
+            value
+                .checked_mul(1024 * 1024)
+                .ok_or_else(|| anyhow::anyhow!("memory limit is too large: {}", value))
+        })
+        .transpose()?
+        .map(i64::try_from)
+        .transpose()
+        .context("memory limit exceeds i64 range")?;
+    Ok(WorkerResourceLimits {
+        cpu_limit_millicores,
+        memory_limit_mb,
+        nano_cpus,
+        memory_bytes,
+    })
 }
 
 async fn detect_daemon_network(docker: &Docker) -> Option<String> {

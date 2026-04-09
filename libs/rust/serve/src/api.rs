@@ -6,6 +6,7 @@ use crate::AppState;
 pub(crate) mod artifacts;
 pub(crate) mod cache;
 pub(crate) mod config;
+pub(crate) mod hardware;
 pub(crate) mod jobs;
 pub(crate) mod logs;
 pub(crate) mod packages;
@@ -18,8 +19,10 @@ pub(crate) mod users;
 pub(crate) use artifacts::{download_job_artifact, get_job_artifact_meta, list_job_artifacts};
 pub(crate) use cache::get_cache_stats;
 pub(crate) use config::{get_config_schema, get_effective_config, update_runtime_settings};
+pub(crate) use hardware::get_server_hardware;
 pub(crate) use jobs::{
-    delete_job, get_job, kill_job, list_jobs, prune_failed_jobs, retry_job,
+    delete_job, get_job, get_job_usage, kill_job, list_job_usage, list_jobs, prune_failed_jobs,
+    retry_job,
 };
 pub(crate) use logs::{
     get_job_log_chunk_by_source, get_job_log_manifest, get_job_log_meta_by_source,
@@ -79,6 +82,7 @@ pub fn router(_state: AppState) -> Router<AppState> {
             get(list_package_sync_operations),
         )
         .route("/jobs", get(list_jobs))
+        .route("/jobs/usage", get(list_job_usage))
         .route("/jobs/prune-failed", post(prune_failed_jobs))
         .route("/jobs/{id}/kill", post(kill_job))
         .route("/jobs/{id}/retry", post(retry_job))
@@ -94,6 +98,7 @@ pub fn router(_state: AppState) -> Router<AppState> {
         )
         .route("/users/{id}/password", post(change_user_password))
         .route("/jobs/{id}", get(get_job).delete(delete_job))
+        .route("/jobs/{id}/usage", get(get_job_usage))
         .route("/jobs/{id}/artifacts", get(list_job_artifacts))
         .route(
             "/jobs/{id}/artifacts/{file}/meta",
@@ -135,6 +140,7 @@ pub fn router(_state: AppState) -> Router<AppState> {
         .route("/sync/operations", get(list_sync_operations))
         .route("/sync/metrics", get(get_sync_metrics))
         .route("/cache/stats", get(get_cache_stats))
+        .route("/system/hardware", get(get_server_hardware))
         .route("/config/schema", get(get_config_schema))
         .route("/config/effective", get(get_effective_config))
         .route("/config/runtime", post(update_runtime_settings))

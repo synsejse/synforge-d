@@ -20,6 +20,10 @@ export interface PackageEditFormState {
   pollIntervalSeconds: string;
   buildTimeoutSeconds: string;
   packageHistoryCount: string;
+  cpuLimitCores: string;
+  cpuLimitEnabled: boolean;
+  memoryLimitEnabled: boolean;
+  memoryLimitMb: string;
   buildEnv: string;
   enabled: boolean;
   publish_srpm: boolean;
@@ -29,6 +33,8 @@ export interface PackageEditFormState {
 
 interface PackageEditFormSectionProps {
   form: PackageEditFormState;
+  maxCpuCores: number | null;
+  maxMemoryMb: number | null;
   saving: boolean;
   availableChroots: string[];
   showSpecPicker: boolean;
@@ -48,6 +54,8 @@ interface PackageEditFormSectionProps {
 
 export default function PackageEditFormSection({
   form,
+  maxCpuCores,
+  maxMemoryMb,
   saving,
   availableChroots,
   showSpecPicker,
@@ -64,6 +72,28 @@ export default function PackageEditFormSection({
   onCloseChrootPicker,
   onBrowseRepository,
 }: PackageEditFormSectionProps) {
+  const CPU_MIN_CORES = 1;
+  const CPU_STEP_CORES = 1;
+  const cpuSliderMax = Math.max(CPU_MIN_CORES, maxCpuCores ?? 64);
+  const CPU_DEFAULT_CORES = Math.min(4, cpuSliderMax);
+  const cpuSliderValue = Math.min(
+    cpuSliderMax,
+    Math.max(CPU_MIN_CORES, Math.floor(Number(form.cpuLimitCores) || CPU_DEFAULT_CORES)),
+  );
+  const MEMORY_MIN_MB = 256;
+  const MEMORY_STEP_MB = 256;
+  const memorySliderMax = Math.max(
+    MEMORY_MIN_MB,
+    maxMemoryMb
+      ? Math.floor(maxMemoryMb / MEMORY_STEP_MB) * MEMORY_STEP_MB
+      : 32768,
+  );
+  const MEMORY_DEFAULT_MB = Math.min(1024, memorySliderMax);
+  const memorySliderValue = Math.min(
+    memorySliderMax,
+    Math.max(MEMORY_MIN_MB, Number(form.memoryLimitMb) || MEMORY_DEFAULT_MB),
+  );
+
   return (
     <>
       <form onSubmit={onSubmit} className="min-w-0 border-4 border-white bg-black p-4 sm:p-6">
@@ -130,6 +160,106 @@ export default function PackageEditFormSection({
               required
               className="md:col-span-2"
             />
+
+            <div className="border-2 border-zinc-700 bg-zinc-950 p-4 md:col-span-2">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+                  CPU limit (cores)
+                </span>
+                <label className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={form.cpuLimitEnabled}
+                    onChange={(event) =>
+                      onFormChange({
+                        cpuLimitEnabled: event.target.checked,
+                        cpuLimitCores: event.target.checked
+                          ? form.cpuLimitCores || String(CPU_DEFAULT_CORES)
+                          : form.cpuLimitCores,
+                      })
+                    }
+                  />
+                  Limit CPU
+                </label>
+              </div>
+              <div
+                className={`mt-4 border-2 border-zinc-800 px-3 py-4 transition ${
+                  form.cpuLimitEnabled ? "bg-black" : "bg-zinc-900/60 opacity-70"
+                }`}
+              >
+                <input
+                  type="range"
+                  min={CPU_MIN_CORES}
+                  max={cpuSliderMax}
+                  step={CPU_STEP_CORES}
+                  value={cpuSliderValue}
+                  onChange={(event) =>
+                    onFormChange({ cpuLimitCores: event.target.value })
+                  }
+                  disabled={!form.cpuLimitEnabled}
+                  aria-label="CPU limit in cores"
+                  className="h-3 w-full cursor-pointer appearance-none bg-zinc-900 accent-[var(--theme-accent-lime)] disabled:cursor-not-allowed [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-black [&::-moz-range-thumb]:bg-[var(--theme-accent-lime)] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-black [&::-webkit-slider-thumb]:bg-[var(--theme-accent-lime)]"
+                />
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-3 font-mono text-xs font-bold uppercase tracking-[0.12em]">
+                <span className="text-[var(--theme-accent-lime)]">
+                  {form.cpuLimitEnabled ? `${cpuSliderValue} cores` : "Unlimited"}
+                </span>
+                <span className="text-zinc-500">
+                  {CPU_MIN_CORES} - {cpuSliderMax} cores
+                </span>
+              </div>
+            </div>
+
+            <div className="border-2 border-zinc-700 bg-zinc-950 p-4 md:col-span-2">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+                  Memory limit (MB)
+                </span>
+                <label className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={form.memoryLimitEnabled}
+                    onChange={(event) =>
+                      onFormChange({
+                        memoryLimitEnabled: event.target.checked,
+                        memoryLimitMb: event.target.checked
+                          ? form.memoryLimitMb || String(MEMORY_DEFAULT_MB)
+                          : form.memoryLimitMb,
+                      })
+                    }
+                  />
+                  Limit RAM
+                </label>
+              </div>
+              <div
+                className={`mt-4 border-2 border-zinc-800 px-3 py-4 transition ${
+                  form.memoryLimitEnabled ? "bg-black" : "bg-zinc-900/60 opacity-70"
+                }`}
+              >
+                <input
+                  type="range"
+                  min={MEMORY_MIN_MB}
+                  max={memorySliderMax}
+                  step={MEMORY_STEP_MB}
+                  value={memorySliderValue}
+                  onChange={(event) =>
+                    onFormChange({ memoryLimitMb: event.target.value })
+                  }
+                  disabled={!form.memoryLimitEnabled}
+                  aria-label="Memory limit in megabytes"
+                  className="h-3 w-full cursor-pointer appearance-none bg-zinc-900 accent-[var(--theme-accent-lime)] disabled:cursor-not-allowed [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-black [&::-moz-range-thumb]:bg-[var(--theme-accent-lime)] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-black [&::-webkit-slider-thumb]:bg-[var(--theme-accent-lime)]"
+                />
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-3 font-mono text-xs font-bold uppercase tracking-[0.12em]">
+                <span className="text-[var(--theme-accent-lime)]">
+                  {form.memoryLimitEnabled ? `${memorySliderValue} MB` : "Unlimited"}
+                </span>
+                <span className="text-zinc-500">
+                  {MEMORY_MIN_MB} - {memorySliderMax} MB
+                </span>
+              </div>
+            </div>
 
             <FieldGroup
               label="Mock chroots"

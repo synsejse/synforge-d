@@ -15,10 +15,11 @@ use crate::sessions::WorkerSessionBroker;
 use crate::sync_tracker::SyncStatusTracker;
 use crate::worker_socket::start_worker_listener;
 use crate::workers::DockerWorkerLauncher;
+use dashmap::DashMap;
 use serde_json::Value;
 use synforge_core::{
     api::{
-        MockChrootListResponse, PageInfo, RefreshAllPackagesProgressView,
+        JobResourceUsageSample, MockChrootListResponse, PageInfo, RefreshAllPackagesProgressView,
         RepoSigningReconcileProgressView,
     },
     config::DaemonConfig,
@@ -33,6 +34,8 @@ const MAX_PAGE_SIZE: usize = 200;
 
 mod cache;
 mod config;
+mod hardware;
+mod job_usage;
 mod jobs;
 mod logs;
 mod packages;
@@ -55,6 +58,7 @@ pub struct SynforgeService {
     queue_tx: mpsc::Sender<crate::scheduler::QueuedBuild>,
     shutdown_tx: watch::Sender<bool>,
     mock_chroot_cache: Arc<Mutex<MockChrootCacheState>>,
+    job_usage_latest: Arc<DashMap<uuid::Uuid, JobResourceUsageSample>>,
     refresh_all_packages_progress: Arc<Mutex<Option<RefreshAllPackagesProgressView>>>,
     signing_reconcile_progress: Arc<Mutex<Option<RepoSigningReconcileProgressView>>>,
 }
@@ -173,6 +177,7 @@ impl SynforgeService {
             queue_tx,
             shutdown_tx,
             mock_chroot_cache: Arc::new(Mutex::new(MockChrootCacheState::default())),
+            job_usage_latest: Arc::new(DashMap::new()),
             refresh_all_packages_progress: Arc::new(Mutex::new(None)),
             signing_reconcile_progress: Arc::new(Mutex::new(None)),
         });
@@ -189,6 +194,7 @@ impl SynforgeService {
         );
         service.start_queue_runner(queue_rx, shutdown_rx.clone());
         service.start_poller(shutdown_rx.clone());
+        service.start_job_usage_sampler(shutdown_rx.clone());
         service.start_runtime_cleanup_worker(shutdown_rx);
         info!("synforge service background workers started");
         Ok(service)

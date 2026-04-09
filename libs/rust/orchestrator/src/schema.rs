@@ -14,6 +14,8 @@ diesel::table! {
         poll_interval_seconds -> BigInt,
         build_timeout_seconds -> BigInt,
         package_history_count -> BigInt,
+        cpu_limit_millicores -> Nullable<BigInt>,
+        memory_limit_mb -> Nullable<BigInt>,
         build_env_json -> Text,
         spec_file -> Text,
         version -> Text,

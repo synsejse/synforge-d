@@ -73,7 +73,7 @@ export function summarizePackageTargetAction(
   }
 }
 
-function humanizeReason(reason: string | null): string {
+function humanizeReason(reason: string | null | undefined): string {
   if (reason?.startsWith("backoff:")) {
     const suffix = reason.slice("backoff:".length).trim();
     return `failure backoff active (${suffix})`;

@@ -1,5 +1,6 @@
 import { faMagnifyingGlass, faSave } from "@fortawesome/free-solid-svg-icons";
-import type { FormEvent } from "react";
+import type { SyntheticEvent } from "react";
+import { formatMockChroots } from "../../lib/utils";
 import FaIcon from "../ui/FaIcon";
 import SelectionDialog from "../common/SelectionDialog";
 import {
@@ -35,7 +36,7 @@ interface PackageEditFormSectionProps {
   browsing: boolean;
   browseError: string | null;
   selectableFiles: string[];
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: SyntheticEvent<HTMLFormElement>) => void;
   onFormChange: (next: Partial<PackageEditFormState>) => void;
   onToggleChroot: (chroot: string, checked: boolean) => void;
   onOpenSpecPicker: () => void;
@@ -43,10 +44,6 @@ interface PackageEditFormSectionProps {
   onOpenChrootPicker: () => void;
   onCloseChrootPicker: () => void;
   onBrowseRepository: () => void;
-}
-
-function formatMockChroots(chroots: string[]) {
-  return chroots.join(", ");
 }
 
 export default function PackageEditFormSection({
@@ -150,7 +147,7 @@ export default function PackageEditFormSection({
             >
               <DisplayBox>
                 {form.mockChroots.length > 0
-                  ? formatMockChroots(form.mockChroots)
+                  ? formatMockChroots(form.mockChroots, "No chroots selected")
                   : "No chroots selected"}
               </DisplayBox>
             </FieldGroup>

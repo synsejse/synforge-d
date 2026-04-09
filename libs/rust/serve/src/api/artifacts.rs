@@ -55,7 +55,7 @@ pub(crate) async fn get_job_artifact_meta(
 
 #[utoipa::path(
     get,
-    path = "/api/v1/jobs/{id}/artifacts/{file}",
+    path = "/api/v1/jobs/{id}/artifacts/{file}/content",
     tag = "Jobs",
     params(
         ("id" = Uuid, Path, description = "Job identifier"),

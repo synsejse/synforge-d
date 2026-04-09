@@ -20,17 +20,21 @@ interface GetJobLogChunkOptions {
   source: string;
 }
 
+interface ListJobsOptions {
+  limit?: number;
+  offset?: number;
+  status?: string;
+  packageName?: string;
+  mockChroot?: string;
+}
+
 export class JobApiClient extends PackageApiClient {
-  async listCompletedJobs(
-    options: {
-      limit?: number;
-      offset?: number;
-      status?: string;
-      packageName?: string;
-      mockChroot?: string;
-    } = {},
+  private async listJobsByScope(
+    scope: "active" | "completed",
+    options: ListJobsOptions = {},
   ): Promise<BuildJobListResponse> {
     const params = new URLSearchParams();
+    params.set("scope", scope);
     if (options.limit !== undefined) {
       params.set("limit", String(options.limit));
     }
@@ -46,37 +50,19 @@ export class JobApiClient extends PackageApiClient {
     if (options.mockChroot?.trim()) {
       params.set("mock_chroot", options.mockChroot.trim());
     }
-    return this.request(
-      "GET",
-      `/api/v1/jobs/completed${params.toString() ? `?${params.toString()}` : ""}`,
-    );
+    return this.request("GET", `/api/v1/jobs?${params.toString()}`);
+  }
+
+  async listCompletedJobs(
+    options: ListJobsOptions = {},
+  ): Promise<BuildJobListResponse> {
+    return this.listJobsByScope("completed", options);
   }
 
   async listActiveJobs(
-    options: {
-      limit?: number;
-      offset?: number;
-      packageName?: string;
-      mockChroot?: string;
-    } = {},
+    options: Omit<ListJobsOptions, "status"> = {},
   ): Promise<BuildJobListResponse> {
-    const params = new URLSearchParams();
-    if (options.limit !== undefined) {
-      params.set("limit", String(options.limit));
-    }
-    if (options.offset !== undefined) {
-      params.set("offset", String(options.offset));
-    }
-    if (options.packageName?.trim()) {
-      params.set("package_name", options.packageName.trim());
-    }
-    if (options.mockChroot?.trim()) {
-      params.set("mock_chroot", options.mockChroot.trim());
-    }
-    return this.request(
-      "GET",
-      `/api/v1/jobs/active${params.toString() ? `?${params.toString()}` : ""}`,
-    );
+    return this.listJobsByScope("active", options);
   }
 
   async getJob(id: string): Promise<BuildJobResponse> {
@@ -126,12 +112,12 @@ export class JobApiClient extends PackageApiClient {
     }
     return this.request(
       "GET",
-      `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(options.source)}/stream?${params.toString()}`,
+      `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(options.source)}/chunks?${params.toString()}`,
     );
   }
 
   async downloadJobLog(id: string, source: string): Promise<void> {
-    const path = `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(source)}/stream`;
+    const path = `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(source)}/chunks`;
     const res = await fetch(`${API_BASE}${path}`, {
       method: "GET",
       headers: this.authHeaders(false),
@@ -193,7 +179,7 @@ export class JobApiClient extends PackageApiClient {
     const path = `/api/v1/jobs/${encodeURIComponent(id)}/artifacts/${artifact.file
       .split("/")
       .map((segment) => encodeURIComponent(segment))
-      .join("/")}`;
+      .join("/")}/content`;
 
     const res = await fetch(`${API_BASE}${path}`, {
       method: "GET",

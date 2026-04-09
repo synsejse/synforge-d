@@ -1,5 +1,5 @@
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
-import type { FormEvent } from "react";
+import type { SyntheticEvent } from "react";
 import FaIcon from "../ui/FaIcon";
 
 export type RepoKindFilter = "all" | "rpm" | "srpm" | "log";
@@ -11,7 +11,7 @@ interface RepositoryInventoryFiltersProps {
   onPackageFilterChange: (value: string) => void;
   onTargetFilterChange: (value: string) => void;
   onKindFilterChange: (value: RepoKindFilter) => void;
-  onApply: (event: FormEvent) => void;
+  onApply: (event: SyntheticEvent) => void;
 }
 
 export default function RepositoryInventoryFilters({

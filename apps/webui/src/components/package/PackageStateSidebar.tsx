@@ -1,14 +1,11 @@
 import type { PackageResponse } from "../../lib/types";
 import { formatDurationSeconds } from "../../lib/datetime";
+import { formatMockChroots } from "../../lib/utils";
 import DetailStat from "../ui/DetailStat";
 import StatusPill from "../ui/StatusPill";
 
 interface PackageStateSidebarProps {
   pkg: PackageResponse;
-}
-
-function formatMockChroots(chroots: string[]) {
-  return chroots.join(", ");
 }
 
 export default function PackageStateSidebar({ pkg }: PackageStateSidebarProps) {
@@ -37,18 +34,18 @@ export default function PackageStateSidebar({ pkg }: PackageStateSidebarProps) {
       <DetailStat label="Repository" value={pkg.package.source.repo_url} mono />
       <DetailStat
         label="Poll Interval"
-        value={`${pkg.package.poll_interval_seconds}s`}
+        value={`${pkg.package.poll_interval_seconds ?? 0}s`}
       />
       <DetailStat
         label="Build Timeout"
-        value={`${pkg.package.build_timeout_seconds}s`}
+        value={`${pkg.package.build_timeout_seconds ?? 0}s`}
       />
-      <DetailStat label="History Count" value={pkg.package.package_history_count} />
+      <DetailStat label="History Count" value={pkg.package.package_history_count ?? 0} />
       <DetailStat
         label="Network Access"
         value={pkg.package.network_access ? "Enabled" : "Disabled"}
       />
-      <DetailStat label="Build Env Vars" value={String(pkg.package.build_env.length)} />
+      <DetailStat label="Build Env Vars" value={String(pkg.package.build_env?.length ?? 0)} />
       <DetailStat
         label="Last Successful Revision"
         value={pkg.state.last_revision || "None yet"}

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type SyntheticEvent } from "react";
 import { faSave, faServer } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import type { ConfigFieldDescriptor, DaemonConfig } from "../../lib/types";
@@ -35,7 +35,7 @@ export default function Settings() {
     load();
   }, []);
 
-  async function handleSave(event: FormEvent) {
+  async function handleSave(event: SyntheticEvent) {
     event.preventDefault();
     setSaving(true);
     try {
@@ -149,7 +149,7 @@ function ConfigFieldInput({
       </span>
       <input
         type={field.type === "number" ? "number" : "text"}
-        min={field.min_value}
+        min={field.min_value ?? undefined}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)] disabled:text-zinc-600 disabled:opacity-60"

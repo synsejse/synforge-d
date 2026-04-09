@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type SyntheticEvent } from "react";
 import {
   faBoxesStacked,
   faBullseye,
@@ -18,9 +18,18 @@ import PageHeader from "../ui/PageHeader";
 import Badge from "../ui/Badge";
 
 const PAGE_SIZE = 50;
+const EMPTY_REPO_SUMMARY: RepoSummaryResponse = {
+  package_count: 0,
+  target_count: 0,
+  build_count: 0,
+  published_file_count: 0,
+  stored_bytes: 0,
+  recent_files: [],
+  targets: [],
+};
 
 export default function RepositoryBrowser() {
-  const [summary, setSummary] = useState<RepoSummaryResponse | null>(null);
+  const [summary, setSummary] = useState<RepoSummaryResponse>(EMPTY_REPO_SUMMARY);
   const [files, setFiles] = useState<PublishedRepoFile[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(() => {
@@ -101,12 +110,12 @@ export default function RepositoryBrowser() {
     load();
   }, []);
 
-  function handleApply(event: FormEvent) {
+  function handleApply(event: SyntheticEvent) {
     event.preventDefault();
     load(0, packageFilter, targetFilter, kindFilter);
   }
 
-  if (loading && !summary) {
+  if (loading) {
     return <LoadingBlock label="Loading repository inventory…" lines={4} />;
   }
 
@@ -129,27 +138,27 @@ export default function RepositoryBrowser() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Packages"
-          value={summary?.package_count ?? 0}
+          value={summary.package_count}
           detail="Published package names"
           icon={<FaIcon icon={faBoxesStacked} />}
         />
         <MetricCard
           label="Targets"
-          value={summary?.target_count ?? 0}
+          value={summary.target_count}
           detail="Active build targets"
           variant="accent"
           icon={<FaIcon icon={faBullseye} />}
         />
         <MetricCard
           label="Builds"
-          value={summary?.build_count ?? 0}
+          value={summary.build_count}
           detail="Recorded publish jobs"
           icon={<FaIcon icon={faHammer} />}
         />
         <MetricCard
           label="Stored Size"
-          value={formatBytes(summary?.stored_bytes ?? 0)}
-          detail={`${summary?.published_file_count ?? 0} published files`}
+          value={formatBytes(summary.stored_bytes)}
+          detail={`${summary.published_file_count} published files`}
           icon={<FaIcon icon={faHardDrive} />}
         />
       </div>

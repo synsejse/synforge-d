@@ -6,7 +6,6 @@ export default function StatusPill({ status }: Props) {
   const classes: Record<string, string> = {
     pending: "border-[var(--theme-accent-orange)] bg-black text-[var(--theme-accent-orange)]",
     running: "border-[var(--theme-accent-lime)] bg-black text-[var(--theme-accent-lime)]",
-    completed: "border-[var(--theme-terminal-green)] bg-black text-[var(--theme-terminal-green)]",
     succeeded: "border-[var(--theme-terminal-green)] bg-black text-[var(--theme-terminal-green)]",
     failed: "border-[var(--theme-error-red)] bg-black text-[var(--theme-error-red)]",
     timed_out: "border-[var(--theme-error-red)] bg-black text-[var(--theme-error-red)]",
@@ -16,7 +15,6 @@ export default function StatusPill({ status }: Props) {
   const dots: Record<string, string> = {
     pending: "bg-[var(--theme-accent-orange)]",
     running: "bg-[var(--theme-accent-lime)]",
-    completed: "bg-[var(--theme-terminal-green)]",
     succeeded: "bg-[var(--theme-terminal-green)]",
     failed: "bg-[var(--theme-error-red)]",
     timed_out: "bg-[var(--theme-error-red)]",

@@ -403,11 +403,11 @@ function PackageCard({
   const backoffTargets = entry.state.targets.filter(isBackoffActive);
   const backoffSummary =
     backoffTargets.length > 0 ? summarizeBackoffTargets(backoffTargets) : null;
-  const status = pkg.enabled
-    ? entry.builds_pending || entry.builds_running
-      ? "running"
-      : "success"
-    : "disabled";
+  const hasActiveWork = entry.state.targets.some(
+    (target) =>
+      target.active_status === "pending" || target.active_status === "running",
+  );
+  const status = pkg.enabled ? (hasActiveWork ? "running" : "success") : "disabled";
 
   return (
     <article className="border-2 border-white bg-black transition duration-100 ease-linear hover:-translate-x-[2px] hover:-translate-y-[2px] hover:shadow-[4px_4px_0_rgba(255,255,255,0.3)]">
@@ -430,8 +430,8 @@ function PackageCard({
                 BACKOFF {backoffSummary.count}
               </Badge>
             )}
-            <Badge 
-              variant={status === "running" ? "lime" : status === "success" ? "terminal-green" : "default"} 
+            <Badge
+              variant={status === "running" ? "lime" : status === "success" ? "success" : "default"}
               pulse={status === "running"}
             >
               {status === "running" ? "ACTIVE" : status === "success" ? "READY" : "DISABLED"}
@@ -463,7 +463,7 @@ function PackageCard({
             TARGETS
           </div>
           <div className="mt-2 font-mono text-sm text-zinc-300">
-            {pkg.mock_chroots.join(", ") || "None"}
+            {pkg.mock_chroots?.join(", ") || "None"}
           </div>
         </div>
         <div className="bg-black px-5 py-4 md:col-span-2">

@@ -1,6 +1,8 @@
 use axum::Json;
 use axum::extract::{Path, Query, State};
-use synforge_core::api::{BuildJobListResponse, BuildJobResponse, JobListQuery, PruneJobsResponse};
+use synforge_core::api::{
+    BuildJobListResponse, BuildJobResponse, JobListQuery, JobListScope, PruneJobsResponse,
+};
 use uuid::Uuid;
 
 use crate::{AppError, AppState};
@@ -20,80 +22,40 @@ pub(crate) async fn list_jobs(
     State(state): State<AppState>,
     Query(query): Query<JobListQuery>,
 ) -> Result<Json<BuildJobListResponse>, AppError> {
-    Ok(Json(
-        state
-            .service
-            .list_jobs(
-                query.limit,
-                query.offset,
-                query.status,
-                query.package_name,
-                query.mock_chroot,
-            )
-            .await?,
-    ))
-}
-
-#[utoipa::path(
-    get,
-    path = "/api/v1/jobs/completed",
-    tag = "Jobs",
-    params(JobListQuery),
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "List completed jobs", body = BuildJobListResponse),
-        (status = 401, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn list_completed_jobs(
-    State(state): State<AppState>,
-    Query(query): Query<JobListQuery>,
-) -> Result<Json<BuildJobListResponse>, AppError> {
-    Ok(Json(
-        state
-            .service
-            .list_completed_jobs(
-                query.limit,
-                query.offset,
-                query.status,
-                query.package_name,
-                query.mock_chroot,
-            )
-            .await?,
-    ))
-}
-
-#[utoipa::path(
-    get,
-    path = "/api/v1/jobs/active",
-    tag = "Jobs",
-    params(
-        ("limit" = Option<usize>, Query, description = "Maximum number of jobs to return"),
-        ("offset" = Option<usize>, Query, description = "Offset for pagination"),
-        ("package_name" = Option<String>, Query, description = "Filter by package name"),
-        ("mock_chroot" = Option<String>, Query, description = "Filter by target")
-    ),
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "List active jobs", body = BuildJobListResponse),
-        (status = 401, body = synforge_core::api::ApiError)
-    )
-)]
-pub(crate) async fn list_active_jobs(
-    State(state): State<AppState>,
-    Query(query): Query<JobListQuery>,
-) -> Result<Json<BuildJobListResponse>, AppError> {
-    Ok(Json(
-        state
-            .service
-            .list_active_jobs(
-                query.limit,
-                query.offset,
-                query.package_name,
-                query.mock_chroot,
-            )
-            .await?,
-    ))
+    let scope = query.scope.unwrap_or(JobListScope::All);
+    let response = match scope {
+        JobListScope::All => {
+            state
+                .service
+                .list_jobs(
+                    query.limit,
+                    query.offset,
+                    query.status,
+                    query.package_name,
+                    query.mock_chroot,
+                )
+                .await?
+        }
+        JobListScope::Active => {
+            state
+                .service
+                .list_active_jobs(query.limit, query.offset, query.package_name, query.mock_chroot)
+                .await?
+        }
+        JobListScope::Completed => {
+            state
+                .service
+                .list_completed_jobs(
+                    query.limit,
+                    query.offset,
+                    query.status,
+                    query.package_name,
+                    query.mock_chroot,
+                )
+                .await?
+        }
+    };
+    Ok(Json(response))
 }
 
 #[utoipa::path(

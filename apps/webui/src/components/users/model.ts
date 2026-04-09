@@ -18,14 +18,26 @@ export interface UserDraft {
   active: boolean;
 }
 
-export const PERMISSIONS: UserPermission[] = ["read", "write", "repo"];
+export type CreateUserDraft = Omit<CreateUserRequest, "active"> & {
+  active: boolean;
+};
 
-export function emptyCreateForm(): CreateUserRequest {
+const USER_PERMISSION_LABELS: Record<UserPermission, string> = {
+  read: "read",
+  write: "write",
+  repo: "repo",
+};
+
+export const PERMISSIONS: UserPermission[] =
+  Object.keys(USER_PERMISSION_LABELS) as UserPermission[];
+
+export function emptyCreateForm(): CreateUserDraft {
+  const [defaultPermission] = PERMISSIONS;
   return {
     handle: "",
     display_name: "",
     password: "",
-    permissions: ["read"],
+    permissions: [defaultPermission],
     active: true,
   };
 }

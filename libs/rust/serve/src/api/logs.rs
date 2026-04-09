@@ -28,7 +28,7 @@ pub(crate) async fn get_job_log_manifest(
 
 #[utoipa::path(
     get,
-    path = "/api/v1/jobs/{id}/logs/{source}/stream",
+    path = "/api/v1/jobs/{id}/logs/{source}/chunks",
     tag = "Logs",
     params(
         ("id" = Uuid, Path, description = "Job identifier"),

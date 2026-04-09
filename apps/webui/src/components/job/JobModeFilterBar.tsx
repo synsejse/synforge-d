@@ -1,16 +1,13 @@
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import type { BuildJobResponse, BuildStatus } from "../../lib/types";
+import { BUILD_STATUS_LABELS } from "../../lib/job-status";
 import ActionButton from "../ui/ActionButton";
 
 export type JobViewMode = "history" | "active";
 
 const FILTERS: Array<"all" | BuildStatus> = [
   "all",
-  "pending",
-  "running",
-  "succeeded",
-  "failed",
-  "timed_out",
+  ...(Object.keys(BUILD_STATUS_LABELS) as BuildStatus[]),
 ];
 
 interface JobModeFilterBarProps {

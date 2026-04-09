@@ -8,3 +8,13 @@ import { twMerge } from "tailwind-merge";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+export function formatMockChroots(
+  chroots: string[] | undefined,
+  emptyLabel = "None",
+): string {
+  if (!chroots || chroots.length === 0) {
+    return emptyLabel;
+  }
+  return chroots.join(", ");
+}

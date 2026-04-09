@@ -7,6 +7,11 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import type { BuildJobResponse } from "../../lib/types";
+import {
+  HISTORY_BUILD_STATUS_LABELS,
+  isHistoryBuildStatus,
+  type HistoryBuildStatus,
+} from "../../lib/job-status";
 import { formatDateTime, formatDurationBetween } from "../../lib/datetime";
 import ErrorMessage from "../common/ErrorMessage";
 import LoadingBlock from "../ui/LoadingBlock";
@@ -17,6 +22,12 @@ import Select from "../ui/Select";
 import PageHeader from "../ui/PageHeader";
 
 type JobViewMode = "active" | "history";
+function normalizeStatusFilter(value: string | null): "all" | HistoryBuildStatus {
+  if (!value || value === "all") {
+    return "all";
+  }
+  return isHistoryBuildStatus(value) ? value : "all";
+}
 
 export default function JobList() {
   const [jobs, setJobs] = useState<BuildJobResponse[]>([]);
@@ -28,9 +39,10 @@ export default function JobList() {
     const value = new URLSearchParams(window.location.search).get("mode");
     return value === "active" ? "active" : "history";
   });
-  const [filter, setFilter] = useState<string>(() => {
+  const [filter, setFilter] = useState<"all" | HistoryBuildStatus>(() => {
     if (typeof window === "undefined") return "all";
-    return new URLSearchParams(window.location.search).get("status") || "all";
+    const value = new URLSearchParams(window.location.search).get("status");
+    return normalizeStatusFilter(value);
   });
   const [offset, setOffset] = useState<number>(() => {
     if (typeof window === "undefined") return 0;
@@ -144,7 +156,7 @@ export default function JobList() {
   }
 
   const getStatusVariant = (status: string) => {
-    if (status === "completed") return "success";
+    if (status === "succeeded") return "success";
     if (status === "failed" || status === "timed_out") return "error";
     if (status === "running") return "lime";
     if (status === "pending") return "warning";
@@ -208,12 +220,14 @@ export default function JobList() {
                 <Select
                   options={[
                     { value: "all", label: "All Statuses" },
-                    { value: "completed", label: "Completed" },
-                    { value: "failed", label: "Failed" },
-                    { value: "timed_out", label: "Timed Out" },
+                    ...(Object.entries(HISTORY_BUILD_STATUS_LABELS).map(
+                      ([value, label]) => ({ value, label }),
+                    )),
                   ]}
                   value={filter}
-                  onValueChange={(val) => load(mode, val, 0, packageFilter, targetFilter)}
+                  onValueChange={(val) =>
+                    load(mode, normalizeStatusFilter(val), 0, packageFilter, targetFilter)
+                  }
                   placeholder="Filter status..."
                 />
               </div>

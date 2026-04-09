@@ -1,7 +1,6 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
-import Button from "./Button";
 
 interface DialogProps {
   open?: boolean;

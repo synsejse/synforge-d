@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import api from "../../lib/api";
+import { API_BASE } from "../../lib/api/client";
 import { formatDateTime } from "../../lib/datetime";
 import type { BuildArtifact, BuildJobResponse } from "../../lib/types";
 import ErrorMessage from "../common/ErrorMessage";
@@ -7,7 +8,6 @@ import LoadingBlock from "../ui/LoadingBlock";
 import FaIcon from "../ui/FaIcon";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
-import Tabs, { TabsContent } from "../ui/Tabs";
 import {
   faArrowLeft,
   faDownload,
@@ -121,7 +121,7 @@ export default function JobDetail({ jobId }: Props) {
   }
 
   const getStatusVariant = (status: string) => {
-    if (status === "completed") return "success";
+    if (status === "succeeded") return "success";
     if (status === "failed" || status === "timed_out") return "error";
     if (status === "running") return "lime";
     if (status === "pending") return "warning";
@@ -151,7 +151,10 @@ export default function JobDetail({ jobId }: Props) {
   }
 
   const isLive = job.job.status === "pending" || job.job.status === "running";
-  const canRetry = job.job.status === "completed" || job.job.status === "failed" || job.job.status === "timed_out";
+  const canRetry =
+    job.job.status === "succeeded" ||
+    job.job.status === "failed" ||
+    job.job.status === "timed_out";
 
   return (
     <div className="space-y-6">
@@ -319,7 +322,11 @@ export default function JobDetail({ jobId }: Props) {
                         size="sm"
                         className="w-full sm:w-auto"
                         onClick={() => {
-                          const url = `/api/jobs/${encodeURIComponent(jobId)}/artifacts/${encodeURIComponent(artifact.file)}`;
+                          const encodedFile = artifact.file
+                            .split("/")
+                            .map((segment) => encodeURIComponent(segment))
+                            .join("/");
+                          const url = `${API_BASE}/api/v1/jobs/${encodeURIComponent(jobId)}/artifacts/${encodedFile}/content`;
                           window.open(url, "_blank");
                         }}
                       >

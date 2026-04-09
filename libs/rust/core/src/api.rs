@@ -306,6 +306,16 @@ pub struct JobListQuery {
     pub package_name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mock_chroot: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<JobListScope>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum JobListScope {
+    All,
+    Active,
+    Completed,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, IntoParams, ToSchema)]

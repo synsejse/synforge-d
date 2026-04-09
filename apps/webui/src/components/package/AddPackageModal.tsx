@@ -4,13 +4,14 @@ import {
   useMemo,
   useRef,
   useState,
-  type FormEvent,
+  type SyntheticEvent,
 } from "react";
 import {
   faMagnifyingGlass,
   faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
+import { formatMockChroots } from "../../lib/utils";
 import type {
   BrowseRepositoryProgressView,
   BuildEnvVar,
@@ -23,10 +24,6 @@ import SelectionDialog from "../common/SelectionDialog";
 interface AddPackageModalProps {
   onClose: () => void;
   onSuccess: () => void;
-}
-
-function formatMockChroots(chroots: string[]) {
-  return chroots.join(", ");
 }
 
 function encodeBuildEnv(entries: BuildEnvVar[]): string {
@@ -243,7 +240,7 @@ export default function AddPackageModal({
     }
   }
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: SyntheticEvent) {
     event.preventDefault();
     setSubmitting(true);
     setError(null);
@@ -450,7 +447,7 @@ export default function AddPackageModal({
                 {chrootsLoading ? (
                   <MockTargetCheckIndicator label="Checking mock targets…" />
                 ) : mockChroots.length > 0 ? (
-                  formatMockChroots(mockChroots)
+                  formatMockChroots(mockChroots, "No chroots selected")
                 ) : (
                   "No chroots selected"
                 )}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type SyntheticEvent } from "react";
 import api from "../../lib/api";
 import {
   summarizePackageAction,
@@ -98,19 +98,20 @@ export default function PackageDetail({ packageName }: Props) {
 
   function applyPackageState(packageRes: PackageResponse) {
     setPkg(packageRes);
+    const definition = packageRes.package;
     setForm({
-      repoUrl: packageRes.package.source.repo_url,
-      specPath: packageRes.package.source.spec_file,
-      poll: packageRes.package.source.poll,
-      mockChroots: packageRes.package.mock_chroots,
-      pollIntervalSeconds: String(packageRes.package.poll_interval_seconds),
-      buildTimeoutSeconds: String(packageRes.package.build_timeout_seconds),
-      packageHistoryCount: String(packageRes.package.package_history_count),
-      buildEnv: encodeBuildEnv(packageRes.package.build_env),
-      enabled: packageRes.package.enabled,
-      publish_srpm: packageRes.package.publish_srpm,
-      publish_debuginfo: packageRes.package.publish_debuginfo,
-      network_access: packageRes.package.network_access,
+      repoUrl: definition.source.repo_url,
+      specPath: definition.source.spec_file,
+      poll: definition.source.poll ?? true,
+      mockChroots: definition.mock_chroots ?? [],
+      pollIntervalSeconds: String(definition.poll_interval_seconds ?? 900),
+      buildTimeoutSeconds: String(definition.build_timeout_seconds ?? 7200),
+      packageHistoryCount: String(definition.package_history_count ?? 3),
+      buildEnv: encodeBuildEnv(definition.build_env ?? []),
+      enabled: definition.enabled ?? true,
+      publish_srpm: definition.publish_srpm ?? true,
+      publish_debuginfo: definition.publish_debuginfo ?? true,
+      network_access: definition.network_access ?? false,
     });
   }
 
@@ -211,7 +212,7 @@ export default function PackageDetail({ packageName }: Props) {
 
 
 
-  async function handleSave(event: FormEvent) {
+  async function handleSave(event: SyntheticEvent) {
     event.preventDefault();
     setSaving(true);
     try {

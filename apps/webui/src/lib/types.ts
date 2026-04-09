@@ -1,8 +1,4 @@
-import type {
-  components,
-  operations,
-  paths,
-} from "./generated/api-schema";
+import type { components, operations, paths } from "./generated/api-schema";
 
 export type ApiSchema = components["schemas"];
 export type ApiPaths = paths;
@@ -51,11 +47,15 @@ export type RefreshAllPackagesProgressView =
   ApiSchema["RefreshAllPackagesProgressView"];
 export type RefreshAllPackagesProgressResponse =
   ApiSchema["RefreshAllPackagesProgressResponse"];
-export type RefreshAllPackagesResponse = ApiSchema["RefreshAllPackagesResponse"];
+export type RefreshAllPackagesResponse =
+  ApiSchema["RefreshAllPackagesResponse"];
 
 export type BuildJobListResponse = ApiSchema["BuildJobListResponse"];
-export type PackageBuildInventoryEntry = ApiSchema["PackageBuildInventoryEntry"];
-export type PackageBuildHistoryResponse = ApiSchema["PackageBuildHistoryResponse"];
+export type PruneJobsResponse = ApiSchema["PruneJobsResponse"];
+export type PackageBuildInventoryEntry =
+  ApiSchema["PackageBuildInventoryEntry"];
+export type PackageBuildHistoryResponse =
+  ApiSchema["PackageBuildHistoryResponse"];
 
 export type RepoInventoryResponse = ApiSchema["RepoInventoryResponse"];
 export type RepoTargetSummary = ApiSchema["RepoTargetSummary"];

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import {
   faKey,
   faPen,
@@ -7,7 +7,7 @@ import {
   faUserPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
-import type { CreateUserRequest, SessionResponse, UserResponse } from "../../lib/types";
+import type { SessionResponse, UserResponse } from "../../lib/types";
 import ErrorMessage from "../common/ErrorMessage";
 import EmptyState from "../ui/EmptyState";
 import FaIcon from "../ui/FaIcon";
@@ -17,6 +17,7 @@ import { PermissionGroup, TextField, ToggleField } from "../users/FormFields";
 import { UserModalActions, UserModalShell } from "../users/ModalShell";
 import UserDirectory from "../users/UserDirectory";
 import {
+  type CreateUserDraft,
   type ModalState,
   type UserDraft,
   emptyCreateForm,
@@ -31,7 +32,7 @@ export default function Users() {
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalState>(null);
   const [createForm, setCreateForm] =
-    useState<CreateUserRequest>(emptyCreateForm());
+    useState<CreateUserDraft>(emptyCreateForm());
   const [editForm, setEditForm] = useState<UserDraft | null>(null);
   const [password, setPassword] = useState("");
   const lastFocusedRef = useRef<HTMLElement | null>(null);
@@ -120,7 +121,7 @@ export default function Users() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [modal, submitting]);
 
-  async function handleCreate(event: FormEvent) {
+  async function handleCreate(event: SyntheticEvent) {
     event.preventDefault();
     try {
       setSubmitting(true);
@@ -134,7 +135,7 @@ export default function Users() {
     }
   }
 
-  async function handleEdit(event: FormEvent) {
+  async function handleEdit(event: SyntheticEvent) {
     event.preventDefault();
     if (!modal || modal.type !== "edit" || !editForm) {
       return;
@@ -151,7 +152,7 @@ export default function Users() {
     }
   }
 
-  async function handlePasswordChange(event: FormEvent) {
+  async function handlePasswordChange(event: SyntheticEvent) {
     event.preventDefault();
     if (!modal || modal.type !== "password") {
       return;

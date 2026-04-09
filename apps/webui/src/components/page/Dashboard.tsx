@@ -20,11 +20,21 @@ import {
   faRocket,
 } from "@fortawesome/free-solid-svg-icons";
 
+const EMPTY_REPO_SUMMARY: RepoSummaryResponse = {
+  package_count: 0,
+  target_count: 0,
+  build_count: 0,
+  published_file_count: 0,
+  stored_bytes: 0,
+  recent_files: [],
+  targets: [],
+};
+
 export default function Dashboard() {
   const [jobs, setJobs] = useState<BuildJobResponse[]>([]);
   const [liveJobs, setLiveJobs] = useState<BuildJobResponse[]>([]);
-  const [repoSummary, setRepoSummary] = useState<RepoSummaryResponse | null>(
-    null,
+  const [repoSummary, setRepoSummary] = useState<RepoSummaryResponse>(
+    EMPTY_REPO_SUMMARY,
   );
   const [packageCount, setPackageCount] = useState(0);
   const [enabledPackageCount, setEnabledPackageCount] = useState(0);
@@ -76,9 +86,10 @@ export default function Dashboard() {
   }
 
   const getStatusVariant = (status: string) => {
-    if (status === "completed") return "success";
-    if (status === "failed") return "error";
+    if (status === "succeeded") return "success";
+    if (status === "failed" || status === "timed_out") return "error";
     if (status === "running") return "lime";
+    if (status === "pending") return "warning";
     return "default";
   };
 
@@ -121,7 +132,7 @@ export default function Dashboard() {
         />
         <MetricCard
           label="Stored"
-          value={formatBytes(repoSummary?.stored_bytes ?? 0)}
+          value={formatBytes(repoSummary.stored_bytes)}
           detail="Published repository data"
           icon={<FaIcon icon={faFolderTree} />}
         />
@@ -274,7 +285,7 @@ export default function Dashboard() {
                   Packages
                 </div>
                 <div className="font-display mt-2 text-3xl font-black text-white">
-                  {repoSummary?.package_count ?? 0}
+                  {repoSummary.package_count}
                 </div>
               </div>
               <div className="border-l-4 border-[var(--theme-accent-lime)] bg-zinc-950/30 pl-4 pr-3 py-4">
@@ -282,7 +293,7 @@ export default function Dashboard() {
                   Targets
                 </div>
                 <div className="font-display mt-2 text-3xl font-black text-white">
-                  {repoSummary?.target_count ?? 0}
+                  {repoSummary.target_count}
                 </div>
               </div>
               <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
@@ -290,7 +301,7 @@ export default function Dashboard() {
                   Builds
                 </div>
                 <div className="font-display mt-2 text-3xl font-black text-white">
-                  {repoSummary?.build_count ?? 0}
+                  {repoSummary.build_count}
                 </div>
               </div>
               <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
@@ -298,7 +309,7 @@ export default function Dashboard() {
                   Files
                 </div>
                 <div className="font-display mt-2 text-3xl font-black text-white">
-                  {repoSummary?.file_count ?? 0}
+                  {repoSummary.published_file_count}
                 </div>
               </div>
             </div>

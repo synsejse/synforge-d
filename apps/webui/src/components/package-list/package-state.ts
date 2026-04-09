@@ -1,4 +1,5 @@
 import type { PackageResponse, PackageTargetState } from "../../lib/types";
+export { formatMockChroots } from "../../lib/utils";
 
 export function summarizePackageStatus(entry: PackageResponse) {
   if (!entry.package.enabled) {
@@ -20,7 +21,7 @@ export function targetStatus(target: PackageTargetState) {
   return target.last_successful_build_id ? "succeeded" : "disabled";
 }
 
-export function compactRevision(revision: string | null) {
+export function compactRevision(revision: string | null | undefined) {
   if (!revision) {
     return "No successful revision";
   }
@@ -28,8 +29,4 @@ export function compactRevision(revision: string | null) {
     return revision;
   }
   return `${revision.slice(0, 20)}...${revision.slice(-16)}`;
-}
-
-export function formatMockChroots(chroots: string[]) {
-  return chroots.join(", ");
 }

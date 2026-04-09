@@ -69,7 +69,7 @@ export default function PackageEditFormSection({
 }: PackageEditFormSectionProps) {
   return (
     <>
-      <form onSubmit={onSubmit} className="border-4 border-white bg-black p-6">
+      <form onSubmit={onSubmit} className="min-w-0 border-4 border-white bg-black p-4 sm:p-6">
         <div className="mb-6">
           <h2 className="font-mono text-xl font-bold uppercase text-white">Edit Package</h2>
           <p className="mt-2 text-sm text-zinc-400">
@@ -244,7 +244,7 @@ export default function PackageEditFormSection({
                       onFormChange({ specPath: file });
                       onCloseSpecPicker();
                     }}
-                    className={`block w-full border-b-2 border-zinc-800 px-4 py-2 text-left font-mono text-sm transition last:border-b-0 ${
+                    className={`block w-full break-all border-b-2 border-zinc-800 px-4 py-2 text-left font-mono text-sm transition last:border-b-0 ${
                       form.specPath === file
                         ? "bg-zinc-950 text-white"
                         : "bg-black text-zinc-300 hover:bg-zinc-950"

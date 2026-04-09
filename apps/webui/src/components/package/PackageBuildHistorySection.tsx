@@ -85,7 +85,93 @@ export default function PackageBuildHistorySection({
         <EmptyState>No build history yet.</EmptyState>
       ) : (
         <div className="space-y-4">
-          <div className="overflow-hidden border-2 border-zinc-700">
+          <div className="space-y-3 md:hidden">
+            {builds.map((entry) => {
+              const publishedFiles = entry.repo_files;
+              const signingSummary = getBuildSigningSummary(entry);
+              const live =
+                entry.build.job.status === "pending" ||
+                entry.build.job.status === "running";
+              return (
+                <article
+                  key={`mobile:${entry.build.job.id}`}
+                  className="border-2 border-zinc-700 bg-black p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <a
+                        href={`/jobs/view/?id=${encodeURIComponent(entry.build.job.id)}`}
+                        className="font-mono text-sm font-bold uppercase text-white transition duration-100 ease-linear hover:text-[var(--theme-accent-lime)]"
+                      >
+                        {entry.build.job.mock_chroot}
+                      </a>
+                      <div className="mt-1 break-all font-mono text-xs text-zinc-500">
+                        {entry.build.job.id}
+                      </div>
+                    </div>
+                    <StatusPill status={entry.build.job.status} />
+                  </div>
+                  <div className="mt-4 space-y-2 text-sm">
+                    <div className="font-mono text-zinc-300">
+                      <span className="text-zinc-500">Revision:</span>{" "}
+                      <span className="break-all">{entry.build.job.revision}</span>
+                    </div>
+                    <div className="font-mono text-zinc-400">
+                      <span className="text-zinc-500">Trigger:</span> {entry.build.job.trigger}
+                    </div>
+                    <div className="font-mono text-zinc-400">
+                      <span className="text-zinc-500">Created:</span>{" "}
+                      {formatDateTime(entry.build.job.created_at)}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-zinc-400">
+                        <span className="text-zinc-500">Repo files:</span> {publishedFiles.length}
+                      </span>
+                      <Badge variant={signingSummary.variant}>
+                        {signingSummary.label}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-2">
+                    <a
+                      href={`/jobs/view/?id=${encodeURIComponent(entry.build.job.id)}`}
+                      className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-300 transition-all duration-100 ease-linear hover:text-[var(--theme-accent-lime)]"
+                    >
+                      <FaIcon icon={faFolderOpen} className="mr-2" />
+                      Open Job
+                    </a>
+                    {!live ? (
+                      <>
+                        <button
+                          onClick={() => onRefreshTarget(entry.build.job.mock_chroot)}
+                          className="text-left font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition-all duration-100 ease-linear hover:text-white"
+                        >
+                          <FaIcon icon={faRotate} className="mr-2" />
+                          Refresh Target
+                        </button>
+                        <button
+                          onClick={() => onRebuildTarget(entry.build.job.mock_chroot)}
+                          className="text-left font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition-all duration-100 ease-linear hover:text-white"
+                        >
+                          <FaIcon icon={faHammer} className="mr-2" />
+                          Rebuild Target
+                        </button>
+                      </>
+                    ) : null}
+                    <button
+                      onClick={() => onDeleteJob(entry.build.job.id)}
+                      disabled={live || deletingJobId === entry.build.job.id}
+                      className="text-left font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition-all duration-100 ease-linear hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <FaIcon icon={faTrash} className="mr-2" />
+                      {deletingJobId === entry.build.job.id ? "Deleting…" : "Delete Build"}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          <div className="hidden overflow-hidden border-2 border-zinc-700 md:block">
             <table className="w-full">
               <thead className="border-b-2 border-zinc-700 bg-zinc-950 text-left font-mono text-xs uppercase tracking-[0.2em] text-zinc-500">
                 <tr>

@@ -104,8 +104,44 @@ export default function SyncHistoryTable({ packageName }: SyncHistoryTableProps)
         <EmptyState>No sync operations recorded for this package.</EmptyState>
       ) : (
         <div className="space-y-4">
-          <div className="overflow-x-auto border-2 border-zinc-700">
-            <table className="min-w-[980px] w-full">
+          <div className="space-y-3 md:hidden">
+            {operations.map((operation) => (
+              <article
+                key={`mobile:${operation.id}`}
+                className={`border-2 p-4 ${
+                  operation.status === "failed"
+                    ? "border-[rgba(255,51,51,0.45)] bg-[rgba(255,51,51,0.06)]"
+                    : "border-zinc-700 bg-black"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-mono text-sm text-zinc-200">
+                      {formatDateTime(operation.created_at)}
+                    </div>
+                    <div className="mt-1 font-mono text-xs uppercase tracking-[0.14em] text-zinc-500">
+                      {formatTrigger(operation.trigger_type)}
+                    </div>
+                  </div>
+                  <Badge variant={operation.status === "failed" ? "error" : "success"}>
+                    {operation.status}
+                  </Badge>
+                </div>
+                <div className="mt-3 space-y-2 font-mono text-xs text-zinc-400">
+                  <div className="break-all">
+                    <span className="text-zinc-500">Revision:</span>{" "}
+                    {operation.revision || "—"}
+                  </div>
+                  <div className="break-all">
+                    <span className="text-zinc-500">Error:</span>{" "}
+                    {operation.error_message || "—"}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto border-2 border-zinc-700 md:block">
+            <table className="w-full min-w-[640px] lg:min-w-[980px]">
               <thead className="border-b-2 border-zinc-700 bg-zinc-950 text-left font-mono text-xs uppercase tracking-[0.2em] text-zinc-500">
                 <tr>
                   <th className="px-4 py-3">Timestamp</th>

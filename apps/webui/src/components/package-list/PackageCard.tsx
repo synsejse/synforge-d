@@ -31,7 +31,7 @@ export default function PackageCard({
 
   return (
     <article key={entry.package.name} className="border-2 border-zinc-700 bg-black">
-      <div className="flex flex-col gap-5 border-b-2 border-zinc-700 px-5 py-5 xl:flex-row xl:items-start xl:justify-between">
+      <div className="flex flex-col gap-5 border-b-2 border-zinc-700 px-4 py-4 sm:px-5 sm:py-5 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 flex-1 space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
@@ -94,11 +94,12 @@ export default function PackageCard({
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-wrap justify-end gap-2 xl:max-w-[460px]">
+        <div className="grid shrink-0 gap-2 sm:flex sm:flex-wrap sm:justify-end xl:max-w-[460px]">
           <ActionButton
             href={`/packages/view/?name=${encodeURIComponent(entry.package.name)}`}
             icon={faFolderOpen}
             aria-label={`Open package ${entry.package.name}`}
+            className="w-full sm:w-auto"
           >
             Open
           </ActionButton>
@@ -106,6 +107,7 @@ export default function PackageCard({
             onClick={() => onRefresh(entry.package.name)}
             icon={faRotate}
             aria-label={`Refresh package ${entry.package.name}`}
+            className="w-full sm:w-auto"
           >
             Refresh
           </ActionButton>
@@ -113,6 +115,7 @@ export default function PackageCard({
             onClick={() => onRebuild(entry.package.name)}
             icon={faHammer}
             aria-label={`Rebuild package ${entry.package.name}`}
+            className="w-full sm:w-auto"
           >
             Rebuild
           </ActionButton>
@@ -120,14 +123,14 @@ export default function PackageCard({
             onClick={() => onDelete(entry.package.name)}
             icon={faTrash}
             aria-label={`Delete package ${entry.package.name}`}
-            className="text-zinc-300"
-          >
-            Delete
-          </ActionButton>
+             className="w-full text-zinc-300 sm:w-auto"
+           >
+             Delete
+           </ActionButton>
         </div>
       </div>
 
-      <div className="px-5 py-4">
+      <div className="px-4 py-4 sm:px-5">
         <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
           Target State
         </div>

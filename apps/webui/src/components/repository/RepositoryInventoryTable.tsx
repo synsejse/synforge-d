@@ -33,7 +33,7 @@ export default function RepositoryInventoryTable({
 
   return (
     <div className="overflow-x-auto border-2 border-zinc-700 bg-black">
-      <table className="min-w-[980px] w-full">
+      <table className="w-full min-w-[640px] lg:min-w-[980px]">
         <caption className="sr-only">
           Published repository files with package, target, type, size, publication
           date, and actions.

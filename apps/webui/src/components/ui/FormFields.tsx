@@ -132,9 +132,9 @@ export function ToggleField({
 }: ToggleFieldProps) {
   return (
     <label
-      className={`flex items-center justify-between border-2 border-zinc-700 bg-zinc-950 px-4 py-3 ${className}`}
+      className={`flex items-start justify-between gap-3 border-2 border-zinc-700 bg-zinc-950 px-4 py-3 ${className}`}
     >
-      <span>
+      <span className="min-w-0">
         <span className="block font-mono text-xs font-bold uppercase tracking-[0.1em] text-white">
           {label}
         </span>
@@ -168,8 +168,8 @@ export function FieldGroup({
 }: FieldGroupProps) {
   return (
     <div className={`border-2 border-zinc-700 bg-zinc-950 p-4 ${className}`}>
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:justify-between">
+        <div className="min-w-0">
           <span className="block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
             {label}
           </span>
@@ -190,7 +190,7 @@ interface DisplayBoxProps {
 
 export function DisplayBox({ children }: DisplayBoxProps) {
   return (
-    <div className="border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-200">
+    <div className="border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-200 break-all">
       {children}
     </div>
   );

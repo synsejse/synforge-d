@@ -68,8 +68,53 @@ export default function PackageRepoFilesSection({
         </EmptyState>
       ) : (
         <div className="space-y-4">
-          <div className="overflow-x-auto border-2 border-zinc-700">
-            <table className="min-w-[980px] w-full">
+          <div className="space-y-3 md:hidden">
+            {repoFiles.map((file) => {
+              const signingState = getSigningState(file);
+              return (
+                <article
+                  key={`mobile:${file.job_id}:${file.path}`}
+                  className="border-2 border-zinc-700 bg-black p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="break-all font-mono text-sm text-zinc-200">
+                        {file.path}
+                      </div>
+                      <div className="mt-1 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
+                        {file.kind}
+                      </div>
+                    </div>
+                    <Badge variant={signingState.variant} title={signingState.title}>
+                      {signingState.label}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 space-y-2 font-mono text-xs text-zinc-400">
+                    <div>
+                      <span className="text-zinc-500">Build:</span>{" "}
+                      <a
+                        href={`/jobs/view/?id=${encodeURIComponent(file.job_id)}`}
+                        className="break-all text-zinc-300 transition hover:text-[var(--theme-accent-lime)]"
+                      >
+                        <FaIcon icon={faBoxesStacked} className="mr-2" />
+                        {file.job_id}
+                      </a>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500">Size:</span>{" "}
+                      {formatBytes(file.size_bytes)}
+                    </div>
+                    <div>
+                      <span className="text-zinc-500">Published:</span>{" "}
+                      {formatDateTime(file.published_at)}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          <div className="hidden overflow-x-auto border-2 border-zinc-700 md:block">
+            <table className="w-full min-w-[640px] lg:min-w-[980px]">
               <thead className="border-b-2 border-zinc-700 bg-zinc-950 text-left font-mono text-xs uppercase tracking-[0.2em] text-zinc-500">
                 <tr>
                   <th className="px-4 py-3">Repo Path</th>

@@ -270,7 +270,7 @@ export default function JobDetail({ jobId }: Props) {
 
       {/* Build Logs */}
       <div className="border-4 border-[var(--theme-terminal-green)] bg-black shadow-[4px_4px_0_rgba(0,255,65,0.2)]">
-        <div className="border-b-4 border-[var(--theme-terminal-green)] bg-black px-6 py-4">
+        <div className="border-b-4 border-[var(--theme-terminal-green)] bg-black px-4 py-4 sm:px-6">
           <div className="flex items-center gap-2">
             <FaIcon icon={faTerminal} className="text-[var(--theme-terminal-green)]" />
             <h2 className="font-display text-xl font-bold uppercase tracking-tight text-[var(--theme-terminal-green)]">
@@ -300,23 +300,24 @@ export default function JobDetail({ jobId }: Props) {
                 return (
                   <div
                     key={`${artifact.id}:${artifact.file}`}
-                    className="flex items-center justify-between gap-4 border-2 border-[var(--theme-border)] bg-zinc-950/40 px-5 py-4 transition-all hover:border-[var(--theme-border-strong)] hover:bg-zinc-950"
+                    className="flex flex-col gap-4 border-2 border-[var(--theme-border)] bg-zinc-950/40 px-4 py-4 transition-all hover:border-[var(--theme-border-strong)] hover:bg-zinc-950 sm:flex-row sm:items-center sm:justify-between sm:px-5"
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="font-mono text-sm text-white">
+                      <div className="break-all font-mono text-sm text-white">
                         {artifact.file}
                       </div>
                       <div className="mt-1 font-mono text-xs text-zinc-600">
                         {artifact.size_bytes.toLocaleString()} bytes
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="grid gap-2 sm:flex sm:items-center sm:gap-3">
                       <Badge variant={signingBadge.variant} title={signingBadge.title}>
                         {signingBadge.label}
                       </Badge>
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="w-full sm:w-auto"
                         onClick={() => {
                           const url = `/api/jobs/${encodeURIComponent(jobId)}/artifacts/${encodeURIComponent(artifact.file)}`;
                           window.open(url, "_blank");

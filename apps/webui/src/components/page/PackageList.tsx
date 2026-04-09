@@ -261,8 +261,8 @@ export default function PackageList() {
       />
 
       {/* Filters */}
-      <div className="border-2 border-white bg-black p-5">
-        <div className="grid gap-4 md:grid-cols-[1fr_auto_auto]">
+      <div className="border-2 border-white bg-black p-4 sm:p-5">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_220px_auto]">
           <div>
             <label className="block">
               <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
@@ -294,10 +294,11 @@ export default function PackageList() {
               />
             </label>
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end md:col-span-2 xl:col-span-1">
             <Button
               variant="secondary"
               size="md"
+              className="w-full xl:w-auto"
               onClick={() => load(0, search, enabledFilter)}
             >
               Apply Filters
@@ -334,10 +335,11 @@ export default function PackageList() {
 
       {/* Pagination */}
       {packages.length > 0 && (
-        <div className="flex items-center justify-between border-2 border-white bg-black p-4">
+        <div className="flex flex-col gap-3 border-2 border-white bg-black p-4 sm:flex-row sm:items-center sm:justify-between">
           <Button
             variant="secondary"
             size="md"
+            className="w-full sm:w-auto"
             onClick={() => load(Math.max(0, offset - pageSize), search, enabledFilter)}
             disabled={loading || offset === 0}
           >
@@ -349,6 +351,7 @@ export default function PackageList() {
           <Button
             variant="secondary"
             size="md"
+            className="w-full sm:w-auto"
             onClick={() => load(offset + pageSize, search, enabledFilter)}
             disabled={loading || !hasMore}
           >
@@ -421,7 +424,7 @@ function PackageCard({
               {pkg.description || "No description"}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {backoffSummary && (
               <Badge variant="warning" title={backoffSummary.details}>
                 BACKOFF {backoffSummary.count}
@@ -473,11 +476,12 @@ function PackageCard({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 border-t-2 border-zinc-800 bg-black px-6 py-4">
+      <div className="grid gap-2 border-t-2 border-zinc-800 bg-black px-4 py-4 sm:flex sm:flex-wrap sm:gap-2 sm:px-6">
         <Button
           type="button"
           variant="secondary"
           size="sm"
+          className="w-full sm:w-auto"
           onClick={() => onRefresh(pkg.name)}
           disabled={refreshDisabled || refreshing}
           aria-busy={refreshing || undefined}
@@ -485,17 +489,27 @@ function PackageCard({
           <FaIcon icon={faRotate} className={refreshing ? "mr-2 animate-spin" : "mr-2"} />
           {refreshing ? "Refreshing…" : "Refresh"}
         </Button>
-        <Button variant="secondary" size="sm" onClick={() => onRebuild(pkg.name)}>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="w-full sm:w-auto"
+          onClick={() => onRebuild(pkg.name)}
+        >
           <FaIcon icon={faHammer} className="mr-2" />
           Rebuild
         </Button>
-        <a href={`/packages/view/?name=${encodeURIComponent(pkg.name)}`}>
-          <Button variant="ghost" size="sm">
+        <a className="w-full sm:w-auto" href={`/packages/view/?name=${encodeURIComponent(pkg.name)}`}>
+          <Button variant="ghost" size="sm" className="w-full sm:w-auto">
             <FaIcon icon={faFolderOpen} className="mr-2" />
             Details
           </Button>
         </a>
-        <Button variant="danger" size="sm" onClick={() => onDelete(pkg.name)}>
+        <Button
+          variant="danger"
+          size="sm"
+          className="w-full sm:w-auto"
+          onClick={() => onDelete(pkg.name)}
+        >
           <FaIcon icon={faTrash} className="mr-2" />
           Delete
         </Button>

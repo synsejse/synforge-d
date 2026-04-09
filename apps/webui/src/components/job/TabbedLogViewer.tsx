@@ -27,7 +27,8 @@ const POLL_INTERVAL_MS = 2000;
 const CHUNK_SIZE = 65536;
 const INITIAL_WINDOW_BYTES = 256 * 1024;
 const ROW_HEIGHT = 24;
-const LOG_VIEWPORT_HEIGHT = 600;
+const MOBILE_LOG_VIEWPORT_HEIGHT = 420;
+const DESKTOP_LOG_VIEWPORT_HEIGHT = 600;
 
 export default function TabbedLogViewer({ jobId, isLive }: Props) {
   const [manifest, setManifest] = useState<LogManifestResponse | null>(null);
@@ -36,6 +37,14 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
   const [logStates, setLogStates] = useState<Record<string, LogState>>({});
   const [followLogs, setFollowLogs] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [logViewportHeight, setLogViewportHeight] = useState(() => {
+    if (typeof window === "undefined") {
+      return DESKTOP_LOG_VIEWPORT_HEIGHT;
+    }
+    return window.innerWidth < 768
+      ? MOBILE_LOG_VIEWPORT_HEIGHT
+      : DESKTOP_LOG_VIEWPORT_HEIGHT;
+  });
   const [pageVisible, setPageVisible] = useState(() => {
     if (typeof document === "undefined") {
       return true;
@@ -62,6 +71,22 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
     return () => {
       document.removeEventListener("visibilitychange", updateVisibility);
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const updateViewportHeight = () => {
+      setLogViewportHeight(
+        window.innerWidth < 768
+          ? MOBILE_LOG_VIEWPORT_HEIGHT
+          : DESKTOP_LOG_VIEWPORT_HEIGHT,
+      );
+    };
+    updateViewportHeight();
+    window.addEventListener("resize", updateViewportHeight);
+    return () => window.removeEventListener("resize", updateViewportHeight);
   }, []);
 
   const currentLog = activeSourcePath ? logStates[activeSourcePath] : null;
@@ -218,44 +243,52 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
   return (
     <div className="space-y-0">
       {/* Tabs with Controls */}
-      <div className="border-2 border-zinc-700 border-b-0 bg-zinc-950 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap">
-          {(manifest?.sources ?? []).map((source) => (
+      <div className="border-2 border-zinc-700 border-b-0 bg-zinc-950">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+          <div className="min-w-0 overflow-x-auto border-b-2 border-zinc-700 md:border-b-0">
+            <div className="flex min-w-max">
+              {(manifest?.sources ?? []).map((source) => {
+                const shortLabel = source.file.split("/").pop() || source.file;
+                return (
+                  <button
+                    key={source.file}
+                    onClick={() => setActiveSourcePath(source.file)}
+                    title={source.file}
+                    className={`shrink-0 whitespace-nowrap px-3 py-3 font-mono text-xs font-bold uppercase tracking-[0.15em] transition sm:px-5 ${
+                      activeSourcePath === source.file
+                        ? "border-b-4 border-[var(--theme-terminal-green)] bg-black text-[var(--theme-terminal-green)]"
+                        : "text-zinc-500 hover:bg-black/50 hover:text-zinc-300"
+                    }`}
+                  >
+                    {shortLabel}
+                    {source.size > 0 && (
+                      <span className="ml-2 text-[10px] text-zinc-600">
+                        {formatBytes(source.size, "metric")}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+            <label className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.15em] text-zinc-400">
+              <input
+                type="checkbox"
+                checked={followLogs}
+                onChange={(event) => setFollowLogs(event.target.checked)}
+              />
+              Follow
+            </label>
             <button
-              key={source.file}
-              onClick={() => setActiveSourcePath(source.file)}
-              className={`px-5 py-3 font-mono text-xs font-bold uppercase tracking-[0.15em] transition ${
-                activeSourcePath === source.file
-                  ? "bg-black text-[var(--theme-terminal-green)] border-b-4 border-[var(--theme-terminal-green)]"
-                  : "text-zinc-500 hover:text-zinc-300 hover:bg-black/50"
-              }`}
+              onClick={handleDownloadLog}
+              disabled={!activeSourcePath || downloading}
+              className="inline-flex w-full items-center justify-center font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition hover:text-[var(--theme-terminal-green)] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
-              {source.file}
-              {source.size > 0 && (
-                <span className="ml-2 text-[10px] text-zinc-600">
-                  {formatBytes(source.size, "metric")}
-                </span>
-              )}
+              <FaIcon icon={faDownload} className="mr-2" />
+              {downloading ? "Downloading…" : "Download"}
             </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-3 px-5 py-3">
-          <label className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.15em] text-zinc-400">
-            <input
-              type="checkbox"
-              checked={followLogs}
-              onChange={(event) => setFollowLogs(event.target.checked)}
-            />
-            Follow
-          </label>
-          <button
-            onClick={handleDownloadLog}
-            disabled={!activeSourcePath || downloading}
-            className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition hover:text-[var(--theme-terminal-green)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <FaIcon icon={faDownload} className="mr-2" />
-            {downloading ? "Downloading…" : "Download"}
-          </button>
+          </div>
         </div>
       </div>
 
@@ -280,6 +313,7 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
                 scrollOffsetsRef.current[activeSourcePath] = nextScrollTop;
               }
             }}
+            viewportHeight={logViewportHeight}
           />
         )}
       </div>
@@ -293,12 +327,14 @@ function VirtualizedAnsiLines({
   viewportRef,
   initialScrollTop,
   onScrollTopChange,
+  viewportHeight,
 }: {
   sourcePath: string;
   lines: string[];
   viewportRef: React.RefObject<HTMLDivElement | null>;
   initialScrollTop: number;
   onScrollTopChange: (scrollTop: number) => void;
+  viewportHeight: number;
 }) {
   const [scrollTop, setScrollTop] = useState(0);
 
@@ -316,7 +352,7 @@ function VirtualizedAnsiLines({
     Math.floor(scrollTop / ROW_HEIGHT) - overscan,
   );
   const visibleCount =
-    Math.ceil(LOG_VIEWPORT_HEIGHT / ROW_HEIGHT) + overscan * 2;
+    Math.ceil(viewportHeight / ROW_HEIGHT) + overscan * 2;
   const visibleEnd = Math.min(lines.length, visibleStart + visibleCount);
 
   const visibleRows = useMemo(
@@ -338,8 +374,8 @@ function VirtualizedAnsiLines({
     <div
       ref={viewportRef}
       onScroll={handleScroll}
-      className="max-h-[78vh] overflow-auto font-mono text-[13px] leading-6 bg-black"
-      style={{ height: LOG_VIEWPORT_HEIGHT }}
+      className="max-h-[78vh] overflow-auto bg-black font-mono text-[13px] leading-6"
+      style={{ height: viewportHeight }}
     >
       <div
         style={{
@@ -361,7 +397,7 @@ function VirtualizedAnsiLines({
             <div
               key={`${sourcePath}:${index}`}
               style={style}
-              className="px-5 text-[var(--theme-terminal-green)] whitespace-pre hover:bg-zinc-950/30"
+              className="whitespace-pre px-3 text-[var(--theme-terminal-green)] hover:bg-zinc-950/30 sm:px-5"
             >
               <Ansi>{line || " "}</Ansi>
             </div>

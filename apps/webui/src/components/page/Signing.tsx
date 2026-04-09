@@ -407,11 +407,11 @@ export default function Signing() {
 
 function StatusRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[minmax(0,220px)_1fr] gap-4 bg-black px-4 py-3 text-xs">
+    <div className="grid gap-1 bg-black px-4 py-3 text-xs sm:grid-cols-[minmax(0,180px)_1fr] sm:gap-4">
       <dt className="font-mono font-bold uppercase tracking-[0.16em] text-zinc-400">
         {label}
       </dt>
-      <dd className="truncate font-mono text-zinc-100">{value}</dd>
+      <dd className="break-all font-mono text-zinc-100 sm:truncate">{value}</dd>
     </div>
   );
 }

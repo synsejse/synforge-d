@@ -231,11 +231,11 @@ export default function Statistics() {
 
 function StatRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[220px_minmax(0,1fr)] gap-3 bg-black px-5 py-3">
+    <div className="grid gap-2 bg-black px-4 py-3 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-3 sm:px-5">
       <div className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-500">
         {label}
       </div>
-      <div className="truncate font-mono text-sm text-zinc-200">{value}</div>
+      <div className="break-words font-mono text-sm text-zinc-200 sm:truncate">{value}</div>
     </div>
   );
 }

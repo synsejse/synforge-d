@@ -367,7 +367,7 @@ export default function PackageDetail({ packageName }: Props) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-8">
       <PackageDetailHeader
         packageName={pkg.package.name}
         description={pkg.package.description || "No description"}
@@ -378,32 +378,36 @@ export default function PackageDetail({ packageName }: Props) {
         onDelete={() => void handleDelete()}
       />
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-        <PackageEditFormSection
-          form={form}
-          saving={saving}
-          availableChroots={availableChroots}
-          showSpecPicker={showSpecPicker}
-          showChrootPicker={showChrootPicker}
-          browsing={browsing}
-          browseError={browseError}
-          selectableFiles={selectableFiles}
-          onSubmit={handleSave}
-          onFormChange={(next) =>
-            setForm((current) => ({
-              ...current,
-              ...next,
-            }))
-          }
-          onToggleChroot={toggleChroot}
-          onOpenSpecPicker={() => setShowSpecPicker(true)}
-          onCloseSpecPicker={() => setShowSpecPicker(false)}
-          onOpenChrootPicker={() => setShowChrootPicker(true)}
-          onCloseChrootPicker={() => setShowChrootPicker(false)}
-          onBrowseRepository={() => void handleBrowse()}
-        />
+      <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+        <div className="min-w-0">
+          <PackageEditFormSection
+            form={form}
+            saving={saving}
+            availableChroots={availableChroots}
+            showSpecPicker={showSpecPicker}
+            showChrootPicker={showChrootPicker}
+            browsing={browsing}
+            browseError={browseError}
+            selectableFiles={selectableFiles}
+            onSubmit={handleSave}
+            onFormChange={(next) =>
+              setForm((current) => ({
+                ...current,
+                ...next,
+              }))
+            }
+            onToggleChroot={toggleChroot}
+            onOpenSpecPicker={() => setShowSpecPicker(true)}
+            onCloseSpecPicker={() => setShowSpecPicker(false)}
+            onOpenChrootPicker={() => setShowChrootPicker(true)}
+            onCloseChrootPicker={() => setShowChrootPicker(false)}
+            onBrowseRepository={() => void handleBrowse()}
+          />
+        </div>
 
-        <PackageStateSidebar pkg={pkg} />
+        <div className="min-w-0">
+          <PackageStateSidebar pkg={pkg} />
+        </div>
       </section>
 
       <PackageBuildHistorySection

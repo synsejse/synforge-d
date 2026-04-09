@@ -12,7 +12,7 @@ interface JobTableProps {
 export default function JobTable({ jobs, onDelete }: JobTableProps) {
   return (
     <div className="overflow-x-auto border border-zinc-800 bg-black">
-      <table className="min-w-[980px] w-full">
+      <table className="w-full min-w-[640px] lg:min-w-[980px]">
         <caption className="sr-only">
           Build jobs with status, target, revision, and row actions.
         </caption>

@@ -17,7 +17,7 @@ export default function PackageFilters({
   onApply,
 }: PackageFiltersProps) {
   return (
-    <section className="grid gap-3 border-2 border-zinc-700 bg-black p-4 md:grid-cols-[minmax(0,1fr)_220px_auto]">
+    <section className="grid gap-3 border-2 border-zinc-700 bg-black p-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_220px_auto]">
       <label className="block">
         <span className="sr-only">Search packages</span>
         <input
@@ -45,7 +45,7 @@ export default function PackageFilters({
       <button
         type="button"
         onClick={onApply}
-        className="border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-200 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
+        className="w-full border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-200 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950 md:col-span-2 xl:col-span-1 xl:w-auto"
       >
         <FaIcon icon={faMagnifyingGlass} className="mr-2" />
         Apply

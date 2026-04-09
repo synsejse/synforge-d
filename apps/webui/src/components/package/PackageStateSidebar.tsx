@@ -13,7 +13,7 @@ function formatMockChroots(chroots: string[]) {
 
 export default function PackageStateSidebar({ pkg }: PackageStateSidebarProps) {
   return (
-    <aside className="space-y-4 border-4 border-white bg-black p-6 shadow-[6px_6px_0_rgba(255,255,255,0.18)]">
+    <aside className="min-w-0 space-y-4 border-4 border-white bg-black p-4 sm:p-6 shadow-[6px_6px_0_rgba(255,255,255,0.18)]">
       <div>
         <h2 className="font-mono text-xl font-bold uppercase text-white">State</h2>
         <p className="mt-2 text-sm text-zinc-400">
@@ -66,7 +66,7 @@ export default function PackageStateSidebar({ pkg }: PackageStateSidebarProps) {
               className="flex flex-col gap-2 border-2 border-zinc-700 bg-zinc-950/60 px-3 py-3"
             >
               <div className="flex items-center justify-between gap-3">
-                <span className="font-mono text-sm text-zinc-100">
+                <span className="min-w-0 break-all font-mono text-sm text-zinc-100">
                   {target.mock_chroot}
                 </span>
                 <StatusPill
@@ -76,7 +76,7 @@ export default function PackageStateSidebar({ pkg }: PackageStateSidebarProps) {
                   }
                 />
               </div>
-              <div className="text-xs text-zinc-500">
+              <div className="break-all text-xs text-zinc-500">
                 {target.last_revision || "No successful revision yet"}
               </div>
               {target.backoff_remaining_seconds && target.backoff_remaining_seconds > 0 && (

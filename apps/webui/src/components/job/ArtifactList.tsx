@@ -50,8 +50,8 @@ export default function ArtifactList({
                 className="grid gap-3 border border-zinc-800 bg-black px-4 py-4 md:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]"
               >
                 <div>
-                  <div className="font-mono text-sm text-white">{artifact.file}</div>
-                  <div className="mt-1 text-xs text-zinc-500">{artifact.sha256}</div>
+                  <div className="break-all font-mono text-sm text-white">{artifact.file}</div>
+                  <div className="mt-1 break-all text-xs text-zinc-500">{artifact.sha256}</div>
                 </div>
                 <div className="text-sm text-zinc-300">
                   {formatBytes(artifact.size_bytes, "metric")}
@@ -68,7 +68,7 @@ export default function ArtifactList({
                   <button
                     onClick={() => onDownload(artifact)}
                     disabled={downloadingArtifactPath === artifact.file}
-                    className="inline-flex items-center border border-zinc-800 bg-black px-3 py-1.5 text-xs text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex w-full items-center justify-center border border-zinc-800 bg-black px-3 py-1.5 text-xs text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto"
                   >
                     <FaIcon icon={faDownload} className="mr-2 text-[0.95em]" />
                     {downloadingArtifactPath === artifact.file

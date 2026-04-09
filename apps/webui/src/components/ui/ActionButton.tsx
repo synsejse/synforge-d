@@ -27,7 +27,7 @@ type ButtonProps = CommonProps &
 export default function ActionButton(props: AnchorProps | ButtonProps) {
   const variant = props.variant ?? "default";
   const classes = [
-    "inline-flex min-w-[108px] items-center justify-center gap-2 border-2 px-3 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] transition-all duration-100 ease-linear focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-accent-lime)] focus-visible:ring-offset-2 focus-visible:ring-offset-black",
+    "inline-flex min-w-[96px] items-center justify-center gap-2 border-2 px-3 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] transition-all duration-100 ease-linear sm:min-w-[108px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-accent-lime)] focus-visible:ring-offset-2 focus-visible:ring-offset-black",
     variant === "primary"
       ? "border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] text-black shadow-[2px_2px_0_rgba(0,0,0,0.8)] hover:translate-x-[-1px] hover:translate-y-[-1px]"
       : "border-[var(--theme-border-strong)] bg-black text-zinc-200 hover:border-white hover:bg-zinc-950",

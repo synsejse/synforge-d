@@ -204,7 +204,7 @@ export default function JobList() {
 
             {/* Status Filter (history only) */}
             {mode === "history" && (
-              <div className="flex-1 min-w-[200px] max-w-xs">
+              <div className="w-full sm:flex-1 sm:min-w-[200px] sm:max-w-xs">
                 <Select
                   options={[
                     { value: "all", label: "All Statuses" },
@@ -277,7 +277,7 @@ export default function JobList() {
         </div>
 
         {/* Jobs Table */}
-        <div className="overflow-x-auto">
+        <div>
           {jobs.length === 0 ? (
             <div className="flex min-h-[300px] items-center justify-center px-6 py-12">
               <div className="text-center">
@@ -287,123 +287,204 @@ export default function JobList() {
               </div>
             </div>
           ) : (
-            <table className="min-w-[980px] w-full">
-              <thead className="border-b-2 border-[var(--theme-border-strong)] bg-zinc-950">
-                <tr>
-                  <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
-                    Package
-                  </th>
-                  <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
-                    Target
-                  </th>
-                  <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
-                    Revision
-                  </th>
-                  <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
-                    Status
-                  </th>
-                  <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
-                    Duration
-                  </th>
-                  <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
-                    Created
-                  </th>
-                  <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {jobs.map((entry, idx) => {
+            <>
+              <div className="space-y-3 p-4 md:hidden">
+                {jobs.map((entry) => {
                   const isLive = entry.job.status === "pending" || entry.job.status === "running";
                   return (
-                    <tr
-                      key={entry.job.id}
-                      className={`border-b-2 border-[var(--theme-border)] transition-all hover:bg-zinc-950 ${
-                        idx % 2 === 0 ? "bg-black" : "bg-zinc-950/40"
-                      }`}
-                    >
-                      <td className="px-5 py-4">
-                        <div className="min-w-[160px]">
+                    <article key={`mobile:${entry.job.id}`} className="border-2 border-zinc-700 bg-black p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
                           <a
                             href={`/jobs/view/?id=${encodeURIComponent(entry.job.id)}`}
                             className="font-display font-bold text-white transition hover:text-[var(--theme-accent-lime)]"
                           >
                             {entry.job.package_name}
                           </a>
-                          <div className="mt-1 max-w-[200px] truncate font-mono text-xs text-zinc-600">
+                          <div className="mt-1 break-all font-mono text-xs text-zinc-600">
                             {entry.job.id}
                           </div>
                         </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <Badge variant="ghost">{entry.job.mock_chroot}</Badge>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="max-w-[300px] truncate font-mono text-sm text-zinc-300">
-                          {entry.job.revision}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
                         <Badge variant={getStatusVariant(entry.job.status)} pulse={isLive}>
                           {entry.job.status}
                         </Badge>
-                      </td>
-                      <td className="px-5 py-4 font-mono text-sm text-zinc-400">
-                        {formatDurationBetween(entry.job.created_at, entry.job.finished_at)}
-                      </td>
-                      <td className="px-5 py-4 font-mono text-sm text-zinc-400">
-                        {formatDateTime(entry.job.created_at)}
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => (window.location.href = `/jobs/view/?id=${encodeURIComponent(entry.job.id)}`)}
-                          >
-                            Open
-                          </Button>
-                          {mode === "active" && isLive && (
-                            <Button
-                              variant="warning"
-                              size="sm"
-                              onClick={() => handleKill(entry)}
-                              disabled={killingJobId === entry.job.id}
-                            >
-                              <FaIcon icon={faStop} />
-                              Kill Active
-                            </Button>
-                          )}
-                          {mode !== "active" && (
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => handleDelete(entry)}
-                              disabled={isLive}
-                            >
-                              <FaIcon icon={faTrash} />
-                              Delete
-                            </Button>
-                          )}
+                      </div>
+                      <div className="mt-3 space-y-2 font-mono text-xs text-zinc-400">
+                        <div>
+                          <span className="text-zinc-500">Target:</span>{" "}
+                          <Badge variant="ghost">{entry.job.mock_chroot}</Badge>
                         </div>
-                      </td>
-                    </tr>
+                        <div className="break-all">
+                          <span className="text-zinc-500">Revision:</span>{" "}
+                          {entry.job.revision}
+                        </div>
+                        <div>
+                          <span className="text-zinc-500">Duration:</span>{" "}
+                          {formatDurationBetween(entry.job.created_at, entry.job.finished_at)}
+                        </div>
+                        <div>
+                          <span className="text-zinc-500">Created:</span>{" "}
+                          {formatDateTime(entry.job.created_at)}
+                        </div>
+                      </div>
+                      <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full sm:w-auto"
+                          onClick={() => (window.location.href = `/jobs/view/?id=${encodeURIComponent(entry.job.id)}`)}
+                        >
+                          Open
+                        </Button>
+                        {mode === "active" && isLive && (
+                          <Button
+                            variant="warning"
+                            size="sm"
+                            className="w-full sm:w-auto"
+                            onClick={() => handleKill(entry)}
+                            disabled={killingJobId === entry.job.id}
+                          >
+                            <FaIcon icon={faStop} />
+                            Kill Active
+                          </Button>
+                        )}
+                        {mode !== "active" && (
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            className="w-full sm:w-auto"
+                            onClick={() => handleDelete(entry)}
+                            disabled={isLive}
+                          >
+                            <FaIcon icon={faTrash} />
+                            Delete
+                          </Button>
+                        )}
+                      </div>
+                    </article>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[640px] lg:min-w-[980px]">
+                  <thead className="border-b-2 border-[var(--theme-border-strong)] bg-zinc-950">
+                    <tr>
+                      <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                        Package
+                      </th>
+                      <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                        Target
+                      </th>
+                      <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                        Revision
+                      </th>
+                      <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                        Status
+                      </th>
+                      <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                        Duration
+                      </th>
+                      <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                        Created
+                      </th>
+                      <th scope="col" className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {jobs.map((entry, idx) => {
+                      const isLive = entry.job.status === "pending" || entry.job.status === "running";
+                      return (
+                        <tr
+                          key={entry.job.id}
+                          className={`border-b-2 border-[var(--theme-border)] transition-all hover:bg-zinc-950 ${
+                            idx % 2 === 0 ? "bg-black" : "bg-zinc-950/40"
+                          }`}
+                        >
+                          <td className="px-5 py-4">
+                            <div className="min-w-[160px]">
+                              <a
+                                href={`/jobs/view/?id=${encodeURIComponent(entry.job.id)}`}
+                                className="font-display font-bold text-white transition hover:text-[var(--theme-accent-lime)]"
+                              >
+                                {entry.job.package_name}
+                              </a>
+                              <div className="mt-1 max-w-[200px] truncate font-mono text-xs text-zinc-600">
+                                {entry.job.id}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4">
+                            <Badge variant="ghost">{entry.job.mock_chroot}</Badge>
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="max-w-[300px] truncate font-mono text-sm text-zinc-300">
+                              {entry.job.revision}
+                            </div>
+                          </td>
+                          <td className="px-5 py-4">
+                            <Badge variant={getStatusVariant(entry.job.status)} pulse={isLive}>
+                              {entry.job.status}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-4 font-mono text-sm text-zinc-400">
+                            {formatDurationBetween(entry.job.created_at, entry.job.finished_at)}
+                          </td>
+                          <td className="px-5 py-4 font-mono text-sm text-zinc-400">
+                            {formatDateTime(entry.job.created_at)}
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => (window.location.href = `/jobs/view/?id=${encodeURIComponent(entry.job.id)}`)}
+                              >
+                                Open
+                              </Button>
+                              {mode === "active" && isLive && (
+                                <Button
+                                  variant="warning"
+                                  size="sm"
+                                  onClick={() => handleKill(entry)}
+                                  disabled={killingJobId === entry.job.id}
+                                >
+                                  <FaIcon icon={faStop} />
+                                  Kill Active
+                                </Button>
+                              )}
+                              {mode !== "active" && (
+                                <Button
+                                  variant="danger"
+                                  size="sm"
+                                  onClick={() => handleDelete(entry)}
+                                  disabled={isLive}
+                                >
+                                  <FaIcon icon={faTrash} />
+                                  Delete
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 
         {/* Pagination */}
         {(offset > 0 || hasMore) && (
           <div className="border-t-4 border-[var(--theme-border-strong)] bg-zinc-950 px-6 py-4">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="font-mono text-sm text-zinc-500">
                 Showing {offset + 1}-{offset + jobs.length}
               </div>
-              <div className="flex gap-3">
+              <div className="flex w-full gap-3 sm:w-auto">
                 <Button
                   variant="ghost"
                   size="sm"

@@ -960,6 +960,27 @@ pub(crate) fn compute_package_state(
             .first::<(String, BuildStatus)>(conn)
             .optional()?;
 
+        let backoff = build_failure_backoff::table
+            .find((package_name, mock_chroot.as_str()))
+            .select((
+                build_failure_backoff::consecutive_failures,
+                build_failure_backoff::next_eligible_at,
+            ))
+            .first::<(i32, String)>(conn)
+            .optional()?;
+        let backoff_until = backoff.as_ref().map(|(_, next_eligible_at)| next_eligible_at.clone());
+        let backoff_remaining_seconds = backoff
+            .as_ref()
+            .and_then(|(_, next_eligible_at)| parse_timestamp(next_eligible_at).ok())
+            .and_then(|next_eligible_at| {
+                let wait_seconds = (next_eligible_at - now_utc()).whole_seconds();
+                if wait_seconds > 0 {
+                    Some(wait_seconds as u64)
+                } else {
+                    None
+                }
+            });
+
         targets.push(PackageTargetRuntimeState {
             mock_chroot: mock_chroot.clone(),
             last_revision: last_success.as_ref().map(|(_, revision)| revision.clone()),
@@ -972,6 +993,8 @@ pub(crate) fn compute_package_state(
                 .map(|(id, _)| Uuid::parse_str(id))
                 .transpose()?,
             active_status: active_job.as_ref().map(|(_, status)| *status),
+            backoff_until,
+            backoff_remaining_seconds,
         });
     }
 

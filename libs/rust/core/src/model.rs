@@ -229,6 +229,10 @@ pub struct PackageTargetRuntimeState {
     pub last_successful_build_id: Option<Uuid>,
     pub active_job_id: Option<Uuid>,
     pub active_status: Option<BuildStatus>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backoff_until: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backoff_remaining_seconds: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

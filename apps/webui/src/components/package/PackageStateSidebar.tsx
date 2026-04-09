@@ -1,4 +1,5 @@
 import type { PackageResponse } from "../../lib/types";
+import { formatDurationSeconds } from "../../lib/datetime";
 import DetailStat from "../ui/DetailStat";
 import StatusPill from "../ui/StatusPill";
 
@@ -78,6 +79,11 @@ export default function PackageStateSidebar({ pkg }: PackageStateSidebarProps) {
               <div className="text-xs text-zinc-500">
                 {target.last_revision || "No successful revision yet"}
               </div>
+              {target.backoff_remaining_seconds && target.backoff_remaining_seconds > 0 && (
+                <div className="border border-[var(--theme-accent-orange)] bg-black px-2 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--theme-accent-orange)]">
+                  Backoff {formatDurationSeconds(target.backoff_remaining_seconds)}
+                </div>
+              )}
             </div>
           ))}
         </div>

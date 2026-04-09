@@ -74,6 +74,11 @@ export function summarizePackageTargetAction(
 }
 
 function humanizeReason(reason: string | null): string {
+  if (reason?.startsWith("backoff:")) {
+    const suffix = reason.slice("backoff:".length).trim();
+    return `failure backoff active (${suffix})`;
+  }
+
   switch (reason) {
     case "no_source_change":
       return "no source change";

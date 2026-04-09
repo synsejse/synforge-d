@@ -8,7 +8,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import { summarizePackageAction } from "../../lib/package-actions";
+import { formatDurationSeconds } from "../../lib/datetime";
 import type {
+  PackageTargetState,
   PackageResponse,
   RefreshAllPackagesProgressView,
 } from "../../lib/types";
@@ -395,6 +397,9 @@ function PackageCard({
   refreshDisabled,
 }: PackageCardProps) {
   const pkg = entry.package;
+  const backoffTargets = entry.state.targets.filter(isBackoffActive);
+  const backoffSummary =
+    backoffTargets.length > 0 ? summarizeBackoffTargets(backoffTargets) : null;
   const status = pkg.enabled
     ? entry.builds_pending || entry.builds_running
       ? "running"
@@ -417,6 +422,11 @@ function PackageCard({
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {backoffSummary && (
+              <Badge variant="warning" title={backoffSummary.details}>
+                BACKOFF {backoffSummary.count}
+              </Badge>
+            )}
             <Badge 
               variant={status === "running" ? "lime" : status === "success" ? "terminal-green" : "default"} 
               pulse={status === "running"}
@@ -426,6 +436,15 @@ function PackageCard({
           </div>
         </div>
       </div>
+
+      {backoffSummary && (
+        <div className="border-t-2 border-zinc-800 bg-zinc-950 px-6 py-3 text-xs text-zinc-300">
+          <span className="font-mono uppercase tracking-[0.14em] text-[var(--theme-accent-orange)]">
+            Failure backoff active:
+          </span>{" "}
+          <span className="font-mono">{backoffSummary.details}</span>
+        </div>
+      )}
 
       <div className="grid gap-px bg-zinc-800 md:grid-cols-2">
         <div className="bg-black px-5 py-4">
@@ -483,4 +502,23 @@ function PackageCard({
       </div>
     </article>
   );
+}
+
+function isBackoffActive(target: PackageTargetState): boolean {
+  const remaining = target.backoff_remaining_seconds ?? null;
+  return remaining !== null && remaining > 0;
+}
+
+function summarizeBackoffTargets(targets: PackageTargetState[]): {
+  count: number;
+  details: string;
+} {
+  const details = targets
+    .map((target) => {
+      const remaining = target.backoff_remaining_seconds ?? 0;
+      return `${target.mock_chroot} (${formatDurationSeconds(remaining)})`;
+    })
+    .join(", ");
+
+  return { count: targets.length, details };
 }

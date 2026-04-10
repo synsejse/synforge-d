@@ -16,6 +16,7 @@ diesel::table! {
         package_history_count -> BigInt,
         cpu_limit_millicores -> Nullable<BigInt>,
         memory_limit_mb -> Nullable<BigInt>,
+        ccache_enabled -> Bool,
         build_env_json -> Text,
         spec_file -> Text,
         version -> Text,

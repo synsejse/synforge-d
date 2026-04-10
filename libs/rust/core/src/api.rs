@@ -47,6 +47,8 @@ pub struct CreatePackageRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memory_limit_mb: Option<u64>,
     #[serde(default)]
+    pub ccache_enabled: bool,
+    #[serde(default)]
     pub build_env: Vec<BuildEnvVar>,
 }
 
@@ -75,6 +77,8 @@ pub struct UpdatePackageRequest {
     pub cpu_limit_millicores: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memory_limit_mb: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ccache_enabled: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub build_env: Option<Vec<BuildEnvVar>>,
 }

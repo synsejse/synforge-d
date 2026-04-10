@@ -339,6 +339,7 @@ impl BuildScheduler {
                     publish_srpm: package.publish_srpm,
                     publish_debuginfo: package.publish_debuginfo,
                     network_access: package.network_access,
+                    ccache_enabled: package.ccache_enabled,
                     mock_chroots: package.mock_chroots.clone(),
                     poll_interval_seconds: package.poll_interval_seconds,
                     build_timeout_seconds: package.build_timeout_seconds,

@@ -118,6 +118,7 @@ export default function AddPackageModal({
   const [cpuLimitEnabled, setCpuLimitEnabled] = useState(false);
   const [memoryLimitEnabled, setMemoryLimitEnabled] = useState(false);
   const [memoryLimitMb, setMemoryLimitMb] = useState("1024");
+  const [ccacheEnabled, setCcacheEnabled] = useState(false);
   const [buildEnv, setBuildEnv] = useState(encodeBuildEnv([]));
   const [browsing, setBrowsing] = useState(false);
   const [browseError, setBrowseError] = useState<string | null>(null);
@@ -321,6 +322,7 @@ export default function AddPackageModal({
         ? parseOptionalCpuLimit(cpuLimitCores, maxCpuCores)
         : undefined,
       memory_limit_mb: memoryLimitEnabled ? memorySliderValue : undefined,
+      ccache_enabled: ccacheEnabled,
       build_env: parseBuildEnv(buildEnv),
     };
 
@@ -401,6 +403,22 @@ export default function AddPackageModal({
           </label>
 
           <div className="grid gap-4 md:grid-cols-2">
+            <label className="flex items-center justify-between border-2 border-zinc-700 bg-zinc-950 px-4 py-3">
+              <span>
+                <span className="block font-mono text-xs font-bold uppercase tracking-[0.1em] text-white">
+                  Shared ccache
+                </span>
+                <span className="mt-1 block text-xs text-zinc-500">
+                  Reuse compiler cache per package and mock chroot.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={ccacheEnabled}
+                onChange={(event) => setCcacheEnabled(event.target.checked)}
+              />
+            </label>
+
             <label className="flex items-center justify-between border-2 border-zinc-700 bg-zinc-950 px-4 py-3">
               <span>
                 <span className="block font-mono text-xs font-bold uppercase tracking-[0.1em] text-white">

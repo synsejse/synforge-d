@@ -77,6 +77,7 @@ impl PackageRegistry {
                     publish_srpm: request.publish_srpm,
                     publish_debuginfo: request.publish_debuginfo,
                     network_access: request.network_access,
+                    ccache_enabled: request.ccache_enabled,
                     mock_chroots: request.mock_chroots,
                     poll_interval_seconds: request.poll_interval_seconds,
                     build_timeout_seconds: request.build_timeout_seconds,
@@ -132,6 +133,9 @@ impl PackageRegistry {
         let network_access = request
             .network_access
             .unwrap_or(existing.package.network_access);
+        let ccache_enabled = request
+            .ccache_enabled
+            .unwrap_or(existing.package.ccache_enabled);
         let publish_srpm = request
             .publish_srpm
             .unwrap_or(existing.package.publish_srpm);
@@ -148,6 +152,7 @@ impl PackageRegistry {
                     publish_srpm,
                     publish_debuginfo,
                     network_access,
+                    ccache_enabled,
                     mock_chroots,
                     poll_interval_seconds,
                     build_timeout_seconds,
@@ -237,6 +242,7 @@ impl PackageRegistry {
                     publish_srpm: package.publish_srpm,
                     publish_debuginfo: package.publish_debuginfo,
                     network_access: package.network_access,
+                    ccache_enabled: package.ccache_enabled,
                     mock_chroots: package.mock_chroots.clone(),
                     poll_interval_seconds: package.poll_interval_seconds,
                     build_timeout_seconds: package.build_timeout_seconds,

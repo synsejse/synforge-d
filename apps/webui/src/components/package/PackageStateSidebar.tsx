@@ -45,6 +45,10 @@ export default function PackageStateSidebar({ pkg }: PackageStateSidebarProps) {
         label="Network Access"
         value={pkg.package.network_access ? "Enabled" : "Disabled"}
       />
+      <DetailStat
+        label="Shared ccache"
+        value={pkg.package.ccache_enabled ? "Enabled" : "Disabled"}
+      />
       <DetailStat label="Build Env Vars" value={String(pkg.package.build_env?.length ?? 0)} />
       <DetailStat
         label="Last Successful Revision"

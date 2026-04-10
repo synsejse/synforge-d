@@ -133,6 +133,7 @@ export default function PackageDetail({ packageName }: Props) {
     cpuLimitEnabled: false,
     memoryLimitEnabled: false,
     memoryLimitMb: "",
+    ccache_enabled: false,
     buildEnv: "",
     enabled: true,
     publish_srpm: true,
@@ -166,6 +167,7 @@ export default function PackageDetail({ packageName }: Props) {
       memoryLimitMb: definition.memory_limit_mb
         ? String(definition.memory_limit_mb)
         : "",
+      ccache_enabled: definition.ccache_enabled ?? false,
       buildEnv: encodeBuildEnv(definition.build_env ?? []),
       enabled: definition.enabled ?? true,
       publish_srpm: definition.publish_srpm ?? true,
@@ -300,6 +302,7 @@ export default function PackageDetail({ packageName }: Props) {
         memory_limit_mb: form.memoryLimitEnabled
           ? parseUpdateMemoryLimit(form.memoryLimitMb, maxMemoryMb)
           : 0,
+        ccache_enabled: form.ccache_enabled,
         build_env: parseBuildEnv(form.buildEnv),
       };
       await api.updatePackage(packageName, request);

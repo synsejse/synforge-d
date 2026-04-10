@@ -24,6 +24,7 @@ export interface PackageEditFormState {
   cpuLimitEnabled: boolean;
   memoryLimitEnabled: boolean;
   memoryLimitMb: string;
+  ccache_enabled: boolean;
   buildEnv: string;
   enabled: boolean;
   publish_srpm: boolean;
@@ -281,6 +282,13 @@ export default function PackageEditFormSection({
                   : "No chroots selected"}
               </DisplayBox>
             </FieldGroup>
+
+            <ToggleField
+              label="Shared ccache"
+              description="Reuse compiler cache across builds for this package and mock chroot."
+              checked={form.ccache_enabled}
+              onChange={(checked) => onFormChange({ ccache_enabled: checked })}
+            />
 
             <ToggleField
               label="Enabled"

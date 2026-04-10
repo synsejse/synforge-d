@@ -311,15 +311,17 @@ impl DockerWorkerLauncher {
         payload: &WorkerJobPayload,
         config: &DaemonConfig,
     ) -> anyhow::Result<Option<Vec<String>>> {
-        let WorkerAction::Build(_) = &payload.action else {
+        let WorkerAction::Build(build) = &payload.action else {
             return Ok(None);
         };
 
-        // Use host path for bind mounts (required when daemon is containerized)
         let Some(host_jobs_root) = config.worker_jobs_host_path() else {
             warn!(
                 job_id = %payload.job_id,
-                "SYNFORGE_WORKER_JOBS_PATH not set; workers will run without dedicated mock bind mounts"
+                package_name = %build.package.name,
+                mock_chroot = %build.mock_chroot,
+                ccache_enabled = build.package.ccache_enabled,
+                "SYNFORGE_WORKER_JOBS_PATH not set; workers will run without dedicated mock or ccache bind mounts"
             );
             return Ok(None);
         };
@@ -343,7 +345,7 @@ impl DockerWorkerLauncher {
         let worker_mock_lib = worker_mock_root.join("lib");
         let worker_mock_cache = worker_mock_root.join("cache");
 
-        Ok(Some(vec![
+        let mut binds = vec![
             format!(
                 "{}:{}:rw,z",
                 host_mock_lib.display(),
@@ -354,7 +356,28 @@ impl DockerWorkerLauncher {
                 host_mock_cache.display(),
                 worker_mock_cache.display()
             ),
-        ]))
+        ];
+
+        if build.package.ccache_enabled {
+            let host_ccache_dir = host_jobs_root
+                .join("ccache")
+                .join(&build.package.name)
+                .join(&build.mock_chroot);
+            let container_ccache_dir = config
+                .worker_jobs_root()
+                .join("ccache")
+                .join(&build.package.name)
+                .join(&build.mock_chroot);
+            tokio::fs::create_dir_all(&container_ccache_dir).await?;
+            let worker_ccache_dir = payload.workspace_dir.join("ccache");
+            binds.push(format!(
+                "{}:{}:rw,z",
+                host_ccache_dir.display(),
+                worker_ccache_dir.display()
+            ));
+        }
+
+        Ok(Some(binds))
     }
 }
 

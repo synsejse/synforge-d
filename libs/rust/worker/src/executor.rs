@@ -107,6 +107,7 @@ async fn execute_spec_build(
         let mut artifacts = Vec::new();
         let arch_topdir = topdir.join(&build_payload.mock_chroot);
         let mock_runtime_root = payload.workspace_dir.join("mock");
+        let ccache_dir = payload.workspace_dir.join("ccache");
         logger.section("Build packages").await?;
         logger
             .line(format!("Target: {}", build_payload.mock_chroot))
@@ -117,6 +118,7 @@ async fn execute_spec_build(
             &srpm_path,
             &arch_topdir,
             &mock_runtime_root,
+            &ccache_dir,
             &logger,
         )
         .await?;
@@ -296,6 +298,7 @@ async fn run_mock_build(
     srpm_path: &Path,
     topdir: &Path,
     mock_runtime_root: &Path,
+    ccache_dir: &Path,
     logger: &BuildLogger,
 ) -> anyhow::Result<()> {
     tokio::fs::create_dir_all(topdir).await?;
@@ -318,6 +321,17 @@ async fn run_mock_build(
         .arg("--isolation=simple")
         .arg("--resultdir")
         .arg(topdir);
+    if package.ccache_enabled {
+        tokio::fs::create_dir_all(ccache_dir).await?;
+        logger
+            .line(format!("Shared ccache: {}", ccache_dir.display()))
+            .await?;
+        command
+            .arg("--enable-plugin")
+            .arg("ccache")
+            .arg("--plugin-option")
+            .arg(format!("ccache:dir={}", ccache_dir.display()));
+    }
     if package.network_access {
         command.arg("--enable-network");
     }

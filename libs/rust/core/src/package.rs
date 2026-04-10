@@ -33,6 +33,8 @@ pub struct PackageDefinition {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memory_limit_mb: Option<u64>,
     #[serde(default)]
+    pub ccache_enabled: bool,
+    #[serde(default)]
     pub build_env: Vec<BuildEnvVar>,
     #[schema(value_type = String)]
     pub spec_file: PathBuf,

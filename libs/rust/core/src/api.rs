@@ -545,11 +545,19 @@ pub struct EffectiveConfigView {
     pub listen_addr: String,
     pub database_url: String,
     #[schema(value_type = String)]
-    pub packages_dir: std::path::PathBuf,
-    #[schema(value_type = String)]
     pub repo_dir: std::path::PathBuf,
     #[schema(value_type = String)]
     pub jobs_root: std::path::PathBuf,
+    #[schema(value_type = String)]
+    pub cache_root: std::path::PathBuf,
+    #[schema(value_type = String)]
+    pub work_root: std::path::PathBuf,
+    #[schema(value_type = String)]
+    pub signing_root: std::path::PathBuf,
+    #[schema(value_type = String)]
+    pub worker_jobs_root: std::path::PathBuf,
+    #[schema(value_type = String)]
+    pub worker_ccache_root: std::path::PathBuf,
     pub worker_image: String,
     pub signing_enabled: bool,
     pub signing_key_id: Option<String>,

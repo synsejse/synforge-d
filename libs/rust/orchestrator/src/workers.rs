@@ -325,6 +325,7 @@ impl DockerWorkerLauncher {
             );
             return Ok(None);
         };
+        let host_ccache_root = config.worker_ccache_host_path();
 
         let host_mock_root = host_jobs_root.join(payload.job_id.to_string()).join("mock");
         let host_mock_lib = host_mock_root.join("lib");
@@ -359,13 +360,20 @@ impl DockerWorkerLauncher {
         ];
 
         if build.package.ccache_enabled {
-            let host_ccache_dir = host_jobs_root
-                .join("ccache")
+            let Some(host_ccache_root) = host_ccache_root else {
+                warn!(
+                    job_id = %payload.job_id,
+                    package_name = %build.package.name,
+                    mock_chroot = %build.mock_chroot,
+                    "worker ccache requested but host worker cache root is unavailable"
+                );
+                return Ok(Some(binds));
+            };
+            let host_ccache_dir = host_ccache_root
                 .join(&build.package.name)
                 .join(&build.mock_chroot);
             let container_ccache_dir = config
-                .worker_jobs_root()
-                .join("ccache")
+                .worker_ccache_root()
                 .join(&build.package.name)
                 .join(&build.mock_chroot);
             tokio::fs::create_dir_all(&container_ccache_dir).await?;

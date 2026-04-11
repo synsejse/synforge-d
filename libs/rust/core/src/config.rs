@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     constants::{
-        DAEMON_RUNTIME_ROOT, DAEMON_WORKER_JOBS_ROOT, DATABASE_URL_ENV_VAR,
+        DAEMON_RUNTIME_ROOT, DAEMON_WORKER_RUNTIME_ROOT, DATABASE_URL_ENV_VAR,
         DEFAULT_DAEMON_LISTEN_ADDR, DEFAULT_DAEMON_PUBLIC_BASE_URL, WORKER_JOBS_HOST_PATH_ENV_VAR,
     },
     error::SynforgeError,
@@ -263,17 +263,35 @@ impl DaemonConfig {
         RuntimePaths::new(PathBuf::from(DAEMON_RUNTIME_ROOT))
     }
 
-    pub fn worker_jobs_root(&self) -> PathBuf {
-        PathBuf::from(DAEMON_WORKER_JOBS_ROOT)
+    pub fn worker_runtime_root(&self) -> PathBuf {
+        PathBuf::from(DAEMON_WORKER_RUNTIME_ROOT)
     }
 
-    /// Returns the host-side path for worker jobs, used for Docker bind mounts.
+    pub fn worker_jobs_root(&self) -> PathBuf {
+        self.worker_runtime_root().join("jobs")
+    }
+
+    pub fn worker_ccache_root(&self) -> PathBuf {
+        self.worker_runtime_root().join("cache").join("ccache")
+    }
+
+    /// Returns the host-side path for the worker runtime root, used for Docker bind mounts.
     /// This is required when daemon runs in a container but spawns workers via Docker API.
-    pub fn worker_jobs_host_path(&self) -> Option<PathBuf> {
+    pub fn worker_runtime_host_path(&self) -> Option<PathBuf> {
         std::env::var(WORKER_JOBS_HOST_PATH_ENV_VAR)
             .ok()
             .filter(|s| !s.is_empty())
             .map(PathBuf::from)
+    }
+
+    pub fn worker_jobs_host_path(&self) -> Option<PathBuf> {
+        self.worker_runtime_host_path()
+            .map(|root| root.join("jobs"))
+    }
+
+    pub fn worker_ccache_host_path(&self) -> Option<PathBuf> {
+        self.worker_runtime_host_path()
+            .map(|root| root.join("cache").join("ccache"))
     }
 }
 

@@ -47,7 +47,6 @@ pub struct MaterializePackageOptions {
 
 #[derive(Clone)]
 pub struct PackageSyncStore {
-    root: PathBuf,
     config: DaemonConfig,
     worker_launcher: Arc<DockerWorkerLauncher>,
     git_mirror_cache: Arc<GitMirrorCache>,
@@ -56,14 +55,12 @@ pub struct PackageSyncStore {
 
 impl PackageSyncStore {
     pub fn new(
-        root: PathBuf,
         config: DaemonConfig,
         worker_launcher: Arc<DockerWorkerLauncher>,
         store: DieselStore,
     ) -> Self {
         let git_mirror_cache = Arc::new(GitMirrorCache::new(store, &config));
         Self {
-            root,
             config,
             worker_launcher,
             git_mirror_cache,
@@ -172,12 +169,7 @@ impl PackageSyncStore {
     }
 
     pub async fn delete(&self, package_name: &str) -> anyhow::Result<()> {
-        let path = self.root.join(package_name);
-        if path.exists() {
-            tokio::fs::remove_dir_all(&path)
-                .await
-                .with_context(|| format!("failed to remove {}", path.display()))?;
-        }
+        let _ = package_name;
         Ok(())
     }
 

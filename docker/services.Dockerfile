@@ -60,7 +60,12 @@ RUN dnf -y upgrade-minimal \
 
 COPY --from=rust-builder /out/daemon /usr/local/bin/daemon
 
-RUN mkdir -p /var/lib/synforge/metadata/database /var/lib/synforge/metadata/packages /var/lib/synforge/metadata/repo /var/lib/synforge/jobs
+RUN mkdir -p \
+    /var/lib/synforge/repo \
+    /var/lib/synforge/state/jobs \
+    /var/lib/synforge/state/signing \
+    /var/lib/synforge/cache \
+    /var/lib/synforge/work
 
 EXPOSE 8080
 EXPOSE 8090

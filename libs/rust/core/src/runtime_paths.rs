@@ -4,26 +4,23 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuntimePaths {
-    packages_dir: PathBuf,
     repo_dir: PathBuf,
     jobs_root: PathBuf,
-    temp_root: PathBuf,
+    cache_root: PathBuf,
+    work_root: PathBuf,
     signing_root: PathBuf,
 }
 
 impl RuntimePaths {
     pub fn new(runtime_root: PathBuf) -> Self {
+        let state_root = runtime_root.join("state");
         Self {
-            packages_dir: runtime_root.join("packages"),
             repo_dir: runtime_root.join("repo"),
-            jobs_root: runtime_root.join("jobs"),
-            temp_root: runtime_root.join("tmp"),
-            signing_root: runtime_root.join("signing"),
+            jobs_root: state_root.join("jobs"),
+            cache_root: runtime_root.join("cache"),
+            work_root: runtime_root.join("work"),
+            signing_root: state_root.join("signing"),
         }
-    }
-
-    pub fn packages_dir(&self) -> &Path {
-        &self.packages_dir
     }
 
     pub fn repo_dir(&self) -> &Path {
@@ -50,8 +47,12 @@ impl RuntimePaths {
         self.job_logs_dir(job_id).join(sanitize_relative_path(file))
     }
 
-    pub fn temp_root(&self) -> PathBuf {
-        self.temp_root.clone()
+    pub fn cache_root(&self) -> &Path {
+        &self.cache_root
+    }
+
+    pub fn work_root(&self) -> &Path {
+        &self.work_root
     }
 
     pub fn signing_root(&self) -> PathBuf {
@@ -63,15 +64,15 @@ impl RuntimePaths {
     }
 
     pub fn spec_parse_workspace_dir(&self, job_id: Uuid) -> PathBuf {
-        self.temp_root().join("parse").join(job_id.to_string())
+        self.work_root().join("parse").join(job_id.to_string())
     }
 
     pub fn repo_browse_workspace_dir(&self, browse_id: Uuid) -> PathBuf {
-        self.temp_root().join("browse").join(browse_id.to_string())
+        self.work_root().join("browse").join(browse_id.to_string())
     }
 
     pub fn git_cache_root(&self) -> PathBuf {
-        self.temp_root().join("git-cache")
+        self.cache_root().join("git")
     }
 
     pub fn git_mirror_root(&self) -> PathBuf {

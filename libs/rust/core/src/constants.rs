@@ -10,7 +10,7 @@ pub const DEFAULT_DAEMON_WORKER_LISTEN_ADDR: &str = "0.0.0.0:8090";
 pub const DEFAULT_SIGNING_PUBLIC_KEY_NAME: &str = "gpg.key";
 
 pub const DAEMON_RUNTIME_ROOT: &str = "/var/lib/synforge";
-pub const DAEMON_WORKER_JOBS_ROOT: &str = "/var/lib/synforge-worker-jobs";
+pub const DAEMON_WORKER_RUNTIME_ROOT: &str = "/var/lib/synforge-worker-jobs";
 
 pub const DEFAULT_WEBUI_LISTEN_ADDR: &str = "0.0.0.0:80";
 pub const DEFAULT_WEBUI_STATIC_DIR: &str = "/opt/synforge/webui";

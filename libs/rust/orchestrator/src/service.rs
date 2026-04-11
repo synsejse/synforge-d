@@ -84,10 +84,21 @@ impl SynforgeService {
         self.store.health_check().await?;
 
         let paths = self.config.runtime_paths();
-        for path in [paths.packages_dir(), paths.repo_dir(), paths.jobs_root()] {
+        for path in [
+            paths.repo_dir(),
+            paths.jobs_root(),
+            paths.cache_root(),
+            paths.work_root(),
+        ] {
             if !tokio::fs::try_exists(path).await? {
                 anyhow::bail!("required runtime path is missing: {}", path.display());
             }
+        }
+        if !tokio::fs::try_exists(paths.signing_root()).await? {
+            anyhow::bail!(
+                "required runtime path is missing: {}",
+                paths.signing_root().display()
+            );
         }
 
         Ok(())
@@ -130,29 +141,31 @@ impl SynforgeService {
             .validate()
             .map_err(|error| anyhow::anyhow!(error.to_string()))?;
         info!(
-            packages_dir = %config.runtime_paths().packages_dir().display(),
             repo_dir = %config.runtime_paths().repo_dir().display(),
             jobs_root = %config.runtime_paths().jobs_root().display(),
+            cache_root = %config.runtime_paths().cache_root().display(),
+            work_root = %config.runtime_paths().work_root().display(),
+            signing_root = %config.runtime_paths().signing_root().display(),
+            worker_jobs_root = %config.worker_jobs_root().display(),
+            worker_ccache_root = %config.worker_ccache_root().display(),
             max_concurrent_builds = config.max_concurrent_builds,
             queue_buffer_size = config.queue_buffer_size,
             poller_tick_seconds = config.poller_tick_seconds,
             "configuring synforge runtime"
         );
         let paths = config.runtime_paths();
-        tokio::fs::create_dir_all(paths.packages_dir()).await?;
         tokio::fs::create_dir_all(paths.repo_dir()).await?;
         tokio::fs::create_dir_all(paths.jobs_root()).await?;
+        tokio::fs::create_dir_all(paths.cache_root()).await?;
+        tokio::fs::create_dir_all(paths.work_root()).await?;
+        tokio::fs::create_dir_all(paths.signing_root()).await?;
         repo_manager.ensure_repo(&config).await?;
         store
             .abort_unfinished_jobs("daemon restarted before job completed")
             .await?;
 
-        let package_store = PackageSyncStore::new(
-            paths.packages_dir().to_path_buf(),
-            config.clone(),
-            worker_launcher.clone(),
-            store.clone(),
-        );
+        let package_store =
+            PackageSyncStore::new(config.clone(), worker_launcher.clone(), store.clone());
         if let Err(error) = package_store.cleanup_git_mirror_cache().await {
             warn!(error = %error, "failed to cleanup git mirror cache at startup");
         }

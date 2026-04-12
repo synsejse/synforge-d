@@ -25,6 +25,7 @@ export interface PackageEditFormState {
   memoryLimitEnabled: boolean;
   memoryLimitMb: string;
   ccache_enabled: boolean;
+  ccacheMaxSizeMb: string;
   buildEnv: string;
   enabled: boolean;
   publish_srpm: boolean;
@@ -161,6 +162,17 @@ export default function PackageEditFormSection({
               required
               className="md:col-span-2"
             />
+
+            <NumberField
+              label="Shared ccache size (MB)"
+              value={form.ccacheMaxSizeMb}
+              onChange={(value) => onFormChange({ ccacheMaxSizeMb: value })}
+              min={1}
+              className="md:col-span-2"
+            />
+            <p className="md:col-span-2 -mt-2 text-xs text-zinc-500">
+              Leave blank to use Mock&apos;s default cache size. Applies per package and mock chroot.
+            </p>
 
             <div className="border-2 border-zinc-700 bg-zinc-950 p-4 md:col-span-2">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

@@ -49,8 +49,8 @@ function parseBuildEnv(input: string): BuildEnvVar[] {
 }
 
 function parseOptionalCpuLimit(
-  value: string,
-  maxCpuCores: number | null,
+    value: string,
+    maxCpuCores: number | null,
 ): number | undefined {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -65,6 +65,18 @@ function parseOptionalCpuLimit(
     return millicores;
   }
   return Math.min(millicores, Math.floor(maxCpuCores * 1000));
+}
+
+function parseOptionalMegabytes(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return undefined;
+  }
+  return Math.floor(parsed);
 }
 
 function stateLabel(state: BrowseRepositoryProgressView["state"]): string {
@@ -119,6 +131,7 @@ export default function AddPackageModal({
   const [memoryLimitEnabled, setMemoryLimitEnabled] = useState(false);
   const [memoryLimitMb, setMemoryLimitMb] = useState("1024");
   const [ccacheEnabled, setCcacheEnabled] = useState(false);
+  const [ccacheMaxSizeMb, setCcacheMaxSizeMb] = useState("");
   const [buildEnv, setBuildEnv] = useState(encodeBuildEnv([]));
   const [browsing, setBrowsing] = useState(false);
   const [browseError, setBrowseError] = useState<string | null>(null);
@@ -323,6 +336,7 @@ export default function AddPackageModal({
         : undefined,
       memory_limit_mb: memoryLimitEnabled ? memorySliderValue : undefined,
       ccache_enabled: ccacheEnabled,
+      ccache_max_size_mb: parseOptionalMegabytes(ccacheMaxSizeMb),
       build_env: parseBuildEnv(buildEnv),
     };
 
@@ -417,6 +431,23 @@ export default function AddPackageModal({
                 checked={ccacheEnabled}
                 onChange={(event) => setCcacheEnabled(event.target.checked)}
               />
+            </label>
+
+            <label className="block border-2 border-zinc-700 bg-zinc-950 px-4 py-3">
+              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.1em] text-white">
+                Shared ccache size (MB)
+              </span>
+              <input
+                type="number"
+                min={1}
+                value={ccacheMaxSizeMb}
+                onChange={(event) => setCcacheMaxSizeMb(event.target.value)}
+                placeholder="Blank uses Mock default"
+                className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]"
+              />
+              <span className="mt-2 block text-xs text-zinc-500">
+                Applies per package and mock chroot.
+              </span>
             </label>
 
             <label className="flex items-center justify-between border-2 border-zinc-700 bg-zinc-950 px-4 py-3">

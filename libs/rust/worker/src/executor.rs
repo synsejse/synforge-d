@@ -331,6 +331,14 @@ async fn run_mock_build(
             .arg("ccache")
             .arg("--plugin-option")
             .arg(format!("ccache:dir={}", ccache_dir.display()));
+        if let Some(ccache_max_size_mb) = package.ccache_max_size_mb.filter(|value| *value > 0) {
+            logger
+                .line(format!("Shared ccache max size: {} MB", ccache_max_size_mb))
+                .await?;
+            command
+                .arg("--plugin-option")
+                .arg(format!("ccache:max_cache_size={}M", ccache_max_size_mb));
+        }
     }
     if package.network_access {
         command.arg("--enable-network");

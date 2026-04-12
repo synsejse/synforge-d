@@ -17,6 +17,7 @@ diesel::table! {
         cpu_limit_millicores -> Nullable<BigInt>,
         memory_limit_mb -> Nullable<BigInt>,
         ccache_enabled -> Bool,
+        ccache_max_size_mb -> Nullable<BigInt>,
         build_env_json -> Text,
         spec_file -> Text,
         version -> Text,

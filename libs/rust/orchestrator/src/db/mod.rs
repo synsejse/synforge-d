@@ -672,6 +672,7 @@ pub(crate) struct PackageRecord {
     pub(crate) cpu_limit_millicores: Option<i64>,
     pub(crate) memory_limit_mb: Option<i64>,
     pub(crate) ccache_enabled: bool,
+    pub(crate) ccache_max_size_mb: Option<i64>,
     pub(crate) build_env_json: String,
     pub(crate) spec_file: String,
     pub(crate) version: String,
@@ -698,6 +699,7 @@ pub(crate) struct NewPackageRecord<'a> {
     pub(crate) cpu_limit_millicores: Option<i64>,
     pub(crate) memory_limit_mb: Option<i64>,
     pub(crate) ccache_enabled: bool,
+    pub(crate) ccache_max_size_mb: Option<i64>,
     pub(crate) build_env_json: &'a str,
     pub(crate) spec_file: &'a str,
     pub(crate) version: &'a str,
@@ -916,6 +918,10 @@ pub(crate) fn package_response_from_record(
             .and_then(|value| u64::try_from(value).ok())
             .filter(|value| *value > 0),
         ccache_enabled: record.ccache_enabled,
+        ccache_max_size_mb: record
+            .ccache_max_size_mb
+            .and_then(|value| u64::try_from(value).ok())
+            .filter(|value| *value > 0),
         build_env: serde_json::from_str::<Vec<BuildEnvVar>>(&record.build_env_json)
             .unwrap_or_default(),
         spec_file: PathBuf::from(record.spec_file),

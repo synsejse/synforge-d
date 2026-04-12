@@ -78,6 +78,7 @@ impl PackageRegistry {
                     publish_debuginfo: request.publish_debuginfo,
                     network_access: request.network_access,
                     ccache_enabled: request.ccache_enabled,
+                    ccache_max_size_mb: request.ccache_max_size_mb.filter(|value| *value > 0),
                     mock_chroots: request.mock_chroots,
                     poll_interval_seconds: request.poll_interval_seconds,
                     build_timeout_seconds: request.build_timeout_seconds,
@@ -136,6 +137,11 @@ impl PackageRegistry {
         let ccache_enabled = request
             .ccache_enabled
             .unwrap_or(existing.package.ccache_enabled);
+        let ccache_max_size_mb = match request.ccache_max_size_mb {
+            Some(0) => None,
+            Some(value) => Some(value),
+            None => existing.package.ccache_max_size_mb,
+        };
         let publish_srpm = request
             .publish_srpm
             .unwrap_or(existing.package.publish_srpm);
@@ -153,6 +159,7 @@ impl PackageRegistry {
                     publish_debuginfo,
                     network_access,
                     ccache_enabled,
+                    ccache_max_size_mb,
                     mock_chroots,
                     poll_interval_seconds,
                     build_timeout_seconds,
@@ -243,6 +250,7 @@ impl PackageRegistry {
                     publish_debuginfo: package.publish_debuginfo,
                     network_access: package.network_access,
                     ccache_enabled: package.ccache_enabled,
+                    ccache_max_size_mb: package.ccache_max_size_mb,
                     mock_chroots: package.mock_chroots.clone(),
                     poll_interval_seconds: package.poll_interval_seconds,
                     build_timeout_seconds: package.build_timeout_seconds,

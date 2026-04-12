@@ -97,6 +97,11 @@ pub(super) async fn upsert_package(
                 .map(i64::try_from)
                 .transpose()
                 .context("memory_limit_mb exceeds database range")?;
+            let ccache_max_size_mb = package
+                .ccache_max_size_mb
+                .map(i64::try_from)
+                .transpose()
+                .context("ccache_max_size_mb exceeds database range")?;
             let new_row = NewPackageRecord {
                 name: package.name.as_str(),
                 description: package.description.as_str(),
@@ -115,6 +120,7 @@ pub(super) async fn upsert_package(
                 cpu_limit_millicores,
                 memory_limit_mb,
                 ccache_enabled: package.ccache_enabled,
+                ccache_max_size_mb,
                 build_env_json: build_env_json.as_str(),
                 spec_file: spec_file.as_str(),
                 version: package.version.as_str(),
@@ -141,6 +147,7 @@ pub(super) async fn upsert_package(
                     packages::cpu_limit_millicores.eq(new_row.cpu_limit_millicores),
                     packages::memory_limit_mb.eq(new_row.memory_limit_mb),
                     packages::ccache_enabled.eq(new_row.ccache_enabled),
+                    packages::ccache_max_size_mb.eq(new_row.ccache_max_size_mb),
                     packages::build_env_json.eq(new_row.build_env_json),
                     packages::spec_file.eq(new_row.spec_file),
                     packages::version.eq(new_row.version),

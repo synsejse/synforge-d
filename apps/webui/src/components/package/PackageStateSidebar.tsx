@@ -49,6 +49,14 @@ export default function PackageStateSidebar({ pkg }: PackageStateSidebarProps) {
         label="Shared ccache"
         value={pkg.package.ccache_enabled ? "Enabled" : "Disabled"}
       />
+      <DetailStat
+        label="Shared ccache size"
+        value={
+          pkg.package.ccache_max_size_mb
+            ? `${pkg.package.ccache_max_size_mb} MB`
+            : "Mock default"
+        }
+      />
       <DetailStat label="Build Env Vars" value={String(pkg.package.build_env?.length ?? 0)} />
       <DetailStat
         label="Last Successful Revision"

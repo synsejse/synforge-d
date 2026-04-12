@@ -81,6 +81,18 @@ function parseUpdateMemoryLimit(value: string, maxMemoryMb: number | null): numb
   return Math.min(memoryLimitMb, Math.floor(maxMemoryMb));
 }
 
+function parseOptionalMegabytes(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return undefined;
+  }
+  return Math.floor(parsed);
+}
+
 function formatCpuLimitCores(value?: number | null): string {
   if (!value || value <= 0) {
     return "";
@@ -134,6 +146,7 @@ export default function PackageDetail({ packageName }: Props) {
     memoryLimitEnabled: false,
     memoryLimitMb: "",
     ccache_enabled: false,
+    ccacheMaxSizeMb: "",
     buildEnv: "",
     enabled: true,
     publish_srpm: true,
@@ -168,6 +181,9 @@ export default function PackageDetail({ packageName }: Props) {
         ? String(definition.memory_limit_mb)
         : "",
       ccache_enabled: definition.ccache_enabled ?? false,
+      ccacheMaxSizeMb: definition.ccache_max_size_mb
+        ? String(definition.ccache_max_size_mb)
+        : "",
       buildEnv: encodeBuildEnv(definition.build_env ?? []),
       enabled: definition.enabled ?? true,
       publish_srpm: definition.publish_srpm ?? true,
@@ -303,6 +319,7 @@ export default function PackageDetail({ packageName }: Props) {
           ? parseUpdateMemoryLimit(form.memoryLimitMb, maxMemoryMb)
           : 0,
         ccache_enabled: form.ccache_enabled,
+        ccache_max_size_mb: parseOptionalMegabytes(form.ccacheMaxSizeMb) ?? 0,
         build_env: parseBuildEnv(form.buildEnv),
       };
       await api.updatePackage(packageName, request);

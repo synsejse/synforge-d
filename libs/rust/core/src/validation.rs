@@ -65,6 +65,13 @@ impl Validator<PackageDefinition> for PackageDefinitionValidator {
                 "memory_limit_mb must be greater than zero when set".to_string(),
             ));
         }
+        if let Some(ccache_max_size_mb) = value.ccache_max_size_mb
+            && ccache_max_size_mb == 0
+        {
+            return Err(SynforgeError::Spec(
+                "ccache_max_size_mb must be greater than zero when set".to_string(),
+            ));
+        }
         for entry in &value.build_env {
             BuildEnvVarValidator.validate(entry)?;
         }

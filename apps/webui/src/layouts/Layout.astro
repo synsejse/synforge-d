@@ -2,7 +2,6 @@
 import "../styles/global.css";
 import AuthScreen from "../features/auth/AuthScreen.astro";
 import AppShell from "../features/app-shell/AppShell.astro";
-import layoutClientUrl from "../features/app-shell/layout-client.js?url";
 import SetupScreen from "../features/setup/SetupScreen.astro";
 import { radixCustomStyles } from "../lib/radix-theme";
 
@@ -44,6 +43,8 @@ const publicApiUrl = import.meta.env.PUBLIC_API_URL || "";
             <slot />
         </AppShell>
 
-        <script type="module" src={layoutClientUrl}></script>
+        <script>
+            import "../features/app-shell/layout-client.js";
+        </script>
     </body>
 </html>

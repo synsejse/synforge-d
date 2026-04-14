@@ -2468,23 +2468,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "synforge-webui"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "axum-helmet",
- "bytes",
- "helmet-core",
- "reqwest",
- "synforge-core",
- "tokio",
- "tower-http",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "synforge-worker"
 version = "0.1.0"
 dependencies = [

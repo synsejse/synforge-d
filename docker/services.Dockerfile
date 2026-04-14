@@ -31,11 +31,9 @@ RUN --mount=type=cache,id=synforge-cargo-registry,target=/usr/local/cargo/regist
     cargo build --release \
       -p synforge-daemon \
       -p synforge-worker-bin \
-      -p synforge-webui \
     && mkdir -p /out \
     && cp /app/target/release/daemon /out/daemon \
     && cp /app/target/release/worker /out/worker \
-    && cp /app/target/release/synforge-webui /out/synforge-webui \
     && cargo run --release --bin openapi-export > /out/openapi.json
 
 FROM node:22-alpine AS webui-builder
@@ -59,6 +57,7 @@ RUN dnf -y upgrade-minimal \
     && dnf clean all
 
 COPY --from=rust-builder /out/daemon /usr/local/bin/daemon
+COPY --from=webui-builder /app/apps/webui/dist /opt/synforge/webui
 
 RUN mkdir -p \
     /var/lib/synforge/repo \
@@ -88,17 +87,3 @@ COPY docker/mock-site-defaults.cfg /etc/mock/site-defaults.cfg
 COPY --from=rust-builder /out/worker /usr/local/bin/worker
 
 ENTRYPOINT ["/usr/local/bin/worker"]
-
-FROM fedora:44 AS webui-runtime
-RUN dnf -y upgrade-minimal \
-    && dnf -y install \
-        ca-certificates \
-        curl \
-    && dnf clean all
-
-COPY --from=rust-builder /out/synforge-webui /usr/local/bin/synforge-webui
-COPY --from=webui-builder /app/apps/webui/dist /opt/synforge/webui
-
-EXPOSE 80
-
-ENTRYPOINT ["/usr/local/bin/synforge-webui"]

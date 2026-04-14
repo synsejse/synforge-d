@@ -1,7 +1,9 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Context;
 use synforge_core::config::DaemonConfig;
+use synforge_core::constants::DEFAULT_WEBUI_STATIC_DIR;
 use synforge_orchestrator::SynforgeService;
 use tracing::warn;
 
@@ -15,7 +17,10 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(&listen_addr)
         .await
         .with_context(|| format!("failed to bind {listen_addr}"))?;
-    let app = synforge_serve::router(Arc::clone(&service));
+    let app = synforge_serve::router(
+        Arc::clone(&service),
+        PathBuf::from(DEFAULT_WEBUI_STATIC_DIR),
+    );
     tracing::info!("daemon listening on {}", listen_addr);
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal(Arc::clone(&service)))

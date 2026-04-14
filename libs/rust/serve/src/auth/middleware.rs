@@ -53,6 +53,9 @@ pub(crate) async fn authenticate_docs_request(
     request: axum::extract::Request,
     next: Next,
 ) -> Result<Response, AppError> {
+    if request.method() == Method::GET && request.uri().path() == "/docs" {
+        return Ok(next.run(request).await);
+    }
     if !is_setup_complete(&state).await? {
         return Err(AppError::unavailable("daemon setup is not complete"));
     }

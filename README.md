@@ -9,7 +9,7 @@ You connect source repositories, sync updates, run builds, and view results in o
 1. Copy `.env.example` to `.env` and set database credentials.
 2. Configure storage paths in `.env` (defaults to `./data/*` subdirectories; point to large disks for production).
 3. Start the stack with Docker Compose.
-4. Open the web app.
+4. Open the daemon-served web app at `http://localhost:8080`.
 5. Complete first-time setup and create an admin user.
 6. Add packages and start syncing/building.
 

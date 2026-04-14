@@ -6,7 +6,6 @@ members = [
     "libs/rust/worker",
     "apps/rust/daemon",
     "apps/rust/worker",
-    "apps/rust/webui",
 ]
 resolver = "2"
 

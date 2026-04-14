@@ -4,6 +4,7 @@ pub mod openapi;
 mod repo_files;
 mod system_routes;
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::auth::middleware::{
@@ -12,6 +13,7 @@ use crate::auth::middleware::{
 pub(crate) use crate::auth::session::{clear_session_cookie, create_session_cookie};
 use crate::repo_files::{download_repo_file, repo_root};
 use crate::system_routes::{healthz, readyz};
+use axum::extract::DefaultBodyLimit;
 use axum::http::StatusCode;
 use axum::http::header::{self, HeaderValue};
 use axum::middleware;
@@ -20,8 +22,11 @@ use axum::routing::get;
 use axum::{Json, Router};
 use axum_helmet::{Helmet, HelmetLayer};
 use helmet_core::{CrossOriginOpenerPolicy, ReferrerPolicy, XContentTypeOptions, XFrameOptions};
-use synforge_core::{api::ApiError, error::SynforgeError};
+use synforge_core::{
+    api::ApiError, constants::DEFAULT_WEBUI_MAX_REQUEST_BODY_BYTES, error::SynforgeError,
+};
 use synforge_orchestrator::SynforgeService;
+use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -31,7 +36,7 @@ pub struct AppState {
     pub service: Arc<SynforgeService>,
 }
 
-pub fn router(service: Arc<SynforgeService>) -> Router {
+pub fn router(service: Arc<SynforgeService>, web_root: PathBuf) -> Router {
     let state = AppState {
         service: Arc::clone(&service),
     };
@@ -65,12 +70,17 @@ pub fn router(service: Arc<SynforgeService>) -> Router {
             authenticate_repo_request,
         ));
 
-    Router::new()
+    let app = Router::new()
         .route("/healthz", get(healthz))
         .route("/readyz", get(readyz))
         .merge(docs)
         .nest("/api/v1", api)
         .nest("/repo", repo)
+        .fallback_service(
+            ServeDir::new(&web_root).not_found_service(ServeFile::new(web_root.join("index.html"))),
+        );
+
+    app.layer(DefaultBodyLimit::max(DEFAULT_WEBUI_MAX_REQUEST_BODY_BYTES))
         .layer(security_layer)
         .layer(TraceLayer::new_for_http())
         .with_state(state)

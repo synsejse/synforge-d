@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`synforge-d` is a Rust + web workspace for orchestrating Fedora RPM package sync/build/publish workflows with a Docker worker runtime and a WebUI.
+`synforge-d` is a Rust + web workspace for orchestrating Fedora RPM package sync/build/publish workflows with a Docker worker runtime and a daemon-served WebUI.
 
 ## Project Structure
 
@@ -10,9 +10,8 @@
 - `libs/rust/orchestrator`: DB-backed orchestration logic, sync/build/repo services, migrations
 - `libs/rust/serve`: Axum API + static serving layer
 - `libs/rust/worker`: worker runtime logic used by containerized build workers
-- `apps/rust/daemon`: main daemon binary
+- `apps/rust/daemon`: main daemon binary serving the API, repo endpoints, docs, and built frontend
 - `apps/rust/worker`: worker binary
-- `apps/rust/webui`: backend for serving/proxying the frontend
 - `apps/webui`: Astro + React frontend
 
 Generated artifacts: `target/`, `apps/webui/dist/`, `apps/webui/node_modules/`.

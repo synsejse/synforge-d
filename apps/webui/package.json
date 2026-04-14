@@ -8,11 +8,11 @@
   "scripts": {
     "dev": "astro dev",
     "predev": "npm run generate:api",
-    "generate:openapi": "cargo run -q -p synforge-daemon --bin openapi-export > openapi.json",
-    "generate:types": "openapi-typescript openapi.json -o src/generated/api/api-schema.ts",
+    "generate:openapi": "mkdir -p src/generated/api && cargo run -q -p synforge-daemon --bin openapi-export > src/generated/api/openapi.json",
+    "generate:types": "openapi-typescript src/generated/api/openapi.json -o src/generated/api/api-schema.ts",
     "generate:api": "npm run generate:openapi && npm run generate:types",
     "build": "astro build",
-    "prebuild": "npm run generate:types:fromfile",
+    "prebuild": "sh -c 'if [ -f src/generated/api/openapi.json ]; then npm run generate:types:fromfile; else echo \"Skipping OpenAPI type regeneration: src/generated/api/openapi.json missing\"; fi'",
     "generate:types:fromfile": "openapi-typescript src/generated/api/openapi.json -o src/generated/api/api-schema.ts",
     "preview": "astro preview",
     "astro": "astro"
@@ -40,7 +40,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "ansi-to-react": "^6.2.6",
-    "astro": "^6.1.4",
+    "astro": "^6.1.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
@@ -52,6 +52,7 @@
   },
   "devDependencies": {
     "openapi-fetch": "^0.17.0",
-    "openapi-typescript": "^7.13.0"
+    "openapi-typescript": "^7.13.0",
+    "vite": "^7.3.2"
   }
 }

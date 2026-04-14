@@ -1,8 +1,8 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import JobList from "../../components/page/JobList";
+import JobListPage from "../../features/jobs/JobListPage";
 ---
 
 <Layout title="Jobs">
-  <JobList client:load />
+  <JobListPage client:load />
 </Layout>

@@ -11,8 +11,8 @@ use synforge_core::{
 
 use super::SynforgeService;
 use super::signing::RUNTIME_SETTING_SIGNING_PRIVATE_KEY_ARMORED;
-use crate::RepoSigningManager;
-use crate::db::UserStore;
+use synforge_runtime::RepoSigningManager;
+use synforge_store::UserStore;
 
 impl SynforgeService {
     pub async fn config_schema(&self) -> ConfigSchemaResponse {

@@ -1,8 +1,8 @@
 ---
 import Layout from "../../../layouts/Layout.astro";
-import PackageDetailLoader from "../../../components/package/PackageDetailLoader";
+import PackageDetailPage from "../../../features/packages/PackageDetailPage";
 ---
 
 <Layout title="Package Details">
-  <PackageDetailLoader client:load />
+  <PackageDetailPage client:load />
 </Layout>

@@ -1,4 +1,4 @@
-import type { components, operations, paths } from "./generated/api-schema";
+import type { components, operations, paths } from "../generated/api/api-schema";
 
 export type ApiSchema = components["schemas"];
 export type ApiPaths = paths;

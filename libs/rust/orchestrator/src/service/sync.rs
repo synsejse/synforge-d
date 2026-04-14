@@ -4,7 +4,7 @@ use synforge_core::{
 };
 
 use super::SynforgeService;
-use crate::db::SyncStore;
+use synforge_store::SyncStore;
 
 impl SynforgeService {
     pub async fn list_sync_operations(

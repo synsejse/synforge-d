@@ -1,12 +1,12 @@
 use std::path::PathBuf;
 
 use super::SynforgeService;
-use crate::db::RepoStore;
 use synforge_core::{
     api::{RepoInventoryResponse, RepoSummaryResponse},
     error::SynforgeError,
     model::ArtifactKind,
 };
+use synforge_store::RepoStore;
 
 impl SynforgeService {
     pub async fn get_repo_inventory(

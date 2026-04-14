@@ -1,6 +1,4 @@
 use super::SynforgeService;
-use crate::RepoSigningManager;
-use crate::db::RepoStore;
 use std::collections::BTreeMap;
 use synforge_core::{
     api::{
@@ -14,6 +12,8 @@ use synforge_core::{
     error::SynforgeError,
     model::{ArtifactKind, ArtifactSignature, ArtifactSigningStatus, UserAccount, now_utc},
 };
+use synforge_runtime::RepoSigningManager;
+use synforge_store::RepoStore;
 use uuid::Uuid;
 
 pub(crate) const RUNTIME_SETTING_SIGNING_PRIVATE_KEY_ARMORED: &str = "signing_private_key_armored";

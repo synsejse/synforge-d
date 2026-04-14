@@ -41,7 +41,7 @@ WORKDIR /app/apps/webui
 COPY apps/webui/package*.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 COPY apps/webui ./
-COPY --from=rust-builder /out/openapi.json ./src/lib/generated/openapi.json
+COPY --from=rust-builder /out/openapi.json ./src/generated/api/openapi.json
 RUN npm run build
 
 FROM fedora:44 AS daemon-runtime

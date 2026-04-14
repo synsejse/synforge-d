@@ -9,11 +9,11 @@
     "dev": "astro dev",
     "predev": "npm run generate:api",
     "generate:openapi": "cargo run -q -p synforge-daemon --bin openapi-export > openapi.json",
-    "generate:types": "openapi-typescript openapi.json -o src/lib/generated/api-schema.ts",
+    "generate:types": "openapi-typescript openapi.json -o src/generated/api/api-schema.ts",
     "generate:api": "npm run generate:openapi && npm run generate:types",
     "build": "astro build",
     "prebuild": "npm run generate:types:fromfile",
-    "generate:types:fromfile": "openapi-typescript src/lib/generated/openapi.json -o src/lib/generated/api-schema.ts",
+    "generate:types:fromfile": "openapi-typescript src/generated/api/openapi.json -o src/generated/api/api-schema.ts",
     "preview": "astro preview",
     "astro": "astro"
   },

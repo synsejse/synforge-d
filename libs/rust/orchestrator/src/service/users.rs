@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use super::SynforgeService;
 use crate::auth::{hash_password, verify_password};
-use crate::db::UserStore;
+use synforge_store::UserStore;
 
 impl SynforgeService {
     pub(crate) async fn is_bootstrap_admin_user(&self, user_id: Uuid) -> anyhow::Result<bool> {

@@ -7,7 +7,7 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 use super::SynforgeService;
-use crate::db::JobStore;
+use synforge_store::JobStore;
 
 const JOB_RUNTIME_CLEANUP_TICK_SECONDS: u64 = 120;
 

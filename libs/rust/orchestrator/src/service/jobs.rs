@@ -14,9 +14,8 @@ use synforge_core::{
 use uuid::Uuid;
 
 use super::SynforgeService;
-use crate::db::{JobStore, RepoStore};
-use crate::scheduler::QueuedBuild;
-use crate::sync_tracker::sync_trigger_from_build_trigger;
+use synforge_runtime::{QueuedBuild, source::sync_tracker::sync_trigger_from_build_trigger};
+use synforge_store::{JobStore, RepoStore};
 
 impl SynforgeService {
     pub async fn resolve_job_artifact_path(

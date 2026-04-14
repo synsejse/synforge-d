@@ -1,6 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import JobDetailLoader from "../../components/job/JobDetailLoader";
+import JobDetailPage from "../../features/jobs/JobDetailPage";
 
 export function getStaticPaths() {
   // Return empty array - pages will be generated client-side
@@ -9,5 +9,5 @@ export function getStaticPaths() {
 ---
 
 <Layout title="Job Details">
-  <JobDetailLoader client:load />
+  <JobDetailPage client:load />
 </Layout>

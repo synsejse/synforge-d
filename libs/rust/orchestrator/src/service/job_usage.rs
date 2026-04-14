@@ -14,7 +14,7 @@ use tracing::warn;
 use uuid::Uuid;
 
 use super::SynforgeService;
-use crate::sessions::ActiveWorkerSession;
+use synforge_runtime::ActiveWorkerSession;
 
 impl SynforgeService {
     pub async fn list_job_resource_usage(&self) -> anyhow::Result<JobResourceUsageListResponse> {

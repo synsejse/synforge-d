@@ -1,8 +1,8 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import PackageList from "../../components/page/PackageList";
+import PackageListPage from "../../features/packages/PackageListPage";
 ---
 
 <Layout title="Packages">
-  <PackageList client:load />
+  <PackageListPage client:load />
 </Layout>

@@ -21,7 +21,7 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 use super::SynforgeService;
-use crate::db::{JobStore, PackageStore, RepoStore};
+use synforge_store::{JobStore, PackageStore, RepoStore};
 
 impl SynforgeService {
     pub async fn list_packages(
@@ -264,7 +264,7 @@ impl SynforgeService {
         let stale = cache.entry.clone();
         match self.load_mock_chroots_uncached().await {
             Ok(response) => {
-                cache.entry = Some(super::MockChrootCacheEntry {
+                cache.entry = Some(super::root::MockChrootCacheEntry {
                     worker_image: self.config.worker_image.clone(),
                     fetched_at: now,
                     fetched_at_unix_seconds: now_utc().unix_timestamp(),

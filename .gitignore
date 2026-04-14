@@ -3,7 +3,7 @@
 /.vscode
 .codex
 .env
-runtime/
+/runtime/
 **/node_modules/
 **/dist/
 **/build/

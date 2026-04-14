@@ -9,17 +9,10 @@ authors.workspace = true
 anyhow.workspace = true
 argon2.workspace = true
 async-trait.workspace = true
-bigdecimal.workspace = true
 bollard.workspace = true
-bytes.workspace = true
 dashmap = "6.1"
-diesel.workspace = true
-diesel_migrations.workspace = true
 futures-util.workspace = true
-notify.workspace = true
-reqwest.workspace = true
 rand_core.workspace = true
-sha2.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -29,3 +22,5 @@ tokio-util.workspace = true
 tracing.workspace = true
 uuid.workspace = true
 synforge-core = { path = "../core" }
+synforge-runtime = { path = "../runtime" }
+synforge-store = { path = "../store" }

@@ -15,6 +15,16 @@ You connect source repositories, sync updates, run builds, and view results in o
 
 `phpMyAdmin` is available only when started with the `dev-tools` profile.
 
+## Architecture
+
+- `libs/rust/core`: shared contracts, config, and domain types
+- `libs/rust/store`: Diesel persistence, schema, and migrations
+- `libs/rust/runtime`: build/worker/repo/source runtime services
+- `libs/rust/orchestrator`: application layer behind `SynforgeService`
+- `libs/rust/serve`: Axum HTTP adapter and static frontend serving
+- `apps/rust/daemon`: main process serving the API, docs, repo endpoints, and built WebUI
+- `apps/webui`: Astro + React frontend, organized toward `src/features/*` ownership
+
 ## What you can do
 
 - Track packages and build activity

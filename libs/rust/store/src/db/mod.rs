@@ -11,9 +11,14 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 use async_trait::async_trait;
-use diesel::mysql::MysqlConnection;
 use diesel::prelude::*;
-use diesel::r2d2::{ConnectionManager, Pool};
+use diesel_async::{
+    AsyncConnection, AsyncMigrationHarness, AsyncMysqlConnection, RunQueryDsl,
+    pooled_connection::{
+        AsyncDieselConnectionManager,
+        bb8::{Pool, PooledConnection},
+    },
+};
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use synforge_core::{
     api::{BuildJobResponse, PackageResponse, RepoTargetSummary},
@@ -43,108 +48,97 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
 #[derive(Clone)]
 pub struct DieselStore {
-    pool: Pool<ConnectionManager<MysqlConnection>>,
+    pool: Pool<AsyncMysqlConnection>,
 }
 
 impl DieselStore {
     pub async fn new(database_url: &str, pool_size: u32) -> anyhow::Result<Self> {
-        let database_url = database_url.to_string();
-        let pool = tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
-            let manager = ConnectionManager::<MysqlConnection>::new(&database_url);
-            let pool = Pool::builder().max_size(pool_size).build(manager)?;
-            let mut conn = pool.get()?;
-            let applied_migrations = conn
-                .run_pending_migrations(MIGRATIONS)
-                .map_err(|error| anyhow::anyhow!("failed to run diesel migrations: {}", error))?;
-            if applied_migrations.is_empty() {
-                info!("no pending diesel migrations");
-            } else {
-                for migration in applied_migrations {
-                    info!(migration = %migration, "applied diesel migration");
-                }
+        let connection = AsyncMysqlConnection::establish(database_url).await?;
+        let mut migration_harness = AsyncMigrationHarness::new(connection);
+        let applied_migrations = migration_harness
+            .run_pending_migrations(MIGRATIONS)
+            .map_err(|error| anyhow::anyhow!("failed to run diesel migrations: {}", error))?;
+        if applied_migrations.is_empty() {
+            info!("no pending diesel migrations");
+        } else {
+            for migration in applied_migrations {
+                info!(migration = %migration, "applied diesel migration");
             }
-            Ok(pool)
-        })
-        .await
-        .context("diesel store initialization task failed")??;
+        }
+
+        let manager = AsyncDieselConnectionManager::<AsyncMysqlConnection>::new(database_url);
+        let pool = Pool::builder().max_size(pool_size).build(manager).await?;
         Ok(Self { pool })
     }
 
-    pub(crate) async fn with_connection<T, F>(&self, f: F) -> anyhow::Result<T>
-    where
-        T: Send + 'static,
-        F: FnOnce(&mut MysqlConnection) -> anyhow::Result<T> + Send + 'static,
-    {
-        let pool = self.pool.clone();
-        tokio::task::spawn_blocking(move || {
-            let mut conn = pool.get()?;
-            f(&mut conn)
-        })
-        .await
-        .context("diesel database task failed")?
+    pub(crate) async fn get_connection(
+        &self,
+    ) -> anyhow::Result<PooledConnection<'_, AsyncMysqlConnection>> {
+        self.pool
+            .get()
+            .await
+            .context("failed to acquire diesel connection")
     }
 
     pub async fn health_check(&self) -> anyhow::Result<()> {
-        self.with_connection(|conn| {
-            packages::table.count().get_result::<i64>(conn)?;
-            Ok(())
-        })
-        .await
+        let mut conn = self.get_connection().await?;
+        packages::table.count().get_result::<i64>(&mut conn).await?;
+        Ok(())
     }
 
     pub async fn list_runtime_settings(
         &self,
     ) -> anyhow::Result<BTreeMap<String, serde_json::Value>> {
-        self.with_connection(|conn| {
-            let rows = runtime_settings::table
-                .select((runtime_settings::key, runtime_settings::value_json))
-                .load::<(String, String)>(conn)?;
-            let mut settings = BTreeMap::new();
-            for (key, value_json) in rows {
-                let value = serde_json::from_str::<serde_json::Value>(&value_json)
-                    .with_context(|| format!("invalid runtime setting JSON for key {}", key))?;
-                settings.insert(key, value);
-            }
-            Ok(settings)
-        })
-        .await
+        let mut conn = self.get_connection().await?;
+        let rows = runtime_settings::table
+            .select((runtime_settings::key, runtime_settings::value_json))
+            .load::<(String, String)>(&mut conn)
+            .await?;
+        let mut settings = BTreeMap::new();
+        for (key, value_json) in rows {
+            let value = serde_json::from_str::<serde_json::Value>(&value_json)
+                .with_context(|| format!("invalid runtime setting JSON for key {}", key))?;
+            settings.insert(key, value);
+        }
+        Ok(settings)
     }
 
     pub async fn upsert_runtime_settings(
         &self,
         settings: BTreeMap<String, serde_json::Value>,
     ) -> anyhow::Result<()> {
-        self.with_connection(move |conn| {
-            let updated_at = format_timestamp(now_utc());
-            for (key, value) in settings {
-                let value_json = serde_json::to_string(&value)
-                    .with_context(|| format!("failed to serialize runtime setting {}", key))?;
-                let existing = runtime_settings::table
-                    .find(key.as_str())
-                    .select(runtime_settings::key)
-                    .first::<String>(conn)
-                    .optional()?;
-                if existing.is_some() {
-                    diesel::update(runtime_settings::table.find(key.as_str()))
-                        .set((
-                            runtime_settings::value_json.eq(value_json.as_str()),
-                            runtime_settings::updated_at.eq(updated_at.as_str()),
-                        ))
-                        .execute(conn)?;
-                } else {
-                    let row = NewRuntimeSettingRecord {
-                        key: key.as_str(),
-                        value_json: value_json.as_str(),
-                        updated_at: updated_at.as_str(),
-                    };
-                    diesel::insert_into(runtime_settings::table)
-                        .values(&row)
-                        .execute(conn)?;
-                }
+        let mut conn = self.get_connection().await?;
+        let updated_at = format_timestamp(now_utc());
+        for (key, value) in settings {
+            let value_json = serde_json::to_string(&value)
+                .with_context(|| format!("failed to serialize runtime setting {}", key))?;
+            let existing = runtime_settings::table
+                .find(key.as_str())
+                .select(runtime_settings::key)
+                .first::<String>(&mut conn)
+                .await
+                .optional()?;
+            if existing.is_some() {
+                diesel::update(runtime_settings::table.find(key.as_str()))
+                    .set((
+                        runtime_settings::value_json.eq(value_json.as_str()),
+                        runtime_settings::updated_at.eq(updated_at.as_str()),
+                    ))
+                    .execute(&mut conn)
+                    .await?;
+            } else {
+                let row = NewRuntimeSettingRecord {
+                    key: key.as_str(),
+                    value_json: value_json.as_str(),
+                    updated_at: updated_at.as_str(),
+                };
+                diesel::insert_into(runtime_settings::table)
+                    .values(&row)
+                    .execute(&mut conn)
+                    .await?;
             }
-            Ok(())
-        })
-        .await
+        }
+        Ok(())
     }
 
     pub async fn update_build_artifact_metadata(
@@ -154,62 +148,61 @@ impl DieselStore {
         size_bytes: u64,
     ) -> anyhow::Result<()> {
         let artifact_id = artifact_id.to_string();
-        self.with_connection(move |conn| {
-            diesel::update(build_artifacts::table.find(artifact_id.as_str()))
-                .set((
-                    build_artifacts::sha256.eq(sha256.as_str()),
-                    build_artifacts::size_bytes.eq(size_bytes as i64),
-                ))
-                .execute(conn)?;
-            Ok(())
-        })
-        .await
+        let mut conn = self.get_connection().await?;
+        diesel::update(build_artifacts::table.find(artifact_id.as_str()))
+            .set((
+                build_artifacts::sha256.eq(sha256.as_str()),
+                build_artifacts::size_bytes.eq(size_bytes as i64),
+            ))
+            .execute(&mut conn)
+            .await?;
+        Ok(())
     }
 
     pub async fn upsert_artifact_signatures(
         &self,
         signatures: Vec<ArtifactSignature>,
     ) -> anyhow::Result<()> {
-        self.with_connection(move |conn| {
-            let updated_at = format_timestamp(now_utc());
-            for signature in signatures {
-                let artifact_id = signature.artifact_id.to_string();
-                let existing = artifact_signatures::table
-                    .find(artifact_id.as_str())
-                    .select(artifact_signatures::artifact_id)
-                    .first::<String>(conn)
-                    .optional()?;
-                if existing.is_some() {
-                    diesel::update(artifact_signatures::table.find(artifact_id.as_str()))
-                        .set((
-                            artifact_signatures::status.eq(signature.status),
-                            artifact_signatures::signed_at
-                                .eq(signature.signed_at.map(format_timestamp)),
-                            artifact_signatures::key_id.eq(signature.key_id.as_deref()),
-                            artifact_signatures::fingerprint.eq(signature.fingerprint.as_deref()),
-                            artifact_signatures::error_message
-                                .eq(signature.error_message.as_deref()),
-                            artifact_signatures::updated_at.eq(updated_at.as_str()),
-                        ))
-                        .execute(conn)?;
-                } else {
-                    let row = NewArtifactSignatureRecord {
-                        artifact_id,
-                        status: signature.status,
-                        signed_at: signature.signed_at.map(format_timestamp),
-                        key_id: signature.key_id,
-                        fingerprint: signature.fingerprint,
-                        error_message: signature.error_message,
-                        updated_at: updated_at.clone(),
-                    };
-                    diesel::insert_into(artifact_signatures::table)
-                        .values(&row)
-                        .execute(conn)?;
-                }
+        let mut conn = self.get_connection().await?;
+        let updated_at = format_timestamp(now_utc());
+        for signature in signatures {
+            let artifact_id = signature.artifact_id.to_string();
+            let existing = artifact_signatures::table
+                .find(artifact_id.as_str())
+                .select(artifact_signatures::artifact_id)
+                .first::<String>(&mut conn)
+                .await
+                .optional()?;
+            if existing.is_some() {
+                diesel::update(artifact_signatures::table.find(artifact_id.as_str()))
+                    .set((
+                        artifact_signatures::status.eq(signature.status),
+                        artifact_signatures::signed_at
+                            .eq(signature.signed_at.map(format_timestamp)),
+                        artifact_signatures::key_id.eq(signature.key_id.as_deref()),
+                        artifact_signatures::fingerprint.eq(signature.fingerprint.as_deref()),
+                        artifact_signatures::error_message.eq(signature.error_message.as_deref()),
+                        artifact_signatures::updated_at.eq(updated_at.as_str()),
+                    ))
+                    .execute(&mut conn)
+                    .await?;
+            } else {
+                let row = NewArtifactSignatureRecord {
+                    artifact_id,
+                    status: signature.status,
+                    signed_at: signature.signed_at.map(format_timestamp),
+                    key_id: signature.key_id,
+                    fingerprint: signature.fingerprint,
+                    error_message: signature.error_message,
+                    updated_at: updated_at.clone(),
+                };
+                diesel::insert_into(artifact_signatures::table)
+                    .values(&row)
+                    .execute(&mut conn)
+                    .await?;
             }
-            Ok(())
-        })
-        .await
+        }
+        Ok(())
     }
 }
 
@@ -887,8 +880,8 @@ pub(crate) struct NewRuntimeSettingRecord<'a> {
     pub(crate) updated_at: &'a str,
 }
 
-pub(crate) fn package_response_from_record(
-    conn: &mut MysqlConnection,
+pub(crate) async fn package_response_from_record(
+    conn: &mut AsyncMysqlConnection,
     record: PackageRecord,
 ) -> anyhow::Result<PackageResponse> {
     let package = PackageDefinition {
@@ -928,12 +921,12 @@ pub(crate) fn package_response_from_record(
         version: record.version,
         release: record.release,
     };
-    let state = compute_package_state(conn, &record.name, &package.mock_chroots)?;
+    let state = compute_package_state(conn, &record.name, &package.mock_chroots).await?;
     Ok(PackageResponse { package, state })
 }
 
-pub(crate) fn compute_package_state(
-    conn: &mut MysqlConnection,
+pub(crate) async fn compute_package_state(
+    conn: &mut AsyncMysqlConnection,
     package_name: &str,
     mock_chroots: &[String],
 ) -> anyhow::Result<PackageRuntimeState> {
@@ -943,6 +936,7 @@ pub(crate) fn compute_package_state(
         .order(build_jobs::finished_at.desc())
         .select((build_jobs::id, build_jobs::revision))
         .first::<(String, String)>(conn)
+        .await
         .optional()?;
 
     let active_job = build_jobs::table
@@ -955,6 +949,7 @@ pub(crate) fn compute_package_state(
         .order(build_jobs::created_at.desc())
         .select(build_jobs::id)
         .first::<String>(conn)
+        .await
         .optional()?;
 
     let mut targets = Vec::with_capacity(mock_chroots.len());
@@ -966,6 +961,7 @@ pub(crate) fn compute_package_state(
             .order(build_jobs::finished_at.desc())
             .select((build_jobs::id, build_jobs::revision))
             .first::<(String, String)>(conn)
+            .await
             .optional()?;
 
         let active_job = build_jobs::table
@@ -979,6 +975,7 @@ pub(crate) fn compute_package_state(
             .order(build_jobs::created_at.desc())
             .select((build_jobs::id, build_jobs::status))
             .first::<(String, BuildStatus)>(conn)
+            .await
             .optional()?;
 
         let backoff = build_failure_backoff::table
@@ -988,6 +985,7 @@ pub(crate) fn compute_package_state(
                 build_failure_backoff::next_eligible_at,
             ))
             .first::<(i32, String)>(conn)
+            .await
             .optional()?;
         let backoff_until = backoff
             .as_ref()
@@ -1032,11 +1030,11 @@ pub(crate) fn compute_package_state(
     })
 }
 
-pub(crate) fn load_job_responses(
-    conn: &mut MysqlConnection,
+pub(crate) async fn load_job_responses(
+    conn: &mut AsyncMysqlConnection,
     rows: Vec<JobRecord>,
 ) -> anyhow::Result<Vec<BuildJobResponse>> {
-    let artifacts = job::load_artifacts_map_for_rows(conn, rows.iter())?;
+    let artifacts = job::load_artifacts_map_for_rows(conn, rows.iter()).await?;
     rows.into_iter()
         .map(|row| build_job_response_from_row(row, &artifacts))
         .collect()
@@ -1092,8 +1090,8 @@ type PublishedRepoFileRow = (
     Option<String>,
 );
 
-pub(crate) fn load_published_repo_files_for_job(
-    conn: &mut MysqlConnection,
+pub(crate) async fn load_published_repo_files_for_job(
+    conn: &mut AsyncMysqlConnection,
     job_id: &str,
 ) -> anyhow::Result<Vec<PublishedRepoFile>> {
     let rows = published_repo_files::table
@@ -1118,7 +1116,8 @@ pub(crate) fn load_published_repo_files_for_job(
             artifact_signatures::status.nullable(),
             artifact_signatures::error_message.nullable(),
         ))
-        .load::<PublishedRepoFileRow>(conn)?;
+        .load::<PublishedRepoFileRow>(conn)
+        .await?;
     rows.into_iter()
         .map(published_repo_file_from_record)
         .collect()

@@ -1,18 +1,19 @@
 use super::*;
+use diesel_async::RunQueryDsl;
 
-pub(in crate::db) fn load_artifacts_map_for_rows<'a>(
-    conn: &mut MysqlConnection,
+pub(in crate::db) async fn load_artifacts_map_for_rows<'a>(
+    conn: &mut AsyncMysqlConnection,
     rows: impl IntoIterator<Item = &'a JobRecord>,
 ) -> anyhow::Result<HashMap<Uuid, Vec<BuildArtifact>>> {
     let job_ids = rows
         .into_iter()
         .map(|row| Uuid::parse_str(&row.id))
         .collect::<Result<Vec<_>, _>>()?;
-    load_artifacts_map_for_job_ids(conn, &job_ids)
+    load_artifacts_map_for_job_ids(conn, &job_ids).await
 }
 
-fn load_artifacts_map_for_job_ids(
-    conn: &mut MysqlConnection,
+async fn load_artifacts_map_for_job_ids(
+    conn: &mut AsyncMysqlConnection,
     job_ids: &[Uuid],
 ) -> anyhow::Result<HashMap<Uuid, Vec<BuildArtifact>>> {
     if job_ids.is_empty() {
@@ -30,7 +31,8 @@ fn load_artifacts_map_for_job_ids(
             artifact_signatures::status.nullable(),
             artifact_signatures::error_message.nullable(),
         ))
-        .load(conn)?;
+        .load(conn)
+        .await?;
     let mut map: HashMap<Uuid, Vec<BuildArtifact>> = HashMap::new();
     for (row, signing_status, signing_error_message) in rows {
         let job_id = Uuid::parse_str(&row.job_id)?;

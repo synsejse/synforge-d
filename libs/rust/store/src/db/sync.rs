@@ -1,4 +1,5 @@
 use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use synforge_core::model::{format_timestamp, now_utc};
 use synforge_core::sync::{SyncOperation, SyncStatus, SyncTriggerType};
 use uuid::Uuid;
@@ -60,23 +61,21 @@ pub(super) async fn insert_sync_operation(
     let revision = revision.map(str::to_string);
     let error_message = error_message.map(str::to_string);
 
-    store
-        .with_connection(move |conn| {
-            let new_operation = NewSyncOperation {
-                id: &id,
-                package_name: &package_name,
-                trigger_type: &trigger_type_str,
-                status: &status_str,
-                revision: revision.as_deref(),
-                error_message: error_message.as_deref(),
-                created_at: &created_at,
-            };
-            diesel::insert_into(sync_operations::table)
-                .values(&new_operation)
-                .execute(conn)?;
-            Ok(())
-        })
-        .await
+    let mut conn = store.get_connection().await?;
+    let new_operation = NewSyncOperation {
+        id: &id,
+        package_name: &package_name,
+        trigger_type: &trigger_type_str,
+        status: &status_str,
+        revision: revision.as_deref(),
+        error_message: error_message.as_deref(),
+        created_at: &created_at,
+    };
+    diesel::insert_into(sync_operations::table)
+        .values(&new_operation)
+        .execute(&mut conn)
+        .await?;
+    Ok(())
 }
 
 pub(super) async fn list_sync_operations(
@@ -88,29 +87,26 @@ pub(super) async fn list_sync_operations(
 ) -> anyhow::Result<Vec<SyncOperation>> {
     let package_name_filter = package_name.clone();
     let status_filter = status.map(|s| s.as_str().to_string());
+    let mut conn = store.get_connection().await?;
+    let mut query = sync_operations::table.into_boxed();
 
-    store
-        .with_connection(move |conn| {
-            let mut query = sync_operations::table.into_boxed();
+    if let Some(ref pkg) = package_name_filter {
+        query = query.filter(sync_operations::package_name.eq(pkg));
+    }
 
-            if let Some(ref pkg) = package_name_filter {
-                query = query.filter(sync_operations::package_name.eq(pkg));
-            }
+    if let Some(ref s) = status_filter {
+        query = query.filter(sync_operations::status.eq(s));
+    }
 
-            if let Some(ref s) = status_filter {
-                query = query.filter(sync_operations::status.eq(s));
-            }
+    let rows = query
+        .order(sync_operations::created_at.desc())
+        .limit(limit as i64)
+        .offset(offset as i64)
+        .select(SyncOperationRow::as_select())
+        .load(&mut conn)
+        .await?;
 
-            let rows = query
-                .order(sync_operations::created_at.desc())
-                .limit(limit as i64)
-                .offset(offset as i64)
-                .select(SyncOperationRow::as_select())
-                .load(conn)?;
-
-            Ok(rows.into_iter().map(SyncOperation::from).collect())
-        })
-        .await
+    Ok(rows.into_iter().map(SyncOperation::from).collect())
 }
 
 pub(super) async fn count_sync_operations(
@@ -120,23 +116,19 @@ pub(super) async fn count_sync_operations(
 ) -> anyhow::Result<u64> {
     let package_name_filter = package_name.clone();
     let status_filter = status.map(|s| s.as_str().to_string());
+    let mut conn = store.get_connection().await?;
+    let mut query = sync_operations::table.into_boxed();
 
-    store
-        .with_connection(move |conn| {
-            let mut query = sync_operations::table.into_boxed();
+    if let Some(ref pkg) = package_name_filter {
+        query = query.filter(sync_operations::package_name.eq(pkg));
+    }
 
-            if let Some(ref pkg) = package_name_filter {
-                query = query.filter(sync_operations::package_name.eq(pkg));
-            }
+    if let Some(ref s) = status_filter {
+        query = query.filter(sync_operations::status.eq(s));
+    }
 
-            if let Some(ref s) = status_filter {
-                query = query.filter(sync_operations::status.eq(s));
-            }
-
-            let count = query.count().get_result::<i64>(conn)?;
-            Ok(count as u64)
-        })
-        .await
+    let count = query.count().get_result::<i64>(&mut conn).await?;
+    Ok(count as u64)
 }
 
 pub(super) async fn get_sync_metrics(
@@ -149,28 +141,28 @@ pub(super) async fn get_sync_metrics(
         past.format(&time::format_description::well_known::Rfc3339)?
     };
 
-    store
-        .with_connection(move |conn| {
-            let succeeded_count = sync_operations::table
-                .filter(sync_operations::status.eq(SyncStatus::Succeeded.as_str()))
-                .filter(sync_operations::created_at.gt(&twenty_four_hours_ago))
-                .count()
-                .get_result::<i64>(conn)? as usize;
+    let mut conn = store.get_connection().await?;
+    let succeeded_count = sync_operations::table
+        .filter(sync_operations::status.eq(SyncStatus::Succeeded.as_str()))
+        .filter(sync_operations::created_at.gt(&twenty_four_hours_ago))
+        .count()
+        .get_result::<i64>(&mut conn)
+        .await? as usize;
 
-            let failed_count = sync_operations::table
-                .filter(sync_operations::status.eq(SyncStatus::Failed.as_str()))
-                .filter(sync_operations::created_at.gt(&twenty_four_hours_ago))
-                .count()
-                .get_result::<i64>(conn)? as usize;
+    let failed_count = sync_operations::table
+        .filter(sync_operations::status.eq(SyncStatus::Failed.as_str()))
+        .filter(sync_operations::created_at.gt(&twenty_four_hours_ago))
+        .count()
+        .get_result::<i64>(&mut conn)
+        .await? as usize;
 
-            let last_failure: Option<String> = sync_operations::table
-                .filter(sync_operations::status.eq(SyncStatus::Failed.as_str()))
-                .order(sync_operations::created_at.desc())
-                .select(sync_operations::created_at)
-                .first(conn)
-                .optional()?;
-
-            Ok((succeeded_count, failed_count, last_failure))
-        })
+    let last_failure: Option<String> = sync_operations::table
+        .filter(sync_operations::status.eq(SyncStatus::Failed.as_str()))
+        .order(sync_operations::created_at.desc())
+        .select(sync_operations::created_at)
+        .first(&mut conn)
         .await
+        .optional()?;
+
+    Ok((succeeded_count, failed_count, last_failure))
 }

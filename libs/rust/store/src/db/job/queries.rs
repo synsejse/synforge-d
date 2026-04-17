@@ -1,5 +1,6 @@
 use super::*;
 use crate::db::traits::BuildFailureBackoffState;
+use diesel_async::RunQueryDsl;
 
 pub(in crate::db) async fn get_last_successful_revision(
     store: &DieselStore,
@@ -8,18 +9,16 @@ pub(in crate::db) async fn get_last_successful_revision(
 ) -> anyhow::Result<Option<String>> {
     let package_name = package_name.to_string();
     let mock_chroot = mock_chroot.to_string();
-    store
-        .with_connection(move |conn| {
-            Ok(build_jobs::table
-                .filter(build_jobs::package_name.eq(package_name.as_str()))
-                .filter(build_jobs::mock_chroot.eq(mock_chroot.as_str()))
-                .filter(build_jobs::status.eq(BuildStatus::Succeeded))
-                .order(build_jobs::finished_at.desc())
-                .select(build_jobs::revision)
-                .first::<String>(conn)
-                .optional()?)
-        })
+    let mut conn = store.get_connection().await?;
+    Ok(build_jobs::table
+        .filter(build_jobs::package_name.eq(package_name.as_str()))
+        .filter(build_jobs::mock_chroot.eq(mock_chroot.as_str()))
+        .filter(build_jobs::status.eq(BuildStatus::Succeeded))
+        .order(build_jobs::finished_at.desc())
+        .select(build_jobs::revision)
+        .first::<String>(&mut conn)
         .await
+        .optional()?)
 }
 
 pub(in crate::db) async fn has_active_job_for_target(
@@ -29,22 +28,20 @@ pub(in crate::db) async fn has_active_job_for_target(
 ) -> anyhow::Result<bool> {
     let package_name = package_name.to_string();
     let mock_chroot = mock_chroot.to_string();
-    store
-        .with_connection(move |conn| {
-            let active_job = build_jobs::table
-                .filter(build_jobs::package_name.eq(package_name.as_str()))
-                .filter(build_jobs::mock_chroot.eq(mock_chroot.as_str()))
-                .filter(
-                    build_jobs::status
-                        .eq(BuildStatus::Pending)
-                        .or(build_jobs::status.eq(BuildStatus::Running)),
-                )
-                .select(build_jobs::id)
-                .first::<String>(conn)
-                .optional()?;
-            Ok(active_job.is_some())
-        })
+    let mut conn = store.get_connection().await?;
+    let active_job = build_jobs::table
+        .filter(build_jobs::package_name.eq(package_name.as_str()))
+        .filter(build_jobs::mock_chroot.eq(mock_chroot.as_str()))
+        .filter(
+            build_jobs::status
+                .eq(BuildStatus::Pending)
+                .or(build_jobs::status.eq(BuildStatus::Running)),
+        )
+        .select(build_jobs::id)
+        .first::<String>(&mut conn)
         .await
+        .optional()?;
+    Ok(active_job.is_some())
 }
 
 pub(in crate::db) async fn list_jobs(
@@ -56,36 +53,34 @@ pub(in crate::db) async fn list_jobs(
     mock_chroot: Option<String>,
     completed_only: bool,
 ) -> anyhow::Result<Vec<BuildJobResponse>> {
-    store
-        .with_connection(move |conn| {
-            let mut query = build_jobs::table.into_boxed();
-            if completed_only {
-                query = query.filter(
-                    build_jobs::status
-                        .ne(BuildStatus::Pending)
-                        .and(build_jobs::status.ne(BuildStatus::Running)),
-                );
-            }
-            if let Some(status) = status {
-                query = query.filter(build_jobs::status.eq(status));
-            }
-            if let Some(package_name) = package_name.as_deref() {
-                let search = format!("%{}%", package_name);
-                query = query.filter(build_jobs::package_name.like(search));
-            }
-            if let Some(mock_chroot) = mock_chroot.as_deref() {
-                let search = format!("%{}%", mock_chroot);
-                query = query.filter(build_jobs::mock_chroot.like(search));
-            }
-            let rows = query
-                .order(build_jobs::created_at.desc())
-                .limit(limit as i64)
-                .offset(offset as i64)
-                .select(JobRecord::as_select())
-                .load(conn)?;
-            load_job_responses(conn, rows)
-        })
-        .await
+    let mut conn = store.get_connection().await?;
+    let mut query = build_jobs::table.into_boxed();
+    if completed_only {
+        query = query.filter(
+            build_jobs::status
+                .ne(BuildStatus::Pending)
+                .and(build_jobs::status.ne(BuildStatus::Running)),
+        );
+    }
+    if let Some(status) = status {
+        query = query.filter(build_jobs::status.eq(status));
+    }
+    if let Some(package_name) = package_name.as_deref() {
+        let search = format!("%{}%", package_name);
+        query = query.filter(build_jobs::package_name.like(search));
+    }
+    if let Some(mock_chroot) = mock_chroot.as_deref() {
+        let search = format!("%{}%", mock_chroot);
+        query = query.filter(build_jobs::mock_chroot.like(search));
+    }
+    let rows = query
+        .order(build_jobs::created_at.desc())
+        .limit(limit as i64)
+        .offset(offset as i64)
+        .select(JobRecord::as_select())
+        .load(&mut conn)
+        .await?;
+    load_job_responses(&mut conn, rows).await
 }
 
 pub(in crate::db) async fn count_jobs(
@@ -95,31 +90,28 @@ pub(in crate::db) async fn count_jobs(
     mock_chroot: Option<String>,
     completed_only: bool,
 ) -> anyhow::Result<u64> {
-    store
-        .with_connection(move |conn| {
-            let mut query = build_jobs::table.into_boxed();
-            if completed_only {
-                query = query.filter(
-                    build_jobs::status
-                        .ne(BuildStatus::Pending)
-                        .and(build_jobs::status.ne(BuildStatus::Running)),
-                );
-            }
-            if let Some(status) = status {
-                query = query.filter(build_jobs::status.eq(status));
-            }
-            if let Some(package_name) = package_name.as_deref() {
-                let search = format!("%{}%", package_name);
-                query = query.filter(build_jobs::package_name.like(search));
-            }
-            if let Some(mock_chroot) = mock_chroot.as_deref() {
-                let search = format!("%{}%", mock_chroot);
-                query = query.filter(build_jobs::mock_chroot.like(search));
-            }
-            let count = query.count().get_result::<i64>(conn)?;
-            Ok(count as u64)
-        })
-        .await
+    let mut conn = store.get_connection().await?;
+    let mut query = build_jobs::table.into_boxed();
+    if completed_only {
+        query = query.filter(
+            build_jobs::status
+                .ne(BuildStatus::Pending)
+                .and(build_jobs::status.ne(BuildStatus::Running)),
+        );
+    }
+    if let Some(status) = status {
+        query = query.filter(build_jobs::status.eq(status));
+    }
+    if let Some(package_name) = package_name.as_deref() {
+        let search = format!("%{}%", package_name);
+        query = query.filter(build_jobs::package_name.like(search));
+    }
+    if let Some(mock_chroot) = mock_chroot.as_deref() {
+        let search = format!("%{}%", mock_chroot);
+        query = query.filter(build_jobs::mock_chroot.like(search));
+    }
+    let count = query.count().get_result::<i64>(&mut conn).await?;
+    Ok(count as u64)
 }
 
 pub(in crate::db) async fn list_active_jobs(
@@ -129,30 +121,28 @@ pub(in crate::db) async fn list_active_jobs(
     package_name: Option<String>,
     mock_chroot: Option<String>,
 ) -> anyhow::Result<Vec<BuildJobResponse>> {
-    store
-        .with_connection(move |conn| {
-            let mut query = build_jobs::table.into_boxed().filter(
-                build_jobs::status
-                    .eq(BuildStatus::Pending)
-                    .or(build_jobs::status.eq(BuildStatus::Running)),
-            );
-            if let Some(package_name) = package_name.as_deref() {
-                let search = format!("%{}%", package_name);
-                query = query.filter(build_jobs::package_name.like(search));
-            }
-            if let Some(mock_chroot) = mock_chroot.as_deref() {
-                let search = format!("%{}%", mock_chroot);
-                query = query.filter(build_jobs::mock_chroot.like(search));
-            }
-            let rows = query
-                .order(build_jobs::created_at.desc())
-                .limit(limit as i64)
-                .offset(offset as i64)
-                .select(JobRecord::as_select())
-                .load(conn)?;
-            load_job_responses(conn, rows)
-        })
-        .await
+    let mut conn = store.get_connection().await?;
+    let mut query = build_jobs::table.into_boxed().filter(
+        build_jobs::status
+            .eq(BuildStatus::Pending)
+            .or(build_jobs::status.eq(BuildStatus::Running)),
+    );
+    if let Some(package_name) = package_name.as_deref() {
+        let search = format!("%{}%", package_name);
+        query = query.filter(build_jobs::package_name.like(search));
+    }
+    if let Some(mock_chroot) = mock_chroot.as_deref() {
+        let search = format!("%{}%", mock_chroot);
+        query = query.filter(build_jobs::mock_chroot.like(search));
+    }
+    let rows = query
+        .order(build_jobs::created_at.desc())
+        .limit(limit as i64)
+        .offset(offset as i64)
+        .select(JobRecord::as_select())
+        .load(&mut conn)
+        .await?;
+    load_job_responses(&mut conn, rows).await
 }
 
 pub(in crate::db) async fn count_active_jobs(
@@ -160,25 +150,22 @@ pub(in crate::db) async fn count_active_jobs(
     package_name: Option<String>,
     mock_chroot: Option<String>,
 ) -> anyhow::Result<u64> {
-    store
-        .with_connection(move |conn| {
-            let mut query = build_jobs::table.into_boxed().filter(
-                build_jobs::status
-                    .eq(BuildStatus::Pending)
-                    .or(build_jobs::status.eq(BuildStatus::Running)),
-            );
-            if let Some(package_name) = package_name.as_deref() {
-                let search = format!("%{}%", package_name);
-                query = query.filter(build_jobs::package_name.like(search));
-            }
-            if let Some(mock_chroot) = mock_chroot.as_deref() {
-                let search = format!("%{}%", mock_chroot);
-                query = query.filter(build_jobs::mock_chroot.like(search));
-            }
-            let count = query.count().get_result::<i64>(conn)?;
-            Ok(count as u64)
-        })
-        .await
+    let mut conn = store.get_connection().await?;
+    let mut query = build_jobs::table.into_boxed().filter(
+        build_jobs::status
+            .eq(BuildStatus::Pending)
+            .or(build_jobs::status.eq(BuildStatus::Running)),
+    );
+    if let Some(package_name) = package_name.as_deref() {
+        let search = format!("%{}%", package_name);
+        query = query.filter(build_jobs::package_name.like(search));
+    }
+    if let Some(mock_chroot) = mock_chroot.as_deref() {
+        let search = format!("%{}%", mock_chroot);
+        query = query.filter(build_jobs::mock_chroot.like(search));
+    }
+    let count = query.count().get_result::<i64>(&mut conn).await?;
+    Ok(count as u64)
 }
 
 pub(in crate::db) async fn list_jobs_for_package(
@@ -186,16 +173,14 @@ pub(in crate::db) async fn list_jobs_for_package(
     package_name: &str,
 ) -> anyhow::Result<Vec<BuildJobResponse>> {
     let package_name = package_name.to_string();
-    store
-        .with_connection(move |conn| {
-            let rows = build_jobs::table
-                .filter(build_jobs::package_name.eq(package_name.as_str()))
-                .order(build_jobs::created_at.desc())
-                .select(JobRecord::as_select())
-                .load(conn)?;
-            load_job_responses(conn, rows)
-        })
-        .await
+    let mut conn = store.get_connection().await?;
+    let rows = build_jobs::table
+        .filter(build_jobs::package_name.eq(package_name.as_str()))
+        .order(build_jobs::created_at.desc())
+        .select(JobRecord::as_select())
+        .load(&mut conn)
+        .await?;
+    load_job_responses(&mut conn, rows).await
 }
 
 pub(in crate::db) async fn get_job(
@@ -203,18 +188,17 @@ pub(in crate::db) async fn get_job(
     job_id: Uuid,
 ) -> anyhow::Result<Option<BuildJobResponse>> {
     let job_id = job_id.to_string();
-    store
-        .with_connection(move |conn| {
-            let row = build_jobs::table
-                .find(job_id.as_str())
-                .select(JobRecord::as_select())
-                .first(conn)
-                .optional()?;
-            let artifacts = helpers::load_artifacts_map_for_rows(conn, row.as_ref().into_iter())?;
-            row.map(|row| build_job_response_from_row(row, &artifacts))
-                .transpose()
-        })
+    let mut conn = store.get_connection().await?;
+    let row = build_jobs::table
+        .find(job_id.as_str())
+        .select(JobRecord::as_select())
+        .first(&mut conn)
         .await
+        .optional()?;
+    let artifacts =
+        helpers::load_artifacts_map_for_rows(&mut conn, row.as_ref().into_iter()).await?;
+    row.map(|row| build_job_response_from_row(row, &artifacts))
+        .transpose()
 }
 
 pub(in crate::db) async fn list_prunable_successful_job_ids(
@@ -225,22 +209,20 @@ pub(in crate::db) async fn list_prunable_successful_job_ids(
 ) -> anyhow::Result<Vec<Uuid>> {
     let package_name = package_name.to_string();
     let mock_chroot = mock_chroot.to_string();
-    store
-        .with_connection(move |conn| {
-            let rows = build_jobs::table
-                .filter(build_jobs::package_name.eq(package_name.as_str()))
-                .filter(build_jobs::mock_chroot.eq(mock_chroot.as_str()))
-                .filter(build_jobs::status.eq(BuildStatus::Succeeded))
-                .order(build_jobs::finished_at.desc())
-                .limit(i64::MAX)
-                .offset(keep as i64)
-                .select(build_jobs::id)
-                .load::<String>(conn)?;
-            rows.into_iter()
-                .map(|id| Ok(Uuid::parse_str(&id)?))
-                .collect()
-        })
-        .await
+    let mut conn = store.get_connection().await?;
+    let rows = build_jobs::table
+        .filter(build_jobs::package_name.eq(package_name.as_str()))
+        .filter(build_jobs::mock_chroot.eq(mock_chroot.as_str()))
+        .filter(build_jobs::status.eq(BuildStatus::Succeeded))
+        .order(build_jobs::finished_at.desc())
+        .limit(i64::MAX)
+        .offset(keep as i64)
+        .select(build_jobs::id)
+        .load::<String>(&mut conn)
+        .await?;
+    rows.into_iter()
+        .map(|id| Ok(Uuid::parse_str(&id)?))
+        .collect()
 }
 
 pub(in crate::db) async fn list_build_logs_for_job(
@@ -248,15 +230,13 @@ pub(in crate::db) async fn list_build_logs_for_job(
     job_id: Uuid,
 ) -> anyhow::Result<Vec<BuildLogRecord>> {
     let job_id = job_id.to_string();
-    store
-        .with_connection(move |conn| {
-            Ok(build_logs::table
-                .filter(build_logs::job_id.eq(job_id.as_str()))
-                .order(build_logs::file.asc())
-                .select((build_logs::file,))
-                .load(conn)?)
-        })
-        .await
+    let mut conn = store.get_connection().await?;
+    Ok(build_logs::table
+        .filter(build_logs::job_id.eq(job_id.as_str()))
+        .order(build_logs::file.asc())
+        .select((build_logs::file,))
+        .load(&mut conn)
+        .await?)
 }
 
 pub(in crate::db) async fn get_build_log_for_job_source(
@@ -266,15 +246,13 @@ pub(in crate::db) async fn get_build_log_for_job_source(
 ) -> anyhow::Result<Option<BuildLogRecord>> {
     let job_id = job_id.to_string();
     let file = file.to_string();
-    store
-        .with_connection(move |conn| {
-            Ok(build_logs::table
-                .find((job_id.as_str(), file.as_str()))
-                .select((build_logs::file,))
-                .first(conn)
-                .optional()?)
-        })
+    let mut conn = store.get_connection().await?;
+    Ok(build_logs::table
+        .find((job_id.as_str(), file.as_str()))
+        .select((build_logs::file,))
+        .first(&mut conn)
         .await
+        .optional()?)
 }
 
 pub(in crate::db) async fn get_target_build_backoff(
@@ -284,21 +262,19 @@ pub(in crate::db) async fn get_target_build_backoff(
 ) -> anyhow::Result<Option<BuildFailureBackoffState>> {
     let package_name = package_name.to_string();
     let mock_chroot = mock_chroot.to_string();
-    store
-        .with_connection(move |conn| {
-            let record = build_failure_backoff::table
-                .find((package_name.as_str(), mock_chroot.as_str()))
-                .select(BuildFailureBackoffRecord::as_select())
-                .first(conn)
-                .optional()?;
-            record
-                .map(|record| {
-                    Ok(BuildFailureBackoffState {
-                        consecutive_failures: record.consecutive_failures as u32,
-                        next_eligible_at: parse_timestamp(&record.next_eligible_at)?,
-                    })
-                })
-                .transpose()
-        })
+    let mut conn = store.get_connection().await?;
+    let record = build_failure_backoff::table
+        .find((package_name.as_str(), mock_chroot.as_str()))
+        .select(BuildFailureBackoffRecord::as_select())
+        .first(&mut conn)
         .await
+        .optional()?;
+    record
+        .map(|record| {
+            Ok(BuildFailureBackoffState {
+                consecutive_failures: record.consecutive_failures as u32,
+                next_eligible_at: parse_timestamp(&record.next_eligible_at)?,
+            })
+        })
+        .transpose()
 }

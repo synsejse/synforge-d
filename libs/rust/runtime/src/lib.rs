@@ -9,6 +9,8 @@ pub mod repo {
     pub mod repo_signing;
 }
 
+pub mod storage;
+
 pub mod source {
     pub mod git_cache;
     pub mod packages;
@@ -30,6 +32,7 @@ pub use repo::repo_signing::{ImportedSigningKey, RepoSigningManager, RepoSigning
 pub use source::packages::{InspectedPackageSource, MaterializePackageOptions, PackageSyncStore};
 pub use source::registry::PackageRegistry;
 pub use source::sync_tracker::{SyncResult, SyncStatusTracker};
+pub use storage::JobObjectStorage;
 pub use worker::sessions::{ActiveWorkerSession, WorkerSession, WorkerSessionBroker};
 pub use worker::worker_socket::start_worker_listener;
 pub use worker::workers::DockerWorkerLauncher;

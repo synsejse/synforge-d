@@ -548,6 +548,12 @@ pub struct EffectiveConfigView {
     pub bootstrap_completed: bool,
     pub listen_addr: String,
     pub database_url: String,
+    pub redis_url: String,
+    pub redis_key_prefix: String,
+    pub object_storage_endpoint: Option<String>,
+    pub object_storage_region: Option<String>,
+    pub object_storage_bucket: Option<String>,
+    pub object_storage_path_style: bool,
     #[schema(value_type = String)]
     pub repo_dir: std::path::PathBuf,
     #[schema(value_type = String)]

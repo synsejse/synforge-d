@@ -16,8 +16,8 @@ CREATE INDEX idx_artifact_signatures_status_updated
     ON artifact_signatures (status, updated_at);
 
 CREATE TABLE IF NOT EXISTS runtime_settings (
-    `key` VARCHAR(191) NOT NULL,
+    "key" VARCHAR(191) NOT NULL,
     value_json TEXT NOT NULL,
     updated_at VARCHAR(64) NOT NULL,
-    PRIMARY KEY (`key`)
+    PRIMARY KEY ("key")
 );

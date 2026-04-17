@@ -16,6 +16,7 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::repo::repo_signing::RepoSigningManager;
+use crate::storage::JobObjectStorage;
 use synforge_store::build_published_repo_path;
 
 fn should_skip_artifact(artifact: &BuildArtifact, package: &PackageDefinition) -> bool {
@@ -26,16 +27,25 @@ fn should_skip_artifact(artifact: &BuildArtifact, package: &PackageDefinition) -
     }
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct FileRepoManager;
+#[derive(Debug, Clone)]
+pub struct FileRepoManager {
+    object_storage: JobObjectStorage,
+}
 
 impl FileRepoManager {
+    pub fn new(object_storage: JobObjectStorage) -> Self {
+        Self { object_storage }
+    }
+
     pub async fn ensure_repo(&self, config: &DaemonConfig) -> anyhow::Result<()> {
         info!(
             repo_dir = %config.runtime_paths().repo_dir().display(),
             "ensuring repository metadata exists"
         );
-        regenerate_metadata(config).await
+        self.object_storage
+            .restore_repo_tree(config.runtime_paths().repo_dir())
+            .await?;
+        regenerate_metadata(config, &self.object_storage).await
     }
 
     pub async fn publish_build(
@@ -112,7 +122,7 @@ impl FileRepoManager {
                 signing_error_message: artifact.signing_error_message.clone(),
             });
         }
-        regenerate_metadata(config).await?;
+        regenerate_metadata(config, &self.object_storage).await?;
         info!(
             job_id = %worker_result.job_id,
             package_name = %package.name,
@@ -150,7 +160,7 @@ impl FileRepoManager {
                 }
             }
         }
-        regenerate_metadata(config).await?;
+        regenerate_metadata(config, &self.object_storage).await?;
         if !files.is_empty() {
             info!(
                 file_count = files.len(),
@@ -177,7 +187,10 @@ fn build_repo_build_dir(
         .join(job_id.to_string())
 }
 
-async fn regenerate_metadata(config: &DaemonConfig) -> anyhow::Result<()> {
+async fn regenerate_metadata(
+    config: &DaemonConfig,
+    object_storage: &JobObjectStorage,
+) -> anyhow::Result<()> {
     let paths = config.runtime_paths();
     let repo_dir = paths.repo_dir();
     tokio::fs::create_dir_all(repo_dir).await?;
@@ -220,6 +233,7 @@ async fn regenerate_metadata(config: &DaemonConfig) -> anyhow::Result<()> {
                 repo_dir.display()
             )
         })?;
+    object_storage.sync_repo_tree(repo_dir).await?;
     Ok(())
 }
 

@@ -100,6 +100,7 @@ async fn handle_connection(
                     true
                 };
                 if created {
+                    sessions.register_log_source(job_id, &path).await;
                     store
                         .upsert_build_log(job_id, &path)
                         .await

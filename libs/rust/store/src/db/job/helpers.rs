@@ -2,7 +2,7 @@ use super::*;
 use diesel_async::RunQueryDsl;
 
 pub(in crate::db) async fn load_artifacts_map_for_rows<'a>(
-    conn: &mut AsyncMysqlConnection,
+    conn: &mut AsyncPgConnection,
     rows: impl IntoIterator<Item = &'a JobRecord>,
 ) -> anyhow::Result<HashMap<Uuid, Vec<BuildArtifact>>> {
     let job_ids = rows
@@ -13,7 +13,7 @@ pub(in crate::db) async fn load_artifacts_map_for_rows<'a>(
 }
 
 async fn load_artifacts_map_for_job_ids(
-    conn: &mut AsyncMysqlConnection,
+    conn: &mut AsyncPgConnection,
     job_ids: &[Uuid],
 ) -> anyhow::Result<HashMap<Uuid, Vec<BuildArtifact>>> {
     if job_ids.is_empty() {

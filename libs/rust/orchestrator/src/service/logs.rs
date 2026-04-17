@@ -29,6 +29,13 @@ impl SynforgeService {
         if tokio::fs::try_exists(&path).await.unwrap_or(false) {
             return Ok(path);
         }
+        if self
+            .object_storage
+            .restore_job_log(job_id, &row.file, &path)
+            .await?
+        {
+            return Ok(path);
+        }
         Err(anyhow::anyhow!(SynforgeError::NotFound(
             path.display().to_string()
         )))
@@ -113,6 +120,12 @@ impl SynforgeService {
 
         for row in db_logs {
             let log_path = self.config.runtime_paths().job_log_path(job_id, &row.file);
+            if !tokio::fs::try_exists(&log_path).await.unwrap_or(false) {
+                let _ = self
+                    .object_storage
+                    .restore_job_log(job_id, &row.file, &log_path)
+                    .await?;
+            }
             if let Ok(meta) = tokio::fs::metadata(&log_path).await {
                 sources.push(LogSource {
                     file: row.file,

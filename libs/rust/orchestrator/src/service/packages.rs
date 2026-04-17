@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bollard::Docker;
 use bollard::models::{ContainerCreateBody, HostConfig};
 use bollard::query_parameters::{CreateContainerOptionsBuilder, LogsOptionsBuilder};
@@ -244,12 +242,13 @@ impl SynforgeService {
     }
 
     pub async fn list_mock_chroots(&self) -> anyhow::Result<MockChrootListResponse> {
-        let ttl = Duration::from_secs(self.config.mock_chroot_cache_ttl_seconds);
-        let now = std::time::Instant::now();
+        let ttl_seconds = self.config.mock_chroot_cache_ttl_seconds;
+        let now_unix_seconds = now_utc().unix_timestamp();
         let mut cache = self.mock_chroot_cache.lock().await;
         let cache_hit = cache.entry.as_ref().and_then(|entry| {
             if entry.worker_image == self.config.worker_image
-                && now.duration_since(entry.fetched_at) < ttl
+                && now_unix_seconds.saturating_sub(entry.fetched_at_unix_seconds)
+                    < ttl_seconds as i64
             {
                 Some(entry.response.clone())
             } else {
@@ -260,14 +259,37 @@ impl SynforgeService {
             cache.hit_count = cache.hit_count.saturating_add(1);
             return Ok(response);
         }
+        if let Some(entry) = self
+            .runtime_cache
+            .get_mock_chroot_entry(&self.config.worker_image)
+            .await?
+            .filter(|entry| {
+                now_unix_seconds.saturating_sub(entry.fetched_at_unix_seconds) < ttl_seconds as i64
+            })
+        {
+            cache.hit_count = cache.hit_count.saturating_add(1);
+            cache.entry = Some(super::root::MockChrootCacheEntry {
+                worker_image: entry.worker_image.clone(),
+                fetched_at_unix_seconds: entry.fetched_at_unix_seconds,
+                response: entry.response.clone(),
+            });
+            return Ok(entry.response);
+        }
         cache.miss_count = cache.miss_count.saturating_add(1);
         let stale = cache.entry.clone();
         match self.load_mock_chroots_uncached().await {
             Ok(response) => {
-                cache.entry = Some(super::root::MockChrootCacheEntry {
+                let entry = super::runtime_cache::CachedMockChrootEntry {
                     worker_image: self.config.worker_image.clone(),
-                    fetched_at: now,
-                    fetched_at_unix_seconds: now_utc().unix_timestamp(),
+                    fetched_at_unix_seconds: now_unix_seconds,
+                    response: response.clone(),
+                };
+                self.runtime_cache
+                    .set_mock_chroot_entry(&self.config.worker_image, ttl_seconds, &entry)
+                    .await?;
+                cache.entry = Some(super::root::MockChrootCacheEntry {
+                    worker_image: entry.worker_image,
+                    fetched_at_unix_seconds: entry.fetched_at_unix_seconds,
                     response: response.clone(),
                 });
                 Ok(response)

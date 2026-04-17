@@ -67,7 +67,7 @@ pub(super) async fn upsert_git_mirror_cache_state(
     };
     diesel::insert_into(git_mirror_cache_states::table)
         .values(&new_state)
-        .on_conflict(diesel::dsl::DuplicatedKeys)
+        .on_conflict(git_mirror_cache_states::mirror_key)
         .do_update()
         .set((
             git_mirror_cache_states::repo_url.eq(&repo_url),

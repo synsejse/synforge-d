@@ -5,7 +5,11 @@ CREATE TABLE sync_operations (
     status VARCHAR(32) NOT NULL,
     revision VARCHAR(255),
     error_message TEXT,
-    created_at VARCHAR(64) NOT NULL,
-    INDEX idx_package_created (package_name, created_at),
-    INDEX idx_status_created (status, created_at)
+    created_at VARCHAR(64) NOT NULL
 );
+
+CREATE INDEX idx_package_created
+    ON sync_operations (package_name, created_at);
+
+CREATE INDEX idx_status_created
+    ON sync_operations (status, created_at);

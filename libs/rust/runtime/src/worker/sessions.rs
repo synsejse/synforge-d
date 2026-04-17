@@ -6,6 +6,7 @@ use dashmap::DashMap;
 use sha2::Digest;
 use tokio::io::AsyncReadExt;
 use tokio::sync::{Mutex, Notify};
+use tracing::warn;
 use uuid::Uuid;
 
 use synforge_core::{
@@ -16,9 +17,12 @@ use synforge_core::{
     package::parse_mock_chroot,
 };
 
+use crate::storage::JobObjectStorage;
+
 #[derive(Clone)]
 pub struct WorkerSessionBroker {
     root: PathBuf,
+    object_storage: JobObjectStorage,
     state: Arc<DashMap<Uuid, Arc<WorkerSessionEntry>>>,
 }
 
@@ -27,6 +31,7 @@ struct WorkerSessionEntry {
     payload: WorkerJobPayload,
     container_id: Mutex<Option<String>>,
     artifacts: Mutex<Vec<BuildArtifact>>,
+    log_sources: Mutex<Vec<String>>,
     result: Mutex<Option<WorkerResult>>,
     notify: Arc<Notify>,
 }
@@ -43,9 +48,10 @@ pub struct ActiveWorkerSession {
 }
 
 impl WorkerSessionBroker {
-    pub fn new(root: PathBuf) -> Self {
+    pub fn new(root: PathBuf, object_storage: JobObjectStorage) -> Self {
         Self {
             root,
+            object_storage,
             state: Arc::new(DashMap::new()),
         }
     }
@@ -66,6 +72,7 @@ impl WorkerSessionBroker {
                 payload,
                 container_id: Mutex::new(None),
                 artifacts: Mutex::new(Vec::new()),
+                log_sources: Mutex::new(Vec::new()),
                 result: Mutex::new(None),
                 notify: Arc::new(Notify::new()),
             }),
@@ -192,11 +199,29 @@ impl WorkerSessionBroker {
         self.job_root(job_id).join("logs").join(sanitized)
     }
 
+    pub async fn register_log_source(&self, job_id: Uuid, relative_path: &str) {
+        let Some(entry) = self.state.get(&job_id) else {
+            return;
+        };
+        let mut sources = entry.log_sources.lock().await;
+        if !sources.iter().any(|path| path == relative_path) {
+            sources.push(relative_path.to_string());
+        }
+    }
+
     pub async fn complete(&self, job_id: Uuid, result: WorkerResult) -> anyhow::Result<()> {
         let entry = self
             .state
             .get(&job_id)
             .ok_or_else(|| anyhow::anyhow!("worker session {} not found", job_id))?;
+        let artifacts = entry.artifacts.lock().await.clone();
+        let log_sources = entry.log_sources.lock().await.clone();
+        if let Err(error) = self
+            .archive_session_outputs(job_id, &artifacts, &log_sources)
+            .await
+        {
+            warn!(job_id = %job_id, error = %error, "failed to archive job outputs to object storage");
+        }
         let artifacts = entry.artifacts.lock().await;
         *entry.result.lock().await = Some(merge_result(result, &artifacts));
         entry.notify.notify_waiters();
@@ -259,6 +284,28 @@ impl WorkerSessionBroker {
 
     pub fn job_root(&self, job_id: Uuid) -> PathBuf {
         self.root.join(job_id.to_string())
+    }
+
+    async fn archive_session_outputs(
+        &self,
+        job_id: Uuid,
+        artifacts: &[BuildArtifact],
+        log_sources: &[String],
+    ) -> anyhow::Result<()> {
+        for artifact in artifacts {
+            let storage_path = artifact.storage_path().to_string_lossy().into_owned();
+            let local_path = self.artifact_storage_path(job_id, &storage_path);
+            self.object_storage
+                .store_job_artifact(job_id, &storage_path, &local_path)
+                .await?;
+        }
+        for log_source in log_sources {
+            let local_path = self.log_storage_path(job_id, log_source);
+            self.object_storage
+                .store_job_log(job_id, log_source, &local_path)
+                .await?;
+        }
+        Ok(())
     }
 }
 

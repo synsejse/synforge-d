@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS build_failure_backoff (
     consecutive_failures INT NOT NULL,
     next_eligible_at VARCHAR(64) NOT NULL,
     updated_at VARCHAR(64) NOT NULL,
-    PRIMARY KEY (package_name, mock_chroot),
-    INDEX idx_build_failure_backoff_next_eligible (next_eligible_at)
+    PRIMARY KEY (package_name, mock_chroot)
 );
 
+CREATE INDEX idx_build_failure_backoff_next_eligible
+    ON build_failure_backoff (next_eligible_at);

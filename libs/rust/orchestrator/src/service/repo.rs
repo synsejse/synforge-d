@@ -57,7 +57,13 @@ impl SynforgeService {
         let repo_root = self.config.runtime_paths().repo_dir().to_path_buf();
         let path = repo_root.join(&requested);
         if !tokio::fs::try_exists(&path).await? {
-            return Err(anyhow::anyhow!(SynforgeError::NotFound(requested)));
+            let restored = self
+                .object_storage
+                .restore_repo_file(std::path::Path::new(&requested), &path)
+                .await?;
+            if !restored {
+                return Err(anyhow::anyhow!(SynforgeError::NotFound(requested)));
+            }
         }
 
         let repo_root = tokio::fs::canonicalize(repo_root).await?;

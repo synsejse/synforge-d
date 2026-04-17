@@ -18,11 +18,7 @@ use synforge_runtime::ActiveWorkerSession;
 
 impl SynforgeService {
     pub async fn list_job_resource_usage(&self) -> anyhow::Result<JobResourceUsageListResponse> {
-        let mut samples = self
-            .job_usage_latest
-            .iter()
-            .map(|entry| entry.value().clone())
-            .collect::<Vec<_>>();
+        let mut samples = self.runtime_cache.list_job_usage_samples().await?;
         samples.sort_by_key(|sample| sample.job_id);
         Ok(JobResourceUsageListResponse { samples })
     }
@@ -31,10 +27,7 @@ impl SynforgeService {
         &self,
         job_id: Uuid,
     ) -> anyhow::Result<JobResourceUsageResponse> {
-        let sample = self
-            .job_usage_latest
-            .get(&job_id)
-            .map(|entry| entry.value().clone());
+        let sample = self.runtime_cache.get_job_usage_sample(job_id).await?;
         Ok(JobResourceUsageResponse { sample })
     }
 
@@ -72,16 +65,23 @@ impl SynforgeService {
             .iter()
             .map(|session| session.job_id)
             .collect::<HashSet<_>>();
-        self.job_usage_latest
-            .retain(|job_id, _| active_ids.contains(job_id));
+        for sample in self.runtime_cache.list_job_usage_samples().await? {
+            if !active_ids.contains(&sample.job_id) {
+                self.runtime_cache
+                    .remove_job_usage_sample(sample.job_id)
+                    .await?;
+            }
+        }
 
         for session in active_sessions {
             match sample_active_session_usage(docker, &session).await {
                 Ok(Some(sample)) => {
-                    self.job_usage_latest.insert(session.job_id, sample);
+                    self.runtime_cache.set_job_usage_sample(&sample).await?;
                 }
                 Ok(None) => {
-                    self.job_usage_latest.remove(&session.job_id);
+                    self.runtime_cache
+                        .remove_job_usage_sample(session.job_id)
+                        .await?;
                 }
                 Err(error) => {
                     warn!(

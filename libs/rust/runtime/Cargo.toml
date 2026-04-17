@@ -12,6 +12,7 @@ bytes.workspace = true
 dashmap = "6.1"
 futures-util.workspace = true
 notify.workspace = true
+object_store.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true

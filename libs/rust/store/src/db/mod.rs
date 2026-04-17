@@ -13,7 +13,7 @@ use anyhow::Context;
 use async_trait::async_trait;
 use diesel::prelude::*;
 use diesel_async::{
-    AsyncConnection, AsyncMigrationHarness, AsyncMysqlConnection, RunQueryDsl,
+    AsyncConnection, AsyncMigrationHarness, AsyncPgConnection, RunQueryDsl,
     pooled_connection::{
         AsyncDieselConnectionManager,
         bb8::{Pool, PooledConnection},
@@ -48,12 +48,12 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
 #[derive(Clone)]
 pub struct DieselStore {
-    pool: Pool<AsyncMysqlConnection>,
+    pool: Pool<AsyncPgConnection>,
 }
 
 impl DieselStore {
     pub async fn new(database_url: &str, pool_size: u32) -> anyhow::Result<Self> {
-        let connection = AsyncMysqlConnection::establish(database_url).await?;
+        let connection = AsyncPgConnection::establish(database_url).await?;
         let mut migration_harness = AsyncMigrationHarness::new(connection);
         let applied_migrations = migration_harness
             .run_pending_migrations(MIGRATIONS)
@@ -66,14 +66,14 @@ impl DieselStore {
             }
         }
 
-        let manager = AsyncDieselConnectionManager::<AsyncMysqlConnection>::new(database_url);
+        let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(database_url);
         let pool = Pool::builder().max_size(pool_size).build(manager).await?;
         Ok(Self { pool })
     }
 
     pub(crate) async fn get_connection(
         &self,
-    ) -> anyhow::Result<PooledConnection<'_, AsyncMysqlConnection>> {
+    ) -> anyhow::Result<PooledConnection<'_, AsyncPgConnection>> {
         self.pool
             .get()
             .await
@@ -881,7 +881,7 @@ pub(crate) struct NewRuntimeSettingRecord<'a> {
 }
 
 pub(crate) async fn package_response_from_record(
-    conn: &mut AsyncMysqlConnection,
+    conn: &mut AsyncPgConnection,
     record: PackageRecord,
 ) -> anyhow::Result<PackageResponse> {
     let package = PackageDefinition {
@@ -926,7 +926,7 @@ pub(crate) async fn package_response_from_record(
 }
 
 pub(crate) async fn compute_package_state(
-    conn: &mut AsyncMysqlConnection,
+    conn: &mut AsyncPgConnection,
     package_name: &str,
     mock_chroots: &[String],
 ) -> anyhow::Result<PackageRuntimeState> {
@@ -1031,7 +1031,7 @@ pub(crate) async fn compute_package_state(
 }
 
 pub(crate) async fn load_job_responses(
-    conn: &mut AsyncMysqlConnection,
+    conn: &mut AsyncPgConnection,
     rows: Vec<JobRecord>,
 ) -> anyhow::Result<Vec<BuildJobResponse>> {
     let artifacts = job::load_artifacts_map_for_rows(conn, rows.iter()).await?;
@@ -1091,7 +1091,7 @@ type PublishedRepoFileRow = (
 );
 
 pub(crate) async fn load_published_repo_files_for_job(
-    conn: &mut AsyncMysqlConnection,
+    conn: &mut AsyncPgConnection,
     job_id: &str,
 ) -> anyhow::Result<Vec<PublishedRepoFile>> {
     let rows = published_repo_files::table

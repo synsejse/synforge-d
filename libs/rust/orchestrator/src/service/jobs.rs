@@ -42,9 +42,16 @@ impl SynforgeService {
             .job_artifacts_dir(job_id)
             .join(artifact.storage_path());
         if !tokio::fs::try_exists(&path).await? {
-            return Err(anyhow::anyhow!(SynforgeError::NotFound(
-                path.display().to_string()
-            )));
+            let storage_path = artifact.storage_path().to_string_lossy().into_owned();
+            let restored = self
+                .object_storage
+                .restore_job_artifact(job_id, &storage_path, &path)
+                .await?;
+            if !restored {
+                return Err(anyhow::anyhow!(SynforgeError::NotFound(
+                    path.display().to_string()
+                )));
+            }
         }
 
         let artifacts_root =
@@ -224,6 +231,7 @@ impl SynforgeService {
     }
 
     async fn cleanup_retry_runtime_dirs(&self, job_id: Uuid) -> anyhow::Result<()> {
+        self.object_storage.delete_job_outputs(job_id).await?;
         let runtime_root = self.config.runtime_paths().job_root(job_id);
         remove_retry_runtime_dir(&runtime_root).await?;
 
@@ -262,6 +270,7 @@ impl SynforgeService {
         self.lifecycle
             .remove_published_files(&published_files)
             .await?;
+        self.object_storage.delete_job_outputs(job_id).await?;
         let deleted = self
             .store
             .delete_job(job_id)

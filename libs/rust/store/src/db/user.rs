@@ -245,7 +245,7 @@ pub(super) async fn increment_user_download_bytes(
     };
     diesel::insert_into(user_repo_metrics::table)
         .values(&row)
-        .on_conflict(diesel::dsl::DuplicatedKeys)
+        .on_conflict(user_repo_metrics::user_id)
         .do_update()
         .set((
             user_repo_metrics::downloaded_bytes.eq(user_repo_metrics::downloaded_bytes + bytes),
@@ -257,7 +257,7 @@ pub(super) async fn increment_user_download_bytes(
 }
 
 async fn build_user_summaries(
-    conn: &mut AsyncMysqlConnection,
+    conn: &mut AsyncPgConnection,
     rows: Vec<UserRecord>,
 ) -> anyhow::Result<Vec<UserSummary>> {
     let ids = rows.iter().map(|row| row.id.clone()).collect::<Vec<_>>();
@@ -280,7 +280,7 @@ async fn build_user_summaries(
 }
 
 async fn load_user_summary(
-    conn: &mut AsyncMysqlConnection,
+    conn: &mut AsyncPgConnection,
     user_id: &str,
 ) -> anyhow::Result<UserSummary> {
     let row = users::table
@@ -293,7 +293,7 @@ async fn load_user_summary(
 }
 
 async fn load_permissions_map(
-    conn: &mut AsyncMysqlConnection,
+    conn: &mut AsyncPgConnection,
     user_ids: &[String],
 ) -> anyhow::Result<HashMap<String, Vec<UserPermission>>> {
     if user_ids.is_empty() {
@@ -317,7 +317,7 @@ async fn load_permissions_map(
 }
 
 async fn load_metrics_map(
-    conn: &mut AsyncMysqlConnection,
+    conn: &mut AsyncPgConnection,
     user_ids: &[String],
 ) -> anyhow::Result<HashMap<String, UserRepoMetrics>> {
     if user_ids.is_empty() {
@@ -337,7 +337,7 @@ async fn load_metrics_map(
 }
 
 async fn replace_permissions(
-    conn: &mut AsyncMysqlConnection,
+    conn: &mut AsyncPgConnection,
     user_id: &str,
     permissions: &[UserPermission],
 ) -> anyhow::Result<()> {

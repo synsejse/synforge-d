@@ -1,10 +1,9 @@
-DROP INDEX idx_packages_enabled_name ON packages;
+DROP INDEX IF EXISTS idx_packages_enabled_name;
 
-DROP INDEX idx_sync_operations_package_status_created ON sync_operations;
+DROP INDEX IF EXISTS idx_sync_operations_package_status_created;
 
-DROP INDEX idx_published_repo_files_published_at ON published_repo_files;
+DROP INDEX IF EXISTS idx_published_repo_files_published_at;
 
-DROP INDEX idx_build_artifacts_package_target_kind_id ON build_artifacts;
+DROP INDEX IF EXISTS idx_build_artifacts_package_target_kind_id;
 
-DROP INDEX idx_build_jobs_status_created_at ON build_jobs;
-
+DROP INDEX IF EXISTS idx_build_jobs_status_created_at;

@@ -1,2 +1,2 @@
 alter table packages
-    add column publish_debuginfo bool not null default 1;
+    add column publish_debuginfo bool not null default true;

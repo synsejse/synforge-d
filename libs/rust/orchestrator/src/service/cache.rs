@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use synforge_core::{
     api::{CacheStatsResponse, GitMirrorCacheStats, MockChrootCacheStats},
     model::{format_timestamp, now_utc},
@@ -10,14 +8,16 @@ use super::SynforgeService;
 
 impl SynforgeService {
     pub async fn get_cache_stats(&self) -> anyhow::Result<CacheStatsResponse> {
-        let now_instant = Instant::now();
+        let now_unix_seconds = now_utc().unix_timestamp();
         let mock_chroot_cache = {
             let cache = self.mock_chroot_cache.lock().await;
             let (cached_chroot_count, age_seconds, worker_image, last_refresh_at) =
                 if let Some(entry) = cache.entry.as_ref() {
                     (
                         entry.response.chroots.len(),
-                        Some(now_instant.duration_since(entry.fetched_at).as_secs()),
+                        now_unix_seconds
+                            .checked_sub(entry.fetched_at_unix_seconds)
+                            .map(|value| value as u64),
                         Some(entry.worker_image.clone()),
                         format_unix_timestamp(entry.fetched_at_unix_seconds),
                     )

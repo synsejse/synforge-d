@@ -6,14 +6,14 @@ You connect source repositories, sync updates, run builds, and view results in o
 
 ## Quick start
 
-1. Copy `.env.example` to `.env` and set database credentials.
+1. Copy `.env.example` to `.env` and set non-default PostgreSQL and MinIO credentials.
 2. Configure storage paths in `.env` (defaults to `./data/*` subdirectories; point to large disks for production).
 3. Start the stack with Docker Compose.
 4. Open the daemon-served web app at `http://localhost:8080`.
 5. Complete first-time setup and create an admin user.
 6. Add packages and start syncing/building.
 
-`phpMyAdmin` is available only when started with the `dev-tools` profile.
+The default compose stack now runs PostgreSQL for relational state, Redis for hot runtime cache/state, and MinIO for job artifacts, logs, and published repository objects. The daemon still materializes a local repo workspace for `createrepo_c` and signing, but object storage is treated as the durable backing store. `Adminer` is available only when started with the `dev-tools` profile.
 
 ## Architecture
 

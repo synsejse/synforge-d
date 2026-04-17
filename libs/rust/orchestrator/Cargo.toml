@@ -13,6 +13,7 @@ bollard.workspace = true
 dashmap = "6.1"
 futures-util.workspace = true
 rand_core.workspace = true
+redis.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

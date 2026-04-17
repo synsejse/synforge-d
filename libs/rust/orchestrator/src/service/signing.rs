@@ -126,6 +126,7 @@ impl SynforgeService {
             manager
                 .reconcile_repo_metadata_signature(&config, config.runtime_paths().repo_dir())
                 .await?;
+            self.sync_repo_storage(&config).await?;
         }
 
         let status = self
@@ -176,6 +177,7 @@ impl SynforgeService {
             manager
                 .reconcile_repo_metadata_signature(&config, config.runtime_paths().repo_dir())
                 .await?;
+            self.sync_repo_storage(&config).await?;
         }
 
         let status = self
@@ -225,6 +227,7 @@ impl SynforgeService {
         manager
             .reconcile_repo_metadata_signature(&config, config.runtime_paths().repo_dir())
             .await?;
+        self.sync_repo_storage(&config).await?;
         self.get_repo_signing_status_for_user_id(Some(current_user_id))
             .await
     }
@@ -247,6 +250,7 @@ impl SynforgeService {
         manager
             .reconcile_repo_metadata_signature(&config, config.runtime_paths().repo_dir())
             .await?;
+        self.sync_repo_storage(&config).await?;
         let signature_path =
             manager.repo_public_key_path(&config, config.runtime_paths().repo_dir());
         if !tokio::fs::try_exists(&signature_path).await? {
@@ -421,6 +425,33 @@ impl SynforgeService {
                     }
 
                     let artifact_path = config.runtime_paths().repo_dir().join(&file.path);
+                    if !tokio::fs::try_exists(&artifact_path).await? {
+                        let restored = self
+                            .object_storage
+                            .restore_repo_file(file.path.as_path(), &artifact_path)
+                            .await?;
+                        if !restored {
+                            failed_artifacts += 1;
+                            signatures.push(signature_failed(
+                                file.artifact_id,
+                                format!(
+                                    "published repository artifact is missing: {}",
+                                    artifact_path.display()
+                                ),
+                            ));
+                            self.update_signing_progress(RepoSigningReconcileProgressView {
+                                operation_id,
+                                mode: mode.clone(),
+                                state: RepoSigningReconcileState::Running,
+                                total_artifacts,
+                                processed_artifacts,
+                                failed_artifacts,
+                                message: None,
+                            })
+                            .await;
+                            continue;
+                        }
+                    }
                     let signature_result = match mode {
                         RepoSigningReconcileMode::Sign => {
                             let Some(key_id) = key_id.as_deref() else {
@@ -522,6 +553,7 @@ impl SynforgeService {
             manager
                 .reconcile_repo_metadata_signature(&config, config.runtime_paths().repo_dir())
                 .await?;
+            self.sync_repo_storage(&config).await?;
             Ok(())
         }
         .await;
@@ -595,6 +627,12 @@ impl SynforgeService {
     async fn update_signing_progress(&self, progress: RepoSigningReconcileProgressView) {
         let mut slot = self.signing_reconcile_progress.lock().await;
         *slot = Some(progress);
+    }
+
+    async fn sync_repo_storage(&self, config: &DaemonConfig) -> anyhow::Result<()> {
+        self.object_storage
+            .sync_repo_tree(config.runtime_paths().repo_dir())
+            .await
     }
 }
 

@@ -1,20 +1,20 @@
 CREATE TABLE IF NOT EXISTS packages (
     name VARCHAR(255) PRIMARY KEY,
     description TEXT NOT NULL,
-    enabled TINYINT(1) NOT NULL,
+    enabled BOOLEAN NOT NULL,
     repo_subdir TEXT NOT NULL,
-    publish_srpm TINYINT(1) NOT NULL,
+    publish_srpm BOOLEAN NOT NULL,
     mock_chroots_json TEXT NOT NULL,
     source_repo_url TEXT NOT NULL,
     source_spec_file TEXT NOT NULL,
-    source_poll TINYINT(1) NOT NULL,
+    source_poll BOOLEAN NOT NULL,
     poll_interval_seconds BIGINT NOT NULL,
     build_timeout_seconds BIGINT NOT NULL,
     package_history_count BIGINT NOT NULL DEFAULT 3,
     build_env_json TEXT NOT NULL,
     spec_file TEXT NOT NULL,
     version TEXT NOT NULL,
-    `release` TEXT NOT NULL
+    release TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS build_jobs (
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS build_jobs (
     package_name VARCHAR(255) NOT NULL,
     mock_chroot VARCHAR(255) NOT NULL,
     revision VARCHAR(255) NOT NULL,
-    `trigger` VARCHAR(64) NOT NULL,
+    "trigger" VARCHAR(64) NOT NULL,
     status VARCHAR(64) NOT NULL,
     spec_file TEXT NOT NULL,
     worker_container_id VARCHAR(255),

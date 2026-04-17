@@ -1,20 +1,18 @@
 use std::sync::Arc;
-use std::time::Instant;
 
 use super::apply_startup_runtime_overrides;
-use dashmap::DashMap;
+use super::runtime_cache::RuntimeCache;
 use synforge_core::{
     api::{
-        JobResourceUsageSample, MockChrootListResponse, RefreshAllPackagesProgressView,
-        RepoSigningReconcileProgressView,
+        MockChrootListResponse, RefreshAllPackagesProgressView, RepoSigningReconcileProgressView,
     },
     config::DaemonConfig,
     constants::DEFAULT_DAEMON_WORKER_LISTEN_ADDR,
 };
 use synforge_runtime::{
     BuildRunner, BuildScheduler, DockerWorkerLauncher, FileRepoManager, JobLifecycle,
-    PackageRegistry, PackageSyncStore, QueuedBuild, SyncStatusTracker, WorkerSessionBroker,
-    start_worker_listener,
+    JobObjectStorage, PackageRegistry, PackageSyncStore, QueuedBuild, SyncStatusTracker,
+    WorkerSessionBroker, start_worker_listener,
 };
 use synforge_store::{DieselStore, JobStore};
 use tokio::sync::{Mutex, Semaphore, mpsc, watch};
@@ -33,8 +31,9 @@ pub struct SynforgeService {
     pub(super) task_tracker: TaskTracker,
     pub(super) queue_tx: mpsc::Sender<QueuedBuild>,
     pub(super) shutdown_tx: watch::Sender<bool>,
+    pub(super) runtime_cache: RuntimeCache,
+    pub(super) object_storage: JobObjectStorage,
     pub(super) mock_chroot_cache: Arc<Mutex<MockChrootCacheState>>,
-    pub(super) job_usage_latest: Arc<DashMap<uuid::Uuid, JobResourceUsageSample>>,
     pub(super) refresh_all_packages_progress: Arc<Mutex<Option<RefreshAllPackagesProgressView>>>,
     pub(super) signing_reconcile_progress: Arc<Mutex<Option<RepoSigningReconcileProgressView>>>,
 }
@@ -42,7 +41,6 @@ pub struct SynforgeService {
 #[derive(Debug, Clone)]
 pub(super) struct MockChrootCacheEntry {
     pub(super) worker_image: String,
-    pub(super) fetched_at: Instant,
     pub(super) fetched_at_unix_seconds: i64,
     pub(super) response: MockChrootListResponse,
 }
@@ -58,6 +56,8 @@ pub(super) struct MockChrootCacheState {
 impl SynforgeService {
     pub async fn health_check(&self) -> anyhow::Result<()> {
         self.store.health_check().await?;
+        self.runtime_cache.health_check().await?;
+        self.object_storage.health_check().await?;
 
         let paths = self.config.runtime_paths();
         for path in [
@@ -84,9 +84,12 @@ impl SynforgeService {
         info!("initializing synforge service");
         let store = DieselStore::new(&config.database_url, config.db_pool_size).await?;
         apply_startup_runtime_overrides(&store, &mut config).await?;
+        let runtime_cache = RuntimeCache::new(&config).await?;
+        let object_storage = JobObjectStorage::from_config(&config).await?;
         let paths = config.runtime_paths();
-        let sessions = WorkerSessionBroker::new(paths.jobs_root().to_path_buf());
-        let repo_manager = Arc::new(FileRepoManager);
+        let sessions =
+            WorkerSessionBroker::new(paths.jobs_root().to_path_buf(), object_storage.clone());
+        let repo_manager = Arc::new(FileRepoManager::new(object_storage.clone()));
         let lifecycle = Arc::new(JobLifecycle::new(
             config.clone(),
             store.clone(),
@@ -101,17 +104,21 @@ impl SynforgeService {
             repo_manager,
             sessions,
             lifecycle,
+            runtime_cache,
+            object_storage,
         )
         .await
     }
 
-    pub async fn new_with_components(
+    pub(crate) async fn new_with_components(
         config: DaemonConfig,
         store: DieselStore,
         worker_launcher: Arc<DockerWorkerLauncher>,
         repo_manager: Arc<FileRepoManager>,
         sessions: WorkerSessionBroker,
         lifecycle: Arc<JobLifecycle>,
+        runtime_cache: RuntimeCache,
+        object_storage: JobObjectStorage,
     ) -> anyhow::Result<Arc<Self>> {
         config
             .validate()
@@ -165,8 +172,9 @@ impl SynforgeService {
             task_tracker,
             queue_tx,
             shutdown_tx,
+            runtime_cache,
+            object_storage,
             mock_chroot_cache: Arc::new(Mutex::new(MockChrootCacheState::default())),
-            job_usage_latest: Arc::new(DashMap::new()),
             refresh_all_packages_progress: Arc::new(Mutex::new(None)),
             signing_reconcile_progress: Arc::new(Mutex::new(None)),
         });

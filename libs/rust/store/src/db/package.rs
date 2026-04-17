@@ -125,7 +125,7 @@ pub(super) async fn upsert_package(
     };
     diesel::insert_into(packages::table)
         .values(&new_row)
-        .on_conflict(diesel::dsl::DuplicatedKeys)
+        .on_conflict(packages::name)
         .do_update()
         .set((
             packages::description.eq(new_row.description),

@@ -3,7 +3,7 @@ create table users (
   handle varchar(255) not null unique,
   display_name varchar(255) not null,
   password_hash varchar(255) not null,
-  active tinyint(1) not null default 1,
+  active boolean not null default true,
   created_at varchar(64) not null,
   updated_at varchar(64) not null
 );

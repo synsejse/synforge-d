@@ -68,7 +68,7 @@ export default function JobDetail({ jobId }: Props) {
   }, [jobId]);
 
   useEffect(() => {
-    api
+    jobsApi
       .getServerHardware()
       .then((hardware) => setServerHardware(hardware))
       .catch(() => undefined);

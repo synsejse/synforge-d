@@ -159,25 +159,16 @@ export function createSetupController({
     }
 
     function readSetupPayload(): SetupPayloadFields {
-        const input = (id: string) => document.getElementById(id);
+        const inputValue = (id: string): string => {
+            const element = document.getElementById(id);
+            return element instanceof HTMLInputElement ? element.value : "";
+        };
 
         return {
-            adminHandle:
-                input("setup-admin-handle") instanceof HTMLInputElement
-                    ? input("setup-admin-handle").value.trim()
-                    : "",
-            adminDisplayName:
-                input("setup-admin-display-name") instanceof HTMLInputElement
-                    ? input("setup-admin-display-name").value.trim()
-                    : "",
-            adminPassword:
-                input("setup-admin-password") instanceof HTMLInputElement
-                    ? input("setup-admin-password").value
-                    : "",
-            adminPasswordConfirm:
-                input("setup-admin-password-confirm") instanceof HTMLInputElement
-                    ? input("setup-admin-password-confirm").value
-                    : "",
+            adminHandle: inputValue("setup-admin-handle").trim(),
+            adminDisplayName: inputValue("setup-admin-display-name").trim(),
+            adminPassword: inputValue("setup-admin-password"),
+            adminPasswordConfirm: inputValue("setup-admin-password-confirm"),
         };
     }
 

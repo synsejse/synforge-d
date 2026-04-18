@@ -67,3 +67,5 @@ if (authMode === "protected") {
         }
     });
 }
+
+export {};

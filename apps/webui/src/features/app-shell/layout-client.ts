@@ -73,3 +73,5 @@ window.addEventListener("resize", () => {
 });
 
 setMobileNavOpen(false);
+
+export {};

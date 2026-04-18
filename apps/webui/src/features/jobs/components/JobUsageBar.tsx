@@ -42,8 +42,9 @@ function resolveMemoryCapacityBytes(
   if (sample.memory_limit_bytes > 0) {
     return sample.memory_limit_bytes;
   }
-  if (hardware && hardware.total_memory_mb > 0) {
-    return hardware.total_memory_mb * 1024 * 1024;
+  const totalMemoryMb = hardware?.total_memory_mb;
+  if (totalMemoryMb && totalMemoryMb > 0) {
+    return totalMemoryMb * 1024 * 1024;
   }
   return null;
 }

@@ -70,6 +70,53 @@ services:
         "mc alias set local http://minio:9000 \"${SYNFORGE_OBJECT_STORAGE_ACCESS_KEY_ID:-synforge-minio}\" \"${SYNFORGE_OBJECT_STORAGE_SECRET_ACCESS_KEY}\" && mc mb -p \"local/${SYNFORGE_OBJECT_STORAGE_BUCKET:-synforge}\" || true",
       ]
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    profiles: ["debug-tools"]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${SYNFORGE_PGADMIN_EMAIL:-admin@synforge.local}
+      PGADMIN_DEFAULT_PASSWORD: ${SYNFORGE_PGADMIN_PASSWORD:?set SYNFORGE_PGADMIN_PASSWORD in .env}
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "${SYNFORGE_PGADMIN_PORT:-5050}:80"
+    volumes:
+      - ${SYNFORGE_PGADMIN_PATH:-/data/pgadmin}:/var/lib/pgadmin:rw,z
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 256m
+    cpus: 0.5
+
+  minio-viewer:
+    image: rclone/rclone:latest
+    restart: unless-stopped
+    profiles: ["debug-tools"]
+    environment:
+      RCLONE_CONFIG_MINIO_TYPE: s3
+      RCLONE_CONFIG_MINIO_PROVIDER: Minio
+      RCLONE_CONFIG_MINIO_ENDPOINT: http://minio:9000
+      RCLONE_CONFIG_MINIO_ACCESS_KEY_ID: ${SYNFORGE_OBJECT_STORAGE_ACCESS_KEY_ID:-synforge-minio}
+      RCLONE_CONFIG_MINIO_SECRET_ACCESS_KEY: ${SYNFORGE_OBJECT_STORAGE_SECRET_ACCESS_KEY:?set SYNFORGE_OBJECT_STORAGE_SECRET_ACCESS_KEY in .env}
+      RCLONE_CONFIG_MINIO_REGION: ${SYNFORGE_OBJECT_STORAGE_REGION:-us-east-1}
+      RCLONE_CONFIG_MINIO_FORCE_PATH_STYLE: ${SYNFORGE_OBJECT_STORAGE_PATH_STYLE:-true}
+    command:
+      [
+        "serve",
+        "http",
+        "minio:${SYNFORGE_OBJECT_STORAGE_BUCKET:-synforge}",
+        "--addr",
+        ":8080",
+        "--read-only",
+      ]
+    ports:
+      - "${SYNFORGE_MINIO_VIEWER_PORT:-8070}:8080"
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    mem_limit: 256m
+    cpus: 0.5
+
   daemon:
     build:
       context: .

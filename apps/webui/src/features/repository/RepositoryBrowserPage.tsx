@@ -5,7 +5,7 @@ import {
   faHardDrive,
   faHammer,
 } from "@fortawesome/free-solid-svg-icons";
-import api from "../../lib/api";
+import { repositoryApi } from "./api";
 import { formatBytes } from "../../lib/bytes";
 import type { PublishedRepoFile, RepoSummaryResponse } from "../../lib/types";
 import ErrorMessage from "../../components/common/ErrorMessage";
@@ -75,8 +75,8 @@ export default function RepositoryBrowser() {
     try {
       setLoading(true);
       const [summaryRes, inventoryRes] = await Promise.all([
-        api.getRepoSummary(),
-        api.getRepoInventory(PAGE_SIZE, nextOffset, {
+        repositoryApi.getRepoSummary(),
+        repositoryApi.getRepoInventory(PAGE_SIZE, nextOffset, {
           packageName: nextPackageFilter,
           mockChroot: nextTargetFilter,
           kind: nextKindFilter,

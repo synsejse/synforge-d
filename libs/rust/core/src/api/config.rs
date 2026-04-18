@@ -11,9 +11,9 @@ pub struct EffectiveConfigView {
     pub database_url: String,
     pub redis_url: String,
     pub redis_key_prefix: String,
-    pub object_storage_endpoint: Option<String>,
-    pub object_storage_region: Option<String>,
-    pub object_storage_bucket: Option<String>,
+    pub object_storage_endpoint: String,
+    pub object_storage_region: String,
+    pub object_storage_bucket: String,
     pub object_storage_path_style: bool,
     #[schema(value_type = String)]
     pub repo_dir: std::path::PathBuf,

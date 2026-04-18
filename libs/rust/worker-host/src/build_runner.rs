@@ -51,8 +51,6 @@ impl BuildRunner {
             trigger = ?build.trigger,
             "starting queued build"
         );
-        let paths = self.config.runtime_paths();
-        tokio::fs::create_dir_all(paths.job_artifacts_dir(build.job_id)).await?;
         let worker_workspace =
             std::path::Path::new(DEFAULT_WORKER_WORKSPACE_ROOT).join(build.job_id.to_string());
 

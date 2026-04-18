@@ -29,6 +29,17 @@ struct DaemonWorkerParseRunner {
     launcher: Arc<DockerWorkerLauncher>,
 }
 
+pub(crate) struct SynforgeStartupComponents {
+    config: DaemonConfig,
+    store: DieselStore,
+    worker_launcher: Arc<DockerWorkerLauncher>,
+    repo_manager: Arc<FileRepoManager>,
+    sessions: WorkerSessionBroker,
+    lifecycle: Arc<JobLifecycle>,
+    runtime_cache: RuntimeCache,
+    object_storage: JobObjectStorage,
+}
+
 #[async_trait]
 impl WorkerParseRunner for DaemonWorkerParseRunner {
     async fn run_job(
@@ -86,7 +97,7 @@ impl SynforgeService {
         ));
         let worker_launcher =
             Arc::new(DockerWorkerLauncher::new(sessions.clone(), lifecycle.clone()).await?);
-        Self::new_with_components(
+        Self::new_with_components(SynforgeStartupComponents {
             config,
             store,
             worker_launcher,
@@ -95,20 +106,23 @@ impl SynforgeService {
             lifecycle,
             runtime_cache,
             object_storage,
-        )
+        })
         .await
     }
 
     pub(crate) async fn new_with_components(
-        config: DaemonConfig,
-        store: DieselStore,
-        worker_launcher: Arc<DockerWorkerLauncher>,
-        repo_manager: Arc<FileRepoManager>,
-        sessions: WorkerSessionBroker,
-        lifecycle: Arc<JobLifecycle>,
-        runtime_cache: RuntimeCache,
-        object_storage: JobObjectStorage,
+        components: SynforgeStartupComponents,
     ) -> anyhow::Result<Arc<Self>> {
+        let SynforgeStartupComponents {
+            config,
+            store,
+            worker_launcher,
+            repo_manager,
+            sessions,
+            lifecycle,
+            runtime_cache,
+            object_storage,
+        } = components;
         config
             .validate()
             .map_err(|error| anyhow::anyhow!(error.to_string()))?;

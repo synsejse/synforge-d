@@ -100,6 +100,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_job_usage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/{id}": {
         parameters: {
             query?: never;
@@ -238,6 +254,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["retry_job"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{id}/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_job_usage"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -740,6 +772,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/system/hardware": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_server_hardware"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users": {
         parameters: {
             query?: never;
@@ -901,7 +949,14 @@ export interface components {
             build_env?: components["schemas"]["BuildEnvVar"][];
             /** Format: int64 */
             build_timeout_seconds: number;
+            ccache_enabled?: boolean;
+            /** Format: int64 */
+            ccache_max_size_mb?: number | null;
+            /** Format: int64 */
+            cpu_limit_millicores?: number | null;
             enabled?: boolean;
+            /** Format: int64 */
+            memory_limit_mb?: number | null;
             mock_chroots: string[];
             name: string;
             network_access?: boolean;
@@ -929,6 +984,7 @@ export interface components {
             build_failure_backoff_base_seconds: number;
             /** Format: int64 */
             build_failure_backoff_max_seconds: number;
+            cache_root: string;
             database_url: string;
             /** Format: int32 */
             db_pool_size: number;
@@ -943,15 +999,24 @@ export interface components {
             max_concurrent_builds: number;
             /** Format: int64 */
             mock_chroot_cache_ttl_seconds: number;
-            packages_dir: string;
+            object_storage_bucket: string;
+            object_storage_endpoint: string;
+            object_storage_path_style: boolean;
+            object_storage_region: string;
             /** Format: int64 */
             poller_tick_seconds: number;
             public_base_url: string;
             queue_buffer_size: number;
+            redis_key_prefix: string;
+            redis_url: string;
             repo_dir: string;
             signing_enabled: boolean;
             signing_key_id?: string | null;
+            signing_root: string;
+            work_root: string;
+            worker_ccache_root: string;
             worker_image: string;
+            worker_jobs_root: string;
             /** Format: int64 */
             worker_result_timeout_seconds: number;
             /** Format: int64 */
@@ -1015,6 +1080,22 @@ export interface components {
         };
         /** @enum {string} */
         JobListScope: "all" | "active" | "completed";
+        JobResourceUsageListResponse: {
+            samples: components["schemas"]["JobResourceUsageSample"][];
+        };
+        JobResourceUsageResponse: {
+            sample?: null | components["schemas"]["JobResourceUsageSample"];
+        };
+        JobResourceUsageSample: {
+            collected_at: string;
+            container_id: string;
+            /** Format: uuid */
+            job_id: string;
+            /** Format: int64 */
+            memory_limit_bytes: number;
+            /** Format: int64 */
+            memory_usage_bytes: number;
+        };
         LogChunkResponse: {
             complete: boolean;
             contents: string;
@@ -1095,8 +1176,15 @@ export interface components {
             build_env?: components["schemas"]["BuildEnvVar"][];
             /** Format: int64 */
             build_timeout_seconds?: number;
+            ccache_enabled?: boolean;
+            /** Format: int64 */
+            ccache_max_size_mb?: number | null;
+            /** Format: int64 */
+            cpu_limit_millicores?: number | null;
             description?: string;
             enabled?: boolean;
+            /** Format: int64 */
+            memory_limit_mb?: number | null;
             mock_chroots?: string[];
             name: string;
             network_access?: boolean;
@@ -1207,6 +1295,13 @@ export interface components {
         /** @enum {string} */
         RefreshAllPackagesState: "running" | "completed" | "failed";
         RefreshRequest: Record<string, never>;
+        RepoInventoryQuery: {
+            kind?: null | components["schemas"]["ArtifactKind"];
+            limit?: number | null;
+            mock_chroot?: string | null;
+            offset?: number | null;
+            package_name?: string | null;
+        };
         RepoInventoryResponse: {
             page: components["schemas"]["PageInfo"];
             repo_files: components["schemas"]["PublishedRepoFile"][];
@@ -1265,6 +1360,12 @@ export interface components {
             package_count: number;
             /** Format: int64 */
             size_bytes: number;
+        };
+        ServerHardwareResponse: {
+            /** Format: int64 */
+            cpu_cores: number;
+            /** Format: int64 */
+            total_memory_mb?: number | null;
         };
         SessionLoginRequest: {
             handle: string;
@@ -1326,15 +1427,18 @@ export interface components {
             signature_path: string;
             signed: boolean;
         };
-        /**
-         * @description PATCH-style update payload for packages.
-         *     Optional fields use "None means keep existing value" semantics.
-         */
         UpdatePackageRequest: {
             build_env?: components["schemas"]["BuildEnvVar"][] | null;
             /** Format: int64 */
             build_timeout_seconds?: number | null;
+            ccache_enabled?: boolean | null;
+            /** Format: int64 */
+            ccache_max_size_mb?: number | null;
+            /** Format: int64 */
+            cpu_limit_millicores?: number | null;
             enabled?: boolean | null;
+            /** Format: int64 */
+            memory_limit_mb?: number | null;
             mock_chroots?: string[] | null;
             network_access?: boolean | null;
             /** Format: int64 */
@@ -1567,6 +1671,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PruneJobsResponse"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    list_job_usage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List live usage for active jobs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobResourceUsageListResponse"];
                 };
             };
             401: {
@@ -2023,6 +2155,37 @@ export interface operations {
                 };
             };
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    get_job_usage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Job identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Get live usage for one job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobResourceUsageResponse"];
+                };
+            };
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3285,6 +3448,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncOperationListResponse"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    get_server_hardware: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Get server hardware limits */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServerHardwareResponse"];
                 };
             };
             401: {

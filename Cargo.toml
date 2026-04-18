@@ -22,13 +22,13 @@ authors = ["synse"]
 anyhow = "1.0.102"
 argon2 = "0.5.3"
 async-trait = "0.1.89"
-axum = { version = "0.8.8", features = ["macros"] }
+axum = { version = "0.8.9", features = ["macros"] }
 axum-helmet = "1.0.1"
 base64 = "0.22.1"
 bigdecimal = "0.4.10"
 bollard = "0.20.2"
 bytes = "1.11.1"
-clap = { version = "4.6.0", features = ["derive", "env"] }
+clap = { version = "4.6.1", features = ["derive", "env"] }
 diesel = { version = "2.3.7", features = ["postgres", "numeric", "r2d2"] }
 diesel-async = { version = "0.7", features = ["postgres", "bb8", "migrations", "async-connection-wrapper"] }
 diesel_migrations = "2.3.1"
@@ -51,7 +51,7 @@ sha2 = "0.11.0"
 slug = "0.1.6"
 thiserror = "2.0.18"
 time = { version = "0.3.47", features = ["formatting", "parsing", "serde"] }
-tokio = { version = "1.51.0", features = ["fs", "macros", "process", "rt-multi-thread", "signal", "sync", "time"] }
+tokio = { version = "1.52.1", features = ["fs", "macros", "process", "rt-multi-thread", "signal", "sync", "time"] }
 tokio-util = { version = "0.7.18", features = ["codec", "io", "rt"] }
 tower = "0.5.3"
 tower-http = { version = "0.6.8", features = ["auth", "fs", "trace"] }
@@ -59,5 +59,5 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
 utoipa = { version = "5.4.0", features = ["axum_extras", "time", "uuid"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
-uuid = { version = "1.23.0", features = ["serde", "v7"] }
+uuid = { version = "1.23.1", features = ["serde", "v7"] }
 xz2 = "0.1.7"

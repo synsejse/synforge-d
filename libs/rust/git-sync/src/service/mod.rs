@@ -1,8 +1,8 @@
 //! Git/source synchronization service.
 
 mod commands;
+mod facade;
 mod queries;
-mod service;
 mod state;
 
 pub use commands::{
@@ -10,9 +10,9 @@ pub use commands::{
     PackageDefinitionWriter, PackageDeleter, PackageDeletionJobReader, PackageDeletionRunner,
     PackageLookup, PackageSourceInspector, RefreshAllProgressStore,
 };
+pub use facade::GitSyncService;
 pub use queries::{
     PackageBuildHistoryReader, PackageDetailsReader, RepositoryBrowseProgressReader,
     RepositoryBrowser,
 };
-pub use service::GitSyncService;
 pub use state::{InspectedPackageSource, PackageMaterializationOptions};

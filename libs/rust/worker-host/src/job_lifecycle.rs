@@ -106,6 +106,21 @@ impl JobLifecycle {
         let mut artifact_signatures = Vec::new();
         let effective_config = self.load_runtime_overrides().await?;
 
+        if status == BuildStatus::Succeeded
+            && effective_config.signing_enabled
+            && let Err(error) = self
+                .repo_manager
+                .ensure_worker_signing_artifacts_available(
+                    &build.package,
+                    &build_result,
+                    &effective_config,
+                )
+                .await
+        {
+            status = BuildStatus::Failed;
+            error_message = Some(error.to_string());
+        }
+
         if status == BuildStatus::Succeeded {
             let signing_manager = RepoSigningManager;
             artifact_signatures = signing_manager
@@ -122,6 +137,9 @@ impl JobLifecycle {
                 status = BuildStatus::Failed;
                 error_message =
                     Some("artifact signing failed for one or more published artifacts".to_string());
+            } else if effective_config.signing_enabled {
+                self.repo_manager
+                    .archive_worker_artifacts_in_background(&build_result, &effective_config);
             }
         }
 

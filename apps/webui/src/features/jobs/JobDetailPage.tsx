@@ -1,1 +1,1 @@
-export { default } from "../../components/job/JobDetailLoader";
+export { default } from "./components/JobDetailLoader";

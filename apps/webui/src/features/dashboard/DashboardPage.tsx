@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import api from "../../lib/api";
+import { dashboardApi } from "./api";
 import { formatBytes } from "../../lib/bytes";
 import { formatDateTime } from "../../lib/datetime";
 import type {
@@ -52,11 +52,11 @@ export default function Dashboard() {
           activeJobsRes,
           repositoryRes,
         ] = await Promise.all([
-          api.listPackagesPage(1, 0),
-          api.listPackagesPage(1, 0, { enabled: true }),
-          api.listCompletedJobs({ limit: 6, offset: 0 }),
-          api.listActiveJobs({ limit: 6, offset: 0 }),
-          api.getRepoSummary(),
+          dashboardApi.listPackagesPage(1, 0),
+          dashboardApi.listPackagesPage(1, 0, { enabled: true }),
+          dashboardApi.listCompletedJobs({ limit: 6, offset: 0 }),
+          dashboardApi.listActiveJobs({ limit: 6, offset: 0 }),
+          dashboardApi.getRepoSummary(),
         ]);
         setPackageCount(packagesRes.page.total ?? packagesRes.packages.length);
         setEnabledPackageCount(

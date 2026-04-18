@@ -1,6 +1,6 @@
 import { useEffect, useState, type SyntheticEvent } from "react";
 import { faSave, faServer } from "@fortawesome/free-solid-svg-icons";
-import api from "../../lib/api";
+import { settingsApi } from "./api";
 import type { ConfigFieldDescriptor, DaemonConfig } from "../../lib/types";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
@@ -20,8 +20,8 @@ export default function Settings() {
     async function load() {
       try {
         const [configRes, schemaRes] = await Promise.all([
-          api.getConfig(),
-          api.getConfigSchema(),
+          settingsApi.getConfig(),
+          settingsApi.getConfigSchema(),
         ]);
         setConfig(configRes.config);
         setSchema(schemaRes.fields);
@@ -40,7 +40,7 @@ export default function Settings() {
     setSaving(true);
     try {
       const runtimeFields = schema.filter((field) => field.editable_in_runtime);
-      const res = await api.updateRuntimeSettings({
+      const res = await settingsApi.updateRuntimeSettings({
         settings: buildSettingsPayload(runtimeFields, values),
       });
       setConfig(res.config);

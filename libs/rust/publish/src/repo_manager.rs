@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use std::fs;
 use std::path::Path;
 
 use anyhow::Context;
@@ -23,6 +22,15 @@ fn should_skip_artifact(artifact: &BuildArtifact, package: &PackageDefinition) -
         ArtifactKind::Srpm => !package.publish_srpm,
         ArtifactKind::Debuginfo | ArtifactKind::Debugsource => !package.publish_debuginfo,
         ArtifactKind::Rpm | ArtifactKind::Log | ArtifactKind::Other => false,
+    }
+}
+
+fn should_restore_for_signing(artifact: &BuildArtifact, package: &PackageDefinition) -> bool {
+    match artifact.kind {
+        ArtifactKind::Rpm => true,
+        ArtifactKind::Srpm => package.publish_srpm,
+        ArtifactKind::Debuginfo | ArtifactKind::Debugsource => package.publish_debuginfo,
+        ArtifactKind::Log | ArtifactKind::Other => false,
     }
 }
 
@@ -79,6 +87,8 @@ impl FileRepoManager {
             let source_path = paths
                 .job_artifacts_dir(worker_result.job_id)
                 .join(artifact.storage_path());
+            self.restore_artifact_if_missing(worker_result.job_id, artifact, &source_path)
+                .await?;
             let file_name = artifact.file.file_name().ok_or_else(|| {
                 anyhow::anyhow!("artifact file {} has no filename", artifact.file.display())
             })?;
@@ -92,21 +102,24 @@ impl FileRepoManager {
             if !seen_paths.insert(path.clone()) {
                 continue;
             }
-            if destination.exists() {
-                fs::remove_file(&destination)
+            if tokio::fs::try_exists(&destination).await? {
+                tokio::fs::remove_file(&destination)
+                    .await
                     .with_context(|| format!("failed to replace {}", destination.display()))?;
             }
-            fs::hard_link(&source_path, &destination).or_else(|_| {
-                fs::copy(&source_path, &destination)
+            if let Err(link_error) = tokio::fs::hard_link(&source_path, &destination).await {
+                tokio::fs::copy(&source_path, &destination)
+                    .await
                     .map(|_| ())
                     .with_context(|| {
                         format!(
-                            "failed to copy artifact {} to {}",
+                            "failed to link ({}) or copy artifact {} to {}",
+                            link_error,
                             source_path.display(),
                             destination.display()
                         )
-                    })
-            })?;
+                    })?;
+            }
             files.push(PublishedRepoFile {
                 artifact_id: artifact.id,
                 job_id: worker_result.job_id,
@@ -134,6 +147,63 @@ impl FileRepoManager {
             published_at,
             files,
         })
+    }
+
+    pub async fn ensure_worker_signing_artifacts_available(
+        &self,
+        package: &PackageDefinition,
+        worker_result: &WorkerBuildResult,
+        config: &DaemonConfig,
+    ) -> anyhow::Result<()> {
+        for artifact in &worker_result.artifacts {
+            if !should_restore_for_signing(artifact, package) {
+                continue;
+            }
+            let local_path = config
+                .runtime_paths()
+                .job_artifacts_dir(worker_result.job_id)
+                .join(artifact.storage_path());
+            self.restore_artifact_if_missing(worker_result.job_id, artifact, &local_path)
+                .await?;
+        }
+        Ok(())
+    }
+
+    pub fn archive_worker_artifacts_in_background(
+        &self,
+        worker_result: &WorkerBuildResult,
+        config: &DaemonConfig,
+    ) {
+        let object_storage = self.object_storage.clone();
+        let job_id = worker_result.job_id;
+        let uploads = worker_result
+            .artifacts
+            .iter()
+            .map(|artifact| {
+                let storage_path = artifact.storage_path().to_string_lossy().into_owned();
+                let local_path = config
+                    .runtime_paths()
+                    .job_artifacts_dir(worker_result.job_id)
+                    .join(artifact.storage_path());
+                (storage_path, local_path)
+            })
+            .collect::<Vec<_>>();
+
+        tokio::spawn(async move {
+            for (storage_path, local_path) in uploads {
+                if let Err(error) = object_storage
+                    .store_job_artifact(job_id, &storage_path, &local_path)
+                    .await
+                {
+                    warn!(
+                        job_id = %job_id,
+                        storage_path,
+                        error = %error,
+                        "failed to archive signed job artifact to object storage"
+                    );
+                }
+            }
+        });
     }
 
     pub async fn remove_build_files(
@@ -164,6 +234,29 @@ impl FileRepoManager {
             info!(
                 file_count = files.len(),
                 "repository metadata regenerated after file removal"
+            );
+        }
+        Ok(())
+    }
+
+    async fn restore_artifact_if_missing(
+        &self,
+        job_id: Uuid,
+        artifact: &BuildArtifact,
+        local_path: &Path,
+    ) -> anyhow::Result<()> {
+        if tokio::fs::try_exists(local_path).await? {
+            return Ok(());
+        }
+        let storage_path = artifact.storage_path().to_string_lossy().into_owned();
+        let restored = self
+            .object_storage
+            .restore_job_artifact(job_id, &storage_path, local_path)
+            .await?;
+        if !restored {
+            anyhow::bail!(
+                "artifact {} is not available locally or in object storage",
+                artifact.file.display()
             );
         }
         Ok(())
@@ -232,7 +325,17 @@ async fn regenerate_metadata(
                 repo_dir.display()
             )
         })?;
-    object_storage.sync_repo_tree(repo_dir).await?;
+    let object_storage = object_storage.clone();
+    let repo_dir = repo_dir.to_path_buf();
+    tokio::spawn(async move {
+        if let Err(error) = object_storage.sync_repo_tree(&repo_dir).await {
+            warn!(
+                repo_dir = %repo_dir.display(),
+                error = %error,
+                "failed to sync repository tree to object storage"
+            );
+        }
+    });
     Ok(())
 }
 

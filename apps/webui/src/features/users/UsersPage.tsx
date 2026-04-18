@@ -6,23 +6,23 @@ import {
   faTrash,
   faUserPlus,
 } from "@fortawesome/free-solid-svg-icons";
-import api from "../../lib/api";
+import { usersApi } from "./api";
 import type { SessionResponse, UserResponse } from "../../lib/types";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import EmptyState from "../../components/ui/EmptyState";
 import FaIcon from "../../components/ui/FaIcon";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import PageHeader from "../../components/ui/PageHeader";
-import { PermissionGroup, TextField, ToggleField } from "../../components/users/FormFields";
-import { UserModalActions, UserModalShell } from "../../components/users/ModalShell";
-import UserDirectory from "../../components/users/UserDirectory";
+import { PermissionGroup, TextField, ToggleField } from "./components/FormFields";
+import { UserModalActions, UserModalShell } from "./components/ModalShell";
+import UserDirectory from "./components/UserDirectory";
 import {
   type CreateUserDraft,
   type ModalState,
   type UserDraft,
   emptyCreateForm,
   togglePermission,
-} from "../../components/users/model";
+} from "./components/model";
 
 export default function Users() {
   const [users, setUsers] = useState<UserResponse[]>([]);
@@ -45,8 +45,8 @@ export default function Users() {
     try {
       setLoading(true);
       const [usersRes, sessionRes] = await Promise.all([
-        api.listUsers(),
-        api.getSession(),
+        usersApi.listUsers(),
+        usersApi.getSession(),
       ]);
       setUsers(usersRes.users);
       setCurrentUserId((sessionRes as SessionResponse).user.id);
@@ -125,7 +125,7 @@ export default function Users() {
     event.preventDefault();
     try {
       setSubmitting(true);
-      await api.createUser(createForm);
+      await usersApi.createUser(createForm);
       closeModal();
       await load();
     } catch (e) {
@@ -142,7 +142,7 @@ export default function Users() {
     }
     try {
       setSubmitting(true);
-      await api.updateUser(modal.user.user.id, editForm);
+      await usersApi.updateUser(modal.user.user.id, editForm);
       closeModal();
       await load();
     } catch (e) {
@@ -163,7 +163,7 @@ export default function Users() {
     }
     try {
       setSubmitting(true);
-      await api.changeUserPassword(modal.user.user.id, { password });
+      await usersApi.changeUserPassword(modal.user.user.id, { password });
       closeModal();
       setError(null);
     } catch (e) {
@@ -179,7 +179,7 @@ export default function Users() {
     }
     try {
       setSubmitting(true);
-      await api.deleteUser(modal.user.user.id);
+      await usersApi.deleteUser(modal.user.user.id);
       closeModal();
       await load();
     } catch (e) {

@@ -2,23 +2,17 @@ import { useEffect, useState } from "react";
 import {
   faPlus,
   faRotate,
-  faHammer,
-  faTrash,
-  faFolderOpen,
 } from "@fortawesome/free-solid-svg-icons";
-import api from "../../lib/api";
+import { packagesApi } from "./api";
 import { summarizePackageAction } from "../../lib/package-actions";
-import { formatDurationSeconds } from "../../lib/datetime";
 import type {
-  PackageTargetState,
   PackageResponse,
   RefreshAllPackagesProgressView,
 } from "../../lib/types";
-import AddPackageModal from "../../components/package/AddPackageModal";
+import AddPackageModal from "./components/AddPackageModal";
+import PackageCard from "./components/PackageCard";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
-import FaIcon from "../../components/ui/FaIcon";
-import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Select from "../../components/ui/Select";
 import PageHeader from "../../components/ui/PageHeader";
@@ -68,7 +62,7 @@ export default function PackageList() {
   ) {
     try {
       setLoading(true);
-      const res = await api.listPackagesPage(pageSize, nextOffset, {
+      const res = await packagesApi.listPackagesPage(pageSize, nextOffset, {
         search: nextSearch,
         enabled: nextEnabled === "all" ? "all" : nextEnabled === "true",
       });
@@ -107,7 +101,7 @@ export default function PackageList() {
   async function handleDelete(name: string) {
     if (!confirm(`Delete package "${name}"?`)) return;
     try {
-      await api.deletePackage(name);
+      await packagesApi.deletePackage(name);
       await load();
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to delete package");
@@ -129,8 +123,8 @@ export default function PackageList() {
     try {
       const response =
         isRefresh
-          ? await api.refreshPackage(name)
-          : await api.rebuildPackage(name);
+          ? await packagesApi.refreshPackage(name)
+          : await packagesApi.rebuildPackage(name);
       alert(summarizePackageAction(response));
       await load();
     } catch (e) {
@@ -185,7 +179,7 @@ export default function PackageList() {
   }
 
   async function pollRefreshAllProgress() {
-    const progress = await api.getRefreshAllPackagesProgress();
+    const progress = await packagesApi.getRefreshAllPackagesProgress();
     if (!progress.operation) {
       return;
     }
@@ -212,7 +206,7 @@ export default function PackageList() {
         void pollRefreshAllProgress().catch(() => undefined);
       }, 500);
       await pollRefreshAllProgress().catch(() => undefined);
-      const response = await api.refreshAllPackages();
+      const response = await packagesApi.refreshAllPackages();
       applyRefreshAllProgress(response.operation);
       await pollRefreshAllProgress().catch(() => undefined);
       await load();
@@ -380,159 +374,4 @@ export default function PackageList() {
       />
     </div>
   );
-}
-
-interface PackageCardProps {
-  entry: PackageResponse;
-  onRefresh: (name: string) => void;
-  onRebuild: (name: string) => void;
-  onDelete: (name: string) => void;
-  refreshing: boolean;
-  refreshDisabled: boolean;
-}
-
-function PackageCard({
-  entry,
-  onRefresh,
-  onRebuild,
-  onDelete,
-  refreshing,
-  refreshDisabled,
-}: PackageCardProps) {
-  const pkg = entry.package;
-  const backoffTargets = entry.state.targets.filter(isBackoffActive);
-  const backoffSummary =
-    backoffTargets.length > 0 ? summarizeBackoffTargets(backoffTargets) : null;
-  const hasActiveWork = entry.state.targets.some(
-    (target) =>
-      target.active_status === "pending" || target.active_status === "running",
-  );
-  const status = pkg.enabled ? (hasActiveWork ? "running" : "success") : "disabled";
-
-  return (
-    <article className="border-2 border-white bg-black transition duration-100 ease-linear hover:-translate-x-[2px] hover:-translate-y-[2px] hover:shadow-[4px_4px_0_rgba(255,255,255,0.3)]">
-      <div className="border-b-2 border-zinc-800 bg-black px-6 py-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0 flex-1">
-            <a
-              href={`/packages/view/?name=${encodeURIComponent(pkg.name)}`}
-              className="font-mono text-lg font-bold uppercase text-white transition duration-100 ease-linear hover:text-[var(--theme-accent-lime)]"
-            >
-              {pkg.name}
-            </a>
-            <p className="mt-1 text-sm text-zinc-500">
-              {pkg.description || "No description"}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {backoffSummary && (
-              <Badge variant="warning" title={backoffSummary.details}>
-                BACKOFF {backoffSummary.count}
-              </Badge>
-            )}
-            <Badge
-              variant={status === "running" ? "lime" : status === "success" ? "success" : "default"}
-              pulse={status === "running"}
-            >
-              {status === "running" ? "ACTIVE" : status === "success" ? "READY" : "DISABLED"}
-            </Badge>
-          </div>
-        </div>
-      </div>
-
-      {backoffSummary && (
-        <div className="border-t-2 border-zinc-800 bg-zinc-950 px-6 py-3 text-xs text-zinc-300">
-          <span className="font-mono uppercase tracking-[0.14em] text-[var(--theme-accent-orange)]">
-            Failure backoff active:
-          </span>{" "}
-          <span className="font-mono">{backoffSummary.details}</span>
-        </div>
-      )}
-
-      <div className="grid gap-px bg-zinc-800 md:grid-cols-2">
-        <div className="bg-black px-5 py-4">
-          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
-            VERSION
-          </div>
-          <div className="mt-2 font-mono text-sm text-white">
-            {pkg.version}-{pkg.release}
-          </div>
-        </div>
-        <div className="bg-black px-5 py-4">
-          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
-            TARGETS
-          </div>
-          <div className="mt-2 font-mono text-sm text-zinc-300">
-            {pkg.mock_chroots?.join(", ") || "None"}
-          </div>
-        </div>
-        <div className="bg-black px-5 py-4 md:col-span-2">
-          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
-            REPOSITORY
-          </div>
-          <div className="mt-2 break-all font-mono text-sm text-zinc-400">
-            {pkg.source.repo_url}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-2 border-t-2 border-zinc-800 bg-black px-4 py-4 sm:flex sm:flex-wrap sm:gap-2 sm:px-6">
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          className="w-full sm:w-auto"
-          onClick={() => onRefresh(pkg.name)}
-          disabled={refreshDisabled || refreshing}
-          aria-busy={refreshing || undefined}
-        >
-          <FaIcon icon={faRotate} className={refreshing ? "mr-2 animate-spin" : "mr-2"} />
-          {refreshing ? "Refreshing…" : "Refresh"}
-        </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="w-full sm:w-auto"
-          onClick={() => onRebuild(pkg.name)}
-        >
-          <FaIcon icon={faHammer} className="mr-2" />
-          Rebuild
-        </Button>
-        <a className="w-full sm:w-auto" href={`/packages/view/?name=${encodeURIComponent(pkg.name)}`}>
-          <Button variant="ghost" size="sm" className="w-full sm:w-auto">
-            <FaIcon icon={faFolderOpen} className="mr-2" />
-            Details
-          </Button>
-        </a>
-        <Button
-          variant="danger"
-          size="sm"
-          className="w-full sm:w-auto"
-          onClick={() => onDelete(pkg.name)}
-        >
-          <FaIcon icon={faTrash} className="mr-2" />
-          Delete
-        </Button>
-      </div>
-    </article>
-  );
-}
-
-function isBackoffActive(target: PackageTargetState): boolean {
-  const remaining = target.backoff_remaining_seconds ?? null;
-  return remaining !== null && remaining > 0;
-}
-
-function summarizeBackoffTargets(targets: PackageTargetState[]): {
-  count: number;
-  details: string;
-} {
-  const details = targets
-    .map((target) => {
-      const remaining = target.backoff_remaining_seconds ?? 0;
-      return `${target.mock_chroot} (${formatDurationSeconds(remaining)})`;
-    })
-    .join(", ");
-
-  return { count: targets.length, details };
 }

@@ -13,7 +13,7 @@ You connect source repositories, sync updates, run builds, and view results in o
 5. Complete first-time setup and create an admin user.
 6. Add packages and start syncing/building.
 
-The default compose stack now runs PostgreSQL for relational state, Redis for hot runtime cache/state, and MinIO for job artifacts, logs, and published repository objects. The daemon still materializes a local repo workspace for `createrepo_c` and signing, but object storage is treated as the durable backing store. `Adminer` is available only when started with the `dev-tools` profile.
+The default compose stack runs PostgreSQL for relational state, Redis for hot runtime cache/state, and MinIO for job artifacts, logs, and published repository objects. The daemon requires all three services at startup. It still materializes a local repo workspace for `createrepo_c` and signing, but object storage is the durable backing store.
 
 ## Architecture
 
@@ -35,5 +35,3 @@ The default compose stack now runs PostgreSQL for relational state, Redis for ho
 - Optionally enable repository + package signing from the Signing page
 
 For technical details, architecture, and contributor guidance, see `AGENTS.md`.
-
-For the planned project-wide backend/frontend simplification, see [docs/rewrite-roadmap.md](docs/rewrite-roadmap.md).

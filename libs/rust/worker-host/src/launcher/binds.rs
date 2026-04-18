@@ -1,10 +1,8 @@
+use super::DockerWorkerLauncher;
 use synforge_core::{
     config::DaemonConfig,
     model::{WorkerAction, WorkerJobPayload},
 };
-use tracing::warn;
-
-use super::DockerWorkerLauncher;
 
 impl DockerWorkerLauncher {
     pub(super) async fn mock_mount_binds(
@@ -15,17 +13,12 @@ impl DockerWorkerLauncher {
             return Ok(None);
         };
 
-        let Some(host_jobs_root) = config.worker_jobs_host_path() else {
-            warn!(
-                job_id = %payload.job_id,
-                package_name = %build.package.name,
-                mock_chroot = %build.mock_chroot,
-                ccache_enabled = build.package.ccache_enabled,
-                "SYNFORGE_WORKER_JOBS_PATH not set; workers will run without dedicated mock or ccache bind mounts"
-            );
-            return Ok(None);
-        };
-        let host_ccache_root = config.worker_ccache_host_path();
+        let host_jobs_root = config.worker_jobs_host_path().ok_or_else(|| {
+            anyhow::anyhow!("SYNFORGE_WORKER_JOBS_PATH is required for build worker bind mounts")
+        })?;
+        let host_ccache_root = config.worker_ccache_host_path().ok_or_else(|| {
+            anyhow::anyhow!("SYNFORGE_WORKER_JOBS_PATH is required for worker ccache bind mounts")
+        })?;
 
         let host_mock_root = host_jobs_root.join(payload.job_id.to_string()).join("mock");
         let host_mock_lib = host_mock_root.join("lib");
@@ -58,15 +51,6 @@ impl DockerWorkerLauncher {
         ];
 
         if build.package.ccache_enabled {
-            let Some(host_ccache_root) = host_ccache_root else {
-                warn!(
-                    job_id = %payload.job_id,
-                    package_name = %build.package.name,
-                    mock_chroot = %build.mock_chroot,
-                    "worker ccache requested but host worker cache root is unavailable"
-                );
-                return Ok(Some(binds));
-            };
             let host_ccache_dir = host_ccache_root
                 .join(&build.package.name)
                 .join(&build.mock_chroot);

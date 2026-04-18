@@ -14,7 +14,7 @@ pub use service::{
     RepoSigningSettingsUpdate, RepoSigningSettingsWriter, RepoSummaryReader,
 };
 pub use signing::{ImportedSigningKey, RepoSigningManager, RepoSigningStatus};
-pub use storage::{JobObjectStorage, WorkerOutputStorage};
+pub use storage::{JobObjectStorage, WorkerOutputStorage, WorkerOutputUpload};
 
 #[derive(Clone)]
 pub struct RuntimeRepoAdapter {

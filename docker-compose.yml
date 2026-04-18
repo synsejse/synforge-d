@@ -70,18 +70,6 @@ services:
         "mc alias set local http://minio:9000 \"${SYNFORGE_OBJECT_STORAGE_ACCESS_KEY_ID:-synforge-minio}\" \"${SYNFORGE_OBJECT_STORAGE_SECRET_ACCESS_KEY}\" && mc mb -p \"local/${SYNFORGE_OBJECT_STORAGE_BUCKET:-synforge}\" || true",
       ]
 
-  adminer:
-    image: adminer:latest
-    restart: unless-stopped
-    profiles: ["dev-tools"]
-    ports:
-      - "${SYNFORGE_ADMINER_PORT:-8081}:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    mem_limit: 256m
-    cpus: 0.5
-
   daemon:
     build:
       context: .

@@ -7,6 +7,7 @@ use synforge_core::{
     protocol::{WorkerWireMessage, decode_worker_wire_message, encode_worker_wire_message},
 };
 use synforge_database::{DieselStore, JobStore};
+use synforge_publish::WorkerOutputUpload;
 use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::watch;
@@ -15,6 +16,7 @@ use tokio_util::task::TaskTracker;
 use tracing::{error, warn};
 
 use crate::WorkerSessionBroker;
+use sha2::Digest;
 
 pub fn start_worker_listener(
     listen_addr: String,
@@ -123,38 +125,37 @@ async fn handle_connection(
                 if current_artifact.is_some() {
                     anyhow::bail!("artifact upload already in progress");
                 }
-                let upload_path = sessions.artifact_storage_path(job_id, &storage_path);
-                if let Some(parent) = upload_path.parent() {
-                    tokio::fs::create_dir_all(parent).await?;
-                }
-                let handle = tokio::fs::File::create(&upload_path).await?;
+                let upload = sessions
+                    .begin_remote_artifact_upload(job_id, &storage_path)
+                    .await?;
                 current_artifact = Some(ActiveArtifactUpload {
                     artifact_id,
                     file: path,
-                    storage_path,
                     kind,
-                    handle,
+                    upload,
+                    hasher: sha2::Sha256::new(),
+                    size_bytes: 0,
                 });
             }
             WorkerWireMessage::ArtifactChunk { bytes } => {
                 let upload = current_artifact
                     .as_mut()
                     .ok_or_else(|| anyhow::anyhow!("artifact chunk received without start"))?;
-                upload.handle.write_all(&bytes).await?;
+                upload.write_chunk(&bytes).await?;
             }
             WorkerWireMessage::ArtifactComplete => {
-                let Some(mut upload) = current_artifact.take() else {
+                let Some(upload) = current_artifact.take() else {
                     anyhow::bail!("artifact complete received without start");
                 };
-                upload.handle.flush().await?;
+                let CompletedArtifactUpload {
+                    artifact_id,
+                    file,
+                    kind,
+                    sha256,
+                    size_bytes,
+                } = upload.finish().await?;
                 sessions
-                    .finalize_artifact_upload(
-                        job_id,
-                        upload.artifact_id,
-                        &upload.file,
-                        &upload.storage_path,
-                        upload.kind,
-                    )
+                    .finalize_artifact_upload(job_id, artifact_id, &file, kind, sha256, size_bytes)
                     .await?;
             }
             WorkerWireMessage::Result { result } => {
@@ -196,7 +197,41 @@ async fn write_message(
 struct ActiveArtifactUpload {
     artifact_id: uuid::Uuid,
     file: String,
-    storage_path: String,
     kind: ArtifactKind,
-    handle: tokio::fs::File,
+    upload: Box<dyn WorkerOutputUpload>,
+    hasher: sha2::Sha256,
+    size_bytes: u64,
+}
+
+impl ActiveArtifactUpload {
+    async fn write_chunk(&mut self, bytes: &[u8]) -> anyhow::Result<()> {
+        self.hasher.update(bytes);
+        self.size_bytes += bytes.len() as u64;
+        self.upload.write_chunk(bytes).await?;
+        Ok(())
+    }
+
+    async fn finish(self) -> anyhow::Result<CompletedArtifactUpload> {
+        self.upload.finish().await?;
+        Ok(CompletedArtifactUpload {
+            artifact_id: self.artifact_id,
+            file: self.file,
+            kind: self.kind,
+            sha256: self
+                .hasher
+                .finalize()
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect(),
+            size_bytes: self.size_bytes,
+        })
+    }
+}
+
+struct CompletedArtifactUpload {
+    artifact_id: uuid::Uuid,
+    file: String,
+    kind: ArtifactKind,
+    sha256: String,
+    size_bytes: u64,
 }

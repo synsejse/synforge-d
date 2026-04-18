@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { faCopy, faFolderTree } from "@fortawesome/free-solid-svg-icons";
-import api from "../../lib/api";
+import { repositoryApi } from "./api";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
@@ -20,9 +20,9 @@ export default function RepositorySetup() {
       try {
         setLoading(true);
         const [configRes, sessionRes, signingRes] = await Promise.all([
-          api.getConfig(),
-          api.getSession(),
-          api.getRepoSigningStatus(),
+          repositoryApi.getConfig(),
+          repositoryApi.getSession(),
+          repositoryApi.getRepoSigningStatus(),
         ]);
         setPublicBaseUrl(normalizeBaseUrl(configRes.config.public_base_url));
         setRepoHandle(sessionRes.user.handle);

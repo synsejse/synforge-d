@@ -1,7 +1,7 @@
 //! Build orchestration service.
 
 mod commands;
-mod service;
+mod facade;
 mod state;
 
 pub use commands::{
@@ -9,5 +9,5 @@ pub use commands::{
     LastSuccessfulRevisionReader, PackageDefinitionCatalog, PackageDefinitionReader,
     RetryBuildCleaner, RetryJobResetter, TargetBuildBackoffReader, TrackedSourceInspector,
 };
-pub use service::BuildService;
+pub use facade::BuildService;
 pub use state::QueuedBuildRequest;

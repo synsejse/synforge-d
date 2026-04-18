@@ -10,7 +10,7 @@ import {
   faRocket,
   faTriangleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
-import api from "../../lib/api";
+import { statisticsApi } from "./api";
 import { formatDateTime } from "../../lib/datetime";
 import type {
   CacheStatsResponse,
@@ -59,12 +59,12 @@ export default function Statistics() {
           enabledPackagesRes,
           activeJobsRes,
         ] = await Promise.all([
-          api.getCacheStats(),
-          api.getSyncMetrics(),
-          api.getRepoSummary(),
-          api.listPackagesPage(1, 0),
-          api.listPackagesPage(1, 0, { enabled: true }),
-          api.listActiveJobs({ limit: 1, offset: 0 }),
+          statisticsApi.getCacheStats(),
+          statisticsApi.getSyncMetrics(),
+          statisticsApi.getRepoSummary(),
+          statisticsApi.listPackagesPage(1, 0),
+          statisticsApi.listPackagesPage(1, 0, { enabled: true }),
+          statisticsApi.listActiveJobs({ limit: 1, offset: 0 }),
         ]);
         setCacheStats(cacheStatsRes);
         setSyncMetrics(syncMetricsRes);

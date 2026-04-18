@@ -1,15 +1,15 @@
 ---
 import "../styles/global.css";
-import AuthScreen from "../features/auth/AuthScreen.astro";
 import AppShell from "../features/app-shell/AppShell.astro";
-import SetupScreen from "../features/setup/SetupScreen.astro";
 import { radixCustomStyles } from "../lib/radix-theme";
 
 interface Props {
     title: string;
+    chrome?: boolean;
+    authMode?: "protected" | "public";
 }
 
-const { title } = Astro.props;
+const { title, chrome = true, authMode = "protected" } = Astro.props;
 const currentPath = Astro.url.pathname;
 const publicApiUrl = import.meta.env.PUBLIC_API_URL || "";
 ---
@@ -25,6 +25,7 @@ const publicApiUrl = import.meta.env.PUBLIC_API_URL || "";
     <body
         class="h-full overflow-x-auto overflow-y-auto antialiased lg:overflow-hidden"
         data-public-api-url={publicApiUrl}
+        data-auth-mode={authMode}
     >
         <a
             href="#main-content"
@@ -37,14 +38,21 @@ const publicApiUrl = import.meta.env.PUBLIC_API_URL || "";
             <div class="app-grid absolute inset-0 opacity-60"></div>
         </div>
 
-        <AuthScreen />
-        <SetupScreen />
-        <AppShell currentPath={currentPath}>
-            <slot />
-        </AppShell>
+        {
+            chrome ? (
+                <AppShell currentPath={currentPath}>
+                    <slot />
+                </AppShell>
+            ) : (
+                <main id="main-content" class="min-h-full">
+                    <slot />
+                </main>
+            )
+        }
 
         <script>
-            import "../features/app-shell/layout-client.js";
+            import "../features/app-shell/layout-client";
+            import "../features/app-shell/route-guard";
         </script>
     </body>
 </html>

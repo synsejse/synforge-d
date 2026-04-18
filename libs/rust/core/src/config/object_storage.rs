@@ -21,14 +21,28 @@ pub struct ObjectStorageConfig {
     pub path_style: bool,
 }
 
-pub(super) fn load_object_storage_config_from_env() -> anyhow::Result<Option<ObjectStorageConfig>> {
+impl Default for ObjectStorageConfig {
+    fn default() -> Self {
+        Self {
+            endpoint: String::new(),
+            region: "us-east-1".to_string(),
+            bucket: String::new(),
+            access_key_id: String::new(),
+            secret_access_key: String::new(),
+            path_style: default_object_storage_path_style(),
+        }
+    }
+}
+
+pub(super) fn load_object_storage_config_from_env() -> anyhow::Result<ObjectStorageConfig> {
     let endpoint = std::env::var(OBJECT_STORAGE_ENDPOINT_ENV_VAR)
-        .ok()
         .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty());
-    let Some(endpoint) = endpoint else {
-        return Ok(None);
-    };
+        .map_err(|_| {
+            anyhow::anyhow!(
+                "{} environment variable is required but not set",
+                OBJECT_STORAGE_ENDPOINT_ENV_VAR
+            )
+        })?;
 
     let region = std::env::var(OBJECT_STORAGE_REGION_ENV_VAR)
         .ok()
@@ -67,12 +81,12 @@ pub(super) fn load_object_storage_config_from_env() -> anyhow::Result<Option<Obj
         .map(|value| matches!(value.trim(), "1" | "true" | "TRUE" | "yes" | "YES"))
         .unwrap_or_else(default_object_storage_path_style);
 
-    Ok(Some(ObjectStorageConfig {
+    Ok(ObjectStorageConfig {
         endpoint,
         region,
         bucket,
         access_key_id,
         secret_access_key,
         path_style,
-    }))
+    })
 }

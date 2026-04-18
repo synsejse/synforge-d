@@ -1,1 +1,1 @@
-export { default } from "../../components/package/PackageDetailLoader";
+export { default } from "./components/PackageDetailLoader";

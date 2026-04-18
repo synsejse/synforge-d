@@ -75,7 +75,7 @@ services:
     restart: unless-stopped
     profiles: ["debug-tools"]
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${SYNFORGE_PGADMIN_EMAIL:-admin@synforge.local}
+      PGADMIN_DEFAULT_EMAIL: ${SYNFORGE_PGADMIN_EMAIL:-admin@example.com}
       PGADMIN_DEFAULT_PASSWORD: ${SYNFORGE_PGADMIN_PASSWORD:?set SYNFORGE_PGADMIN_PASSWORD in .env}
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
     ports:

@@ -89,8 +89,15 @@ impl WorkerTransportHandle {
     }
 
     pub(crate) async fn send_result(&self, result: WorkerResult) -> anyhow::Result<()> {
-        self.send_message(WorkerWireMessage::Result { result })
-            .await
+        self.send_message(WorkerWireMessage::Result { result }).await?;
+        match self.read_message().await? {
+            WorkerWireMessage::ResultAck => Ok(()),
+            WorkerWireMessage::Error { message } => Err(anyhow::anyhow!(message)),
+            other => Err(anyhow::anyhow!(
+                "unexpected worker result acknowledgement message: {:?}",
+                other
+            )),
+        }
     }
 
     pub(crate) async fn send_heartbeat(&self) -> anyhow::Result<()> {

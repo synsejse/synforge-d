@@ -160,13 +160,16 @@ async fn handle_connection(
             }
             WorkerWireMessage::Result { result } => {
                 sessions.complete(job_id, result).await?;
+                write_message(&mut framed, &WorkerWireMessage::ResultAck).await?;
                 return Ok(());
             }
             WorkerWireMessage::Heartbeat => {}
             WorkerWireMessage::Error { message } => {
                 anyhow::bail!("worker reported error: {}", message);
             }
-            WorkerWireMessage::Hello { .. } | WorkerWireMessage::JobAssignment { .. } => {
+            WorkerWireMessage::Hello { .. }
+            | WorkerWireMessage::JobAssignment { .. }
+            | WorkerWireMessage::ResultAck => {
                 anyhow::bail!("unexpected worker message");
             }
         }

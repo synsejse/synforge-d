@@ -32,6 +32,7 @@ pub enum WorkerWireMessage {
     Result {
         result: WorkerResult,
     },
+    ResultAck,
     Error {
         message: String,
     },
@@ -55,6 +56,7 @@ enum WorkerWireEnvelope {
     ArtifactChunk { bytes: Vec<u8> },
     ArtifactComplete,
     Result { result_json: Vec<u8> },
+    ResultAck,
     Error { message: String },
 }
 
@@ -97,6 +99,7 @@ impl TryFrom<&WorkerWireMessage> for WorkerWireEnvelope {
                 result_json: serde_json::to_vec(result)
                     .context("failed to serialize worker result payload")?,
             },
+            WorkerWireMessage::ResultAck => Self::ResultAck,
             WorkerWireMessage::Error { message } => Self::Error {
                 message: message.clone(),
             },
@@ -134,6 +137,7 @@ impl TryFrom<WorkerWireEnvelope> for WorkerWireMessage {
                 result: serde_json::from_slice(&result_json)
                     .context("failed to decode worker result payload")?,
             },
+            WorkerWireEnvelope::ResultAck => Self::ResultAck,
             WorkerWireEnvelope::Error { message } => Self::Error { message },
         })
     }

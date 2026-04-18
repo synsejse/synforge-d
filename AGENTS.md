@@ -7,10 +7,11 @@
 ## Project Structure
 
 - `libs/rust/core`: shared API contracts, runtime config, and domain models
-- `libs/rust/store`: Diesel persistence, schema, and migrations
-- `libs/rust/runtime`: background/runtime mechanics for builds, workers, repos, and source sync
-- `libs/rust/orchestrator`: application orchestration layer exposing `SynforgeService`
-- `libs/rust/serve`: Axum API + public HTTP/static serving layer
+- `libs/rust/database`: Diesel persistence, schema, migrations, and PostgreSQL-backed adapters
+- `libs/rust/state`: Redis-backed runtime cache/state and short-lived coordination data
+- `libs/rust/git-sync`: git/source inspection, mirrors, package materialization, and sync mechanics
+- `libs/rust/publish`: object storage, repo publication, and signing
+- `libs/rust/worker-host`: daemon-side worker launch, sessions, socket handling, queueing, and build lifecycle
 - `libs/rust/worker`: worker runtime logic used by containerized build workers
 - `apps/rust/daemon`: main daemon binary serving the API, repo endpoints, docs, and built frontend
 - `apps/rust/worker`: worker binary
@@ -21,10 +22,12 @@ Generated artifacts: `target/`, `apps/webui/dist/`, `apps/webui/node_modules/`.
 ## Architecture Boundaries
 
 - `synforge-core` owns shared models, DTOs, config, validation primitives, and constants.
-- `synforge-store` owns Diesel-only persistence concerns, schema, and migrations.
-- `synforge-runtime` owns schedulers, runners, worker/session management, repo runtime, and source sync mechanics.
-- `synforge-orchestrator` owns application use-cases and wires store + runtime behind `SynforgeService`.
-- `synforge-serve` stays a transport adapter over `SynforgeService`; it should not reach into store/runtime internals.
+- `synforge-database` owns Diesel-only persistence concerns, schema, migrations, and PostgreSQL-backed adapters.
+- `synforge-state` owns Redis and in-memory runtime state.
+- `synforge-git-sync` owns package source sync, git mirrors, source inspection, and package materialization.
+- `synforge-publish` owns repo publication, signing, object storage, and repo-file resolution.
+- `synforge-worker-host` owns daemon-side worker orchestration and build lifecycle.
+- `apps/rust/daemon` owns HTTP transport, startup, background loops, and composition wiring.
 - `apps/webui/src/pages` should stay thin route files.
 - `apps/webui/src/features` should own feature-specific UI, helpers, and local state.
 - `apps/webui/src/lib` should remain cross-feature and generic only.
@@ -47,6 +50,7 @@ Generated artifacts: `target/`, `apps/webui/dist/`, `apps/webui/node_modules/`.
   - `write` implies `read` for session/API access checks.
   - `repo` remains separate for repository consumption/auth use-cases.
 - WebUI deauth trigger is narrow by design: only session endpoint auth failures (`/api/v1/session` 401) force auth reset.
+- UI session cookies are opaque Redis-backed tokens; Postgres remains source of truth for accounts, password hashes, permissions, and user metrics.
 - Git mirror cache state persistence is DB-backed (`git_mirror_cache_states`) instead of file metadata.
 - Repo summary/stat queries were optimized to DB aggregates (Diesel query builder `COUNT DISTINCT`/`SUM` style paths), replacing in-memory aggregation loops.
 - Repository metadata signing is optional and default-off. When enabled, `repodata/repomd.xml` is signed and `repomd.xml.asc` is emitted.
@@ -54,7 +58,7 @@ Generated artifacts: `target/`, `apps/webui/dist/`, `apps/webui/node_modules/`.
 
 ## Database and Migrations
 
-- Migrations live in `libs/rust/store/migrations/`.
+- Migrations live in `libs/rust/database/migrations/`.
 - Performance index migration exists: `00000000000006_performance_indexes`.
 - Artifact signature/runtime settings migration exists: `00000000000007_artifact_signatures_and_runtime_settings`.
 - Migration execution now logs whether migrations were applied and prints applied migration versions at startup.

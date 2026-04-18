@@ -18,11 +18,12 @@ The default compose stack now runs PostgreSQL for relational state, Redis for ho
 ## Architecture
 
 - `libs/rust/core`: shared contracts, config, and domain types
-- `libs/rust/store`: Diesel persistence, schema, and migrations
-- `libs/rust/runtime`: build/worker/repo/source runtime services
-- `libs/rust/orchestrator`: application layer behind `SynforgeService`
-- `libs/rust/serve`: Axum HTTP adapter and static frontend serving
-- `apps/rust/daemon`: main process serving the API, docs, repo endpoints, and built WebUI
+- `libs/rust/database`: Diesel persistence, schema, migrations, and PostgreSQL-backed adapters
+- `libs/rust/state`: Redis-backed runtime cache/state and ephemeral coordination data
+- `libs/rust/git-sync`: git/source inspection, mirrors, and package sync mechanics
+- `libs/rust/worker-host`: worker launch, session/socket protocol, and build execution
+- `libs/rust/publish`: object storage, repo publication, and signing
+- `apps/rust/daemon`: main process, service composition, API, docs, repo endpoints, and built WebUI
 - `apps/webui`: Astro + React frontend, organized toward `src/features/*` ownership
 
 ## What you can do
@@ -34,3 +35,5 @@ The default compose stack now runs PostgreSQL for relational state, Redis for ho
 - Optionally enable repository + package signing from the Signing page
 
 For technical details, architecture, and contributor guidance, see `AGENTS.md`.
+
+For the planned project-wide backend/frontend simplification, see [docs/rewrite-roadmap.md](docs/rewrite-roadmap.md).

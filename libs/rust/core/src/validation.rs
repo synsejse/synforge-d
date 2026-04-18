@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use crate::{
     error::SynforgeError,
+    model::UserPermission,
     package::{BuildEnvVar, PackageDefinition, SpecSource},
     validated::{MockChroot, PackageName, RepoUrl},
 };
@@ -13,6 +14,40 @@ pub trait Validator<T> {
 pub struct PackageDefinitionValidator;
 pub struct BuildEnvVarValidator;
 pub struct SpecSourceValidator;
+
+pub fn validate_user_handle(handle: &str) -> anyhow::Result<()> {
+    if handle.is_empty() {
+        anyhow::bail!("user handle must not be empty");
+    }
+    if !handle
+        .chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '-'))
+    {
+        anyhow::bail!("user handle may only contain letters, digits, '.', '_' and '-'");
+    }
+    Ok(())
+}
+
+pub fn validate_display_name(display_name: &str) -> anyhow::Result<()> {
+    if display_name.trim().is_empty() {
+        anyhow::bail!("display_name must not be empty");
+    }
+    Ok(())
+}
+
+pub fn validate_password(password: &str) -> anyhow::Result<()> {
+    if password.is_empty() {
+        anyhow::bail!("password must not be empty");
+    }
+    Ok(())
+}
+
+pub fn validate_permissions(permissions: &[UserPermission]) -> anyhow::Result<()> {
+    if permissions.is_empty() {
+        anyhow::bail!("at least one permission is required");
+    }
+    Ok(())
+}
 
 impl Validator<PackageDefinition> for PackageDefinitionValidator {
     fn validate(&self, value: &PackageDefinition) -> Result<(), SynforgeError> {

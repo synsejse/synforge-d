@@ -1,10 +1,11 @@
 [workspace]
 members = [
     "libs/rust/core",
-    "libs/rust/store",
-    "libs/rust/runtime",
-    "libs/rust/orchestrator",
-    "libs/rust/serve",
+    "libs/rust/database",
+    "libs/rust/git-sync",
+    "libs/rust/worker-host",
+    "libs/rust/publish",
+    "libs/rust/state",
     "libs/rust/worker",
     "apps/rust/daemon",
     "apps/rust/worker",

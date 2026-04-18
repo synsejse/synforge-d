@@ -1,0 +1,25 @@
+[package]
+name = "synforge-worker-host"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+bollard.workspace = true
+bytes.workspace = true
+dashmap = "6.1"
+futures-util.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+synforge-core = { path = "../core" }
+synforge-database = { path = "../database" }
+synforge-git-sync = { path = "../git-sync" }
+synforge-publish = { path = "../publish" }
+synforge-state = { path = "../state" }
+tokio.workspace = true
+tracing.workspace = true
+tokio-util.workspace = true
+uuid.workspace = true

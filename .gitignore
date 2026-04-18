@@ -9,5 +9,6 @@
 **/build/
 !libs/rust/runtime/src/build/
 !libs/rust/runtime/src/build/**
+!libs/rust/build
 /plans/
 .github/skills/

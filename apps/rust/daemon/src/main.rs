@@ -4,7 +4,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use synforge_core::config::DaemonConfig;
 use synforge_core::constants::DEFAULT_WEBUI_STATIC_DIR;
-use synforge_orchestrator::SynforgeService;
+use synforge_daemon::SynforgeService;
 use tracing::warn;
 
 #[tokio::main]
@@ -17,7 +17,7 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(&listen_addr)
         .await
         .with_context(|| format!("failed to bind {listen_addr}"))?;
-    let app = synforge_serve::router(
+    let app = synforge_daemon::router(
         Arc::clone(&service),
         PathBuf::from(DEFAULT_WEBUI_STATIC_DIR),
     );

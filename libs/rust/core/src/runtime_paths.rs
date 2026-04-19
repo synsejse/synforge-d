@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use path_clean::PathClean;
 use uuid::Uuid;
 
 use crate::package::RepoTarget;
@@ -105,13 +106,11 @@ impl RuntimePaths {
 
 fn sanitize_relative_path(path: &str) -> PathBuf {
     Path::new(path)
+        .clean()
         .components()
         .filter_map(|component| match component {
             std::path::Component::Normal(part) => Some(PathBuf::from(part)),
             _ => None,
         })
-        .fold(PathBuf::new(), |mut acc, part| {
-            acc.push(part);
-            acc
-        })
+        .collect()
 }

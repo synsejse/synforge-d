@@ -14,7 +14,7 @@ use super::{
     RepoSigningSettingsWriter, signing_reconcile::reconcile_existing_artifacts,
 };
 use crate::service::queries::{
-    RepoFileStorage, RepoSigningConfigLoader, RepoSigningInspector, get_repo_signing_status,
+    RepoSigningConfigLoader, RepoSigningInspector, get_repo_signing_status,
 };
 use crate::service::state::RepoSigningSettingsUpdate;
 
@@ -30,7 +30,6 @@ where
         + RepoSigningCommandRunner
         + RepoArtifactCatalog
         + RepoSigningProgressWriter
-        + RepoFileStorage
         + Send
         + Sync,
 {
@@ -189,8 +188,6 @@ where
     })
     .await?;
     deps.reconcile_repo_metadata_signature(&config).await?;
-    deps.sync_repo_tree(config.runtime_paths().repo_dir())
-        .await?;
     get_repo_signing_status(deps, can_export_private_key).await
 }
 
@@ -219,8 +216,6 @@ where
     }
 
     deps.reconcile_repo_metadata_signature(&config).await?;
-    deps.sync_repo_tree(config.runtime_paths().repo_dir())
-        .await?;
     if !tokio::fs::try_exists(&status.repo_public_key_path).await? {
         return Err(anyhow::anyhow!(SynforgeError::Internal(
             "repository public key file was not generated".to_string(),

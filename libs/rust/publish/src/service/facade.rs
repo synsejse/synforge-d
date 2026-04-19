@@ -20,7 +20,7 @@ use super::{
         test_repo_signing, update_repo_signing_config,
     },
     queries::{
-        RepoFileStorage, RepoInventoryReader, RepoSigningConfigLoader, RepoSigningInspector,
+        RepoInventoryReader, RepoSigningConfigLoader, RepoSigningInspector,
         RepoSigningProgressReader, RepoSummaryReader, get_repo_inventory,
         get_repo_signing_reconcile_progress, get_repo_signing_status, get_repo_summary,
         resolve_repo_file_path,
@@ -53,16 +53,13 @@ impl RepoService {
         get_repo_summary(deps).await
     }
 
-    pub async fn resolve_repo_file_path<D>(
+    pub async fn resolve_repo_file_path(
         &self,
-        deps: &D,
         repo_root: &Path,
         relative_repo_path: &str,
     ) -> anyhow::Result<PathBuf>
-    where
-        D: RepoFileStorage + Send + Sync,
     {
-        resolve_repo_file_path(deps, repo_root, relative_repo_path).await
+        resolve_repo_file_path(repo_root, relative_repo_path).await
     }
 
     pub async fn get_repo_signing_status<D>(
@@ -99,7 +96,6 @@ impl RepoService {
             + RepoSigningCommandRunner
             + RepoArtifactCatalog
             + RepoSigningProgressWriter
-            + RepoFileStorage
             + Send
             + Sync,
     {

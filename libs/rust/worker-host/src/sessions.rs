@@ -3,8 +3,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use dashmap::DashMap;
+use path_clean::PathClean;
 use sha2::Digest;
-use synforge_publish::sanitize_relative_path;
 use tokio::io::AsyncReadExt;
 use tokio::sync::{Mutex, Notify};
 use uuid::Uuid;
@@ -280,4 +280,15 @@ fn merge_result(result: WorkerResult, artifacts: &[BuildArtifact]) -> WorkerResu
             ..build
         }),
     }
+}
+
+fn sanitize_relative_path(path: &str) -> PathBuf {
+    std::path::Path::new(path)
+        .clean()
+        .components()
+        .filter_map(|component| match component {
+            std::path::Component::Normal(part) => Some(PathBuf::from(part)),
+            _ => None,
+        })
+        .collect()
 }

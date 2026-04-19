@@ -20,12 +20,11 @@ impl RepoSigningManager {
         if config.signing_enabled {
             self.sync_repo_public_key(config, repo_dir).await
         } else {
-            self.clear_repo_public_key(config, repo_dir).await
+            self.clear_repo_public_key(repo_dir).await
         }
     }
 
-    pub fn repo_public_key_path(&self, config: &DaemonConfig, repo_dir: &Path) -> PathBuf {
-        let _ = config;
+    pub fn repo_public_key_path(&self, repo_dir: &Path) -> PathBuf {
         repo_dir.join(DEFAULT_SIGNING_PUBLIC_KEY_NAME)
     }
 
@@ -36,7 +35,7 @@ impl RepoSigningManager {
     ) -> anyhow::Result<()> {
         let (key_id, _) = self.resolve_configured_signing_identity(config).await?;
         let public_key = self.export_public_key(config, key_id.as_str()).await?;
-        let public_key_path = self.repo_public_key_path(config, repo_dir);
+        let public_key_path = self.repo_public_key_path(repo_dir);
         if let Some(parent) = public_key_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
@@ -60,12 +59,8 @@ impl RepoSigningManager {
         }
     }
 
-    async fn clear_repo_public_key(
-        &self,
-        config: &DaemonConfig,
-        repo_dir: &Path,
-    ) -> anyhow::Result<()> {
-        let public_key_path = self.repo_public_key_path(config, repo_dir);
+    async fn clear_repo_public_key(&self, repo_dir: &Path) -> anyhow::Result<()> {
+        let public_key_path = self.repo_public_key_path(repo_dir);
         match tokio::fs::remove_file(&public_key_path).await {
             Ok(()) => Ok(()),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),

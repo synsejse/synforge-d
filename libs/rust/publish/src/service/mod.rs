@@ -12,7 +12,7 @@ pub use commands::{
 };
 pub use facade::RepoService;
 pub use queries::{
-    RepoFileStorage, RepoInventoryReader, RepoSigningConfigLoader, RepoSigningInspector,
-    RepoSigningProgressReader, RepoSummaryReader,
+    RepoInventoryReader, RepoSigningConfigLoader, RepoSigningInspector, RepoSigningProgressReader,
+    RepoSummaryReader,
 };
 pub use state::{RepoSigningKeyIdentity, RepoSigningSettingsUpdate};

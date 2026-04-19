@@ -99,8 +99,6 @@ pub trait RepoArtifactCatalog {
         &self,
         signatures: Vec<ArtifactSignature>,
     ) -> anyhow::Result<()>;
-
-    async fn sync_repo_tree(&self, repo_root: &Path) -> anyhow::Result<()>;
 }
 
 #[async_trait]

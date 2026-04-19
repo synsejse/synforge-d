@@ -46,10 +46,8 @@ impl SynforgeService {
         &self,
         relative_repo_path: &str,
     ) -> anyhow::Result<PathBuf> {
-        let deps = self.repo_signing_deps();
         self.repo_service
             .resolve_repo_file_path(
-                &deps,
                 self.config.runtime_paths().repo_dir(),
                 relative_repo_path,
             )

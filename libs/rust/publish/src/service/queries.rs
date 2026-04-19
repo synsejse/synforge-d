@@ -55,15 +55,6 @@ pub trait RepoSummaryReader {
 }
 
 #[async_trait]
-pub trait RepoFileStorage {
-    async fn restore_repo_file(
-        &self,
-        relative_repo_path: &Path,
-        destination_path: &Path,
-    ) -> anyhow::Result<bool>;
-}
-
-#[async_trait]
 pub trait RepoSigningConfigLoader {
     async fn load_effective_daemon_config(&self) -> anyhow::Result<DaemonConfig>;
 
@@ -128,21 +119,15 @@ where
     })
 }
 
-pub async fn resolve_repo_file_path<D>(
-    deps: &D,
+pub async fn resolve_repo_file_path(
     repo_root: &Path,
     relative_repo_path: &str,
 ) -> anyhow::Result<PathBuf>
-where
-    D: RepoFileStorage + Send + Sync,
 {
     let requested = normalize_repo_path(relative_repo_path)?;
     let path = repo_root.join(&requested);
     if !tokio::fs::try_exists(&path).await? {
-        let restored = deps.restore_repo_file(Path::new(&requested), &path).await?;
-        if !restored {
-            return Err(anyhow::anyhow!(SynforgeError::NotFound(requested)));
-        }
+        return Err(anyhow::anyhow!(SynforgeError::NotFound(requested)));
     }
 
     let repo_root = tokio::fs::canonicalize(repo_root).await?;

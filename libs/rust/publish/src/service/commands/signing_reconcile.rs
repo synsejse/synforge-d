@@ -6,7 +6,7 @@ use synforge_core::{
 use uuid::Uuid;
 
 use super::{RepoArtifactCatalog, RepoSigningCommandRunner, RepoSigningProgressWriter};
-use crate::service::{RepoFileStorage, RepoSigningConfigLoader};
+use crate::service::RepoSigningConfigLoader;
 
 pub async fn reconcile_existing_artifacts<D>(
     deps: &D,
@@ -18,7 +18,6 @@ where
         + RepoSigningCommandRunner
         + RepoArtifactCatalog
         + RepoSigningProgressWriter
-        + RepoFileStorage
         + Send
         + Sync,
 {
@@ -77,32 +76,25 @@ where
 
                 let artifact_path = config.runtime_paths().repo_dir().join(&file.path);
                 if !tokio::fs::try_exists(&artifact_path).await? {
-                    let restored = deps
-                        .restore_repo_file(file.path.as_path(), &artifact_path)
-                        .await?;
-                    if !restored {
-                        failed_artifacts += 1;
-                        signatures.push(signature_failed(
-                            file.artifact_id,
-                            format!(
-                                "published repository artifact is missing: {}",
-                                artifact_path.display()
-                            ),
-                        ));
-                        deps.save_repo_signing_reconcile_progress(
-                            RepoSigningReconcileProgressView {
-                                operation_id,
-                                mode: mode.clone(),
-                                state: RepoSigningReconcileState::Running,
-                                total_artifacts,
-                                processed_artifacts,
-                                failed_artifacts,
-                                message: None,
-                            },
-                        )
-                        .await;
-                        continue;
-                    }
+                    failed_artifacts += 1;
+                    signatures.push(signature_failed(
+                        file.artifact_id,
+                        format!(
+                            "published repository artifact is missing: {}",
+                            artifact_path.display()
+                        ),
+                    ));
+                    deps.save_repo_signing_reconcile_progress(RepoSigningReconcileProgressView {
+                        operation_id,
+                        mode: mode.clone(),
+                        state: RepoSigningReconcileState::Running,
+                        total_artifacts,
+                        processed_artifacts,
+                        failed_artifacts,
+                        message: None,
+                    })
+                    .await;
+                    continue;
                 }
 
                 let signature_result = match mode {
@@ -199,8 +191,6 @@ where
             deps.upsert_artifact_signatures(signatures).await?;
         }
         deps.reconcile_repo_metadata_signature(&config).await?;
-        deps.sync_repo_tree(config.runtime_paths().repo_dir())
-            .await?;
         Ok(())
     }
     .await;

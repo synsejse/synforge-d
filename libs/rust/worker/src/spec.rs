@@ -6,6 +6,7 @@ use synforge_core::{
     model::{WorkerJobPayload, WorkerParsePayload, WorkerParseResult},
     package::{ParsedSpec, SpecRevision},
 };
+use tokio::io::AsyncReadExt;
 use tokio::process::Command;
 
 use crate::git::{clone_repository, git_head_commit};
@@ -87,10 +88,20 @@ pub(crate) async fn query_spec_metadata(spec_path: &Path) -> anyhow::Result<Pars
 }
 
 async fn hash_tracked_spec(spec_path: &Path) -> anyhow::Result<String> {
-    let bytes = tokio::fs::read(spec_path)
+    let mut file = tokio::fs::File::open(spec_path)
         .await
-        .with_context(|| format!("failed to read tracked spec {}", spec_path.display()))?;
-    Ok(Sha256::digest(&bytes)
+        .with_context(|| format!("failed to open tracked spec {}", spec_path.display()))?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0_u8; 64 * 1024];
+    loop {
+        let read = file.read(&mut buffer).await?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    Ok(hasher
+        .finalize()
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect())

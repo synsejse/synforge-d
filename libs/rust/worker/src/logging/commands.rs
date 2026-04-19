@@ -2,7 +2,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::Stdio;
 
-use tokio::io::{AsyncRead, AsyncReadExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeekExt};
 use tokio::process::Command;
 use tokio::sync::oneshot;
 
@@ -172,7 +172,7 @@ async fn tail_named_files_until_exit(
     logger: BuildLogger,
     mut shutdown: oneshot::Receiver<()>,
 ) -> anyhow::Result<()> {
-    let mut offsets: std::collections::HashMap<PathBuf, usize> = std::collections::HashMap::new();
+    let mut offsets: std::collections::HashMap<PathBuf, u64> = std::collections::HashMap::new();
 
     loop {
         let mut made_progress = false;
@@ -180,16 +180,10 @@ async fn tail_named_files_until_exit(
             if !tokio::fs::try_exists(path).await.unwrap_or(false) {
                 continue;
             }
-
-            let bytes = tokio::fs::read(path).await?;
-            let offset = offsets.get(path).copied().unwrap_or(0);
-            if bytes.len() <= offset {
-                continue;
+            let offset = offsets.entry(path.clone()).or_insert(0);
+            if stream_new_file_bytes(path, offset, name, &logger).await? {
+                made_progress = true;
             }
-
-            logger.append_named_log(name, &bytes[offset..]).await?;
-            offsets.insert(path.clone(), bytes.len());
-            made_progress = true;
         }
 
         if shutdown.try_recv().is_ok() {
@@ -210,13 +204,39 @@ async fn tail_named_files_until_exit(
         if !tokio::fs::try_exists(path).await.unwrap_or(false) {
             continue;
         }
-        let bytes = tokio::fs::read(path).await?;
-        let offset = offsets.get(path).copied().unwrap_or(0);
-        if bytes.len() <= offset {
-            continue;
-        }
-        logger.append_named_log(name, &bytes[offset..]).await?;
+        let offset = offsets.entry(path.clone()).or_insert(0);
+        stream_new_file_bytes(path, offset, name, &logger).await?;
     }
 
     Ok(())
+}
+
+async fn stream_new_file_bytes(
+    path: &std::path::Path,
+    offset: &mut u64,
+    name: &str,
+    logger: &BuildLogger,
+) -> anyhow::Result<bool> {
+    let mut file = tokio::fs::File::open(path).await?;
+    let len = file.metadata().await?.len();
+    if len < *offset {
+        *offset = 0;
+    }
+    if len == *offset {
+        return Ok(false);
+    }
+
+    file.seek(std::io::SeekFrom::Start(*offset)).await?;
+    let mut buffer = [0_u8; 8192];
+    let mut wrote = false;
+    loop {
+        let read = file.read(&mut buffer).await?;
+        if read == 0 {
+            break;
+        }
+        logger.append_named_log(name, &buffer[..read]).await?;
+        *offset += read as u64;
+        wrote = true;
+    }
+    Ok(wrote)
 }

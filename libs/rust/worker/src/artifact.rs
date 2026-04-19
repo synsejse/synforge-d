@@ -10,6 +10,7 @@ use synforge_core::{
     model::{ArtifactKind, BuildArtifact},
     package::PackageDefinition,
 };
+use tokio::io::AsyncReadExt;
 use uuid::Uuid;
 
 pub(crate) async fn collect_artifacts(
@@ -93,10 +94,22 @@ async fn build_artifact(
     path: PathBuf,
     mock_chroot: &str,
 ) -> anyhow::Result<BuildArtifact> {
-    let bytes = tokio::fs::read(&path)
+    let mut file = tokio::fs::File::open(&path)
         .await
-        .with_context(|| format!("failed to read artifact {}", path.display()))?;
-    let sha256 = Sha256::digest(&bytes)
+        .with_context(|| format!("failed to open artifact {}", path.display()))?;
+    let mut hasher = Sha256::new();
+    let mut size_bytes = 0_u64;
+    let mut buffer = [0_u8; 64 * 1024];
+    loop {
+        let read = file.read(&mut buffer).await?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+        size_bytes += read as u64;
+    }
+    let sha256 = hasher
+        .finalize()
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect();
@@ -106,7 +119,7 @@ async fn build_artifact(
         id: Uuid::now_v7(),
         package_name: package.name.clone(),
         mock_chroot: mock_chroot.to_string(),
-        size_bytes: bytes.len() as u64,
+        size_bytes,
         file: path.file_name().map(PathBuf::from).unwrap_or_else(|| {
             path.strip_prefix(artifact_root)
                 .ok()

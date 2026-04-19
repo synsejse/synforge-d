@@ -144,7 +144,7 @@ impl RepoSigningManager {
             .with_context(|| {
                 format!("failed to create signing keyring {}", keyring_dir.display())
             })?;
-        set_owner_only_permissions(&keyring_dir)?;
+        set_owner_only_permissions(&keyring_dir).await?;
         Ok(keyring_dir)
     }
 

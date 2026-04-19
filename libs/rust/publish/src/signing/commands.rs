@@ -3,7 +3,7 @@ use std::process::Stdio;
 
 use anyhow::Context;
 use sha2::{Digest, Sha256};
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
 
 pub(super) fn parse_first_fingerprint(output: &str) -> Option<String> {
@@ -165,25 +165,38 @@ pub(super) async fn run_rpm_delsign(artifact_path: &Path) -> anyhow::Result<()> 
 }
 
 pub(super) async fn recompute_artifact_metadata(path: &Path) -> anyhow::Result<(String, u64)> {
-    let bytes = tokio::fs::read(path)
+    let mut file = tokio::fs::File::open(path)
         .await
-        .with_context(|| format!("failed to read artifact {}", path.display()))?;
-    let sha256 = Sha256::digest(&bytes)
+        .with_context(|| format!("failed to open artifact {}", path.display()))?;
+    let mut hasher = Sha256::new();
+    let mut size_bytes = 0_u64;
+    let mut buffer = [0_u8; 64 * 1024];
+    loop {
+        let read = file.read(&mut buffer).await?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+        size_bytes += read as u64;
+    }
+    let sha256 = hasher
+        .finalize()
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect();
-    Ok((sha256, bytes.len() as u64))
+    Ok((sha256, size_bytes))
 }
 
 #[cfg(unix)]
-pub(super) fn set_owner_only_permissions(path: &Path) -> anyhow::Result<()> {
+pub(super) async fn set_owner_only_permissions(path: &Path) -> anyhow::Result<()> {
     use std::os::unix::fs::PermissionsExt;
-    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700))
+    tokio::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700))
+        .await
         .with_context(|| format!("failed to set permissions on {}", path.display()))
 }
 
 #[cfg(not(unix))]
-pub(super) fn set_owner_only_permissions(_path: &Path) -> anyhow::Result<()> {
+pub(super) async fn set_owner_only_permissions(_path: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 

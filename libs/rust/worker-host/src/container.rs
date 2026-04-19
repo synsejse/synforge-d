@@ -38,7 +38,7 @@ pub(super) fn worker_container_body(
 }
 
 pub(super) async fn detect_daemon_network(docker: &Docker) -> Option<String> {
-    let hostname = daemon_container_hostname()?;
+    let hostname = daemon_container_hostname().await?;
     let inspect = docker
         .inspect_container(
             &hostname,
@@ -56,8 +56,9 @@ pub(super) async fn detect_daemon_network(docker: &Docker) -> Option<String> {
         .or_else(|| networks.keys().next().cloned())
 }
 
-fn daemon_container_hostname() -> Option<String> {
-    std::fs::read_to_string("/etc/hostname")
+async fn daemon_container_hostname() -> Option<String> {
+    tokio::fs::read_to_string("/etc/hostname")
+        .await
         .ok()
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())

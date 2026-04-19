@@ -21,7 +21,6 @@ use super::defaults::{
     default_worker_image, default_worker_result_timeout_seconds,
     default_worker_socket_timeout_seconds,
 };
-use super::object_storage::{ObjectStorageConfig, load_object_storage_config_from_env};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DaemonConfig {
@@ -31,8 +30,6 @@ pub struct DaemonConfig {
     pub redis_url: String,
     #[serde(default = "default_redis_key_prefix")]
     pub redis_key_prefix: String,
-    #[serde(default)]
-    pub object_storage: ObjectStorageConfig,
     #[serde(default = "default_worker_image")]
     pub worker_image: String,
     #[serde(default = "default_signing_enabled")]
@@ -76,7 +73,6 @@ impl Default for DaemonConfig {
             database_url: String::new(),
             redis_url: String::new(),
             redis_key_prefix: default_redis_key_prefix(),
-            object_storage: ObjectStorageConfig::default(),
             worker_image: default_worker_image(),
             signing_enabled: default_signing_enabled(),
             signing_key_id: None,
@@ -112,11 +108,9 @@ impl DaemonConfig {
                 REDIS_URL_ENV_VAR
             )
         })?;
-        let object_storage = load_object_storage_config_from_env()?;
         let config = Self {
             database_url,
             redis_url,
-            object_storage,
             ..Self::default()
         };
         config
@@ -224,32 +218,6 @@ impl DaemonConfig {
         if self.build_failure_backoff_max_seconds < self.build_failure_backoff_base_seconds {
             return Err(SynforgeError::Config(
                 "build_failure_backoff_max_seconds must be greater than or equal to build_failure_backoff_base_seconds".to_string(),
-            ));
-        }
-        let object_storage = &self.object_storage;
-        if object_storage.endpoint.trim().is_empty() {
-            return Err(SynforgeError::Config(
-                "object_storage.endpoint must not be empty".to_string(),
-            ));
-        }
-        if object_storage.region.trim().is_empty() {
-            return Err(SynforgeError::Config(
-                "object_storage.region must not be empty".to_string(),
-            ));
-        }
-        if object_storage.bucket.trim().is_empty() {
-            return Err(SynforgeError::Config(
-                "object_storage.bucket must not be empty".to_string(),
-            ));
-        }
-        if object_storage.access_key_id.trim().is_empty() {
-            return Err(SynforgeError::Config(
-                "object_storage.access_key_id must not be empty".to_string(),
-            ));
-        }
-        if object_storage.secret_access_key.trim().is_empty() {
-            return Err(SynforgeError::Config(
-                "object_storage.secret_access_key must not be empty".to_string(),
             ));
         }
         Ok(())

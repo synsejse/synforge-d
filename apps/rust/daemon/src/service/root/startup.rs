@@ -15,7 +15,7 @@ use synforge_database::DieselStore;
 use synforge_git_sync::{
     PackageSyncStore, RuntimeGitRegistryAdapter, SyncStatusTracker, WorkerParseRunner,
 };
-use synforge_publish::{FileRepoManager, JobObjectStorage, RepoService, WorkerOutputStorage};
+use synforge_publish::{FileRepoManager, RepoService};
 use synforge_state::{
     MockChrootCache, RefreshAllPackagesProgressState, RuntimeCache, SigningReconcileProgressState,
 };
@@ -37,7 +37,6 @@ pub(crate) struct SynforgeStartupComponents {
     sessions: WorkerSessionBroker,
     lifecycle: Arc<JobLifecycle>,
     runtime_cache: RuntimeCache,
-    object_storage: JobObjectStorage,
 }
 
 #[async_trait]
@@ -55,7 +54,6 @@ impl SynforgeService {
     pub async fn health_check(&self) -> anyhow::Result<()> {
         self.store.health_check().await?;
         self.runtime_cache.health_check().await?;
-        self.object_storage.health_check().await?;
 
         let paths = self.config.runtime_paths();
         for path in [
@@ -83,13 +81,9 @@ impl SynforgeService {
         let store = DieselStore::new(&config.database_url, config.db_pool_size).await?;
         apply_startup_runtime_overrides(&store, &mut config).await?;
         let runtime_cache = RuntimeCache::new(&config).await?;
-        let object_storage = JobObjectStorage::from_config(&config).await?;
         let paths = config.runtime_paths();
-        let sessions = WorkerSessionBroker::new(
-            paths.jobs_root().to_path_buf(),
-            Arc::new(object_storage.clone()) as Arc<dyn WorkerOutputStorage>,
-        );
-        let repo_manager = Arc::new(FileRepoManager::new(object_storage.clone()));
+        let sessions = WorkerSessionBroker::new(paths.jobs_root().to_path_buf());
+        let repo_manager = Arc::new(FileRepoManager::new());
         let lifecycle = Arc::new(JobLifecycle::new(
             config.clone(),
             store.clone(),
@@ -105,7 +99,6 @@ impl SynforgeService {
             sessions,
             lifecycle,
             runtime_cache,
-            object_storage,
         })
         .await
     }
@@ -121,7 +114,6 @@ impl SynforgeService {
             sessions,
             lifecycle,
             runtime_cache,
-            object_storage,
         } = components;
         config
             .validate()
@@ -183,7 +175,6 @@ impl SynforgeService {
             queue_tx,
             shutdown_tx,
             runtime_cache,
-            object_storage,
             mock_chroot_cache: MockChrootCache::default(),
             refresh_all_packages_progress: RefreshAllPackagesProgressState::default(),
             signing_reconcile_progress: SigningReconcileProgressState::default(),

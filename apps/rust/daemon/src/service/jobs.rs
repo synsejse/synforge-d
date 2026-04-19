@@ -43,16 +43,9 @@ impl SynforgeService {
             .job_artifacts_dir(job_id)
             .join(artifact.storage_path());
         if !tokio::fs::try_exists(&path).await? {
-            let storage_path = artifact.storage_path().to_string_lossy().into_owned();
-            let restored = self
-                .object_storage
-                .restore_job_artifact(job_id, &storage_path, &path)
-                .await?;
-            if !restored {
-                return Err(anyhow::anyhow!(SynforgeError::NotFound(
-                    path.display().to_string()
-                )));
-            }
+            return Err(anyhow::anyhow!(SynforgeError::NotFound(
+                path.display().to_string()
+            )));
         }
 
         let artifacts_root =
@@ -205,7 +198,6 @@ impl SynforgeService {
         self.lifecycle
             .remove_published_files(&published_files)
             .await?;
-        self.object_storage.delete_job_outputs(job_id).await?;
         let deleted = job_store
             .delete_job(job_id)
             .await?

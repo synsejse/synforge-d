@@ -969,10 +969,6 @@ export interface components {
             max_concurrent_builds: number;
             /** Format: int64 */
             mock_chroot_cache_ttl_seconds: number;
-            object_storage_bucket: string;
-            object_storage_endpoint: string;
-            object_storage_path_style: boolean;
-            object_storage_region: string;
             /** Format: int64 */
             poller_tick_seconds: number;
             public_base_url: string;

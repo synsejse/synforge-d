@@ -34,7 +34,6 @@ impl PackageDeletionRunner for DaemonPackageDeps {
         self.lifecycle
             .remove_published_files(&published_files)
             .await?;
-        self.object_storage.delete_job_outputs(job_id).await?;
         self.package_store
             .delete_job(job_id)
             .await?

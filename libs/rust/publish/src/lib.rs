@@ -14,15 +14,13 @@ pub use service::{
     RepoSigningSettingsUpdate, RepoSigningSettingsWriter, RepoSummaryReader,
 };
 pub use signing::{ImportedSigningKey, RepoSigningManager, RepoSigningStatus};
-pub use storage::{JobObjectStorage, WorkerOutputStorage, WorkerOutputUpload};
+pub use storage::sanitize_relative_path;
 
 #[derive(Clone)]
-pub struct RuntimeRepoAdapter {
-    object_storage: JobObjectStorage,
-}
+pub struct RuntimeRepoAdapter;
 
 impl RuntimeRepoAdapter {
-    pub fn new(object_storage: JobObjectStorage) -> Self {
-        Self { object_storage }
+    pub fn new() -> Self {
+        Self
     }
 }

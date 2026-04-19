@@ -7,7 +7,6 @@ use async_trait::async_trait;
 use synforge_core::{api::PackageActionTargetResult, model::BuildTrigger};
 use synforge_database::packages::PostgresPackageStore;
 use synforge_git_sync::{RefreshAllProgressStore, RuntimeGitRegistryAdapter};
-use synforge_publish::JobObjectStorage;
 use synforge_state::RefreshAllPackagesProgressState;
 use synforge_worker_host::{BuildService, JobLifecycle, WorkerBuildQueue};
 use tracing::info;
@@ -21,7 +20,6 @@ pub(crate) struct DaemonPackageDeps {
     build_queue: WorkerBuildQueue,
     build_service: BuildService,
     lifecycle: Arc<JobLifecycle>,
-    object_storage: JobObjectStorage,
     progress: RefreshAllPackagesProgressState,
 }
 
@@ -49,7 +47,6 @@ impl SynforgeService {
             build_queue: WorkerBuildQueue::new(self.queue_tx.clone()),
             build_service: self.build_service.clone(),
             lifecycle: Arc::clone(&self.lifecycle),
-            object_storage: self.object_storage.clone(),
             progress: self.refresh_all_packages_progress.clone(),
         }
     }

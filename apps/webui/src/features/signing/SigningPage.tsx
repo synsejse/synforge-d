@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { faCheckCircle, faKey, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { signingApi } from "./api";
-import type { RepoSigningStatusView } from "../../lib/types";
+import type {
+  RepoSigningReconcileMode,
+  RepoSigningReconcileProgressView,
+  RepoSigningStatusView,
+} from "../../lib/types";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import Button from "../../components/ui/Button";
 import FaIcon from "../../components/ui/FaIcon";
@@ -51,34 +55,43 @@ export default function Signing() {
 
   const keyActionsLocked = enabled;
 
-  async function pollReconcileProgress() {
+  async function pollReconcileProgress(expectedMode?: RepoSigningReconcileMode) {
     const progress = await signingApi.getRepoSigningReconcileProgress();
     const operation = progress.operation;
     if (!operation) {
-      return;
+      return null;
     }
+    if (expectedMode && operation.mode !== expectedMode) {
+      return null;
+    }
+    applyReconcileOverlay(operation);
+    return operation;
+  }
+
+  function applyReconcileOverlay(operation: RepoSigningReconcileProgressView) {
     setOverlayTitle(
       operation.mode === "sign"
         ? "Signing existing artifacts"
         : "Unsigning existing artifacts"
     );
-    const percent =
-      operation.total_artifacts === 0
-        ? 100
-        : Math.min(
-            100,
-            Math.round(
-              (operation.processed_artifacts / operation.total_artifacts) * 100
-            )
-          );
-    setOverlayProgress(percent);
-    setOverlayDetail(
-      `${operation.processed_artifacts}/${operation.total_artifacts} artifacts · ${operation.failed_artifacts} failed`
-    );
+    setOverlayProgress(progressPercent(operation));
+    setOverlayDetail(progressDetail(operation));
+  }
+
+  async function waitForReconcileTerminalState(mode: RepoSigningReconcileMode) {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const operation = await pollReconcileProgress(mode).catch(() => null);
+      if (operation && operation.state !== "running") {
+        return operation;
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 250));
+    }
+    return null;
   }
 
   async function handleToggleSigning() {
     const nextEnabled = !enabled;
+    const mode: RepoSigningReconcileMode = nextEnabled ? "sign" : "unsign";
     setSaving(true);
     setOverlayOpen(true);
     setOverlayProgress(0);
@@ -87,12 +100,22 @@ export default function Signing() {
     );
     setOverlayDetail("Preparing artifact reconciliation…");
     const progressTicker = window.setInterval(() => {
-      void pollReconcileProgress().catch(() => undefined);
+      void pollReconcileProgress(mode).catch(() => undefined);
     }, 500);
     try {
-      await pollReconcileProgress().catch(() => undefined);
+      await pollReconcileProgress(mode).catch(() => undefined);
       const response = await signingApi.updateRepoSigningConfig({ enabled: nextEnabled });
-      await pollReconcileProgress().catch(() => undefined);
+      const finalOperation = await waitForReconcileTerminalState(mode);
+      if (finalOperation) {
+        applyReconcileOverlay(finalOperation);
+      } else {
+        setOverlayProgress(100);
+        setOverlayDetail(
+          nextEnabled
+            ? "Artifact signing finished."
+            : "Artifact unsigning finished."
+        );
+      }
       applyStatus(response.status);
       if (nextEnabled) {
         await signingApi.testRepoSigning();
@@ -101,11 +124,14 @@ export default function Signing() {
         setMessage("Repository signing disabled.");
       }
       setError(null);
+      setOverlayOpen(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update signing state");
+      const message = e instanceof Error ? e.message : "Failed to update signing state";
+      setError(message);
+      setOverlayProgress(100);
+      setOverlayDetail(message);
     } finally {
       window.clearInterval(progressTicker);
-      setOverlayProgress(100);
       setSaving(false);
     }
   }
@@ -403,6 +429,32 @@ export default function Signing() {
       />
     </div>
   );
+}
+
+function progressPercent(operation: RepoSigningReconcileProgressView): number {
+  if (operation.state !== "running") {
+    return 100;
+  }
+  if (operation.total_artifacts === 0) {
+    return 100;
+  }
+  return Math.min(
+    100,
+    Math.round((operation.processed_artifacts / operation.total_artifacts) * 100)
+  );
+}
+
+function progressDetail(operation: RepoSigningReconcileProgressView): string {
+  const counts = `${operation.processed_artifacts}/${operation.total_artifacts} artifacts · ${operation.failed_artifacts} failed`;
+  if (operation.state === "completed") {
+    return operation.failed_artifacts > 0
+      ? `Finished with failures · ${counts}`
+      : `Finished · ${counts}`;
+  }
+  if (operation.state === "failed") {
+    return operation.message ? `Failed · ${operation.message}` : `Failed · ${counts}`;
+  }
+  return counts;
 }
 
 function StatusRow({ label, value }: { label: string; value: string }) {

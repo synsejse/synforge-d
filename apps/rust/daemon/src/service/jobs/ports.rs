@@ -10,7 +10,6 @@ use synforge_database::DieselStore;
 use synforge_database::jobs::PostgresJobStore;
 use synforge_database::packages::PostgresPackageStore;
 use synforge_git_sync::RuntimeGitRegistryAdapter;
-use synforge_publish::JobObjectStorage;
 use synforge_worker_host::{
     ActiveTargetBuildReader, BuildJobReader, BuildQueue, DockerWorkerLauncher,
     ExistingSourceSyncer, JobLifecycle, PackageDefinitionReader, QueuedBuild, QueuedBuildRequest,
@@ -28,7 +27,6 @@ pub(super) struct JobRetryDeps {
     registry: RuntimeGitRegistryAdapter,
     lifecycle: Arc<JobLifecycle>,
     worker_launcher: Arc<DockerWorkerLauncher>,
-    object_storage: JobObjectStorage,
     queue_tx: mpsc::Sender<QueuedBuild>,
 }
 
@@ -120,7 +118,6 @@ impl BuildQueue for JobRetryDeps {
 
 impl JobRetryDeps {
     async fn cleanup_retry_runtime_dirs(&self, job_id: Uuid) -> anyhow::Result<()> {
-        self.object_storage.delete_job_outputs(job_id).await?;
         let runtime_root = self.config.runtime_paths().job_root(job_id);
         remove_retry_runtime_dir(&runtime_root).await?;
 
@@ -141,7 +138,6 @@ impl SynforgeService {
             registry: self.registry.clone(),
             lifecycle: Arc::clone(&self.lifecycle),
             worker_launcher: Arc::clone(&self.worker_launcher),
-            object_storage: self.object_storage.clone(),
             queue_tx: self.queue_tx.clone(),
         }
     }

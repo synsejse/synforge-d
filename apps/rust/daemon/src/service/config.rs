@@ -66,10 +66,6 @@ impl SynforgeService {
                 database_url: current.database_url.clone(),
                 redis_url: current.redis_url.clone(),
                 redis_key_prefix: current.redis_key_prefix.clone(),
-                object_storage_endpoint: current.object_storage.endpoint.clone(),
-                object_storage_region: current.object_storage.region.clone(),
-                object_storage_bucket: current.object_storage.bucket.clone(),
-                object_storage_path_style: current.object_storage.path_style,
                 repo_dir: paths.repo_dir().to_path_buf(),
                 jobs_root: paths.jobs_root().to_path_buf(),
                 cache_root: paths.cache_root().to_path_buf(),
@@ -199,9 +195,6 @@ impl SynforgeService {
             .await?;
         signing_manager
             .reconcile_repo_metadata_signature(&config, config.runtime_paths().repo_dir())
-            .await?;
-        self.object_storage
-            .sync_repo_tree(config.runtime_paths().repo_dir())
             .await?;
         self.effective_config().await
     }

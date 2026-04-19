@@ -15,7 +15,7 @@ use tokio::process::Command;
 use tracing::{info, warn};
 use uuid::Uuid;
 
-use crate::{JobObjectStorage, RepoSigningManager};
+use crate::RepoSigningManager;
 
 fn should_skip_artifact(artifact: &BuildArtifact, package: &PackageDefinition) -> bool {
     match artifact.kind {
@@ -25,23 +25,12 @@ fn should_skip_artifact(artifact: &BuildArtifact, package: &PackageDefinition) -
     }
 }
 
-fn should_restore_for_signing(artifact: &BuildArtifact, package: &PackageDefinition) -> bool {
-    match artifact.kind {
-        ArtifactKind::Rpm => true,
-        ArtifactKind::Srpm => package.publish_srpm,
-        ArtifactKind::Debuginfo | ArtifactKind::Debugsource => package.publish_debuginfo,
-        ArtifactKind::Log | ArtifactKind::Other => false,
-    }
-}
-
 #[derive(Debug, Clone)]
-pub struct FileRepoManager {
-    object_storage: JobObjectStorage,
-}
+pub struct FileRepoManager;
 
 impl FileRepoManager {
-    pub fn new(object_storage: JobObjectStorage) -> Self {
-        Self { object_storage }
+    pub fn new() -> Self {
+        Self
     }
 
     pub async fn ensure_repo(&self, config: &DaemonConfig) -> anyhow::Result<()> {
@@ -50,13 +39,10 @@ impl FileRepoManager {
             "ensuring repository metadata exists"
         );
         let runtime_paths = config.runtime_paths();
-        self.object_storage
-            .restore_repo_tree(runtime_paths.repo_dir())
-            .await?;
         for target in discover_repo_targets(runtime_paths.repo_dir()).await? {
             regenerate_target_metadata(runtime_paths.repo_target_dir(&target).as_path()).await?;
         }
-        reconcile_repo_state(config, &self.object_storage).await
+        reconcile_repo_state(config).await
     }
 
     pub async fn publish_build(
@@ -92,8 +78,12 @@ impl FileRepoManager {
             let source_path = paths
                 .job_artifacts_dir(worker_result.job_id)
                 .join(artifact.storage_path());
-            self.restore_artifact_if_missing(worker_result.job_id, artifact, &source_path)
-                .await?;
+            if !tokio::fs::try_exists(&source_path).await? {
+                anyhow::bail!(
+                    "artifact {} is not available locally",
+                    artifact.file.display()
+                );
+            }
             let file_name = artifact.file.file_name().ok_or_else(|| {
                 anyhow::anyhow!("artifact file {} has no filename", artifact.file.display())
             })?;
@@ -143,7 +133,7 @@ impl FileRepoManager {
         for target_repo_dir in affected_targets {
             regenerate_target_metadata(&target_repo_dir).await?;
         }
-        reconcile_repo_state(config, &self.object_storage).await?;
+        reconcile_repo_state(config).await?;
         info!(
             job_id = %worker_result.job_id,
             package_name = %package.name,
@@ -156,63 +146,6 @@ impl FileRepoManager {
             published_at,
             files,
         })
-    }
-
-    pub async fn ensure_worker_signing_artifacts_available(
-        &self,
-        package: &PackageDefinition,
-        worker_result: &WorkerBuildResult,
-        config: &DaemonConfig,
-    ) -> anyhow::Result<()> {
-        for artifact in &worker_result.artifacts {
-            if !should_restore_for_signing(artifact, package) {
-                continue;
-            }
-            let local_path = config
-                .runtime_paths()
-                .job_artifacts_dir(worker_result.job_id)
-                .join(artifact.storage_path());
-            self.restore_artifact_if_missing(worker_result.job_id, artifact, &local_path)
-                .await?;
-        }
-        Ok(())
-    }
-
-    pub fn archive_worker_artifacts_in_background(
-        &self,
-        worker_result: &WorkerBuildResult,
-        config: &DaemonConfig,
-    ) {
-        let object_storage = self.object_storage.clone();
-        let job_id = worker_result.job_id;
-        let uploads = worker_result
-            .artifacts
-            .iter()
-            .map(|artifact| {
-                let storage_path = artifact.storage_path().to_string_lossy().into_owned();
-                let local_path = config
-                    .runtime_paths()
-                    .job_artifacts_dir(worker_result.job_id)
-                    .join(artifact.storage_path());
-                (storage_path, local_path)
-            })
-            .collect::<Vec<_>>();
-
-        tokio::spawn(async move {
-            for (storage_path, local_path) in uploads {
-                if let Err(error) = object_storage
-                    .store_job_artifact(job_id, &storage_path, &local_path)
-                    .await
-                {
-                    warn!(
-                        job_id = %job_id,
-                        storage_path,
-                        error = %error,
-                        "failed to archive signed job artifact to object storage"
-                    );
-                }
-            }
-        });
     }
 
     pub async fn remove_build_files(
@@ -245,7 +178,7 @@ impl FileRepoManager {
         for target_repo_dir in affected_targets {
             refresh_target_repo_after_removal(paths.repo_dir(), &target_repo_dir).await?;
         }
-        reconcile_repo_state(config, &self.object_storage).await?;
+        reconcile_repo_state(config).await?;
         if !files.is_empty() {
             info!(
                 file_count = files.len(),
@@ -255,28 +188,6 @@ impl FileRepoManager {
         Ok(())
     }
 
-    async fn restore_artifact_if_missing(
-        &self,
-        job_id: Uuid,
-        artifact: &BuildArtifact,
-        local_path: &Path,
-    ) -> anyhow::Result<()> {
-        if tokio::fs::try_exists(local_path).await? {
-            return Ok(());
-        }
-        let storage_path = artifact.storage_path().to_string_lossy().into_owned();
-        let restored = self
-            .object_storage
-            .restore_job_artifact(job_id, &storage_path, local_path)
-            .await?;
-        if !restored {
-            anyhow::bail!(
-                "artifact {} is not available locally or in object storage",
-                artifact.file.display()
-            );
-        }
-        Ok(())
-    }
 }
 
 fn build_repo_build_dir(
@@ -325,10 +236,7 @@ async fn regenerate_target_metadata(repo_dir: &Path) -> anyhow::Result<()> {
     createrepo_result
 }
 
-async fn reconcile_repo_state(
-    config: &DaemonConfig,
-    object_storage: &JobObjectStorage,
-) -> anyhow::Result<()> {
+async fn reconcile_repo_state(config: &DaemonConfig) -> anyhow::Result<()> {
     let runtime_paths = config.runtime_paths();
     let repo_root = runtime_paths.repo_dir();
     clear_root_repo_metadata(repo_root).await?;
@@ -342,17 +250,6 @@ async fn reconcile_repo_state(
                 repo_root.display()
             )
         })?;
-    let object_storage = object_storage.clone();
-    let repo_root = repo_root.to_path_buf();
-    tokio::spawn(async move {
-        if let Err(error) = object_storage.sync_repo_tree(&repo_root).await {
-            warn!(
-                repo_dir = %repo_root.display(),
-                error = %error,
-                "failed to sync repository tree to object storage"
-            );
-        }
-    });
     Ok(())
 }
 

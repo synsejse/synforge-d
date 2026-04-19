@@ -8,8 +8,6 @@ authors.workspace = true
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-futures-util.workspace = true
-object_store.workspace = true
 sha2.workspace = true
 synforge-core = { path = "../core" }
 synforge-database = { path = "../database" }

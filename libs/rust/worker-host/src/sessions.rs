@@ -1,11 +1,12 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
 use dashmap::DashMap;
-use synforge_publish::{WorkerOutputStorage, WorkerOutputUpload};
+use sha2::Digest;
+use synforge_publish::sanitize_relative_path;
+use tokio::io::AsyncReadExt;
 use tokio::sync::{Mutex, Notify};
-use tracing::warn;
 use uuid::Uuid;
 
 use synforge_core::{
@@ -19,7 +20,6 @@ use synforge_core::{
 #[derive(Clone)]
 pub struct WorkerSessionBroker {
     root: PathBuf,
-    output_storage: Arc<dyn WorkerOutputStorage>,
     state: Arc<DashMap<Uuid, Arc<WorkerSessionEntry>>>,
 }
 
@@ -45,10 +45,9 @@ pub struct ActiveWorkerSession {
 }
 
 impl WorkerSessionBroker {
-    pub fn new(root: PathBuf, output_storage: Arc<dyn WorkerOutputStorage>) -> Self {
+    pub fn new(root: PathBuf) -> Self {
         Self {
             root,
-            output_storage,
             state: Arc::new(DashMap::new()),
         }
     }
@@ -60,6 +59,7 @@ impl WorkerSessionBroker {
     ) -> anyhow::Result<WorkerSession> {
         let worker_id = job_id.to_string();
         let job_root = self.job_root(job_id);
+        tokio::fs::create_dir_all(job_root.join("artifacts")).await?;
         tokio::fs::create_dir_all(job_root.join("logs")).await?;
         self.state.insert(
             job_id,
@@ -117,14 +117,9 @@ impl WorkerSessionBroker {
         self.state.iter().map(|entry| *entry.key()).collect()
     }
 
-    pub async fn begin_remote_artifact_upload(
-        &self,
-        job_id: Uuid,
-        storage_path: &str,
-    ) -> anyhow::Result<Box<dyn WorkerOutputUpload>> {
-        self.output_storage
-            .begin_job_artifact_upload(job_id, storage_path)
-            .await
+    pub fn artifact_storage_path(&self, job_id: Uuid, relative_path: &str) -> PathBuf {
+        let sanitized = sanitize_relative_path(relative_path);
+        self.job_root(job_id).join("artifacts").join(sanitized)
     }
 
     pub async fn finalize_artifact_upload(
@@ -132,21 +127,40 @@ impl WorkerSessionBroker {
         job_id: Uuid,
         artifact_id: Uuid,
         file: &str,
+        storage_path: &str,
         kind: ArtifactKind,
-        sha256: String,
-        size_bytes: u64,
     ) -> anyhow::Result<BuildArtifact> {
         let entry = self
             .state
             .get(&job_id)
             .ok_or_else(|| anyhow::anyhow!("worker session {} not found", job_id))?;
         let (package_name, mock_chroot) = build_metadata_from_payload(&entry.payload)?;
+        let stored_path = self.artifact_storage_path(job_id, storage_path);
+        let mut stored_file = tokio::fs::File::open(&stored_path).await?;
+        let mut hasher = sha2::Sha256::new();
+        let mut size_bytes = 0_u64;
+        let mut buffer = vec![0_u8; 64 * 1024];
+        loop {
+            let read = stored_file.read(&mut buffer).await?;
+            if read == 0 {
+                break;
+            }
+            hasher.update(&buffer[..read]);
+            size_bytes += read as u64;
+        }
+        if let Some(parent) = stored_path.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
         let artifact = BuildArtifact {
             id: artifact_id,
             package_name,
             mock_chroot,
             file: PathBuf::from(file),
-            sha256,
+            sha256: hasher
+                .finalize()
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect(),
             size_bytes,
             kind,
             signing_status: None,
@@ -157,17 +171,7 @@ impl WorkerSessionBroker {
     }
 
     pub fn log_storage_path(&self, job_id: Uuid, relative_path: &str) -> PathBuf {
-        let relative = Path::new(relative_path);
-        let sanitized = relative
-            .components()
-            .filter_map(|component| match component {
-                std::path::Component::Normal(part) => Some(PathBuf::from(part)),
-                _ => None,
-            })
-            .fold(PathBuf::new(), |mut acc, part| {
-                acc.push(part);
-                acc
-            });
+        let sanitized = sanitize_relative_path(relative_path);
         self.job_root(job_id).join("logs").join(sanitized)
     }
 
@@ -186,8 +190,6 @@ impl WorkerSessionBroker {
             .state
             .get(&job_id)
             .ok_or_else(|| anyhow::anyhow!("worker session {} not found", job_id))?;
-        let log_sources = entry.log_sources.lock().await.clone();
-        self.archive_session_outputs_in_background(job_id, &log_sources);
         let artifacts = entry.artifacts.lock().await;
         *entry.result.lock().await = Some(merge_result(result, &artifacts));
         entry.notify.notify_waiters();
@@ -250,33 +252,6 @@ impl WorkerSessionBroker {
 
     pub fn job_root(&self, job_id: Uuid) -> PathBuf {
         self.root.join(job_id.to_string())
-    }
-
-    fn archive_session_outputs_in_background(&self, job_id: Uuid, log_sources: &[String]) {
-        let output_storage = Arc::clone(&self.output_storage);
-        let log_uploads = log_sources
-            .iter()
-            .map(|log_source| {
-                let local_path = self.log_storage_path(job_id, log_source);
-                (log_source.clone(), local_path)
-            })
-            .collect::<Vec<_>>();
-
-        tokio::spawn(async move {
-            for (log_source, local_path) in log_uploads {
-                if let Err(error) = output_storage
-                    .store_job_log(job_id, &log_source, &local_path)
-                    .await
-                {
-                    warn!(
-                        job_id = %job_id,
-                        log_source,
-                        error = %error,
-                        "failed to archive job log to object storage"
-                    );
-                }
-            }
-        });
     }
 }
 

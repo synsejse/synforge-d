@@ -8,7 +8,7 @@ use std::sync::Arc;
 use synforge_core::config::DaemonConfig;
 use synforge_database::DieselStore;
 use synforge_git_sync::RuntimeGitRegistryAdapter;
-use synforge_publish::{JobObjectStorage, RepoService};
+use synforge_publish::RepoService;
 use synforge_state::{
     MockChrootCache, RefreshAllPackagesProgressState, RuntimeCache, SigningReconcileProgressState,
 };
@@ -32,7 +32,6 @@ pub struct SynforgeService {
     pub(super) queue_tx: mpsc::Sender<QueuedBuild>,
     pub(super) shutdown_tx: watch::Sender<bool>,
     pub(super) runtime_cache: RuntimeCache,
-    pub(super) object_storage: JobObjectStorage,
     pub(super) mock_chroot_cache: MockChrootCache,
     pub(super) refresh_all_packages_progress: RefreshAllPackagesProgressState,
     pub(super) signing_reconcile_progress: SigningReconcileProgressState,

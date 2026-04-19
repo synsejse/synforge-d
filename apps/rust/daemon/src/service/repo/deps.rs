@@ -10,10 +10,10 @@ use synforge_database::{
     DieselStore, repo::PostgresRepoStore, runtime_settings::PostgresRuntimeSettingsStore,
 };
 use synforge_publish::{
-    JobObjectStorage, RepoArtifactCatalog, RepoFileStorage, RepoSigningCommandRunner,
-    RepoSigningConfigLoader, RepoSigningInspector, RepoSigningKeyIdentity,
-    RepoSigningProgressReader, RepoSigningProgressWriter, RepoSigningSettingsUpdate,
-    RepoSigningSettingsWriter, RuntimeRepoAdapter,
+    RepoArtifactCatalog, RepoFileStorage, RepoSigningCommandRunner, RepoSigningConfigLoader,
+    RepoSigningInspector, RepoSigningKeyIdentity, RepoSigningProgressReader,
+    RepoSigningProgressWriter, RepoSigningSettingsUpdate, RepoSigningSettingsWriter,
+    RuntimeRepoAdapter,
 };
 use synforge_state::SigningReconcileProgressState;
 use uuid::Uuid;
@@ -26,13 +26,12 @@ use super::config::sync_keyring_from_runtime_settings;
 pub(crate) struct RepoSigningDeps {
     store: DieselStore,
     base_config: DaemonConfig,
-    object_storage: JobObjectStorage,
     signing_progress: SigningReconcileProgressState,
 }
 
 impl RepoSigningDeps {
     fn repo_adapter(&self) -> RuntimeRepoAdapter {
-        RuntimeRepoAdapter::new(self.object_storage.clone())
+        RuntimeRepoAdapter::new()
     }
 
     fn repo_store(&self) -> PostgresRepoStore {
@@ -269,7 +268,6 @@ impl SynforgeService {
         RepoSigningDeps {
             store: self.store.clone(),
             base_config: self.config.clone(),
-            object_storage: self.object_storage.clone(),
             signing_progress: self.signing_reconcile_progress.clone(),
         }
     }

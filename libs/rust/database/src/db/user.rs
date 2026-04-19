@@ -13,19 +13,19 @@ async fn build_user_summaries(
     conn: &mut AsyncPgConnection,
     rows: Vec<UserRecord>,
 ) -> anyhow::Result<Vec<UserSummary>> {
-    let ids = rows.iter().map(|row| row.id.clone()).collect::<Vec<_>>();
+    let ids = rows.iter().map(|row| row.id).collect::<Vec<_>>();
     let mut permissions = load_permissions_map(conn, &ids).await?;
     let mut metrics = load_metrics_map(conn, &ids).await?;
 
     rows.into_iter()
         .map(|row| {
-            let user_id = row.id.clone();
-            let fallback_updated_at = row.updated_at.clone();
+            let user_id = row.id;
+            let fallback_updated_at = row.updated_at;
             let user = user_from_record(row, permissions.remove(&user_id).unwrap_or_default())?;
             let metrics = metrics.remove(&user_id).unwrap_or(UserRepoMetrics {
                 user_id: user.id,
                 downloaded_bytes: 0,
-                updated_at: parse_timestamp(&fallback_updated_at)?,
+                updated_at: fallback_updated_at,
             });
             Ok(UserSummary { user, metrics })
         })
@@ -34,7 +34,7 @@ async fn build_user_summaries(
 
 async fn load_user_summary(
     conn: &mut AsyncPgConnection,
-    user_id: &str,
+    user_id: Uuid,
 ) -> anyhow::Result<UserSummary> {
     let row = users::table
         .find(user_id)
@@ -47,8 +47,8 @@ async fn load_user_summary(
 
 async fn load_permissions_map(
     conn: &mut AsyncPgConnection,
-    user_ids: &[String],
-) -> anyhow::Result<HashMap<String, Vec<UserPermission>>> {
+    user_ids: &[Uuid],
+) -> anyhow::Result<HashMap<Uuid, Vec<UserPermission>>> {
     if user_ids.is_empty() {
         return Ok(HashMap::new());
     }
@@ -62,7 +62,7 @@ async fn load_permissions_map(
         .select(UserPermissionRecord::as_select())
         .load::<UserPermissionRecord>(conn)
         .await?;
-    let mut map = HashMap::<String, Vec<UserPermission>>::new();
+    let mut map = HashMap::<Uuid, Vec<UserPermission>>::new();
     for row in rows {
         map.entry(row.user_id).or_default().push(row.permission);
     }
@@ -71,8 +71,8 @@ async fn load_permissions_map(
 
 async fn load_metrics_map(
     conn: &mut AsyncPgConnection,
-    user_ids: &[String],
-) -> anyhow::Result<HashMap<String, UserRepoMetrics>> {
+    user_ids: &[Uuid],
+) -> anyhow::Result<HashMap<Uuid, UserRepoMetrics>> {
     if user_ids.is_empty() {
         return Ok(HashMap::new());
     }
@@ -82,7 +82,7 @@ async fn load_metrics_map(
         .select(UserRepoMetricsRecord::as_select())
         .load::<UserRepoMetricsRecord>(conn)
         .await?;
-    let mut map = HashMap::<String, UserRepoMetrics>::new();
+    let mut map = HashMap::<Uuid, UserRepoMetrics>::new();
     for row in rows {
         map.insert(row.user_id.clone(), user_metrics_from_record(row)?);
     }
@@ -91,7 +91,7 @@ async fn load_metrics_map(
 
 async fn replace_permissions(
     conn: &mut AsyncPgConnection,
-    user_id: &str,
+    user_id: Uuid,
     permissions: &[UserPermission],
 ) -> anyhow::Result<()> {
     diesel::delete(user_permissions::table.filter(user_permissions::user_id.eq(user_id)))

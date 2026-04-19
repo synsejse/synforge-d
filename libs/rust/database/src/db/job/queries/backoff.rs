@@ -38,7 +38,7 @@ pub(in crate::db) async fn has_active_job_for_target(
                 .or(build_jobs::status.eq(BuildStatus::Running)),
         )
         .select(build_jobs::id)
-        .first::<String>(&mut conn)
+        .first::<Uuid>(&mut conn)
         .await
         .optional()?;
     Ok(active_job.is_some())
@@ -61,11 +61,9 @@ pub(in crate::db) async fn list_prunable_successful_job_ids(
         .limit(i64::MAX)
         .offset(keep as i64)
         .select(build_jobs::id)
-        .load::<String>(&mut conn)
+        .load::<Uuid>(&mut conn)
         .await?;
-    rows.into_iter()
-        .map(|id| Ok(Uuid::parse_str(&id)?))
-        .collect()
+    Ok(rows)
 }
 
 pub(in crate::db) async fn get_target_build_backoff(
@@ -86,7 +84,7 @@ pub(in crate::db) async fn get_target_build_backoff(
         .map(|record| {
             Ok(BuildFailureBackoffState {
                 consecutive_failures: record.consecutive_failures as u32,
-                next_eligible_at: parse_timestamp(&record.next_eligible_at)?,
+                next_eligible_at: record.next_eligible_at,
             })
         })
         .transpose()

@@ -1,29 +1,30 @@
 use super::super::*;
+use synforge_core::package::RepoTarget;
 
 #[derive(Insertable)]
 #[diesel(table_name = published_repo_files)]
 pub(crate) struct NewPublishedRepoFileRecord {
-    pub(crate) artifact_id: String,
-    pub(crate) published_at: String,
+    pub(crate) artifact_id: Uuid,
+    pub(crate) published_at: OffsetDateTime,
 }
 
 type PublishedRepoFileRow = (
-    String,
-    String,
+    Uuid,
+    Uuid,
     String,
     String,
     String,
     String,
     i64,
     ArtifactKind,
-    String,
+    OffsetDateTime,
     Option<ArtifactSigningStatus>,
     Option<String>,
 );
 
 pub(crate) async fn load_published_repo_files_for_job(
     conn: &mut AsyncPgConnection,
-    job_id: &str,
+    job_id: Uuid,
 ) -> anyhow::Result<Vec<PublishedRepoFile>> {
     let rows = published_repo_files::table
         .inner_join(
@@ -70,7 +71,6 @@ pub(crate) fn published_repo_file_from_record(
         signing_status,
         signing_error_message,
     ) = row;
-    let job_id = Uuid::parse_str(&job_id)?;
     let path = build_published_repo_path(
         &package_name,
         &mock_chroot,
@@ -78,7 +78,7 @@ pub(crate) fn published_repo_file_from_record(
         Path::new(&artifact_path),
     )?;
     Ok(PublishedRepoFile {
-        artifact_id: Uuid::parse_str(&artifact_id)?,
+        artifact_id,
         job_id,
         package_name,
         mock_chroot,
@@ -86,7 +86,7 @@ pub(crate) fn published_repo_file_from_record(
         sha256,
         size_bytes: size_bytes.max(0) as u64,
         kind,
-        published_at: parse_timestamp(&published_at)?,
+        published_at,
         signing_status,
         signing_error_message,
     })
@@ -98,16 +98,47 @@ pub fn build_published_repo_path(
     job_id: Uuid,
     artifact_path: &Path,
 ) -> anyhow::Result<PathBuf> {
+    let target = RepoTarget::from_mock_chroot(mock_chroot)
+        .ok_or_else(|| anyhow::anyhow!("invalid mock chroot {}", mock_chroot))?;
     let file_name = artifact_path.file_name().ok_or_else(|| {
         anyhow::anyhow!(
             "artifact path {} has no filename for published repo path",
             artifact_path.display()
         )
     })?;
-    Ok(PathBuf::from("packages")
+    Ok(target
+        .repo_subdir()
+        .join("packages")
         .join(package_name)
-        .join(mock_chroot)
         .join("builds")
         .join(job_id.to_string())
         .join(file_name))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_published_repo_path;
+    use uuid::Uuid;
+
+    #[test]
+    fn builds_target_scoped_repo_paths() {
+        let path = build_published_repo_path(
+            "bash",
+            "fedora-44-x86_64",
+            Uuid::nil(),
+            std::path::Path::new("bash-1.0-1.fc44.x86_64.rpm"),
+        )
+        .expect("path should build");
+
+        assert_eq!(
+            path,
+            std::path::PathBuf::from("fedora")
+                .join("44")
+                .join("packages")
+                .join("bash")
+                .join("builds")
+                .join(Uuid::nil().to_string())
+                .join("bash-1.0-1.fc44.x86_64.rpm")
+        );
+    }
 }

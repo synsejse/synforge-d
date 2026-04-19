@@ -33,13 +33,14 @@ use synforge_core::{
     },
     package::{BuildEnvVar, PackageDefinition, SpecSource},
 };
-use time::{OffsetDateTime, format_description::well_known::Rfc3339};
+use time::OffsetDateTime;
 use tracing::info;
 use uuid::Uuid;
 
 use crate::schema::{
-    artifact_signatures, build_artifacts, build_failure_backoff, build_jobs, build_logs, packages,
-    published_repo_files, runtime_settings, user_permissions, user_repo_metrics, users,
+    artifact_signatures, build_artifacts, build_failure_backoff, build_jobs, build_logs,
+    package_mock_chroots, packages, published_repo_files, runtime_settings, user_permissions,
+    user_repo_metrics, users,
 };
 
 pub(crate) use records::*;

@@ -20,10 +20,9 @@ pub(in crate::db) async fn get_user(
     store: &DieselStore,
     user_id: Uuid,
 ) -> anyhow::Result<Option<UserSummary>> {
-    let user_id = user_id.to_string();
     let mut conn = store.get_connection().await?;
     let row = users::table
-        .find(user_id.as_str())
+        .find(user_id)
         .select(UserRecord::as_select())
         .first(&mut conn)
         .await

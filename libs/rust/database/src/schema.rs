@@ -7,7 +7,6 @@ diesel::table! {
         publish_srpm -> Bool,
         publish_debuginfo -> Bool,
         network_access -> Bool,
-        mock_chroots_json -> Text,
         source_repo_url -> Text,
         source_spec_file -> Text,
         source_poll -> Bool,
@@ -18,7 +17,7 @@ diesel::table! {
         memory_limit_mb -> Nullable<BigInt>,
         ccache_enabled -> Bool,
         ccache_max_size_mb -> Nullable<BigInt>,
-        build_env_json -> Text,
+        build_env_json -> Jsonb,
         spec_file -> Text,
         version -> Text,
         release -> Text,
@@ -26,8 +25,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    package_mock_chroots (package_name, mock_chroot) {
+        package_name -> Text,
+        mock_chroot -> Text,
+    }
+}
+
+diesel::table! {
     build_jobs (id) {
-        id -> Text,
+        id -> Uuid,
         package_name -> Text,
         mock_chroot -> Text,
         revision -> Text,
@@ -35,17 +41,17 @@ diesel::table! {
         status -> Text,
         spec_file -> Text,
         worker_container_id -> Nullable<Text>,
-        created_at -> Text,
-        updated_at -> Text,
-        finished_at -> Nullable<Text>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+        finished_at -> Nullable<Timestamptz>,
         error_message -> Nullable<Text>,
     }
 }
 
 diesel::table! {
     build_artifacts (id) {
-        id -> Text,
-        job_id -> Text,
+        id -> Uuid,
+        job_id -> Uuid,
         package_name -> Text,
         mock_chroot -> Text,
         file -> Text,
@@ -57,21 +63,21 @@ diesel::table! {
 
 diesel::table! {
     artifact_signatures (artifact_id) {
-        artifact_id -> Text,
+        artifact_id -> Uuid,
         status -> Text,
-        signed_at -> Nullable<Text>,
+        signed_at -> Nullable<Timestamptz>,
         key_id -> Nullable<Text>,
         fingerprint -> Nullable<Text>,
         error_message -> Nullable<Text>,
-        updated_at -> Text,
+        updated_at -> Timestamptz,
     }
 }
 
 diesel::table! {
     build_logs (job_id, file) {
-        job_id -> Text,
+        job_id -> Uuid,
         file -> Text,
-        updated_at -> Text,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -80,54 +86,54 @@ diesel::table! {
         package_name -> Text,
         mock_chroot -> Text,
         consecutive_failures -> Integer,
-        next_eligible_at -> Text,
-        updated_at -> Text,
+        next_eligible_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
 diesel::table! {
     users (id) {
-        id -> Text,
+        id -> Uuid,
         handle -> Text,
         display_name -> Text,
         password_hash -> Text,
         active -> Bool,
-        created_at -> Text,
-        updated_at -> Text,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
 diesel::table! {
     user_permissions (user_id, permission) {
-        user_id -> Text,
+        user_id -> Uuid,
         permission -> Text,
     }
 }
 
 diesel::table! {
     user_repo_metrics (user_id) {
-        user_id -> Text,
+        user_id -> Uuid,
         downloaded_bytes -> BigInt,
-        updated_at -> Text,
+        updated_at -> Timestamptz,
     }
 }
 
 diesel::table! {
     published_repo_files (artifact_id) {
-        artifact_id -> Text,
-        published_at -> Text,
+        artifact_id -> Uuid,
+        published_at -> Timestamptz,
     }
 }
 
 diesel::table! {
     sync_operations (id) {
-        id -> Text,
+        id -> Uuid,
         package_name -> Text,
         trigger_type -> Text,
         status -> Text,
         revision -> Nullable<Text>,
         error_message -> Nullable<Text>,
-        created_at -> Text,
+        created_at -> Timestamptz,
     }
 }
 
@@ -143,13 +149,14 @@ diesel::table! {
 diesel::table! {
     runtime_settings (key) {
         key -> Text,
-        value_json -> Text,
-        updated_at -> Text,
+        value_json -> Jsonb,
+        updated_at -> Timestamptz,
     }
 }
 
 diesel::allow_tables_to_appear_in_same_query!(
     packages,
+    package_mock_chroots,
     build_jobs,
     build_artifacts,
     artifact_signatures,

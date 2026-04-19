@@ -2,6 +2,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use synforge_core::model::{format_timestamp, now_utc};
 use synforge_core::sync::{SyncOperation, SyncStatus, SyncTriggerType};
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 use super::*;
@@ -10,37 +11,37 @@ use crate::schema::sync_operations;
 #[derive(Debug, Queryable, Selectable)]
 #[diesel(table_name = sync_operations)]
 pub struct SyncOperationRow {
-    pub id: String,
+    pub id: Uuid,
     pub package_name: String,
     pub trigger_type: String,
     pub status: String,
     pub revision: Option<String>,
     pub error_message: Option<String>,
-    pub created_at: String,
+    pub created_at: OffsetDateTime,
 }
 
 #[derive(Insertable)]
 #[diesel(table_name = sync_operations)]
 pub struct NewSyncOperation<'a> {
-    pub id: &'a str,
+    pub id: Uuid,
     pub package_name: &'a str,
     pub trigger_type: &'a str,
     pub status: &'a str,
     pub revision: Option<&'a str>,
     pub error_message: Option<&'a str>,
-    pub created_at: &'a str,
+    pub created_at: OffsetDateTime,
 }
 
 impl From<SyncOperationRow> for SyncOperation {
     fn from(row: SyncOperationRow) -> Self {
         Self {
-            id: row.id,
+            id: row.id.to_string(),
             package_name: row.package_name,
             trigger_type: row.trigger_type.parse().unwrap_or(SyncTriggerType::Poll),
             status: row.status.parse().unwrap_or(SyncStatus::Failed),
             revision: row.revision,
             error_message: row.error_message,
-            created_at: row.created_at,
+            created_at: format_timestamp(row.created_at),
         }
     }
 }
@@ -53,8 +54,8 @@ pub(super) async fn insert_sync_operation(
     revision: Option<&str>,
     error_message: Option<&str>,
 ) -> anyhow::Result<()> {
-    let id = Uuid::now_v7().to_string();
-    let created_at = format_timestamp(now_utc());
+    let id = Uuid::now_v7();
+    let created_at = now_utc();
     let package_name = package_name.to_string();
     let trigger_type_str = trigger_type.as_str().to_string();
     let status_str = status.as_str().to_string();
@@ -63,13 +64,13 @@ pub(super) async fn insert_sync_operation(
 
     let mut conn = store.get_connection().await?;
     let new_operation = NewSyncOperation {
-        id: &id,
+        id,
         package_name: &package_name,
         trigger_type: &trigger_type_str,
         status: &status_str,
         revision: revision.as_deref(),
         error_message: error_message.as_deref(),
-        created_at: &created_at,
+        created_at,
     };
     diesel::insert_into(sync_operations::table)
         .values(&new_operation)
@@ -134,12 +135,7 @@ pub(super) async fn count_sync_operations(
 pub(super) async fn get_sync_metrics(
     store: &DieselStore,
 ) -> anyhow::Result<(usize, usize, Option<String>)> {
-    let twenty_four_hours_ago = {
-        use time::OffsetDateTime;
-        let now = OffsetDateTime::now_utc();
-        let past = now - time::Duration::hours(24);
-        past.format(&time::format_description::well_known::Rfc3339)?
-    };
+    let twenty_four_hours_ago = OffsetDateTime::now_utc() - time::Duration::hours(24);
 
     let mut conn = store.get_connection().await?;
     let succeeded_count = sync_operations::table
@@ -156,7 +152,7 @@ pub(super) async fn get_sync_metrics(
         .get_result::<i64>(&mut conn)
         .await? as usize;
 
-    let last_failure: Option<String> = sync_operations::table
+    let last_failure: Option<OffsetDateTime> = sync_operations::table
         .filter(sync_operations::status.eq(SyncStatus::Failed.as_str()))
         .order(sync_operations::created_at.desc())
         .select(sync_operations::created_at)
@@ -164,5 +160,9 @@ pub(super) async fn get_sync_metrics(
         .await
         .optional()?;
 
-    Ok((succeeded_count, failed_count, last_failure))
+    Ok((
+        succeeded_count,
+        failed_count,
+        last_failure.map(format_timestamp),
+    ))
 }

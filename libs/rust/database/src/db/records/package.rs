@@ -10,7 +10,6 @@ pub(crate) struct PackageRecord {
     pub(crate) publish_srpm: bool,
     pub(crate) publish_debuginfo: bool,
     pub(crate) network_access: bool,
-    pub(crate) mock_chroots_json: String,
     pub(crate) source_repo_url: String,
     pub(crate) source_spec_file: String,
     pub(crate) source_poll: bool,
@@ -21,7 +20,7 @@ pub(crate) struct PackageRecord {
     pub(crate) memory_limit_mb: Option<i64>,
     pub(crate) ccache_enabled: bool,
     pub(crate) ccache_max_size_mb: Option<i64>,
-    pub(crate) build_env_json: String,
+    pub(crate) build_env_json: serde_json::Value,
     pub(crate) spec_file: String,
     pub(crate) version: String,
     pub(crate) release: String,
@@ -37,7 +36,6 @@ pub(crate) struct NewPackageRecord<'a> {
     pub(crate) publish_srpm: bool,
     pub(crate) publish_debuginfo: bool,
     pub(crate) network_access: bool,
-    pub(crate) mock_chroots_json: &'a str,
     pub(crate) source_repo_url: &'a str,
     pub(crate) source_spec_file: &'a str,
     pub(crate) source_poll: bool,
@@ -48,16 +46,24 @@ pub(crate) struct NewPackageRecord<'a> {
     pub(crate) memory_limit_mb: Option<i64>,
     pub(crate) ccache_enabled: bool,
     pub(crate) ccache_max_size_mb: Option<i64>,
-    pub(crate) build_env_json: &'a str,
+    pub(crate) build_env_json: serde_json::Value,
     pub(crate) spec_file: &'a str,
     pub(crate) version: &'a str,
     pub(crate) release: &'a str,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = package_mock_chroots)]
+pub(crate) struct NewPackageMockChrootRecord<'a> {
+    pub(crate) package_name: &'a str,
+    pub(crate) mock_chroot: &'a str,
 }
 
 pub(crate) async fn package_response_from_record(
     conn: &mut AsyncPgConnection,
     record: PackageRecord,
 ) -> anyhow::Result<PackageResponse> {
+    let mock_chroots = load_package_mock_chroots(conn, &record.name).await?;
     let package = PackageDefinition {
         name: record.name.clone(),
         description: record.description,
@@ -66,8 +72,7 @@ pub(crate) async fn package_response_from_record(
         publish_srpm: record.publish_srpm,
         publish_debuginfo: record.publish_debuginfo,
         network_access: record.network_access,
-        mock_chroots: serde_json::from_str::<Vec<String>>(&record.mock_chroots_json)
-            .unwrap_or_default(),
+        mock_chroots,
         source: SpecSource {
             repo_url: record.source_repo_url,
             spec_file: record.source_spec_file,
@@ -89,7 +94,7 @@ pub(crate) async fn package_response_from_record(
             .ccache_max_size_mb
             .and_then(|value| u64::try_from(value).ok())
             .filter(|value| *value > 0),
-        build_env: serde_json::from_str::<Vec<BuildEnvVar>>(&record.build_env_json)
+        build_env: serde_json::from_value::<Vec<BuildEnvVar>>(record.build_env_json)
             .unwrap_or_default(),
         spec_file: PathBuf::from(record.spec_file),
         version: record.version,
@@ -97,6 +102,20 @@ pub(crate) async fn package_response_from_record(
     };
     let state = compute_package_state(conn, &record.name, &package.mock_chroots).await?;
     Ok(PackageResponse { package, state })
+}
+
+pub(crate) async fn load_package_mock_chroots(
+    conn: &mut AsyncPgConnection,
+    package_name: &str,
+) -> anyhow::Result<Vec<String>> {
+    Ok(
+        package_mock_chroots::table
+            .filter(package_mock_chroots::package_name.eq(package_name))
+            .order(package_mock_chroots::mock_chroot.asc())
+            .select(package_mock_chroots::mock_chroot)
+            .load(conn)
+            .await?,
+    )
 }
 
 pub(crate) async fn compute_package_state(
@@ -109,7 +128,7 @@ pub(crate) async fn compute_package_state(
         .filter(build_jobs::status.eq(BuildStatus::Succeeded))
         .order(build_jobs::finished_at.desc())
         .select((build_jobs::id, build_jobs::revision))
-        .first::<(String, String)>(conn)
+        .first::<(Uuid, String)>(conn)
         .await
         .optional()?;
 
@@ -122,7 +141,7 @@ pub(crate) async fn compute_package_state(
         )
         .order(build_jobs::created_at.desc())
         .select(build_jobs::id)
-        .first::<String>(conn)
+        .first::<Uuid>(conn)
         .await
         .optional()?;
 
@@ -134,7 +153,7 @@ pub(crate) async fn compute_package_state(
             .filter(build_jobs::status.eq(BuildStatus::Succeeded))
             .order(build_jobs::finished_at.desc())
             .select((build_jobs::id, build_jobs::revision))
-            .first::<(String, String)>(conn)
+            .first::<(Uuid, String)>(conn)
             .await
             .optional()?;
 
@@ -148,7 +167,7 @@ pub(crate) async fn compute_package_state(
             )
             .order(build_jobs::created_at.desc())
             .select((build_jobs::id, build_jobs::status))
-            .first::<(String, BuildStatus)>(conn)
+            .first::<(Uuid, BuildStatus)>(conn)
             .await
             .optional()?;
 
@@ -158,15 +177,15 @@ pub(crate) async fn compute_package_state(
                 build_failure_backoff::consecutive_failures,
                 build_failure_backoff::next_eligible_at,
             ))
-            .first::<(i32, String)>(conn)
+            .first::<(i32, OffsetDateTime)>(conn)
             .await
             .optional()?;
         let backoff_until = backoff
             .as_ref()
-            .map(|(_, next_eligible_at)| next_eligible_at.clone());
+            .map(|(_, next_eligible_at)| format_timestamp(*next_eligible_at));
         let backoff_remaining_seconds = backoff
             .as_ref()
-            .and_then(|(_, next_eligible_at)| parse_timestamp(next_eligible_at).ok())
+            .map(|(_, next_eligible_at)| *next_eligible_at)
             .and_then(|next_eligible_at| {
                 let wait_seconds = (next_eligible_at - now_utc()).whole_seconds();
                 if wait_seconds > 0 {
@@ -179,14 +198,8 @@ pub(crate) async fn compute_package_state(
         targets.push(PackageTargetRuntimeState {
             mock_chroot: mock_chroot.clone(),
             last_revision: last_success.as_ref().map(|(_, revision)| revision.clone()),
-            last_successful_build_id: last_success
-                .as_ref()
-                .map(|(id, _)| Uuid::parse_str(id))
-                .transpose()?,
-            active_job_id: active_job
-                .as_ref()
-                .map(|(id, _)| Uuid::parse_str(id))
-                .transpose()?,
+            last_successful_build_id: last_success.as_ref().map(|(id, _)| *id),
+            active_job_id: active_job.as_ref().map(|(id, _)| *id),
             active_status: active_job.as_ref().map(|(_, status)| *status),
             backoff_until,
             backoff_remaining_seconds,
@@ -195,11 +208,8 @@ pub(crate) async fn compute_package_state(
 
     Ok(PackageRuntimeState {
         last_revision: last_success.as_ref().map(|(_, revision)| revision.clone()),
-        last_successful_build_id: last_success
-            .as_ref()
-            .map(|(id, _)| Uuid::parse_str(id))
-            .transpose()?,
-        active_job_id: active_job.as_deref().map(Uuid::parse_str).transpose()?,
+        last_successful_build_id: last_success.as_ref().map(|(id, _)| *id),
+        active_job_id: active_job,
         targets,
     })
 }

@@ -7,15 +7,15 @@ use diesel::{
 use diesel_async::RunQueryDsl;
 
 type PublishedRepoRow = (
-    String,
-    String,
+    Uuid,
+    Uuid,
     String,
     String,
     String,
     String,
     i64,
     ArtifactKind,
-    String,
+    OffsetDateTime,
     Option<ArtifactSigningStatus>,
     Option<String>,
 );
@@ -78,9 +78,8 @@ pub(super) async fn list_published_repo_files_for_job(
     store: &DieselStore,
     job_id: Uuid,
 ) -> anyhow::Result<Vec<PublishedRepoFile>> {
-    let job_id = job_id.to_string();
     let mut conn = store.get_connection().await?;
-    load_published_repo_files_for_job(&mut conn, job_id.as_str()).await
+    load_published_repo_files_for_job(&mut conn, job_id).await
 }
 
 pub(super) async fn list_published_repo_files_for_package(

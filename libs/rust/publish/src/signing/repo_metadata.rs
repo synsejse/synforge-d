@@ -4,6 +4,7 @@ use anyhow::Context;
 use synforge_core::{config::DaemonConfig, constants::DEFAULT_SIGNING_PUBLIC_KEY_NAME};
 
 use super::RepoSigningManager;
+use crate::repo_manager::discover_repo_targets;
 
 impl RepoSigningManager {
     pub async fn reconcile_repo_metadata_signature(
@@ -12,6 +13,10 @@ impl RepoSigningManager {
         repo_dir: &Path,
     ) -> anyhow::Result<()> {
         self.clear_repo_metadata_signature(repo_dir).await?;
+        for target in discover_repo_targets(repo_dir).await? {
+            let target_repo_dir = repo_dir.join(target.repo_subdir());
+            self.clear_repo_metadata_signature(&target_repo_dir).await?;
+        }
         if config.signing_enabled {
             self.sync_repo_public_key(config, repo_dir).await
         } else {

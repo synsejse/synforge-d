@@ -20,10 +20,9 @@ pub(in crate::db) async fn get_job(
     store: &DieselStore,
     job_id: Uuid,
 ) -> anyhow::Result<Option<BuildJobResponse>> {
-    let job_id = job_id.to_string();
     let mut conn = store.get_connection().await?;
     let row = build_jobs::table
-        .find(job_id.as_str())
+        .find(job_id)
         .select(JobRecord::as_select())
         .first(&mut conn)
         .await
@@ -38,10 +37,9 @@ pub(in crate::db) async fn list_build_logs_for_job(
     store: &DieselStore,
     job_id: Uuid,
 ) -> anyhow::Result<Vec<BuildLogRecord>> {
-    let job_id = job_id.to_string();
     let mut conn = store.get_connection().await?;
     Ok(build_logs::table
-        .filter(build_logs::job_id.eq(job_id.as_str()))
+        .filter(build_logs::job_id.eq(job_id))
         .order(build_logs::file.asc())
         .select((build_logs::file,))
         .load(&mut conn)
@@ -53,11 +51,10 @@ pub(in crate::db) async fn get_build_log_for_job_source(
     job_id: Uuid,
     file: &str,
 ) -> anyhow::Result<Option<BuildLogRecord>> {
-    let job_id = job_id.to_string();
     let file = file.to_string();
     let mut conn = store.get_connection().await?;
     Ok(build_logs::table
-        .find((job_id.as_str(), file.as_str()))
+        .find((job_id, file.as_str()))
         .select((build_logs::file,))
         .first(&mut conn)
         .await

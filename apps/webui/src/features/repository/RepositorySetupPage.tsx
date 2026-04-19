@@ -37,14 +37,19 @@ export default function RepositorySetup() {
     load();
   }, []);
 
-  const repoBaseUrl = useMemo(() => {
+  const repoRootUrl = useMemo(() => {
     if (!publicBaseUrl) return "";
     return `${publicBaseUrl}/repo`;
   }, [publicBaseUrl]);
 
+  const repoBaseUrl = useMemo(() => {
+    if (!repoRootUrl) return "";
+    return `${repoRootUrl}/fedora/$releasever`;
+  }, [repoRootUrl]);
+
   const repoFileContents = useMemo(
-    () => buildRepoFile(repoBaseUrl, repoHandle, repoSigningEnabled, repoPublicKeyName),
-    [repoBaseUrl, repoHandle, repoSigningEnabled, repoPublicKeyName],
+    () => buildRepoFile(repoRootUrl, repoBaseUrl, repoHandle, repoSigningEnabled, repoPublicKeyName),
+    [repoRootUrl, repoBaseUrl, repoHandle, repoSigningEnabled, repoPublicKeyName],
   );
   const installCommand = "sudo dnf install <package-name>";
 
@@ -81,7 +86,7 @@ export default function RepositorySetup() {
               Add Repo To Fedora
             </h1>
             <p className="mt-2 text-sm text-zinc-400">
-              Repo file and basic DNF usage.
+              Fedora repo file and basic DNF usage.
             </p>
           </div>
           <div className="flex gap-3">
@@ -197,6 +202,7 @@ export default function RepositorySetup() {
 }
 
 function buildRepoFile(
+  repoRootUrl: string,
   repoBaseUrl: string,
   repoHandle: string,
   repoSigningEnabled: boolean,
@@ -205,7 +211,7 @@ function buildRepoFile(
   const signingLines = repoSigningEnabled
     ? `gpgcheck=1
 repo_gpgcheck=0
-gpgkey=${repoBaseUrl}/${encodeURIComponent(repoPublicKeyName)}`
+gpgkey=${repoRootUrl}/${encodeURIComponent(repoPublicKeyName)}`
     : `gpgcheck=0
 repo_gpgcheck=0`;
   return `[synforge]

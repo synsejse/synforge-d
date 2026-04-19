@@ -13,13 +13,11 @@ impl DieselStore {
         let mut conn = self.get_connection().await?;
         let rows = runtime_settings::table
             .select((runtime_settings::key, runtime_settings::value_json))
-            .load::<(String, String)>(&mut conn)
+            .load::<(String, serde_json::Value)>(&mut conn)
             .await?;
         let mut settings = BTreeMap::new();
         for (key, value_json) in rows {
-            let value = serde_json::from_str::<serde_json::Value>(&value_json)
-                .with_context(|| format!("invalid runtime setting JSON for key {}", key))?;
-            settings.insert(key, value);
+            settings.insert(key, value_json);
         }
         Ok(settings)
     }
@@ -29,10 +27,8 @@ impl DieselStore {
         settings: BTreeMap<String, serde_json::Value>,
     ) -> anyhow::Result<()> {
         let mut conn = self.get_connection().await?;
-        let updated_at = format_timestamp(now_utc());
+        let updated_at = now_utc();
         for (key, value) in settings {
-            let value_json = serde_json::to_string(&value)
-                .with_context(|| format!("failed to serialize runtime setting {}", key))?;
             let existing = runtime_settings::table
                 .find(key.as_str())
                 .select(runtime_settings::key)
@@ -42,16 +38,16 @@ impl DieselStore {
             if existing.is_some() {
                 diesel::update(runtime_settings::table.find(key.as_str()))
                     .set((
-                        runtime_settings::value_json.eq(value_json.as_str()),
-                        runtime_settings::updated_at.eq(updated_at.as_str()),
+                        runtime_settings::value_json.eq(value.clone()),
+                        runtime_settings::updated_at.eq(updated_at),
                     ))
                     .execute(&mut conn)
                     .await?;
             } else {
                 let row = NewRuntimeSettingRecord {
                     key: key.as_str(),
-                    value_json: value_json.as_str(),
-                    updated_at: updated_at.as_str(),
+                    value_json: value,
+                    updated_at,
                 };
                 diesel::insert_into(runtime_settings::table)
                     .values(&row)
@@ -68,9 +64,8 @@ impl DieselStore {
         sha256: String,
         size_bytes: u64,
     ) -> anyhow::Result<()> {
-        let artifact_id = artifact_id.to_string();
         let mut conn = self.get_connection().await?;
-        diesel::update(build_artifacts::table.find(artifact_id.as_str()))
+        diesel::update(build_artifacts::table.find(artifact_id))
             .set((
                 build_artifacts::sha256.eq(sha256.as_str()),
                 build_artifacts::size_bytes.eq(size_bytes as i64),
@@ -85,37 +80,35 @@ impl DieselStore {
         signatures: Vec<ArtifactSignature>,
     ) -> anyhow::Result<()> {
         let mut conn = self.get_connection().await?;
-        let updated_at = format_timestamp(now_utc());
+        let updated_at = now_utc();
         for signature in signatures {
-            let artifact_id = signature.artifact_id.to_string();
             let existing = artifact_signatures::table
-                .find(artifact_id.as_str())
+                .find(signature.artifact_id)
                 .select(artifact_signatures::artifact_id)
-                .first::<String>(&mut conn)
+                .first::<Uuid>(&mut conn)
                 .await
                 .optional()?;
             if existing.is_some() {
-                diesel::update(artifact_signatures::table.find(artifact_id.as_str()))
+                diesel::update(artifact_signatures::table.find(signature.artifact_id))
                     .set((
                         artifact_signatures::status.eq(signature.status),
-                        artifact_signatures::signed_at
-                            .eq(signature.signed_at.map(format_timestamp)),
+                        artifact_signatures::signed_at.eq(signature.signed_at),
                         artifact_signatures::key_id.eq(signature.key_id.as_deref()),
                         artifact_signatures::fingerprint.eq(signature.fingerprint.as_deref()),
                         artifact_signatures::error_message.eq(signature.error_message.as_deref()),
-                        artifact_signatures::updated_at.eq(updated_at.as_str()),
+                        artifact_signatures::updated_at.eq(updated_at),
                     ))
                     .execute(&mut conn)
                     .await?;
             } else {
                 let row = NewArtifactSignatureRecord {
-                    artifact_id,
+                    artifact_id: signature.artifact_id,
                     status: signature.status,
-                    signed_at: signature.signed_at.map(format_timestamp),
+                    signed_at: signature.signed_at,
                     key_id: signature.key_id,
                     fingerprint: signature.fingerprint,
                     error_message: signature.error_message,
-                    updated_at: updated_at.clone(),
+                    updated_at,
                 };
                 diesel::insert_into(artifact_signatures::table)
                     .values(&row)

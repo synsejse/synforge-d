@@ -1,5 +1,5 @@
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Component, Path, PathBuf};
 
 use idna::domain_to_ascii_strict;
 use serde::{Deserialize, Serialize};
@@ -79,6 +79,44 @@ pub struct BuildTarget {
     pub distribution: String,
     pub release: String,
     pub arch: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, ToSchema)]
+pub struct RepoTarget {
+    pub distribution: String,
+    pub release: String,
+}
+
+impl BuildTarget {
+    pub fn repo_target(&self) -> RepoTarget {
+        RepoTarget {
+            distribution: self.distribution.clone(),
+            release: self.release.clone(),
+        }
+    }
+}
+
+impl RepoTarget {
+    pub fn repo_subdir(&self) -> PathBuf {
+        PathBuf::from(&self.distribution).join(&self.release)
+    }
+
+    pub fn from_mock_chroot(value: &str) -> Option<Self> {
+        parse_mock_chroot(value).map(|target| target.repo_target())
+    }
+
+    pub fn from_repo_relative_path(path: &Path) -> Option<Self> {
+        let mut parts = path.components().filter_map(|component| match component {
+            Component::Normal(part) => part.to_str(),
+            _ => None,
+        });
+        let distribution = parts.next()?;
+        let release = parts.next()?;
+        Some(Self {
+            distribution: distribution.to_string(),
+            release: release.to_string(),
+        })
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
@@ -173,7 +211,9 @@ pub fn is_dns_label(value: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::is_dns_label;
+    use std::path::Path;
+
+    use super::{RepoTarget, is_dns_label};
 
     #[test]
     fn dns_label_validation_is_strict_and_ascii() {
@@ -183,5 +223,16 @@ mod tests {
         assert!(!is_dns_label("-nginx"));
         assert!(!is_dns_label("nginx-"));
         assert!(!is_dns_label("nginx.prod"));
+    }
+
+    #[test]
+    fn parses_repo_target_from_relative_repo_path() {
+        let target = RepoTarget::from_repo_relative_path(Path::new(
+            "fedora/44/packages/bash/builds/job/bash.rpm",
+        ))
+        .expect("target should parse");
+
+        assert_eq!(target.distribution, "fedora");
+        assert_eq!(target.release, "44");
     }
 }

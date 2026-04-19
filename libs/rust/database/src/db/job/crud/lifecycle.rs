@@ -5,10 +5,9 @@ use super::super::*;
 pub(in crate::db) async fn insert_job(store: &DieselStore, job: &BuildJob) -> anyhow::Result<()> {
     let job = job.clone();
     let mut conn = store.get_connection().await?;
-    let id = job.id.to_string();
     let spec_file = job.spec_file.to_string_lossy().to_string();
     let new_job = NewJobRecord {
-        id: id.as_str(),
+        id: job.id,
         package_name: job.package_name.as_str(),
         mock_chroot: job.mock_chroot.as_str(),
         revision: job.revision.as_str(),
@@ -16,9 +15,9 @@ pub(in crate::db) async fn insert_job(store: &DieselStore, job: &BuildJob) -> an
         status: job.status,
         spec_file: spec_file.as_str(),
         worker_container_id: job.worker_container_id.as_deref(),
-        created_at: format_timestamp(job.created_at),
-        updated_at: format_timestamp(job.updated_at),
-        finished_at: job.finished_at.map(format_timestamp),
+        created_at: job.created_at,
+        updated_at: job.updated_at,
+        finished_at: job.finished_at,
         error_message: job.error_message.as_deref(),
     };
     diesel::insert_into(build_jobs::table)
@@ -33,14 +32,13 @@ pub(in crate::db) async fn set_job_running(
     job_id: Uuid,
     worker_container_id: Option<&str>,
 ) -> anyhow::Result<()> {
-    let job_id = job_id.to_string();
-    let now = format_timestamp(now_utc());
+    let now = now_utc();
     let worker_container_id = worker_container_id.map(ToOwned::to_owned);
     let mut conn = store.get_connection().await?;
-    diesel::update(build_jobs::table.find(job_id.as_str()))
+    diesel::update(build_jobs::table.find(job_id))
         .set((
             build_jobs::status.eq(BuildStatus::Running),
-            build_jobs::updated_at.eq(now.as_str()),
+            build_jobs::updated_at.eq(now),
             build_jobs::worker_container_id.eq(worker_container_id.as_deref()),
         ))
         .execute(&mut conn)
@@ -54,9 +52,8 @@ pub(in crate::db) async fn reset_job_for_retry(
     trigger: BuildTrigger,
     revision: &str,
 ) -> anyhow::Result<()> {
-    let job_id = job_id.to_string();
     let revision = revision.to_string();
-    let now = format_timestamp(now_utc());
+    let now = now_utc();
     let mut conn = store.get_connection().await?;
     conn.transaction::<(), anyhow::Error, _>(|conn| {
         async move {
@@ -64,7 +61,7 @@ pub(in crate::db) async fn reset_job_for_retry(
                 published_repo_files::table.filter(
                     published_repo_files::artifact_id.eq_any(
                         build_artifacts::table
-                            .filter(build_artifacts::job_id.eq(job_id.as_str()))
+                            .filter(build_artifacts::job_id.eq(job_id))
                             .select(build_artifacts::id),
                     ),
                 ),
@@ -73,23 +70,23 @@ pub(in crate::db) async fn reset_job_for_retry(
             .await?;
 
             diesel::delete(
-                build_artifacts::table.filter(build_artifacts::job_id.eq(job_id.as_str())),
+                build_artifacts::table.filter(build_artifacts::job_id.eq(job_id)),
             )
             .execute(conn)
             .await?;
 
-            diesel::delete(build_logs::table.filter(build_logs::job_id.eq(job_id.as_str())))
+            diesel::delete(build_logs::table.filter(build_logs::job_id.eq(job_id)))
                 .execute(conn)
                 .await?;
 
-            diesel::update(build_jobs::table.find(job_id.as_str()))
+            diesel::update(build_jobs::table.find(job_id))
                 .set((
                     build_jobs::trigger.eq(trigger),
                     build_jobs::revision.eq(revision.as_str()),
                     build_jobs::status.eq(BuildStatus::Pending),
                     build_jobs::worker_container_id.eq::<Option<&str>>(None),
-                    build_jobs::updated_at.eq(now.as_str()),
-                    build_jobs::finished_at.eq::<Option<&str>>(None),
+                    build_jobs::updated_at.eq(now),
+                    build_jobs::finished_at.eq::<Option<OffsetDateTime>>(None),
                     build_jobs::error_message.eq::<Option<&str>>(None),
                 ))
                 .execute(conn)
@@ -111,7 +108,6 @@ pub(in crate::db) async fn finish_job(
     published_files: &[PublishedRepoFile],
     artifact_signatures: &[ArtifactSignature],
 ) -> anyhow::Result<()> {
-    let job_id = job_id.to_string();
     let error_message = error_message.map(ToOwned::to_owned);
     let artifacts = artifacts.to_vec();
     let published_files = published_files.to_vec();
@@ -119,25 +115,25 @@ pub(in crate::db) async fn finish_job(
     let mut conn = store.get_connection().await?;
     conn.transaction::<(), diesel::result::Error, _>(|conn| {
         async move {
-            let now = format_timestamp(now_utc());
+            let now = now_utc();
             let job_row = build_jobs::table
-                .find(job_id.as_str())
+                .find(job_id)
                 .select(JobRecord::as_select())
                 .first(conn)
                 .await?;
 
-            diesel::update(build_jobs::table.find(job_id.as_str()))
+            diesel::update(build_jobs::table.find(job_id))
                 .set((
                     build_jobs::status.eq(status),
-                    build_jobs::updated_at.eq(now.as_str()),
-                    build_jobs::finished_at.eq(Some(now.as_str())),
+                    build_jobs::updated_at.eq(now),
+                    build_jobs::finished_at.eq(Some(now)),
                     build_jobs::error_message.eq(error_message.as_deref()),
                 ))
                 .execute(conn)
                 .await?;
 
             diesel::delete(
-                build_artifacts::table.filter(build_artifacts::job_id.eq(job_id.as_str())),
+                build_artifacts::table.filter(build_artifacts::job_id.eq(job_id)),
             )
             .execute(conn)
             .await?;
@@ -146,8 +142,8 @@ pub(in crate::db) async fn finish_job(
                 let rows = artifacts
                     .iter()
                     .map(|artifact| NewArtifactRecord {
-                        id: artifact.id.to_string(),
-                        job_id: job_id.clone(),
+                        id: artifact.id,
+                        job_id,
                         package_name: job_row.package_name.clone(),
                         mock_chroot: job_row.mock_chroot.clone(),
                         file: artifact.file.to_string_lossy().to_string(),
@@ -166,13 +162,13 @@ pub(in crate::db) async fn finish_job(
                 let rows = artifact_signatures
                     .iter()
                     .map(|signature| NewArtifactSignatureRecord {
-                        artifact_id: signature.artifact_id.to_string(),
+                        artifact_id: signature.artifact_id,
                         status: signature.status,
-                        signed_at: signature.signed_at.map(format_timestamp),
+                        signed_at: signature.signed_at,
                         key_id: signature.key_id.clone(),
                         fingerprint: signature.fingerprint.clone(),
                         error_message: signature.error_message.clone(),
-                        updated_at: now.clone(),
+                        updated_at: now,
                     })
                     .collect::<Vec<_>>();
                 diesel::insert_into(artifact_signatures::table)
@@ -185,7 +181,7 @@ pub(in crate::db) async fn finish_job(
                 published_repo_files::table.filter(
                     published_repo_files::artifact_id.eq_any(
                         build_artifacts::table
-                            .filter(build_artifacts::job_id.eq(job_id.as_str()))
+                            .filter(build_artifacts::job_id.eq(job_id))
                             .select(build_artifacts::id),
                     ),
                 ),
@@ -197,8 +193,8 @@ pub(in crate::db) async fn finish_job(
                 let rows = published_files
                     .iter()
                     .map(|file| NewPublishedRepoFileRecord {
-                        artifact_id: file.artifact_id.to_string(),
-                        published_at: format_timestamp(file.published_at),
+                        artifact_id: file.artifact_id,
+                        published_at: file.published_at,
                     })
                     .collect::<Vec<_>>();
                 diesel::insert_into(published_repo_files::table)

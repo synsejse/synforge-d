@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::{Component, Path};
 use std::sync::Arc;
 use std::{fmt, fmt::Formatter};
@@ -149,7 +150,7 @@ impl JobObjectStorage {
         let local_keys = local_files
             .iter()
             .map(|relative_path| self.repo_key(relative_path))
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
 
         for relative_path in &local_files {
             let local_path = repo_root.join(relative_path);
@@ -161,7 +162,7 @@ impl JobObjectStorage {
         let mut listing = self.store.list(Some(&prefix));
         while let Some(result) = listing.next().await {
             let meta = result?;
-            if !local_keys.iter().any(|key| key == &meta.location) {
+            if !local_keys.contains(&meta.location) {
                 self.store.delete(&meta.location).await?;
             }
         }

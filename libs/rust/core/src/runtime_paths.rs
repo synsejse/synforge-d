@@ -2,6 +2,8 @@ use std::path::{Path, PathBuf};
 
 use uuid::Uuid;
 
+use crate::package::RepoTarget;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuntimePaths {
     repo_dir: PathBuf,
@@ -25,6 +27,14 @@ impl RuntimePaths {
 
     pub fn repo_dir(&self) -> &Path {
         &self.repo_dir
+    }
+
+    pub fn repo_target_dir(&self, target: &RepoTarget) -> PathBuf {
+        self.repo_dir.join(target.repo_subdir())
+    }
+
+    pub fn repo_target_dir_for_mock_chroot(&self, mock_chroot: &str) -> Option<PathBuf> {
+        RepoTarget::from_mock_chroot(mock_chroot).map(|target| self.repo_target_dir(&target))
     }
 
     pub fn jobs_root(&self) -> &Path {

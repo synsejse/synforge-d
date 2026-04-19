@@ -36,38 +36,57 @@ services:
     mem_limit: 256m
     cpus: 0.5
 
-  minio:
-    image: quay.io/minio/minio:latest
+  rustfs-perms:
+    image: busybox:latest
+    restart: "no"
+    user: root
+    command:
+      [
+        "sh",
+        "-c",
+        "mkdir -p /data /logs && chown -R 10001:10001 /data /logs",
+      ]
+    volumes:
+      - ${SYNFORGE_OBJECT_STORAGE_PATH:-/data/object-storage-rustfs}:/data:rw,z
+      - ${SYNFORGE_OBJECT_STORAGE_LOG_PATH:-/data/object-storage-rustfs-logs}:/logs:rw,z
+
+  rustfs:
+    image: rustfs/rustfs:latest
     restart: unless-stopped
-    command: ["server", "/data", "--console-address", ":9001"]
+    depends_on:
+      rustfs-perms:
+        condition: service_completed_successfully
     environment:
-      MINIO_ROOT_USER: ${SYNFORGE_OBJECT_STORAGE_ACCESS_KEY_ID:-synforge-minio}
-      MINIO_ROOT_PASSWORD: ${SYNFORGE_OBJECT_STORAGE_SECRET_ACCESS_KEY:?set SYNFORGE_OBJECT_STORAGE_SECRET_ACCESS_KEY in .env}
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_ACCESS_KEY: ${SYNFORGE_OBJECT_STORAGE_ACCESS_KEY_ID:-synforge-minio}
+      RUSTFS_SECRET_KEY: ${SYNFORGE_OBJECT_STORAGE_SECRET_ACCESS_KEY:?set SYNFORGE_OBJECT_STORAGE_SECRET_ACCESS_KEY in .env}
+      RUSTFS_OBS_LOG_DIRECTORY: /logs
     ports:
       - "${SYNFORGE_MINIO_API_PORT:-9000}:9000"
-      - "${SYNFORGE_MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
-      - ${SYNFORGE_OBJECT_STORAGE_PATH:-/data/object-storage}:/data:rw,z
+      - ${SYNFORGE_OBJECT_STORAGE_PATH:-/data/object-storage-rustfs}:/data:rw,z
+      - ${SYNFORGE_OBJECT_STORAGE_LOG_PATH:-/data/object-storage-rustfs-logs}:/logs:rw,z
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/health"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 15s
+      start_period: 20s
     mem_limit: 512m
     cpus: 1.0
 
-  minio-init:
+  object-storage-init:
     image: quay.io/minio/mc:latest
     restart: "no"
     depends_on:
-      minio:
+      rustfs:
         condition: service_healthy
     entrypoint:
       [
         "/bin/sh",
         "-c",
-        "mc alias set local http://minio:9000 \"${SYNFORGE_OBJECT_STORAGE_ACCESS_KEY_ID:-synforge-minio}\" \"${SYNFORGE_OBJECT_STORAGE_SECRET_ACCESS_KEY}\" && mc mb -p \"local/${SYNFORGE_OBJECT_STORAGE_BUCKET:-synforge}\" || true",
+        "mc alias set local http://rustfs:9000 \"${SYNFORGE_OBJECT_STORAGE_ACCESS_KEY_ID:-synforge-minio}\" \"${SYNFORGE_OBJECT_STORAGE_SECRET_ACCESS_KEY}\" && mc mb -p \"local/${SYNFORGE_OBJECT_STORAGE_BUCKET:-synforge}\" || true",
       ]
 
   pgadmin:
@@ -88,14 +107,14 @@ services:
     mem_limit: 256m
     cpus: 0.5
 
-  minio-viewer:
+  object-storage-viewer:
     image: rclone/rclone:latest
     restart: unless-stopped
     profiles: ["debug-tools"]
     environment:
       RCLONE_CONFIG_MINIO_TYPE: s3
       RCLONE_CONFIG_MINIO_PROVIDER: Minio
-      RCLONE_CONFIG_MINIO_ENDPOINT: http://minio:9000
+      RCLONE_CONFIG_MINIO_ENDPOINT: http://rustfs:9000
       RCLONE_CONFIG_MINIO_ACCESS_KEY_ID: ${SYNFORGE_OBJECT_STORAGE_ACCESS_KEY_ID:-synforge-minio}
       RCLONE_CONFIG_MINIO_SECRET_ACCESS_KEY: ${SYNFORGE_OBJECT_STORAGE_SECRET_ACCESS_KEY:?set SYNFORGE_OBJECT_STORAGE_SECRET_ACCESS_KEY in .env}
       RCLONE_CONFIG_MINIO_REGION: ${SYNFORGE_OBJECT_STORAGE_REGION:-us-east-1}
@@ -112,7 +131,7 @@ services:
     ports:
       - "${SYNFORGE_MINIO_VIEWER_PORT:-8070}:8080"
     depends_on:
-      minio-init:
+      object-storage-init:
         condition: service_completed_successfully
     mem_limit: 256m
     cpus: 0.5
@@ -129,7 +148,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${SYNFORGE_DB_USER:-synforge}:${SYNFORGE_DB_PASSWORD:?set SYNFORGE_DB_PASSWORD in .env}@postgres:5432/${SYNFORGE_DB_NAME:-synforge}
       REDIS_URL: redis://redis:6379/0
-      SYNFORGE_OBJECT_STORAGE_ENDPOINT: http://minio:9000
+      SYNFORGE_OBJECT_STORAGE_ENDPOINT: http://rustfs:9000
       SYNFORGE_OBJECT_STORAGE_REGION: ${SYNFORGE_OBJECT_STORAGE_REGION:-us-east-1}
       SYNFORGE_OBJECT_STORAGE_BUCKET: ${SYNFORGE_OBJECT_STORAGE_BUCKET:-synforge}
       SYNFORGE_OBJECT_STORAGE_ACCESS_KEY_ID: ${SYNFORGE_OBJECT_STORAGE_ACCESS_KEY_ID:-synforge-minio}
@@ -143,7 +162,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio-init:
+      object-storage-init:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/readyz"]

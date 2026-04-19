@@ -2,10 +2,10 @@ mod actions;
 mod deps;
 
 use synforge_core::api::{
-    BrowseRepositoryProgressResponse, BrowseRepositoryRequest, BrowseRepositoryResponse,
-    CreatePackageRequest, MockChrootListResponse, PackageBuildHistoryResponse, PackageListResponse,
-    PackageResponse, RefreshAllPackagesProgressResponse, RefreshAllPackagesResponse,
-    UpdatePackageRequest, build_page_info, normalize_pagination,
+    BrowseRepositoryRequest, BrowseRepositoryResponse, CreatePackageRequest,
+    MockChrootListResponse, PackageBuildHistoryResponse, PackageListResponse, PackageResponse,
+    RefreshAllPackagesProgressResponse, RefreshAllPackagesResponse, UpdatePackageRequest,
+    build_page_info, normalize_pagination,
 };
 use synforge_database::PackageStore;
 use synforge_git_sync::GitSyncService;
@@ -89,14 +89,6 @@ impl SynforgeService {
     ) -> anyhow::Result<BrowseRepositoryResponse> {
         GitSyncService
             .browse_repository(&self.package_deps(), request)
-            .await
-    }
-
-    pub async fn get_browse_repository_progress(
-        &self,
-    ) -> anyhow::Result<BrowseRepositoryProgressResponse> {
-        GitSyncService
-            .get_browse_repository_progress(&self.package_deps())
             .await
     }
 

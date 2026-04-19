@@ -500,22 +500,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/repositories/browse/progress": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_browse_repository_progress"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/session": {
         parameters: {
             query?: never;
@@ -848,20 +832,6 @@ export interface components {
         ArtifactKind: "rpm" | "srpm" | "debuginfo" | "debugsource" | "log" | "other";
         /** @enum {string} */
         ArtifactSigningStatus: "signed" | "failed" | "skipped";
-        BrowseRepositoryProgressResponse: {
-            operation?: null | components["schemas"]["BrowseRepositoryProgressView"];
-        };
-        /** @enum {string} */
-        BrowseRepositoryProgressState: "running" | "completed" | "failed";
-        BrowseRepositoryProgressView: {
-            message?: string | null;
-            /** Format: uuid */
-            operation_id: string;
-            /** Format: int32 */
-            progress_percent: number;
-            repo_url: string;
-            state: components["schemas"]["BrowseRepositoryProgressState"];
-        };
         BrowseRepositoryRequest: {
             repo_url: string;
         };
@@ -2921,34 +2891,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    get_browse_repository_progress: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Get latest repository browse clone progress */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BrowseRepositoryProgressResponse"];
                 };
             };
             401: {

@@ -2,9 +2,9 @@
 
 use synforge_core::{
     api::{
-        BrowseRepositoryProgressResponse, BrowseRepositoryRequest, BrowseRepositoryResponse,
-        CreatePackageRequest, PackageBuildHistoryResponse, PackageResponse,
-        RefreshAllPackagesProgressResponse, RefreshAllPackagesResponse, UpdatePackageRequest,
+        BrowseRepositoryRequest, BrowseRepositoryResponse, CreatePackageRequest,
+        PackageBuildHistoryResponse, PackageResponse, RefreshAllPackagesProgressResponse,
+        RefreshAllPackagesResponse, UpdatePackageRequest,
     },
     error::SynforgeError,
 };
@@ -17,9 +17,8 @@ use super::{
         delete_package, trigger_refresh_all_packages, update_package,
     },
     queries::{
-        PackageBuildHistoryReader, PackageDetailsReader, RepositoryBrowseProgressReader,
-        RepositoryBrowser, get_browse_repository_progress, get_package_build_history,
-        get_refresh_all_packages_progress,
+        PackageBuildHistoryReader, PackageDetailsReader, RepositoryBrowser,
+        get_package_build_history, get_refresh_all_packages_progress,
     },
 };
 
@@ -104,16 +103,6 @@ impl GitSyncService {
         }
 
         deps.browse_repository(repo_url).await
-    }
-
-    pub async fn get_browse_repository_progress<D>(
-        &self,
-        deps: &D,
-    ) -> anyhow::Result<BrowseRepositoryProgressResponse>
-    where
-        D: RepositoryBrowseProgressReader + Send + Sync,
-    {
-        get_browse_repository_progress(deps).await
     }
 
     pub async fn update_package<D>(

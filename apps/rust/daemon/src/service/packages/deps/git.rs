@@ -11,7 +11,6 @@ use synforge_git_sync::{
     PackageDeleter as GitSyncPackageDeleter, PackageDetailsReader as GitSyncPackageDetailsReader,
     PackageMaterializationOptions as GitSyncPackageMaterializationOptions,
     PackageSourceInspector as GitSyncPackageSourceInspector,
-    RepositoryBrowseProgressReader as GitSyncRepositoryBrowseProgressReader,
     RepositoryBrowser as GitSyncRepositoryBrowser,
 };
 use synforge_worker_host::{
@@ -36,15 +35,6 @@ impl GitSyncManualRefreshScheduler for DaemonPackageDeps {
 impl GitSyncRepositoryBrowser for DaemonPackageDeps {
     async fn browse_repository(&self, repo_url: &str) -> anyhow::Result<BrowseRepositoryResponse> {
         self.git.browse_repository(repo_url).await
-    }
-}
-
-#[async_trait]
-impl GitSyncRepositoryBrowseProgressReader for DaemonPackageDeps {
-    async fn load_browse_repository_progress(
-        &self,
-    ) -> Option<synforge_core::api::BrowseRepositoryProgressView> {
-        self.git.browse_repository_progress().await
     }
 }
 

@@ -11,8 +11,5 @@ pub use commands::{
     PackageLookup, PackageSourceInspector, RefreshAllProgressStore,
 };
 pub use facade::GitSyncService;
-pub use queries::{
-    PackageBuildHistoryReader, PackageDetailsReader, RepositoryBrowseProgressReader,
-    RepositoryBrowser,
-};
+pub use queries::{PackageBuildHistoryReader, PackageDetailsReader, RepositoryBrowser};
 pub use state::{InspectedPackageSource, PackageMaterializationOptions};

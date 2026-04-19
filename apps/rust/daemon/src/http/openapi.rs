@@ -37,7 +37,6 @@ impl Modify for SecurityAddon {
         packages::delete_package,
         packages::list_mock_chroots,
         packages::browse_repository,
-        packages::get_browse_repository_progress,
         packages::get_package_builds,
         packages::trigger_rebuild,
         packages::trigger_refresh,
@@ -94,9 +93,6 @@ impl Modify for SecurityAddon {
         schemas(
             synforge_core::api::ApiError,
             synforge_core::api::BrowseRepositoryRequest,
-            synforge_core::api::BrowseRepositoryProgressResponse,
-            synforge_core::api::BrowseRepositoryProgressView,
-            synforge_core::api::BrowseRepositoryProgressState,
             synforge_core::api::BrowseRepositoryResponse,
             synforge_core::api::BuildJobListResponse,
             synforge_core::api::BuildJobResponse,

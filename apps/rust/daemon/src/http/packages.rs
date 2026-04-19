@@ -5,8 +5,8 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
 use synforge_core::api::{
-    BrowseRepositoryProgressResponse, BrowseRepositoryRequest, BrowseRepositoryResponse,
-    CreatePackageRequest, MockChrootListResponse, PackageActionResponse, PackageActionTargetResult,
+    BrowseRepositoryRequest, BrowseRepositoryResponse, CreatePackageRequest,
+    MockChrootListResponse, PackageActionResponse, PackageActionTargetResult,
     PackageBuildHistoryResponse, PackageListQuery, PackageListResponse, PackageResponse,
     PaginationQuery, RebuildRequest, RefreshAllPackagesProgressResponse,
     RefreshAllPackagesResponse, RefreshRequest, UpdatePackageRequest,
@@ -17,10 +17,6 @@ pub fn router() -> Router<AppState> {
         .route("/packages", get(list_packages).post(create_package))
         .route("/mock/chroots", get(list_mock_chroots))
         .route("/repositories/browse", post(browse_repository))
-        .route(
-            "/repositories/browse/progress",
-            get(get_browse_repository_progress),
-        )
         .route(
             "/packages/{name}",
             get(get_package).put(update_package).delete(delete_package),
@@ -119,22 +115,6 @@ pub(super) async fn browse_repository(
     Json(request): Json<BrowseRepositoryRequest>,
 ) -> Result<Json<BrowseRepositoryResponse>, AppError> {
     Ok(Json(state.service.browse_repository(request).await?))
-}
-
-#[utoipa::path(
-    get,
-    path = "/api/v1/repositories/browse/progress",
-    tag = "Repository",
-    security(("session_auth" = [])),
-    responses(
-        (status = 200, description = "Get latest repository browse clone progress", body = BrowseRepositoryProgressResponse),
-        (status = 401, body = synforge_core::api::ApiError)
-    )
-)]
-pub(super) async fn get_browse_repository_progress(
-    State(state): State<AppState>,
-) -> Result<Json<BrowseRepositoryProgressResponse>, AppError> {
-    Ok(Json(state.service.get_browse_repository_progress().await?))
 }
 
 #[utoipa::path(

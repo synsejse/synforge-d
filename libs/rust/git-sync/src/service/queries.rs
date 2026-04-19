@@ -4,9 +4,9 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use synforge_core::api::{
-    BrowseRepositoryProgressResponse, BrowseRepositoryProgressView, BrowseRepositoryResponse,
-    BuildJobResponse, PackageBuildHistoryResponse, PackageBuildInventoryEntry, PackageResponse,
-    RefreshAllPackagesProgressResponse, RefreshAllPackagesProgressView,
+    BrowseRepositoryResponse, BuildJobResponse, PackageBuildHistoryResponse,
+    PackageBuildInventoryEntry, PackageResponse, RefreshAllPackagesProgressResponse,
+    RefreshAllPackagesProgressView,
 };
 use synforge_core::model::PublishedRepoFile;
 use uuid::Uuid;
@@ -16,11 +16,6 @@ use super::commands::RefreshAllProgressStore;
 #[async_trait]
 pub trait RepositoryBrowser {
     async fn browse_repository(&self, repo_url: &str) -> anyhow::Result<BrowseRepositoryResponse>;
-}
-
-#[async_trait]
-pub trait RepositoryBrowseProgressReader {
-    async fn load_browse_repository_progress(&self) -> Option<BrowseRepositoryProgressView>;
 }
 
 #[async_trait]
@@ -54,17 +49,6 @@ where
     let operation: Option<RefreshAllPackagesProgressView> =
         deps.load_refresh_all_packages_progress().await;
     Ok(RefreshAllPackagesProgressResponse { operation })
-}
-
-pub async fn get_browse_repository_progress<D>(
-    deps: &D,
-) -> anyhow::Result<BrowseRepositoryProgressResponse>
-where
-    D: RepositoryBrowseProgressReader + Send + Sync,
-{
-    Ok(BrowseRepositoryProgressResponse {
-        operation: deps.load_browse_repository_progress().await,
-    })
 }
 
 pub async fn get_package_build_history<D>(

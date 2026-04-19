@@ -24,12 +24,11 @@ pub use self::logs::{
     LogChunkQuery, LogChunkResponse, LogManifestResponse, LogMetaResponse, LogSource, LogSourceType,
 };
 pub use self::packages::{
-    BrowseRepositoryProgressResponse, BrowseRepositoryProgressState, BrowseRepositoryProgressView,
-    BrowseRepositoryRequest, BrowseRepositoryResponse, CreatePackageRequest,
-    MockChrootListResponse, PackageActionDisposition, PackageActionResponse,
-    PackageActionTargetResult, PackageListQuery, PackageListResponse, PackageResponse,
-    RebuildRequest, RefreshAllPackagesProgressResponse, RefreshAllPackagesProgressView,
-    RefreshAllPackagesResponse, RefreshAllPackagesState, RefreshRequest, UpdatePackageRequest,
+    BrowseRepositoryRequest, BrowseRepositoryResponse, CreatePackageRequest, MockChrootListResponse,
+    PackageActionDisposition, PackageActionResponse, PackageActionTargetResult, PackageListQuery,
+    PackageListResponse, PackageResponse, RebuildRequest, RefreshAllPackagesProgressResponse,
+    RefreshAllPackagesProgressView, RefreshAllPackagesResponse, RefreshAllPackagesState,
+    RefreshRequest, UpdatePackageRequest,
 };
 pub use self::repo::{
     ExportRepoSigningKeyResponse, ExportRepoSigningPublicKeyResponse,

@@ -9,7 +9,6 @@ import {
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { packagesApi } from "../api";
 import type {
-  BrowseRepositoryProgressView,
   CreatePackageRequest,
   ServerHardwareResponse,
   SpecSource,
@@ -59,11 +58,6 @@ export default function AddPackageModal({
   const [browseFiles, setBrowseFiles] = useState<string[]>([]);
   const [serverHardware, setServerHardware] =
     useState<ServerHardwareResponse | null>(null);
-  const [browseProgress, setBrowseProgress] =
-    useState<BrowseRepositoryProgressView | null>(null);
-  const [browseProgressIssue, setBrowseProgressIssue] = useState<string | null>(
-    null,
-  );
   const [availableChroots, setAvailableChroots] = useState<string[]>([]);
   const [chrootsLoading, setChrootsLoading] = useState(true);
   const [showSpecPicker, setShowSpecPicker] = useState(false);
@@ -77,20 +71,6 @@ export default function AddPackageModal({
     () => browseFiles.filter((file) => file.endsWith(".spec")),
     [browseFiles],
   );
-  const activeBrowseProgress = useMemo(() => {
-    const trimmedRepoUrl = repoUrl.trim();
-    if (!browseProgress || !trimmedRepoUrl) {
-      return null;
-    }
-    if (browseProgress.repo_url !== trimmedRepoUrl) {
-      return null;
-    }
-    return browseProgress;
-  }, [browseProgress, repoUrl]);
-  const browseProgressPercent = activeBrowseProgress?.progress_percent ?? (browsing ? 2 : 0);
-  const browseProgressState = activeBrowseProgress?.state ?? "running";
-  const browseProgressMessage =
-    activeBrowseProgress?.message ?? "Preparing repository clone…";
   const maxCpuCores = serverHardware?.cpu_cores ?? null;
   const CPU_MIN_CORES = 1;
   const cpuSliderMax = Math.max(CPU_MIN_CORES, maxCpuCores ?? 64);
@@ -151,48 +131,6 @@ export default function AddPackageModal({
     firstFocusable?.focus();
   }, []);
 
-  useEffect(() => {
-    if (!browsing) {
-      return;
-    }
-    const currentRepoUrl = repoUrl.trim();
-    if (!currentRepoUrl) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const poll = async () => {
-      try {
-        const response = await packagesApi.getBrowseRepositoryProgress();
-        if (cancelled) {
-          return;
-        }
-        if (response.operation && response.operation.repo_url === currentRepoUrl) {
-          setBrowseProgress(response.operation);
-          setBrowseProgressIssue(null);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setBrowseProgressIssue(
-            "Clone is running, but live progress updates are temporarily unavailable.",
-          );
-          console.warn("Failed to poll repository browse progress", e);
-        }
-      }
-    };
-
-    void poll();
-    const intervalId = window.setInterval(() => {
-      void poll();
-    }, 700);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, [browsing, repoUrl]);
-
   async function handleBrowse() {
     const trimmedRepoUrl = repoUrl.trim();
     if (!trimmedRepoUrl) {
@@ -201,8 +139,6 @@ export default function AddPackageModal({
     }
     setBrowsing(true);
     setBrowseError(null);
-    setBrowseProgressIssue(null);
-    setBrowseProgress(null);
     try {
       const response = await packagesApi.browseRepository({ repo_url: trimmedRepoUrl });
       setBrowseFiles(response.files);
@@ -214,17 +150,6 @@ export default function AddPackageModal({
         e instanceof Error ? e.message : "Failed to browse repository",
       );
     } finally {
-      try {
-        const progressResponse = await packagesApi.getBrowseRepositoryProgress();
-        if (
-          progressResponse.operation &&
-          progressResponse.operation.repo_url === trimmedRepoUrl
-        ) {
-          setBrowseProgress(progressResponse.operation);
-        }
-      } catch (e) {
-        console.warn("Failed to load final browse progress", e);
-      }
       setBrowsing(false);
     }
   }
@@ -389,12 +314,7 @@ export default function AddPackageModal({
 
       {showSpecPicker && (
         <SpecPickerDialog
-          activeBrowseProgress={activeBrowseProgress}
           browseError={browseError}
-          browseProgressIssue={browseProgressIssue}
-          browseProgressMessage={browseProgressMessage}
-          browseProgressPercent={browseProgressPercent}
-          browseProgressState={browseProgressState}
           browsing={browsing}
           onBrowse={handleBrowse}
           onClose={() => setShowSpecPicker(false)}

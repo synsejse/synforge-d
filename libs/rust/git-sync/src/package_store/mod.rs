@@ -6,7 +6,6 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use synforge_core::{
-    api::BrowseRepositoryProgressView,
     config::DaemonConfig,
     constants::DEFAULT_WORKER_WORKSPACE_ROOT,
     model::{WorkerAction, WorkerJobPayload, WorkerParsePayload, WorkerResult},
@@ -14,7 +13,6 @@ use synforge_core::{
     validation::{PackageDefinitionValidator, Validator},
 };
 use synforge_database::DieselStore;
-use tokio::sync::Mutex;
 use tracing::instrument;
 
 use crate::cache::{GitMirrorCache, GitMirrorCacheStatsSnapshot};
@@ -57,7 +55,6 @@ pub struct PackageSyncStore {
     config: DaemonConfig,
     worker_runner: Arc<dyn WorkerParseRunner>,
     git_mirror_cache: Arc<GitMirrorCache>,
-    browse_progress: Arc<Mutex<Option<BrowseRepositoryProgressView>>>,
 }
 
 impl PackageSyncStore {
@@ -71,7 +68,6 @@ impl PackageSyncStore {
             config,
             worker_runner,
             git_mirror_cache,
-            browse_progress: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -87,10 +83,6 @@ impl PackageSyncStore {
 
     pub async fn git_cache_stats(&self) -> anyhow::Result<GitMirrorCacheStatsSnapshot> {
         self.git_mirror_cache.stats().await
-    }
-
-    pub async fn browse_repository_progress(&self) -> Option<BrowseRepositoryProgressView> {
-        self.browse_progress.lock().await.clone()
     }
 
     #[instrument(skip(self, source), fields(package_name = %package_name, repo_url = %source.repo_url))]

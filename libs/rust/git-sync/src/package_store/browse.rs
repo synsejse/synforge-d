@@ -1,13 +1,10 @@
 use std::time::Duration;
 
-use synforge_core::{
-    api::{BrowseRepositoryProgressState, BrowseRepositoryProgressView, BrowseRepositoryResponse},
-    error::SynforgeError,
-};
+use synforge_core::api::BrowseRepositoryResponse;
 use tracing::instrument;
 
 use super::PackageSyncStore;
-use super::git::{run_git, run_git_clone_with_progress};
+use super::git::{run_git, run_git_clone};
 
 impl PackageSyncStore {
     #[instrument(skip(self), fields(repo_url = %repo_url))]
@@ -19,24 +16,6 @@ impl PackageSyncStore {
         if repo_url.is_empty() {
             anyhow::bail!("repository URL must not be empty");
         }
-        let operation_id = uuid::Uuid::now_v7();
-        {
-            let mut slot = self.browse_progress.lock().await;
-            if let Some(operation) = slot.as_ref()
-                && operation.state == BrowseRepositoryProgressState::Running
-            {
-                return Err(anyhow::anyhow!(SynforgeError::Conflict(
-                    "repository browse is already running".to_string()
-                )));
-            }
-            *slot = Some(BrowseRepositoryProgressView {
-                operation_id,
-                repo_url: repo_url.to_string(),
-                state: BrowseRepositoryProgressState::Running,
-                progress_percent: 0,
-                message: Some("Preparing repository clone…".to_string()),
-            });
-        }
 
         let paths = self.config.runtime_paths();
         let clone_dir = paths.repo_browse_workspace_dir(uuid::Uuid::now_v7());
@@ -45,19 +24,11 @@ impl PackageSyncStore {
         }
 
         let git_timeout = Duration::from_secs(self.config.git_operation_timeout_seconds);
-        self.update_browse_progress(
-            operation_id,
-            repo_url,
-            BrowseRepositoryProgressState::Running,
-            5,
-            Some("Checking mirror cache…".to_string()),
-        )
-        .await;
         let clone_result: anyhow::Result<()> =
             match self.git_mirror_cache.ensure_mirror(repo_url).await {
                 Ok(mirror_dir) => {
                     let mirror_path = mirror_dir.to_string_lossy().to_string();
-                    let mirror_clone = run_git_clone_with_progress(
+                    let mirror_clone = run_git_clone(
                         None,
                         &[
                             "clone",
@@ -68,15 +39,6 @@ impl PackageSyncStore {
                             clone_dir.to_string_lossy().as_ref(),
                         ],
                         git_timeout,
-                        |percent, message| {
-                            self.update_browse_progress(
-                                operation_id,
-                                repo_url,
-                                BrowseRepositoryProgressState::Running,
-                                percent.min(95),
-                                Some(message),
-                            )
-                        },
                     )
                     .await;
                     if let Err(error) = mirror_clone {
@@ -94,15 +56,7 @@ impl PackageSyncStore {
                                 "failed to cleanup failed mirror clone workspace before retry"
                             );
                         }
-                        self.update_browse_progress(
-                            operation_id,
-                            repo_url,
-                            BrowseRepositoryProgressState::Running,
-                            8,
-                            Some("Mirror clone failed. Retrying direct clone…".to_string()),
-                        )
-                        .await;
-                        run_git_clone_with_progress(
+                        run_git_clone(
                             None,
                             &[
                                 "clone",
@@ -113,15 +67,6 @@ impl PackageSyncStore {
                                 clone_dir.to_string_lossy().as_ref(),
                             ],
                             git_timeout,
-                            |percent, message| {
-                                self.update_browse_progress(
-                                    operation_id,
-                                    repo_url,
-                                    BrowseRepositoryProgressState::Running,
-                                    percent.min(95),
-                                    Some(message),
-                                )
-                            },
                         )
                         .await
                     } else {
@@ -134,15 +79,7 @@ impl PackageSyncStore {
                         error = %error,
                         "failed to prepare mirror cache; falling back to direct clone"
                     );
-                    self.update_browse_progress(
-                        operation_id,
-                        repo_url,
-                        BrowseRepositoryProgressState::Running,
-                        8,
-                        Some("Mirror cache unavailable. Cloning directly…".to_string()),
-                    )
-                    .await;
-                    run_git_clone_with_progress(
+                    run_git_clone(
                         None,
                         &[
                             "clone",
@@ -153,15 +90,6 @@ impl PackageSyncStore {
                             clone_dir.to_string_lossy().as_ref(),
                         ],
                         git_timeout,
-                        |percent, message| {
-                            self.update_browse_progress(
-                                operation_id,
-                                repo_url,
-                                BrowseRepositoryProgressState::Running,
-                                percent.min(95),
-                                Some(message),
-                            )
-                        },
                     )
                     .await
                 }
@@ -169,24 +97,8 @@ impl PackageSyncStore {
 
         let response: anyhow::Result<BrowseRepositoryResponse> = async {
             clone_result?;
-            self.update_browse_progress(
-                operation_id,
-                repo_url,
-                BrowseRepositoryProgressState::Running,
-                96,
-                Some("Reading repository metadata…".to_string()),
-            )
-            .await;
             let head_commit =
                 run_git(Some(&clone_dir), &["rev-parse", "HEAD"], git_timeout).await?;
-            self.update_browse_progress(
-                operation_id,
-                repo_url,
-                BrowseRepositoryProgressState::Running,
-                98,
-                Some("Scanning repository files…".to_string()),
-            )
-            .await;
             let files_output = run_git(Some(&clone_dir), &["ls-files"], git_timeout).await?;
             let mut files = files_output
                 .lines()
@@ -207,17 +119,6 @@ impl PackageSyncStore {
                 files,
                 spec_files,
             };
-            self.update_browse_progress(
-                operation_id,
-                repo_url,
-                BrowseRepositoryProgressState::Completed,
-                100,
-                Some(format!(
-                    "Clone complete. {} spec file(s) discovered.",
-                    response.spec_files.len()
-                )),
-            )
-            .await;
             Ok(response)
         }
         .await;
@@ -230,34 +131,6 @@ impl PackageSyncStore {
                 "failed to cleanup repository browse workspace"
             );
         }
-        if let Err(error) = &response {
-            self.update_browse_progress(
-                operation_id,
-                repo_url,
-                BrowseRepositoryProgressState::Failed,
-                100,
-                Some(error.to_string()),
-            )
-            .await;
-        }
         response
-    }
-
-    async fn update_browse_progress(
-        &self,
-        operation_id: uuid::Uuid,
-        repo_url: &str,
-        state: BrowseRepositoryProgressState,
-        progress_percent: u8,
-        message: Option<String>,
-    ) {
-        let mut slot = self.browse_progress.lock().await;
-        *slot = Some(BrowseRepositoryProgressView {
-            operation_id,
-            repo_url: repo_url.to_string(),
-            state,
-            progress_percent,
-            message,
-        });
     }
 }

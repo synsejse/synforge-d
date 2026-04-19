@@ -80,30 +80,6 @@ pub struct BrowseRepositoryResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum BrowseRepositoryProgressState {
-    Running,
-    Completed,
-    Failed,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
-pub struct BrowseRepositoryProgressView {
-    pub operation_id: uuid::Uuid,
-    pub repo_url: String,
-    pub state: BrowseRepositoryProgressState,
-    pub progress_percent: u8,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub message: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
-pub struct BrowseRepositoryProgressResponse {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub operation: Option<BrowseRepositoryProgressView>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct MockChrootListResponse {
     pub chroots: Vec<String>,
 }

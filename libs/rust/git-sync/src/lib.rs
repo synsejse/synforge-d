@@ -7,7 +7,7 @@ mod sync_tracker;
 
 use anyhow::Context;
 use synforge_core::{
-    api::{BrowseRepositoryProgressView, BrowseRepositoryResponse, PackageResponse},
+    api::{BrowseRepositoryResponse, PackageResponse},
     error::SynforgeError,
     package::{PackageDefinition, SpecRevision, SpecSource},
     sync::SyncTriggerType,
@@ -29,7 +29,7 @@ pub use self::service::{
     PackageBuildHistoryReader, PackageDefinitionMaterializer, PackageDefinitionWriter,
     PackageDeleter, PackageDeletionJobReader, PackageDeletionRunner, PackageDetailsReader,
     PackageLookup, PackageMaterializationOptions, PackageSourceInspector, RefreshAllProgressStore,
-    RepositoryBrowseProgressReader, RepositoryBrowser,
+    RepositoryBrowser,
 };
 use self::sync_tracker::SyncResult;
 pub use self::sync_tracker::SyncStatusTracker;
@@ -196,10 +196,6 @@ impl RuntimeGitRegistryAdapter {
         repo_url: &str,
     ) -> anyhow::Result<BrowseRepositoryResponse> {
         self.package_store.browse_repository(repo_url).await
-    }
-
-    pub async fn browse_repository_progress(&self) -> Option<BrowseRepositoryProgressView> {
-        self.package_store.browse_repository_progress().await
     }
 
     pub async fn git_cache_stats(&self) -> anyhow::Result<GitMirrorCacheStatsSnapshot> {

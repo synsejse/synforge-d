@@ -8,9 +8,6 @@ export const packagesApi = {
   deleteJob: (...args: Parameters<typeof api.deleteJob>) => api.deleteJob(...args),
   deletePackage: (...args: Parameters<typeof api.deletePackage>) =>
     api.deletePackage(...args),
-  getBrowseRepositoryProgress: (
-    ...args: Parameters<typeof api.getBrowseRepositoryProgress>
-  ) => api.getBrowseRepositoryProgress(...args),
   getPackage: (...args: Parameters<typeof api.getPackage>) => api.getPackage(...args),
   getPackageBuilds: (...args: Parameters<typeof api.getPackageBuilds>) =>
     api.getPackageBuilds(...args),

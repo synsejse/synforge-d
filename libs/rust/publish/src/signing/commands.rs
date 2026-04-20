@@ -2,6 +2,7 @@ use std::path::Path;
 use std::process::Stdio;
 
 use anyhow::Context;
+use hex::encode as hex_encode;
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
@@ -179,11 +180,7 @@ pub(super) async fn recompute_artifact_metadata(path: &Path) -> anyhow::Result<(
         hasher.update(&buffer[..read]);
         size_bytes += read as u64;
     }
-    let sha256 = hasher
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect();
+    let sha256 = hex_encode(hasher.finalize());
     Ok((sha256, size_bytes))
 }
 

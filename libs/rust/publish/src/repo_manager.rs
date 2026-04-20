@@ -12,6 +12,7 @@ use synforge_core::{
 };
 use synforge_database::build_published_repo_path;
 use tokio::process::Command;
+use tokio_stream::{StreamExt, wrappers::ReadDirStream};
 use tracing::{info, warn};
 use uuid::Uuid;
 
@@ -256,18 +257,18 @@ async fn reconcile_repo_state(config: &DaemonConfig) -> anyhow::Result<()> {
 pub(crate) async fn discover_repo_targets(repo_root: &Path) -> anyhow::Result<Vec<RepoTarget>> {
     let mut targets = Vec::new();
     let mut distro_dirs = match tokio::fs::read_dir(repo_root).await {
-        Ok(entries) => entries,
+        Ok(entries) => ReadDirStream::new(entries),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(targets),
         Err(error) => return Err(error.into()),
     };
 
-    while let Some(distro_entry) = distro_dirs.next_entry().await? {
+    while let Some(distro_entry) = distro_dirs.next().await.transpose()? {
         let distro_path = distro_entry.path();
         if !distro_entry.file_type().await?.is_dir() {
             continue;
         }
-        let mut release_dirs = tokio::fs::read_dir(&distro_path).await?;
-        while let Some(release_entry) = release_dirs.next_entry().await? {
+        let mut release_dirs = ReadDirStream::new(tokio::fs::read_dir(&distro_path).await?);
+        while let Some(release_entry) = release_dirs.next().await.transpose()? {
             if !release_entry.file_type().await?.is_dir() {
                 continue;
             }
@@ -315,11 +316,11 @@ async fn dir_contains_files(dir: &Path) -> anyhow::Result<bool> {
     let mut stack = vec![dir.to_path_buf()];
     while let Some(current) = stack.pop() {
         let mut entries = match tokio::fs::read_dir(&current).await {
-            Ok(entries) => entries,
+            Ok(entries) => ReadDirStream::new(entries),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
             Err(error) => return Err(error.into()),
         };
-        while let Some(entry) = entries.next_entry().await? {
+        while let Some(entry) = entries.next().await.transpose()? {
             let file_type = entry.file_type().await?;
             if file_type.is_file() {
                 return Ok(true);

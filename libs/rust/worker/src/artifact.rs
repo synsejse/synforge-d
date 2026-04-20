@@ -5,6 +5,7 @@ use std::{
 
 use anyhow::Context;
 use glob::glob;
+use hex::encode as hex_encode;
 use sha2::{Digest, Sha256};
 use synforge_core::{
     model::{ArtifactKind, BuildArtifact},
@@ -108,11 +109,7 @@ async fn build_artifact(
         hasher.update(&buffer[..read]);
         size_bytes += read as u64;
     }
-    let sha256 = hasher
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect();
+    let sha256 = hex_encode(hasher.finalize());
     let kind = classify_rpm_artifact(&path);
     let artifact_root = topdir.parent().unwrap_or(topdir);
     Ok(BuildArtifact {

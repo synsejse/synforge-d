@@ -1,6 +1,7 @@
 use std::{collections::BTreeMap, path::Path};
 
 use async_trait::async_trait;
+use delegate::delegate;
 use synforge_core::{
     api::RepoSigningStatusView,
     config::{DaemonConfig, RUNTIME_SETTING_SIGNING_PRIVATE_KEY_ARMORED},
@@ -32,6 +33,65 @@ impl RepoSigningDeps {
     fn repo_store(&self) -> PostgresRepoStore {
         PostgresRepoStore::new(self.store.clone())
     }
+
+    fn signing_manager(&self) -> synforge_publish::RepoSigningManager {
+        synforge_publish::RepoSigningManager
+    }
+
+    delegate! {
+        to self.repo_store() {
+            #[call(count_all_published_repo_files)]
+            async fn load_published_repo_file_count(&self) -> anyhow::Result<u64>;
+
+            #[call(list_all_published_repo_files)]
+            async fn load_published_repo_files(
+                &self,
+                limit: usize,
+                offset: usize,
+            ) -> anyhow::Result<Vec<PublishedRepoFile>>;
+
+            #[call(update_build_artifact_metadata)]
+            async fn persist_build_artifact_metadata(
+                &self,
+                artifact_id: Uuid,
+                sha256: String,
+                size_bytes: u64,
+            ) -> anyhow::Result<()>;
+
+            #[call(upsert_artifact_signatures)]
+            async fn persist_artifact_signatures(
+                &self,
+                signatures: Vec<ArtifactSignature>,
+            ) -> anyhow::Result<()>;
+        }
+    }
+
+    delegate! {
+        to self.signing_manager() {
+            #[call(remove_all_keys)]
+            async fn clear_signing_keys(&self, config: &DaemonConfig) -> anyhow::Result<()>;
+
+            #[call(export_private_key)]
+            async fn load_private_key(&self, config: &DaemonConfig, key_id: &str) -> anyhow::Result<String>;
+
+            #[call(export_public_key)]
+            async fn load_public_key(&self, config: &DaemonConfig, key_id: &str) -> anyhow::Result<String>;
+
+            #[call(add_signature_to_artifact)]
+            async fn sign_artifact(
+                &self,
+                config: &DaemonConfig,
+                key_id: &str,
+                artifact_path: &Path,
+            ) -> anyhow::Result<()>;
+
+            #[call(remove_signature_from_artifact)]
+            async fn unsign_artifact(&self, artifact_path: &Path) -> anyhow::Result<()>;
+
+            #[call(recompute_artifact_metadata)]
+            async fn load_artifact_metadata(&self, artifact_path: &Path) -> anyhow::Result<(String, u64)>;
+        }
+    }
 }
 
 #[async_trait]
@@ -54,13 +114,14 @@ impl RepoSigningInspector for RepoSigningDeps {
         &self,
         config: &DaemonConfig,
     ) -> anyhow::Result<RepoSigningStatusView> {
-        let manager = synforge_publish::RepoSigningManager;
-        let status = manager.status(config).await?;
+        let status = self.signing_manager().status(config).await?;
         Ok(RepoSigningStatusView {
             enabled: status.enabled,
             configured_key_id: status.configured_key_id,
             keyring_dir: status.keyring_dir,
-            repo_public_key_path: manager.repo_public_key_path(config.runtime_paths().repo_dir()),
+            repo_public_key_path: self
+                .signing_manager()
+                .repo_public_key_path(config.runtime_paths().repo_dir()),
             key_present: status.key_present,
             active_fingerprint: status.active_fingerprint,
             can_export_private_key: false,
@@ -121,8 +182,7 @@ impl RepoSigningCommandRunner for RepoSigningDeps {
         &self,
         config: &DaemonConfig,
     ) -> anyhow::Result<RepoSigningKeyIdentity> {
-        let manager = synforge_publish::RepoSigningManager;
-        let key = manager.generate_new_managed_signing_key(config).await?;
+        let key = self.signing_manager().generate_new_managed_signing_key(config).await?;
         Ok(RepoSigningKeyIdentity {
             key_id: key.key_id,
             fingerprint: key.fingerprint,
@@ -134,8 +194,8 @@ impl RepoSigningCommandRunner for RepoSigningDeps {
         config: &DaemonConfig,
         armored_private_key: &str,
     ) -> anyhow::Result<RepoSigningKeyIdentity> {
-        let manager = synforge_publish::RepoSigningManager;
-        let key = manager
+        let key = self
+            .signing_manager()
             .import_private_key(config, armored_private_key)
             .await?;
         Ok(RepoSigningKeyIdentity {
@@ -145,8 +205,7 @@ impl RepoSigningCommandRunner for RepoSigningDeps {
     }
 
     async fn remove_all_keys(&self, config: &DaemonConfig) -> anyhow::Result<()> {
-        let manager = synforge_publish::RepoSigningManager;
-        manager.remove_all_keys(config).await
+        self.clear_signing_keys(config).await
     }
 
     async fn export_private_key(
@@ -154,16 +213,17 @@ impl RepoSigningCommandRunner for RepoSigningDeps {
         config: &DaemonConfig,
         key_id: &str,
     ) -> anyhow::Result<String> {
-        let manager = synforge_publish::RepoSigningManager;
-        manager.export_private_key(config, key_id).await
+        self.load_private_key(config, key_id).await
     }
 
     async fn resolve_configured_signing_identity(
         &self,
         config: &DaemonConfig,
     ) -> anyhow::Result<RepoSigningKeyIdentity> {
-        let manager = synforge_publish::RepoSigningManager;
-        let (key_id, fingerprint) = manager.resolve_configured_signing_identity(config).await?;
+        let (key_id, fingerprint) = self
+            .signing_manager()
+            .resolve_configured_signing_identity(config)
+            .await?;
         Ok(RepoSigningKeyIdentity {
             key_id,
             fingerprint,
@@ -175,13 +235,11 @@ impl RepoSigningCommandRunner for RepoSigningDeps {
         config: &DaemonConfig,
         key_id: &str,
     ) -> anyhow::Result<String> {
-        let manager = synforge_publish::RepoSigningManager;
-        manager.export_public_key(config, key_id).await
+        self.load_public_key(config, key_id).await
     }
 
     async fn reconcile_repo_metadata_signature(&self, config: &DaemonConfig) -> anyhow::Result<()> {
-        let manager = synforge_publish::RepoSigningManager;
-        manager
+        self.signing_manager()
             .reconcile_repo_metadata_signature(config, config.runtime_paths().repo_dir())
             .await
     }
@@ -192,23 +250,18 @@ impl RepoSigningCommandRunner for RepoSigningDeps {
         key_id: &str,
         artifact_path: &Path,
     ) -> anyhow::Result<()> {
-        let manager = synforge_publish::RepoSigningManager;
-        manager
-            .add_signature_to_artifact(config, key_id, artifact_path)
-            .await
+        self.sign_artifact(config, key_id, artifact_path).await
     }
 
     async fn remove_signature_from_artifact(&self, artifact_path: &Path) -> anyhow::Result<()> {
-        let manager = synforge_publish::RepoSigningManager;
-        manager.remove_signature_from_artifact(artifact_path).await
+        self.unsign_artifact(artifact_path).await
     }
 
     async fn recompute_artifact_metadata(
         &self,
         artifact_path: &Path,
     ) -> anyhow::Result<(String, u64)> {
-        let manager = synforge_publish::RepoSigningManager;
-        manager.recompute_artifact_metadata(artifact_path).await
+        self.load_artifact_metadata(artifact_path).await
     }
 }
 
@@ -225,7 +278,7 @@ impl RepoSigningProgressWriter for RepoSigningDeps {
 #[async_trait]
 impl RepoArtifactCatalog for RepoSigningDeps {
     async fn count_all_published_repo_files(&self) -> anyhow::Result<u64> {
-        self.repo_store().count_all_published_repo_files().await
+        self.load_published_repo_file_count().await
     }
 
     async fn list_all_published_repo_files(
@@ -233,9 +286,7 @@ impl RepoArtifactCatalog for RepoSigningDeps {
         limit: usize,
         offset: usize,
     ) -> anyhow::Result<Vec<PublishedRepoFile>> {
-        self.repo_store()
-            .list_all_published_repo_files(limit, offset)
-            .await
+        self.load_published_repo_files(limit, offset).await
     }
 
     async fn update_build_artifact_metadata(
@@ -244,8 +295,7 @@ impl RepoArtifactCatalog for RepoSigningDeps {
         sha256: String,
         size_bytes: u64,
     ) -> anyhow::Result<()> {
-        self.repo_store()
-            .update_build_artifact_metadata(artifact_id, sha256, size_bytes)
+        self.persist_build_artifact_metadata(artifact_id, sha256, size_bytes)
             .await
     }
 
@@ -253,9 +303,7 @@ impl RepoArtifactCatalog for RepoSigningDeps {
         &self,
         signatures: Vec<ArtifactSignature>,
     ) -> anyhow::Result<()> {
-        self.repo_store()
-            .upsert_artifact_signatures(signatures)
-            .await
+        self.persist_artifact_signatures(signatures).await
     }
 }
 

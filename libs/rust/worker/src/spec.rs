@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use anyhow::Context;
+use hex::encode as hex_encode;
 use sha2::{Digest, Sha256};
 use synforge_core::{
     model::{WorkerJobPayload, WorkerParsePayload, WorkerParseResult},
@@ -100,9 +101,5 @@ async fn hash_tracked_spec(spec_path: &Path) -> anyhow::Result<String> {
         }
         hasher.update(&buffer[..read]);
     }
-    Ok(hasher
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect())
+    Ok(hex_encode(hasher.finalize()))
 }

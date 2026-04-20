@@ -34,21 +34,21 @@ impl GitSyncManualRefreshScheduler for DaemonPackageDeps {
 #[async_trait]
 impl GitSyncRepositoryBrowser for DaemonPackageDeps {
     async fn browse_repository(&self, repo_url: &str) -> anyhow::Result<BrowseRepositoryResponse> {
-        self.git.browse_repository(repo_url).await
+        self.browse_git_repository(repo_url).await
     }
 }
 
 #[async_trait]
 impl GitSyncPackageDetailsReader for DaemonPackageDeps {
     async fn get_package(&self, package_name: &str) -> anyhow::Result<PackageResponse> {
-        self.git.get_package(package_name).await
+        self.load_git_package(package_name).await
     }
 }
 
 #[async_trait]
 impl PackageDefinitionCatalog for DaemonPackageDeps {
     async fn list_package_definitions(&self) -> anyhow::Result<Vec<PackageDefinition>> {
-        self.git.list_definitions().await
+        self.load_package_definitions().await
     }
 }
 
@@ -114,7 +114,7 @@ impl PackageDefinitionReader for DaemonPackageDeps {
         &self,
         package_name: &str,
     ) -> anyhow::Result<PackageDefinition> {
-        self.git.get_definition(package_name).await
+        self.load_package_definition(package_name).await
     }
 }
 
@@ -142,6 +142,6 @@ impl TrackedSourceInspector for DaemonPackageDeps {
 #[async_trait]
 impl GitSyncPackageDeleter for DaemonPackageDeps {
     async fn delete_package(&self, package_name: &str) -> anyhow::Result<()> {
-        self.git.delete_package(package_name).await
+        self.delete_git_package(package_name).await
     }
 }

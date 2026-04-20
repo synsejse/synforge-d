@@ -11,6 +11,7 @@ async-trait.workspace = true
 bytes.workspace = true
 futures-util.workspace = true
 glob.workspace = true
+hex.workspace = true
 ini.workspace = true
 reqwest.workspace = true
 serde.workspace = true

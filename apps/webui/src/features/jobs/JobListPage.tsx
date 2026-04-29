@@ -18,9 +18,6 @@ import JobListTable from "./components/JobListTable";
 import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import { useDialogs } from "../../components/common/DialogsProvider";
-import PageVisibilityProvider, {
-  usePageVisible,
-} from "../../components/common/PageVisibilityProvider";
 import ServerHardwareProvider, {
   useServerHardware,
 } from "../../components/common/ServerHardwareProvider";
@@ -85,7 +82,6 @@ function syncUrl(state: JobsFilterState) {
 function JobList() {
   const queryClient = useQueryClient();
   const { confirm, notify } = useDialogs();
-  const pageVisible = usePageVisible();
   const serverHardware = useServerHardware();
 
   const initial = readInitialFilters();
@@ -134,9 +130,8 @@ function JobList() {
   const usageQuery = useQuery({
     queryKey: queryKeys.jobs.usageList(),
     queryFn: () => api.listJobUsage(),
-    enabled: filters.mode === "active" && pageVisible,
-    refetchInterval:
-      filters.mode === "active" && pageVisible ? USAGE_POLL_INTERVAL_MS : false,
+    enabled: filters.mode === "active",
+    refetchInterval: filters.mode === "active" ? USAGE_POLL_INTERVAL_MS : false,
   });
 
   const usageByJob = (() => {
@@ -427,11 +422,9 @@ function JobList() {
 export default function JobListPage() {
   return (
     <PageRoot>
-      <PageVisibilityProvider>
-        <ServerHardwareProvider>
-          <JobList />
-        </ServerHardwareProvider>
-      </PageVisibilityProvider>
+      <ServerHardwareProvider>
+        <JobList />
+      </ServerHardwareProvider>
     </PageRoot>
   );
 }

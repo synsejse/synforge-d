@@ -11,7 +11,6 @@ import type {
 } from "../../../lib/types";
 import ErrorMessage from "../../../components/common/ErrorMessage";
 import { useDialogs } from "../../../components/common/DialogsProvider";
-import { usePageVisible } from "../../../components/common/PageVisibilityProvider";
 import { useServerHardware } from "../../../components/common/ServerHardwareProvider";
 import LoadingBlock from "../../../components/ui/LoadingBlock";
 import FaIcon from "../../../components/ui/FaIcon";
@@ -41,7 +40,6 @@ function isLiveStatus(status: string | undefined): boolean {
 export default function JobDetail({ jobId }: Props) {
   const queryClient = useQueryClient();
   const { confirm, notify } = useDialogs();
-  const pageVisible = usePageVisible();
   const serverHardware = useServerHardware();
 
   const jobQuery = useQuery({
@@ -54,9 +52,7 @@ export default function JobDetail({ jobId }: Props) {
       return { job, artifacts: artifacts.artifacts };
     },
     refetchInterval: (query) =>
-      pageVisible && isLiveStatus(query.state.data?.job.job.status)
-        ? POLL_INTERVAL_MS
-        : false,
+      isLiveStatus(query.state.data?.job.job.status) ? POLL_INTERVAL_MS : false,
   });
 
   const isLive = isLiveStatus(jobQuery.data?.job.job.status);
@@ -64,8 +60,8 @@ export default function JobDetail({ jobId }: Props) {
   const usageQuery = useQuery({
     queryKey: queryKeys.jobs.usage(jobId),
     queryFn: () => api.getJobUsage(jobId),
-    enabled: isLive && pageVisible,
-    refetchInterval: isLive && pageVisible ? USAGE_POLL_INTERVAL_MS : false,
+    enabled: isLive,
+    refetchInterval: isLive ? USAGE_POLL_INTERVAL_MS : false,
   });
   const latestUsage = usageQuery.data?.sample ?? null;
 

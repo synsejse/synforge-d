@@ -13,6 +13,7 @@ import AddPackageModal from "./components/AddPackageModal";
 import PackageCard from "./components/PackageCard";
 import ErrorBoundary from "../../components/common/ErrorBoundary";
 import ErrorMessage from "../../components/common/ErrorMessage";
+import { useDialogs } from "../../components/common/useDialogs";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import Button from "../../components/ui/Button";
 import Select from "../../components/ui/Select";
@@ -20,6 +21,7 @@ import PageHeader from "../../components/ui/PageHeader";
 import ProgressOverlayDialog from "../../components/ui/ProgressOverlayDialog";
 
 function PackageList() {
+  const { confirm, notify, element: dialogs } = useDialogs();
   const [packages, setPackages] = useState<PackageResponse[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(() => {
@@ -100,12 +102,22 @@ function PackageList() {
   }, []);
 
   async function handleDelete(name: string) {
-    if (!confirm(`Delete package "${name}"?`)) return;
+    const ok = await confirm({
+      title: "Delete package?",
+      message: `Package "${name}" will be removed.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await api.deletePackage(name);
       await load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to delete package");
+      await notify({
+        title: "Delete failed",
+        message: e instanceof Error ? e.message : "Failed to delete package",
+        variant: "error",
+      });
     }
   }
 
@@ -126,10 +138,18 @@ function PackageList() {
         isRefresh
           ? await api.refreshPackage(name)
           : await api.rebuildPackage(name);
-      alert(summarizePackageAction(response));
+      await notify({
+        title: isRefresh ? "Refresh queued" : "Rebuild queued",
+        message: summarizePackageAction(response),
+      });
       await load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : `Failed to ${action} package`);
+      await notify({
+        title: `${isRefresh ? "Refresh" : "Rebuild"} failed`,
+        message:
+          e instanceof Error ? e.message : `Failed to ${action} package`,
+        variant: "error",
+      });
     } finally {
       if (isRefresh) {
         setRefreshingPackageNames((current) => {
@@ -191,7 +211,12 @@ function PackageList() {
     if (refreshingAll) {
       return;
     }
-    if (!confirm("Queue manual refresh for all enabled packages?")) {
+    const ok = await confirm({
+      title: "Refresh all enabled packages?",
+      message: "Queue a manual source refresh for every enabled package.",
+      confirmLabel: "Refresh all",
+    });
+    if (!ok) {
       return;
     }
 
@@ -234,6 +259,7 @@ function PackageList() {
 
   return (
     <div className="space-y-8">
+      {dialogs}
       {/* Header */}
       <PageHeader
         eyebrow="PACKAGE_REGISTRY"

@@ -9,6 +9,7 @@ import type {
   ServerHardwareResponse,
 } from "../../../lib/types";
 import ErrorMessage from "../../../components/common/ErrorMessage";
+import { useDialogs } from "../../../components/common/useDialogs";
 import LoadingBlock from "../../../components/ui/LoadingBlock";
 import FaIcon from "../../../components/ui/FaIcon";
 import Badge from "../../../components/ui/Badge";
@@ -31,6 +32,7 @@ const USAGE_POLL_INTERVAL_MS = 1000;
 const TabbedLogViewer = lazy(() => import("./TabbedLogViewer"));
 
 export default function JobDetail({ jobId }: Props) {
+  const { confirm, notify, element: dialogs } = useDialogs();
   const [job, setJob] = useState<BuildJobResponse | null>(null);
   const [artifacts, setArtifacts] = useState<BuildArtifact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -124,36 +126,65 @@ export default function JobDetail({ jobId }: Props) {
   }, [job?.job.status, jobId, pageVisible]);
 
   async function handleDelete() {
-    if (!confirm(`Delete job ${jobId}?`)) return;
+    const ok = await confirm({
+      title: "Delete job?",
+      message: `Job ${jobId} will be removed.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       setDeleting(true);
       await api.deleteJob(jobId);
       window.location.href = "/jobs/";
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to delete job");
+      await notify({
+        title: "Delete failed",
+        message: e instanceof Error ? e.message : "Failed to delete job",
+        variant: "error",
+      });
       setDeleting(false);
     }
   }
 
   async function handleRetry() {
     if (!job) return;
-    if (!confirm(`Retry build for ${job.job.package_name}?`)) return;
+    const ok = await confirm({
+      title: "Retry build?",
+      message: `Queue a fresh build for ${job.job.package_name}.`,
+      confirmLabel: "Retry",
+    });
+    if (!ok) return;
     try {
       const res = await api.retryJob(jobId);
       window.location.href = `/jobs/view/?id=${encodeURIComponent(res.job.id)}`;
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to retry job");
+      await notify({
+        title: "Retry failed",
+        message: e instanceof Error ? e.message : "Failed to retry job",
+        variant: "error",
+      });
     }
   }
 
   async function handleKill() {
-    if (!confirm(`Kill active job ${jobId}?`)) return;
+    const ok = await confirm({
+      title: "Kill active job?",
+      message: `Job ${jobId} will be terminated.`,
+      confirmLabel: "Kill",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       setKilling(true);
       await api.killJob(jobId);
       await loadJob();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to kill job");
+      await notify({
+        title: "Kill failed",
+        message: e instanceof Error ? e.message : "Failed to kill job",
+        variant: "error",
+      });
     } finally {
       setKilling(false);
     }
@@ -197,6 +228,7 @@ export default function JobDetail({ jobId }: Props) {
 
   return (
     <div className="space-y-6">
+      {dialogs}
       {/* Header */}
       <section className="border-4 border-[var(--theme-accent-orange)] bg-black p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">

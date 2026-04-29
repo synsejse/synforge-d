@@ -19,6 +19,7 @@ import type { JobViewMode } from "./types";
 import JobListTable from "./components/JobListTable";
 import ErrorBoundary from "../../components/common/ErrorBoundary";
 import ErrorMessage from "../../components/common/ErrorMessage";
+import { useDialogs } from "../../components/common/useDialogs";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
 import Button from "../../components/ui/Button";
@@ -35,6 +36,7 @@ function normalizeStatusFilter(value: string | null): "all" | HistoryBuildStatus
 }
 
 function JobList() {
+  const { confirm, notify, element: dialogs } = useDialogs();
   const [jobs, setJobs] = useState<BuildJobResponse[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -168,12 +170,22 @@ function JobList() {
   }, [mode, pageVisible]);
 
   async function handleDelete(job: BuildJobResponse) {
-    if (!confirm(`Delete job ${job.job.id}?`)) return;
+    const ok = await confirm({
+      title: "Delete job?",
+      message: `Job ${job.job.id} will be removed.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await api.deleteJob(job.job.id);
       await load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to delete job");
+      await notify({
+        title: "Delete failed",
+        message: e instanceof Error ? e.message : "Failed to delete job",
+        variant: "error",
+      });
     }
   }
 
@@ -182,32 +194,46 @@ function JobList() {
       (entry) => entry.job.status === "failed" || entry.job.status === "timed_out",
     ).length;
     if (failedCount === 0) return;
-    if (!confirm(`Delete ${failedCount} failed or timed out jobs?`)) return;
+    const ok = await confirm({
+      title: "Prune failed jobs?",
+      message: `Delete ${failedCount} failed or timed out jobs?`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       setPruning(true);
       await api.pruneFailedJobs();
       await load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to prune failed jobs");
+      await notify({
+        title: "Prune failed",
+        message: e instanceof Error ? e.message : "Failed to prune failed jobs",
+        variant: "error",
+      });
     } finally {
       setPruning(false);
     }
   }
 
   async function handleKill(job: BuildJobResponse) {
-    if (
-      !confirm(
-        `Kill active job ${job.job.id} (${job.job.package_name} / ${job.job.mock_chroot})?`,
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({
+      title: "Kill active job?",
+      message: `${job.job.package_name} / ${job.job.mock_chroot} (${job.job.id})`,
+      confirmLabel: "Kill",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       setKillingJobId(job.job.id);
       await api.killJob(job.job.id);
       await load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to kill job");
+      await notify({
+        title: "Kill failed",
+        message: e instanceof Error ? e.message : "Failed to kill job",
+        variant: "error",
+      });
     } finally {
       setKillingJobId(null);
     }
@@ -223,6 +249,7 @@ function JobList() {
 
   return (
     <div className="space-y-6">
+      {dialogs}
       {/* Header */}
       <PageHeader
         eyebrow="JOB_ACTIVITY"

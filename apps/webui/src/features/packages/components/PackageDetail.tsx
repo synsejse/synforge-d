@@ -5,6 +5,7 @@ import {
   summarizePackageTargetAction,
 } from "../../../lib/package-actions";
 import ErrorMessage from "../../../components/common/ErrorMessage";
+import { useDialogs } from "../../../components/common/useDialogs";
 import LoadingBlock from "../../../components/ui/LoadingBlock";
 import PackageBuildHistorySection from "./PackageBuildHistorySection";
 import PackageEditFormSection, {
@@ -104,6 +105,7 @@ function formatCpuLimitCores(value?: number | null): string {
 }
 
 export default function PackageDetail({ packageName }: Props) {
+  const { confirm, notify, element: dialogs } = useDialogs();
   const BUILD_HISTORY_PAGE_SIZE = 12;
   const REPO_FILES_PAGE_SIZE = 20;
   const [pkg, setPkg] = useState<PackageResponse | null>(null);
@@ -332,11 +334,13 @@ export default function PackageDetail({ packageName }: Props) {
   }
 
   async function handleDelete() {
-    if (
-      !confirm(
-        `Delete package "${packageName}"? This removes its stored spec sources.`,
-      )
-    ) {
+    const ok = await confirm({
+      title: "Delete package?",
+      message: `Package "${packageName}" and its stored spec sources will be removed.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) {
       return;
     }
     setDeleting(true);
@@ -361,7 +365,10 @@ export default function PackageDetail({ packageName }: Props) {
         action === "rebuild"
           ? await api.rebuildPackage(packageName)
           : await api.refreshPackage(packageName);
-      alert(summarizePackageAction(response));
+      await notify({
+        title: action === "rebuild" ? "Rebuild queued" : "Refresh queued",
+        message: summarizePackageAction(response),
+      });
       await refreshVisibleData();
     } catch (e) {
       setError(e instanceof Error ? e.message : `Failed to ${action}`);
@@ -381,12 +388,13 @@ export default function PackageDetail({ packageName }: Props) {
         action === "rebuild"
           ? await api.rebuildPackageTarget(packageName, mockChroot)
           : await api.refreshPackageTarget(packageName, mockChroot);
-      alert(
-        summarizePackageTargetAction(
+      await notify({
+        title: action === "rebuild" ? "Rebuild queued" : "Refresh queued",
+        message: summarizePackageTargetAction(
           response,
           action === "rebuild" ? "Rebuild" : "Refresh",
         ),
-      );
+      });
       await refreshVisibleData();
     } catch (e) {
       setError(e instanceof Error ? e.message : `Failed to ${action}`);
@@ -394,11 +402,13 @@ export default function PackageDetail({ packageName }: Props) {
   }
 
   async function handleDeleteJob(jobId: string) {
-    if (
-      !confirm(
-        `Delete build ${jobId}? This also removes repo files published by that build.`,
-      )
-    ) {
+    const ok = await confirm({
+      title: "Delete build?",
+      message: `Build ${jobId} and its published repo files will be removed.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) {
       return;
     }
     setDeletingJobId(jobId);
@@ -458,6 +468,7 @@ export default function PackageDetail({ packageName }: Props) {
 
   return (
     <div className="min-w-0 space-y-8">
+      {dialogs}
       <PackageDetailHeader
         packageName={pkg.package.name}
         description={pkg.package.description || "No description"}

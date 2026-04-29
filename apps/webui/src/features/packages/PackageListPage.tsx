@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   faPlus,
   faRotate,
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
+import { queryKeys } from "../../lib/query-keys";
 import { summarizePackageAction } from "../../lib/package-actions";
-import type {
-  PackageResponse,
-  RefreshAllPackagesProgressView,
-} from "../../lib/types";
+import type { RefreshAllPackagesProgressView } from "../../lib/types";
 import AddPackageModal from "./components/AddPackageModal";
 import PackageCard from "./components/PackageCard";
 import PageRoot from "../../components/common/PageRoot";
@@ -21,86 +20,140 @@ import Select from "../../components/ui/Select";
 import PageHeader from "../../components/ui/PageHeader";
 import ProgressOverlayDialog from "../../components/ui/ProgressOverlayDialog";
 
-function PackageList() {
-  const { confirm, notify } = useDialogs();
-  const [packages, setPackages] = useState<PackageResponse[]>([]);
-  const [hasMore, setHasMore] = useState(false);
-  const [offset, setOffset] = useState(() => {
-    if (typeof window === "undefined") {
-      return 0;
-    }
-    return Number(new URLSearchParams(window.location.search).get("offset") || "0");
-  });
-  const [search, setSearch] = useState(() => {
-    if (typeof window === "undefined") {
-      return "";
-    }
-    return new URLSearchParams(window.location.search).get("search") || "";
-  });
-  const [enabledFilter, setEnabledFilter] = useState<"all" | "true" | "false">(() => {
-    if (typeof window === "undefined") {
-      return "all";
-    }
-    const value = new URLSearchParams(window.location.search).get("enabled");
-    return value === "true" || value === "false" ? value : "all";
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [refreshingAll, setRefreshingAll] = useState(false);
-  const [refreshingPackageNames, setRefreshingPackageNames] = useState<Set<string>>(
-    () => new Set(),
-  );
-  const [refreshOverlayOpen, setRefreshOverlayOpen] = useState(false);
-  const [refreshOverlayTitle, setRefreshOverlayTitle] = useState("Refreshing packages");
-  const [refreshOverlayDetail, setRefreshOverlayDetail] = useState(
-    "Preparing package refresh…",
-  );
-  const [refreshOverlayProgress, setRefreshOverlayProgress] = useState(0);
-  const pageSize = 50;
+const PAGE_SIZE = 50;
 
-  async function load(
-    nextOffset = offset,
-    nextSearch = search,
-    nextEnabled = enabledFilter,
-  ) {
-    try {
-      setLoading(true);
-      const res = await api.listPackagesPage(pageSize, nextOffset, {
-        search: nextSearch,
-        enabled: nextEnabled === "all" ? "all" : nextEnabled === "true",
-      });
-      setPackages(res.packages);
-      setHasMore(res.page.has_more);
-      setOffset(nextOffset);
-      setSearch(nextSearch);
-      setEnabledFilter(nextEnabled);
-      setError(null);
+type EnabledFilter = "all" | "true" | "false";
 
-      if (typeof window !== "undefined") {
-        const params = new URLSearchParams();
-        if (nextOffset > 0) {
-          params.set("offset", String(nextOffset));
-        }
-        if (nextSearch.trim()) {
-          params.set("search", nextSearch.trim());
-        }
-        if (nextEnabled !== "all") {
-          params.set("enabled", nextEnabled);
-        }
-        const query = params.toString();
-        window.history.replaceState({}, "", `/packages/${query ? `?${query}` : ""}`);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load packages");
-    } finally {
-      setLoading(false);
-    }
+function readInitialFilters() {
+  if (typeof window === "undefined") {
+    return { offset: 0, search: "", enabled: "all" as EnabledFilter };
   }
+  const params = new URLSearchParams(window.location.search);
+  const enabled = params.get("enabled");
+  return {
+    offset: Number(params.get("offset") || "0"),
+    search: params.get("search") || "",
+    enabled:
+      enabled === "true" || enabled === "false"
+        ? (enabled as EnabledFilter)
+        : "all",
+  };
+}
+
+function syncUrl(offset: number, search: string, enabled: EnabledFilter) {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams();
+  if (offset > 0) params.set("offset", String(offset));
+  if (search.trim()) params.set("search", search.trim());
+  if (enabled !== "all") params.set("enabled", enabled);
+  const query = params.toString();
+  window.history.replaceState({}, "", `/packages/${query ? `?${query}` : ""}`);
+}
+
+function formatRefreshDetail(operation: RefreshAllPackagesProgressView): string {
+  if (operation.total_packages === 0) {
+    return operation.message ?? "Preparing package refresh…";
+  }
+  const detail = [
+    `${operation.processed_packages}/${operation.total_packages} packages`,
+    `queued ${operation.queued_packages}`,
+    `skipped ${operation.skipped_packages}`,
+    `blocked ${operation.blocked_packages}`,
+    `failed ${operation.failed_packages}`,
+    `queued targets ${operation.queued_targets}`,
+    `skipped targets ${operation.skipped_targets}`,
+    `blocked targets ${operation.blocked_targets}`,
+  ].join(" · ");
+  return operation.message ? `${detail} · ${operation.message}` : detail;
+}
+
+function refreshTitle(state: RefreshAllPackagesProgressView["state"]): string {
+  if (state === "running") return "Refreshing enabled packages";
+  if (state === "failed") return "Refresh all failed";
+  return "Refresh all complete";
+}
+
+function PackageList() {
+  const queryClient = useQueryClient();
+  const { confirm, notify } = useDialogs();
+
+  const initial = readInitialFilters();
+  const [offset, setOffset] = useState(initial.offset);
+  const [search, setSearch] = useState(initial.search);
+  const [searchInput, setSearchInput] = useState(initial.search);
+  const [enabledFilter, setEnabledFilter] = useState<EnabledFilter>(initial.enabled);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [refreshOverlayOpen, setRefreshOverlayOpen] = useState(false);
 
   useEffect(() => {
-    load();
-  }, []);
+    syncUrl(offset, search, enabledFilter);
+  }, [offset, search, enabledFilter]);
+
+  const listQuery = useQuery({
+    queryKey: queryKeys.packages.list({
+      limit: PAGE_SIZE,
+      offset,
+      search,
+      enabled: enabledFilter === "all" ? "all" : enabledFilter === "true",
+    }),
+    queryFn: () =>
+      api.listPackagesPage(PAGE_SIZE, offset, {
+        search,
+        enabled: enabledFilter === "all" ? "all" : enabledFilter === "true",
+      }),
+    placeholderData: (previous) => previous,
+  });
+
+  const invalidatePackages = () =>
+    queryClient.invalidateQueries({ queryKey: ["packages"] });
+
+  const deleteMutation = useMutation({
+    mutationFn: (name: string) => api.deletePackage(name),
+    onSuccess: invalidatePackages,
+    onError: (error) =>
+      notify({
+        title: "Delete failed",
+        message: error instanceof Error ? error.message : "Failed to delete package",
+        variant: "error",
+      }),
+  });
+
+  const triggerMutation = useMutation({
+    mutationFn: ({ name, action }: { name: string; action: "refresh" | "rebuild" }) =>
+      action === "refresh" ? api.refreshPackage(name) : api.rebuildPackage(name),
+    onSuccess: async (response, variables) => {
+      await notify({
+        title: variables.action === "refresh" ? "Refresh queued" : "Rebuild queued",
+        message: summarizePackageAction(response),
+      });
+      await invalidatePackages();
+    },
+    onError: (error, variables) =>
+      notify({
+        title: `${variables.action === "refresh" ? "Refresh" : "Rebuild"} failed`,
+        message:
+          error instanceof Error
+            ? error.message
+            : `Failed to ${variables.action} package`,
+        variant: "error",
+      }),
+  });
+
+  const refreshAllMutation = useMutation({
+    mutationFn: () => api.refreshAllPackages(),
+    onSettled: () => invalidatePackages(),
+  });
+
+  const progressQuery = useQuery({
+    queryKey: queryKeys.packages.refreshAllProgress(),
+    queryFn: () => api.getRefreshAllPackagesProgress(),
+    enabled: refreshOverlayOpen,
+    refetchInterval: refreshOverlayOpen ? 500 : false,
+  });
+
+  const refreshingAll = refreshAllMutation.isPending;
+  const liveOperation =
+    refreshAllMutation.data?.operation ?? progressQuery.data?.operation ?? null;
 
   async function handleDelete(name: string) {
     const ok = await confirm({
@@ -110,153 +163,78 @@ function PackageList() {
       destructive: true,
     });
     if (!ok) return;
-    try {
-      await api.deletePackage(name);
-      await load();
-    } catch (e) {
-      await notify({
-        title: "Delete failed",
-        message: e instanceof Error ? e.message : "Failed to delete package",
-        variant: "error",
-      });
-    }
+    deleteMutation.mutate(name);
   }
 
-  async function trigger(name: string, action: "refresh" | "rebuild") {
-    const isRefresh = action === "refresh";
-    if (isRefresh && refreshingPackageNames.has(name)) {
+  function trigger(name: string, action: "refresh" | "rebuild") {
+    if (
+      action === "refresh" &&
+      triggerMutation.isPending &&
+      triggerMutation.variables?.name === name &&
+      triggerMutation.variables?.action === "refresh"
+    ) {
       return;
     }
-    if (isRefresh) {
-      setRefreshingPackageNames((current) => {
-        const next = new Set(current);
-        next.add(name);
-        return next;
-      });
-    }
-    try {
-      const response =
-        isRefresh
-          ? await api.refreshPackage(name)
-          : await api.rebuildPackage(name);
-      await notify({
-        title: isRefresh ? "Refresh queued" : "Rebuild queued",
-        message: summarizePackageAction(response),
-      });
-      await load();
-    } catch (e) {
-      await notify({
-        title: `${isRefresh ? "Refresh" : "Rebuild"} failed`,
-        message:
-          e instanceof Error ? e.message : `Failed to ${action} package`,
-        variant: "error",
-      });
-    } finally {
-      if (isRefresh) {
-        setRefreshingPackageNames((current) => {
-          if (!current.has(name)) {
-            return current;
-          }
-          const next = new Set(current);
-          next.delete(name);
-          return next;
-        });
-      }
-    }
-  }
-
-  function applyRefreshAllProgress(operation: RefreshAllPackagesProgressView) {
-    if (operation.state === "running") {
-      setRefreshOverlayTitle("Refreshing enabled packages");
-    } else if (operation.state === "failed") {
-      setRefreshOverlayTitle("Refresh all failed");
-    } else {
-      setRefreshOverlayTitle("Refresh all complete");
-    }
-
-    if (operation.total_packages === 0) {
-      setRefreshOverlayProgress(operation.state === "running" ? 0 : 100);
-      setRefreshOverlayDetail(operation.message ?? "Preparing package refresh…");
-      return;
-    }
-
-    const progressPercent = Math.min(
-      100,
-      Math.round((operation.processed_packages / operation.total_packages) * 100),
-    );
-    setRefreshOverlayProgress(progressPercent);
-    const detail = [
-      `${operation.processed_packages}/${operation.total_packages} packages`,
-      `queued ${operation.queued_packages}`,
-      `skipped ${operation.skipped_packages}`,
-      `blocked ${operation.blocked_packages}`,
-      `failed ${operation.failed_packages}`,
-      `queued targets ${operation.queued_targets}`,
-      `skipped targets ${operation.skipped_targets}`,
-      `blocked targets ${operation.blocked_targets}`,
-    ].join(" · ");
-    setRefreshOverlayDetail(
-      operation.message ? `${detail} · ${operation.message}` : detail,
-    );
-  }
-
-  async function pollRefreshAllProgress() {
-    const progress = await api.getRefreshAllPackagesProgress();
-    if (!progress.operation) {
-      return;
-    }
-    applyRefreshAllProgress(progress.operation);
+    triggerMutation.mutate({ name, action });
   }
 
   async function handleRefreshAllPackages() {
-    if (refreshingAll) {
-      return;
-    }
+    if (refreshingAll) return;
     const ok = await confirm({
       title: "Refresh all enabled packages?",
       message: "Queue a manual source refresh for every enabled package.",
       confirmLabel: "Refresh all",
     });
-    if (!ok) {
-      return;
-    }
-
-    let progressTicker: number | null = null;
-    try {
-      setRefreshingAll(true);
-      setError(null);
-      setRefreshOverlayOpen(true);
-      setRefreshOverlayProgress(0);
-      setRefreshOverlayTitle("Refreshing enabled packages");
-      setRefreshOverlayDetail("Preparing package refresh…");
-      progressTicker = window.setInterval(() => {
-        void pollRefreshAllProgress().catch(() => undefined);
-      }, 500);
-      await pollRefreshAllProgress().catch(() => undefined);
-      const response = await api.refreshAllPackages();
-      applyRefreshAllProgress(response.operation);
-      await pollRefreshAllProgress().catch(() => undefined);
-      await load();
-    } catch (e) {
-      const message =
-        e instanceof Error ? e.message : "Failed to refresh enabled packages";
-      setRefreshOverlayTitle("Refresh all failed");
-      setRefreshOverlayDetail(message);
-    } finally {
-      if (progressTicker !== null) {
-        window.clearInterval(progressTicker);
-      }
-      setRefreshingAll(false);
-    }
+    if (!ok) return;
+    setRefreshOverlayOpen(true);
+    await refreshAllMutation.mutateAsync().catch(() => undefined);
   }
 
-  if (loading) {
+  function applyFilters() {
+    setSearch(searchInput);
+    setOffset(0);
+  }
+
+  if (listQuery.isPending) {
     return <LoadingBlock label="Loading packages…" lines={4} />;
   }
 
-  if (error) {
-    return <ErrorMessage message={error} />;
+  if (listQuery.error) {
+    return (
+      <ErrorMessage
+        message={
+          listQuery.error instanceof Error
+            ? listQuery.error.message
+            : "Failed to load packages"
+        }
+      />
+    );
   }
+
+  const refreshingNameForMutation =
+    triggerMutation.isPending &&
+    triggerMutation.variables?.action === "refresh"
+      ? triggerMutation.variables.name
+      : null;
+
+  const overlayTitle = liveOperation
+    ? refreshTitle(liveOperation.state)
+    : "Refreshing enabled packages";
+  const overlayDetail = liveOperation
+    ? formatRefreshDetail(liveOperation)
+    : "Preparing package refresh…";
+  const overlayProgress = liveOperation
+    ? liveOperation.total_packages === 0
+      ? liveOperation.state === "running"
+        ? 0
+        : 100
+      : Math.min(
+          100,
+          Math.round(
+            (liveOperation.processed_packages / liveOperation.total_packages) * 100,
+          ),
+        )
+    : 0;
 
   return (
     <div className="space-y-8">
@@ -291,9 +269,9 @@ function PackageList() {
               </span>
               <input
                 type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && load(0, search, enabledFilter)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && applyFilters()}
                 placeholder="Filter by name or description"
                 className="w-full border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
               />
@@ -306,7 +284,10 @@ function PackageList() {
               </span>
               <Select
                 value={enabledFilter}
-                onValueChange={(val) => setEnabledFilter(val as "all" | "true" | "false")}
+                onValueChange={(val) => {
+                  setEnabledFilter(val as EnabledFilter);
+                  setOffset(0);
+                }}
                 options={[
                   { value: "all", label: "All" },
                   { value: "true", label: "Enabled" },
@@ -320,7 +301,7 @@ function PackageList() {
               variant="secondary"
               size="md"
               className="w-full xl:w-auto"
-              onClick={() => load(0, search, enabledFilter)}
+              onClick={applyFilters}
             >
               Apply Filters
             </Button>
@@ -329,7 +310,7 @@ function PackageList() {
       </div>
 
       {/* Package Cards */}
-      {packages.length === 0 ? (
+      {listQuery.data.packages.length === 0 ? (
         <div className="border-2 border-zinc-700 bg-black p-12 text-center">
           <p className="font-mono text-sm font-bold uppercase tracking-[0.3em] text-zinc-500">
             NO_PACKAGES_CONFIGURED
@@ -340,14 +321,14 @@ function PackageList() {
         </div>
       ) : (
         <div className="space-y-4">
-          {packages.map((entry) => (
+          {listQuery.data.packages.map((entry) => (
             <PackageCard
               key={entry.package.name}
               entry={entry}
-              onRefresh={(name) => void trigger(name, "refresh")}
-              onRebuild={(name) => void trigger(name, "rebuild")}
+              onRefresh={(name) => trigger(name, "refresh")}
+              onRebuild={(name) => trigger(name, "rebuild")}
               onDelete={(name) => void handleDelete(name)}
-              refreshing={refreshingPackageNames.has(entry.package.name)}
+              refreshing={refreshingNameForMutation === entry.package.name}
               refreshDisabled={refreshingAll}
             />
           ))}
@@ -355,14 +336,14 @@ function PackageList() {
       )}
 
       {/* Pagination */}
-      {packages.length > 0 && (
+      {listQuery.data.packages.length > 0 && (
         <div className="flex flex-col gap-3 border-2 border-white bg-black p-4 sm:flex-row sm:items-center sm:justify-between">
           <Button
             variant="secondary"
             size="md"
             className="w-full sm:w-auto"
-            onClick={() => load(Math.max(0, offset - pageSize), search, enabledFilter)}
-            disabled={loading || offset === 0}
+            onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+            disabled={listQuery.isFetching || offset === 0}
           >
             Previous
           </Button>
@@ -373,8 +354,8 @@ function PackageList() {
             variant="secondary"
             size="md"
             className="w-full sm:w-auto"
-            onClick={() => load(offset + pageSize, search, enabledFilter)}
-            disabled={loading || !hasMore}
+            onClick={() => setOffset(offset + PAGE_SIZE)}
+            disabled={listQuery.isFetching || !listQuery.data.page.has_more}
           >
             Next
           </Button>
@@ -386,16 +367,16 @@ function PackageList() {
           onClose={() => setShowAddModal(false)}
           onSuccess={() => {
             setShowAddModal(false);
-            load();
+            void invalidatePackages();
           }}
         />
       )}
 
       <ProgressOverlayDialog
         open={refreshOverlayOpen}
-        title={refreshOverlayTitle}
-        detail={refreshOverlayDetail}
-        progress={refreshOverlayProgress}
+        title={overlayTitle}
+        detail={overlayDetail}
+        progress={overlayProgress}
         onClose={() => setRefreshOverlayOpen(false)}
         closeDisabled={refreshingAll}
       />

@@ -1,4 +1,5 @@
 import { useEffect, useState, type SyntheticEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   faBoxesStacked,
   faBullseye,
@@ -6,8 +7,9 @@ import {
   faHammer,
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
+import { queryKeys } from "../../lib/query-keys";
 import { formatBytes } from "../../lib/bytes";
-import type { PublishedRepoFile, RepoSummaryResponse } from "../../lib/types";
+import type { PublishedRepoFile } from "../../lib/types";
 import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
@@ -19,109 +21,113 @@ import PageHeader from "../../components/ui/PageHeader";
 import Badge from "../../components/ui/Badge";
 
 const PAGE_SIZE = 50;
-const EMPTY_REPO_SUMMARY: RepoSummaryResponse = {
-  package_count: 0,
-  target_count: 0,
-  build_count: 0,
-  published_file_count: 0,
-  stored_bytes: 0,
-  recent_files: [],
-  targets: [],
-};
+
+type KindFilter = "all" | "rpm" | "srpm" | "log";
+
+interface BrowseFilterState {
+  offset: number;
+  packageFilter: string;
+  targetFilter: string;
+  kindFilter: KindFilter;
+}
+
+function readInitialFilters(): BrowseFilterState {
+  if (typeof window === "undefined") {
+    return { offset: 0, packageFilter: "", targetFilter: "", kindFilter: "all" };
+  }
+  const params = new URLSearchParams(window.location.search);
+  const kind = params.get("kind");
+  return {
+    offset: Number(params.get("offset") || "0"),
+    packageFilter: params.get("package") || "",
+    targetFilter: params.get("target") || "",
+    kindFilter:
+      kind === "rpm" || kind === "srpm" || kind === "log" ? kind : "all",
+  };
+}
+
+function syncUrl(state: BrowseFilterState) {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams();
+  if (state.offset > 0) params.set("offset", String(state.offset));
+  if (state.packageFilter.trim()) params.set("package", state.packageFilter.trim());
+  if (state.targetFilter.trim()) params.set("target", state.targetFilter.trim());
+  if (state.kindFilter !== "all") params.set("kind", state.kindFilter);
+  const query = params.toString();
+  window.history.replaceState({}, "", `/repository/${query ? `?${query}` : ""}`);
+}
+
+function getSigningState(file: PublishedRepoFile) {
+  if (file.signing_status === "signed") {
+    return { label: "SIGNED", variant: "success" as const, title: undefined };
+  }
+  if (file.signing_status === "failed") {
+    return {
+      label: "SIGN FAILED",
+      variant: "error" as const,
+      title: file.signing_error_message || "Artifact signing failed",
+    };
+  }
+  return { label: "NOT SIGNED", variant: "warning" as const, title: undefined };
+}
 
 function RepositoryBrowser() {
-  const [summary, setSummary] = useState<RepoSummaryResponse>(EMPTY_REPO_SUMMARY);
-  const [files, setFiles] = useState<PublishedRepoFile[]>([]);
-  const [hasMore, setHasMore] = useState(false);
-  const [offset, setOffset] = useState(() => {
-    if (typeof window === "undefined") return 0;
-    return Number(new URLSearchParams(window.location.search).get("offset") || "0");
-  });
-  const [packageFilter, setPackageFilter] = useState(() => {
-    if (typeof window === "undefined") return "";
-    return new URLSearchParams(window.location.search).get("package") || "";
-  });
-  const [targetFilter, setTargetFilter] = useState(() => {
-    if (typeof window === "undefined") return "";
-    return new URLSearchParams(window.location.search).get("target") || "";
-  });
-  const [kindFilter, setKindFilter] = useState<"all" | "rpm" | "srpm" | "log">(() => {
-    if (typeof window === "undefined") return "all";
-    const value = new URLSearchParams(window.location.search).get("kind");
-    return value === "rpm" || value === "srpm" || value === "log" ? value : "all";
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const getSigningState = (file: PublishedRepoFile) => {
-    if (file.signing_status === "signed") {
-      return { label: "SIGNED", variant: "success" as const };
-    }
-    if (file.signing_status === "failed") {
-      return {
-        label: "SIGN FAILED",
-        variant: "error" as const,
-        title: file.signing_error_message || "Artifact signing failed",
-      };
-    }
-    return { label: "NOT SIGNED", variant: "warning" as const };
-  };
-
-  async function load(
-    nextOffset = offset,
-    nextPackageFilter = packageFilter,
-    nextTargetFilter = targetFilter,
-    nextKindFilter = kindFilter,
-  ) {
-    try {
-      setLoading(true);
-      const [summaryRes, inventoryRes] = await Promise.all([
-        api.getRepoSummary(),
-        api.getRepoInventory(PAGE_SIZE, nextOffset, {
-          packageName: nextPackageFilter,
-          mockChroot: nextTargetFilter,
-          kind: nextKindFilter,
-        }),
-      ]);
-      setSummary(summaryRes);
-      setFiles(inventoryRes.repo_files);
-      setHasMore(inventoryRes.page.has_more);
-      setOffset(nextOffset);
-      setPackageFilter(nextPackageFilter);
-      setTargetFilter(nextTargetFilter);
-      setKindFilter(nextKindFilter);
-      setError(null);
-      if (typeof window !== "undefined") {
-        const params = new URLSearchParams();
-        if (nextOffset > 0) params.set("offset", String(nextOffset));
-        if (nextPackageFilter.trim()) params.set("package", nextPackageFilter.trim());
-        if (nextTargetFilter.trim()) params.set("target", nextTargetFilter.trim());
-        if (nextKindFilter !== "all") params.set("kind", nextKindFilter);
-        const query = params.toString();
-        window.history.replaceState({}, "", `/repository/${query ? `?${query}` : ""}`);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load repository inventory");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const initial = readInitialFilters();
+  const [filters, setFilters] = useState<BrowseFilterState>(initial);
+  const [packageInput, setPackageInput] = useState(initial.packageFilter);
+  const [targetInput, setTargetInput] = useState(initial.targetFilter);
 
   useEffect(() => {
-    load();
-  }, []);
+    syncUrl(filters);
+  }, [filters]);
+
+  const summaryQuery = useQuery({
+    queryKey: queryKeys.repository.summary(),
+    queryFn: () => api.getRepoSummary(),
+  });
+
+  const inventoryQuery = useQuery({
+    queryKey: queryKeys.repository.inventory({
+      limit: PAGE_SIZE,
+      offset: filters.offset,
+      packageName: filters.packageFilter,
+      mockChroot: filters.targetFilter,
+      kind: filters.kindFilter,
+    }),
+    queryFn: () =>
+      api.getRepoInventory(PAGE_SIZE, filters.offset, {
+        packageName: filters.packageFilter,
+        mockChroot: filters.targetFilter,
+        kind: filters.kindFilter,
+      }),
+    placeholderData: (previous) => previous,
+  });
 
   function handleApply(event: SyntheticEvent) {
     event.preventDefault();
-    load(0, packageFilter, targetFilter, kindFilter);
+    setFilters({
+      ...filters,
+      offset: 0,
+      packageFilter: packageInput,
+      targetFilter: targetInput,
+    });
   }
 
-  if (loading) {
+  if (summaryQuery.isPending || inventoryQuery.isPending) {
     return <LoadingBlock label="Loading repository inventory…" lines={4} />;
   }
 
-  if (error) {
-    return <ErrorMessage message={error} />;
+  const loadError = summaryQuery.error ?? inventoryQuery.error;
+  if (loadError || !summaryQuery.data || !inventoryQuery.data) {
+    return (
+      <ErrorMessage
+        message={
+          loadError instanceof Error
+            ? loadError.message
+            : "Failed to load repository inventory"
+        }
+      />
+    );
   }
 
   return (
@@ -139,27 +145,27 @@ function RepositoryBrowser() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Packages"
-          value={summary.package_count}
+          value={summaryQuery.data.package_count}
           detail="Published package names"
           icon={<FaIcon icon={faBoxesStacked} />}
         />
         <MetricCard
           label="Targets"
-          value={summary.target_count}
+          value={summaryQuery.data.target_count}
           detail="Active build targets"
           variant="accent"
           icon={<FaIcon icon={faBullseye} />}
         />
         <MetricCard
           label="Builds"
-          value={summary.build_count}
+          value={summaryQuery.data.build_count}
           detail="Recorded publish jobs"
           icon={<FaIcon icon={faHammer} />}
         />
         <MetricCard
           label="Stored Size"
-          value={formatBytes(summary.stored_bytes)}
-          detail={`${summary.published_file_count} published files`}
+          value={formatBytes(summaryQuery.data.stored_bytes)}
+          detail={`${summaryQuery.data.published_file_count} published files`}
           icon={<FaIcon icon={faHardDrive} />}
         />
       </div>
@@ -174,8 +180,8 @@ function RepositoryBrowser() {
               </span>
               <input
                 type="text"
-                value={packageFilter}
-                onChange={(e) => setPackageFilter(e.target.value)}
+                value={packageInput}
+                onChange={(e) => setPackageInput(e.target.value)}
                 placeholder="Filter by package name"
                 className="w-full border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
               />
@@ -188,8 +194,8 @@ function RepositoryBrowser() {
               </span>
               <input
                 type="text"
-                value={targetFilter}
-                onChange={(e) => setTargetFilter(e.target.value)}
+                value={targetInput}
+                onChange={(e) => setTargetInput(e.target.value)}
                 placeholder="Filter by target"
                 className="w-full border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
               />
@@ -201,8 +207,14 @@ function RepositoryBrowser() {
                 Kind
               </span>
               <Select
-                value={kindFilter}
-                onValueChange={(val) => setKindFilter(val as "all" | "rpm" | "srpm" | "log")}
+                value={filters.kindFilter}
+                onValueChange={(val) =>
+                  setFilters({
+                    ...filters,
+                    kindFilter: val as KindFilter,
+                    offset: 0,
+                  })
+                }
                 options={[
                   { value: "all", label: "All" },
                   { value: "rpm", label: "RPM" },
@@ -228,7 +240,7 @@ function RepositoryBrowser() {
           </h2>
         </div>
         
-        {files.length === 0 ? (
+        {inventoryQuery.data.repo_files.length === 0 ? (
           <div className="px-6 py-12 text-center">
             <p className="font-mono text-sm text-zinc-500">
               No files match the current filters.
@@ -237,7 +249,7 @@ function RepositoryBrowser() {
         ) : (
           <>
             <div className="space-y-3 p-4 md:hidden">
-              {files.map((file) => {
+              {inventoryQuery.data.repo_files.map((file) => {
                 const fileName = file.path.split("/").pop() || file.path;
                 const signingState = getSigningState(file);
                 return (
@@ -299,7 +311,7 @@ function RepositoryBrowser() {
                   </tr>
                 </thead>
                 <tbody>
-                  {files.map((file) => {
+                  {inventoryQuery.data.repo_files.map((file) => {
                     const fileName = file.path.split("/").pop() || file.path;
                     const signingState = getSigningState(file);
                     return (
@@ -342,24 +354,33 @@ function RepositoryBrowser() {
         )}
 
         {/* Pagination */}
-        {files.length > 0 && (
+        {inventoryQuery.data.repo_files.length > 0 && (
           <div className="flex flex-col gap-3 border-t-2 border-zinc-800 bg-black px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
             <Button
               variant="secondary"
               size="md"
-              onClick={() => load(Math.max(0, offset - PAGE_SIZE))}
-              disabled={loading || offset === 0}
+              onClick={() =>
+                setFilters({
+                  ...filters,
+                  offset: Math.max(0, filters.offset - PAGE_SIZE),
+                })
+              }
+              disabled={inventoryQuery.isFetching || filters.offset === 0}
             >
               Previous
             </Button>
             <span className="font-mono text-sm text-zinc-400">
-              Offset: {offset}
+              Offset: {filters.offset}
             </span>
             <Button
               variant="secondary"
               size="md"
-              onClick={() => load(offset + PAGE_SIZE)}
-              disabled={loading || !hasMore}
+              onClick={() =>
+                setFilters({ ...filters, offset: filters.offset + PAGE_SIZE })
+              }
+              disabled={
+                inventoryQuery.isFetching || !inventoryQuery.data.page.has_more
+              }
             >
               Next
             </Button>

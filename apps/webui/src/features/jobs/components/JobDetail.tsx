@@ -1,10 +1,11 @@
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../../lib/api";
 import { API_BASE } from "../../../lib/api/client";
+import { queryKeys } from "../../../lib/query-keys";
 import { formatDateTime } from "../../../lib/datetime";
 import type {
   BuildArtifact,
-  BuildJobResponse,
   JobResourceUsageSample,
   ServerHardwareResponse,
 } from "../../../lib/types";
@@ -33,78 +34,83 @@ const POLL_INTERVAL_MS = 2000;
 const USAGE_POLL_INTERVAL_MS = 1000;
 const TabbedLogViewer = lazy(() => import("./TabbedLogViewer"));
 
+function isLiveStatus(status: string | undefined): boolean {
+  return status === "pending" || status === "running";
+}
+
 export default function JobDetail({ jobId }: Props) {
+  const queryClient = useQueryClient();
   const { confirm, notify } = useDialogs();
   const pageVisible = usePageVisible();
   const serverHardware = useServerHardware();
-  const [job, setJob] = useState<BuildJobResponse | null>(null);
-  const [artifacts, setArtifacts] = useState<BuildArtifact[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [killing, setKilling] = useState(false);
-  const [latestUsage, setLatestUsage] = useState<JobResourceUsageSample | null>(null);
 
-  async function loadJob() {
-    try {
-      const [jobRes, artifactRes] = await Promise.all([
+  const jobQuery = useQuery({
+    queryKey: queryKeys.jobs.detail(jobId),
+    queryFn: async () => {
+      const [job, artifacts] = await Promise.all([
         api.getJob(jobId),
         api.listJobArtifacts(jobId),
       ]);
-      setJob(jobRes);
-      setArtifacts(artifactRes.artifacts);
-      setError(null);
-      return jobRes;
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Failed to load job";
-      setError(message);
-      throw e;
-    } finally {
-      setLoading(false);
-    }
-  }
+      return { job, artifacts: artifacts.artifacts };
+    },
+    refetchInterval: (query) =>
+      pageVisible && isLiveStatus(query.state.data?.job.job.status)
+        ? POLL_INTERVAL_MS
+        : false,
+  });
 
-  useEffect(() => {
-    loadJob().catch(() => undefined);
-  }, [jobId]);
+  const isLive = isLiveStatus(jobQuery.data?.job.job.status);
 
-  // Poll for job status updates when live
-  useEffect(() => {
-    if (!job) return;
-    if (job.job.status !== "pending" && job.job.status !== "running") return;
-    if (!pageVisible) return;
+  const usageQuery = useQuery({
+    queryKey: queryKeys.jobs.usage(jobId),
+    queryFn: () => api.getJobUsage(jobId),
+    enabled: isLive && pageVisible,
+    refetchInterval: isLive && pageVisible ? USAGE_POLL_INTERVAL_MS : false,
+  });
+  const latestUsage = usageQuery.data?.sample ?? null;
 
-    loadJob().catch(() => undefined);
-    const timer = window.setInterval(() => {
-      loadJob().catch(() => undefined);
-    }, POLL_INTERVAL_MS);
+  const invalidateJob = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.detail(jobId) }),
+      queryClient.invalidateQueries({ queryKey: ["jobs"] }),
+    ]);
 
-    return () => window.clearInterval(timer);
-  }, [job?.job.status, pageVisible]);
+  const deleteMutation = useMutation({
+    mutationFn: () => api.deleteJob(jobId),
+    onSuccess: () => {
+      window.location.href = "/jobs/";
+    },
+    onError: (error) =>
+      notify({
+        title: "Delete failed",
+        message: error instanceof Error ? error.message : "Failed to delete job",
+        variant: "error",
+      }),
+  });
 
-  useEffect(() => {
-    if (!job) return;
-    if (job.job.status !== "pending" && job.job.status !== "running") return;
-    if (!pageVisible) return;
-    let cancelled = false;
-    const pollUsage = async () => {
-      try {
-        const response = await api.getJobUsage(jobId);
-        if (cancelled) return;
-        setLatestUsage(response.sample ?? null);
-      } catch {
-        // keep last value when one poll fails
-      }
-    };
-    void pollUsage();
-    const timer = window.setInterval(() => {
-      void pollUsage();
-    }, USAGE_POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [job?.job.status, jobId, pageVisible]);
+  const retryMutation = useMutation({
+    mutationFn: () => api.retryJob(jobId),
+    onSuccess: (response) => {
+      window.location.href = `/jobs/view/?id=${encodeURIComponent(response.job.id)}`;
+    },
+    onError: (error) =>
+      notify({
+        title: "Retry failed",
+        message: error instanceof Error ? error.message : "Failed to retry job",
+        variant: "error",
+      }),
+  });
+
+  const killMutation = useMutation({
+    mutationFn: () => api.killJob(jobId),
+    onSuccess: invalidateJob,
+    onError: (error) =>
+      notify({
+        title: "Kill failed",
+        message: error instanceof Error ? error.message : "Failed to kill job",
+        variant: "error",
+      }),
+  });
 
   async function handleDelete() {
     const ok = await confirm({
@@ -114,38 +120,18 @@ export default function JobDetail({ jobId }: Props) {
       destructive: true,
     });
     if (!ok) return;
-    try {
-      setDeleting(true);
-      await api.deleteJob(jobId);
-      window.location.href = "/jobs/";
-    } catch (e) {
-      await notify({
-        title: "Delete failed",
-        message: e instanceof Error ? e.message : "Failed to delete job",
-        variant: "error",
-      });
-      setDeleting(false);
-    }
+    deleteMutation.mutate();
   }
 
   async function handleRetry() {
-    if (!job) return;
+    if (!jobQuery.data) return;
     const ok = await confirm({
       title: "Retry build?",
-      message: `Queue a fresh build for ${job.job.package_name}.`,
+      message: `Queue a fresh build for ${jobQuery.data.job.job.package_name}.`,
       confirmLabel: "Retry",
     });
     if (!ok) return;
-    try {
-      const res = await api.retryJob(jobId);
-      window.location.href = `/jobs/view/?id=${encodeURIComponent(res.job.id)}`;
-    } catch (e) {
-      await notify({
-        title: "Retry failed",
-        message: e instanceof Error ? e.message : "Failed to retry job",
-        variant: "error",
-      });
-    }
+    retryMutation.mutate();
   }
 
   async function handleKill() {
@@ -156,56 +142,27 @@ export default function JobDetail({ jobId }: Props) {
       destructive: true,
     });
     if (!ok) return;
-    try {
-      setKilling(true);
-      await api.killJob(jobId);
-      await loadJob();
-    } catch (e) {
-      await notify({
-        title: "Kill failed",
-        message: e instanceof Error ? e.message : "Failed to kill job",
-        variant: "error",
-      });
-    } finally {
-      setKilling(false);
-    }
+    killMutation.mutate();
   }
 
-  const getStatusVariant = (status: string) => {
-    if (status === "succeeded") return "success";
-    if (status === "failed" || status === "timed_out") return "error";
-    if (status === "running") return "lime";
-    if (status === "pending") return "warning";
-    return "default";
-  };
-
-  const getArtifactSigningBadge = (artifact: BuildArtifact) => {
-    if (artifact.signing_status === "signed") {
-      return { label: "SIGNED", variant: "success" as const };
-    }
-    if (artifact.signing_status === "failed") {
-      return {
-        label: "SIGN FAILED",
-        variant: "error" as const,
-        title: artifact.signing_error_message || "Artifact signing failed",
-      };
-    }
-    return { label: "NOT SIGNED", variant: "warning" as const };
-  };
-
-  if (loading) {
+  if (jobQuery.isPending) {
     return <LoadingBlock label="Loading job details…" lines={6} />;
   }
 
-  if (error || !job) {
-    return <ErrorMessage message={error || "Job not found"} />;
+  if (jobQuery.error || !jobQuery.data) {
+    return (
+      <ErrorMessage
+        message={
+          jobQuery.error instanceof Error ? jobQuery.error.message : "Job not found"
+        }
+      />
+    );
   }
 
-  const isLive = job.job.status === "pending" || job.job.status === "running";
   const canRetry =
-    job.job.status === "succeeded" ||
-    job.job.status === "failed" ||
-    job.job.status === "timed_out";
+    jobQuery.data.job.job.status === "succeeded" ||
+    jobQuery.data.job.job.status === "failed" ||
+    jobQuery.data.job.job.status === "timed_out";
 
   return (
     <div className="space-y-6">
@@ -214,25 +171,25 @@ export default function JobDetail({ jobId }: Props) {
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
-              <Badge variant={getStatusVariant(job.job.status)} pulse={isLive}>
-                {job.job.status}
+              <Badge variant={getStatusVariant(jobQuery.data.job.job.status)} pulse={isLive}>
+                {jobQuery.data.job.job.status}
               </Badge>
               <span className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[var(--theme-accent-orange)]">
                 JOB_DETAILS
               </span>
             </div>
             <h1 className="mt-3 font-mono text-3xl font-bold uppercase text-white">
-              {job.job.package_name}
+              {jobQuery.data.job.job.package_name}
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-4">
               <div className="font-mono text-sm text-zinc-400">
-                <span className="text-zinc-600">Target:</span> {job.job.mock_chroot}
+                <span className="text-zinc-600">Target:</span> {jobQuery.data.job.job.mock_chroot}
               </div>
               <div className="font-mono text-sm text-zinc-400">
-                <span className="text-zinc-600">Trigger:</span> {job.job.trigger}
+                <span className="text-zinc-600">Trigger:</span> {jobQuery.data.job.job.trigger}
               </div>
               <div className="font-mono text-sm text-zinc-400">
-                <span className="text-zinc-600">Created:</span> {formatDateTime(job.job.created_at)}
+                <span className="text-zinc-600">Created:</span> {formatDateTime(jobQuery.data.job.job.created_at)}
               </div>
             </div>
           </div>
@@ -242,18 +199,22 @@ export default function JobDetail({ jobId }: Props) {
               Back
             </Button>
             {canRetry && (
-              <Button variant="primary" onClick={handleRetry}>
+              <Button variant="primary" onClick={handleRetry} disabled={retryMutation.isPending}>
                 <FaIcon icon={faRotate} />
                 Retry
               </Button>
             )}
             {isLive && (
-              <Button variant="warning" onClick={handleKill} disabled={killing}>
+              <Button variant="warning" onClick={handleKill} disabled={killMutation.isPending}>
                 <FaIcon icon={faStop} />
                 Kill Active
               </Button>
             )}
-            <Button variant="danger" onClick={handleDelete} disabled={deleting || killing || isLive}>
+            <Button
+              variant="danger"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending || killMutation.isPending || isLive}
+            >
               <FaIcon icon={faTrash} />
               Delete
             </Button>
@@ -274,7 +235,7 @@ export default function JobDetail({ jobId }: Props) {
               Job ID
             </div>
             <div className="mt-2 break-all font-mono text-sm text-white">
-              {job.job.id}
+              {jobQuery.data.job.job.id}
             </div>
           </div>
           <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
@@ -282,7 +243,7 @@ export default function JobDetail({ jobId }: Props) {
               Package
             </div>
             <div className="mt-2 font-display text-base font-bold text-white">
-              {job.job.package_name}
+              {jobQuery.data.job.job.package_name}
             </div>
           </div>
           <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
@@ -290,7 +251,7 @@ export default function JobDetail({ jobId }: Props) {
               Mock Chroot
             </div>
             <div className="mt-2 font-mono text-sm text-white">
-              {job.job.mock_chroot}
+              {jobQuery.data.job.job.mock_chroot}
             </div>
           </div>
           <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
@@ -298,7 +259,7 @@ export default function JobDetail({ jobId }: Props) {
               Revision
             </div>
             <div className="mt-2 break-all font-mono text-sm text-white">
-              {job.job.revision}
+              {jobQuery.data.job.job.revision}
             </div>
           </div>
           <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
@@ -306,16 +267,16 @@ export default function JobDetail({ jobId }: Props) {
               Created At
             </div>
             <div className="mt-2 font-mono text-sm text-white">
-              {formatDateTime(job.job.created_at)}
+              {formatDateTime(jobQuery.data.job.job.created_at)}
             </div>
           </div>
-          {job.job.finished_at && (
+          {jobQuery.data.job.job.finished_at && (
             <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
               <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
                 Finished At
               </div>
               <div className="mt-2 font-mono text-sm text-white">
-                {formatDateTime(job.job.finished_at)}
+                {formatDateTime(jobQuery.data.job.job.finished_at)}
               </div>
             </div>
           )}
@@ -359,7 +320,7 @@ export default function JobDetail({ jobId }: Props) {
       </div>
 
       {/* Artifacts */}
-      {artifacts.length > 0 && (
+      {jobQuery.data.artifacts.length > 0 && (
         <div className="border-4 border-[var(--theme-border-strong)] bg-black shadow-[4px_4px_0_rgba(255,255,255,0.1)]">
           <div className="border-b-4 border-[var(--theme-border-strong)] bg-gradient-to-r from-zinc-900 to-black px-6 py-4">
             <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white">
@@ -368,7 +329,7 @@ export default function JobDetail({ jobId }: Props) {
           </div>
           <div className="p-6">
             <div className="grid gap-2">
-              {artifacts.map((artifact) => {
+              {jobQuery.data.artifacts.map((artifact) => {
                 const signingBadge = getArtifactSigningBadge(artifact);
                 return (
                   <div
@@ -413,6 +374,28 @@ export default function JobDetail({ jobId }: Props) {
       )}
     </div>
   );
+}
+
+function getStatusVariant(status: string) {
+  if (status === "succeeded") return "success" as const;
+  if (status === "failed" || status === "timed_out") return "error" as const;
+  if (status === "running") return "lime" as const;
+  if (status === "pending") return "warning" as const;
+  return "default" as const;
+}
+
+function getArtifactSigningBadge(artifact: BuildArtifact) {
+  if (artifact.signing_status === "signed") {
+    return { label: "SIGNED", variant: "success" as const, title: undefined };
+  }
+  if (artifact.signing_status === "failed") {
+    return {
+      label: "SIGN FAILED",
+      variant: "error" as const,
+      title: artifact.signing_error_message || "Artifact signing failed",
+    };
+  }
+  return { label: "NOT SIGNED", variant: "warning" as const, title: undefined };
 }
 
 function formatMemory(bytes: number): string {

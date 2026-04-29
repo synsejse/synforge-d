@@ -1,6 +1,8 @@
 import { useEffect, useState, type SyntheticEvent } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { faSave, faServer } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
+import { queryKeys } from "../../lib/query-keys";
 import type { ConfigFieldDescriptor, DaemonConfig } from "../../lib/types";
 import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
@@ -10,59 +12,67 @@ import Button from "../../components/ui/Button";
 import PageHeader from "../../components/ui/PageHeader";
 
 function Settings() {
-  const [config, setConfig] = useState<DaemonConfig | null>(null);
-  const [schema, setSchema] = useState<ConfigFieldDescriptor[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const configQuery = useQuery({
+    queryKey: queryKeys.config.effective(),
+    queryFn: () => api.getConfig(),
+  });
+  const schemaQuery = useQuery({
+    queryKey: queryKeys.config.schema(),
+    queryFn: () => api.getConfigSchema(),
+  });
+
   const [values, setValues] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState(false);
+  const [valuesInitialized, setValuesInitialized] = useState(false);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const [configRes, schemaRes] = await Promise.all([
-          api.getConfig(),
-          api.getConfigSchema(),
-        ]);
-        setConfig(configRes.config);
-        setSchema(schemaRes.fields);
-        setValues(buildFieldValues(configRes.config, schemaRes.fields, false));
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load config");
-      } finally {
-        setLoading(false);
-      }
+    if (
+      !valuesInitialized &&
+      configQuery.data &&
+      schemaQuery.data
+    ) {
+      setValues(
+        buildFieldValues(configQuery.data.config, schemaQuery.data.fields, false),
+      );
+      setValuesInitialized(true);
     }
-    load();
-  }, []);
+  }, [configQuery.data, schemaQuery.data, valuesInitialized]);
 
-  async function handleSave(event: SyntheticEvent) {
-    event.preventDefault();
-    setSaving(true);
-    try {
-      const runtimeFields = schema.filter((field) => field.editable_in_runtime);
-      const res = await api.updateRuntimeSettings({
+  const saveMutation = useMutation({
+    mutationFn: () => {
+      const runtimeFields = (schemaQuery.data?.fields ?? []).filter(
+        (field) => field.editable_in_runtime,
+      );
+      return api.updateRuntimeSettings({
         settings: buildSettingsPayload(runtimeFields, values),
       });
-      setConfig(res.config);
-      setValues(buildFieldValues(res.config, schema, false));
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update settings");
-    } finally {
-      setSaving(false);
-    }
+    },
+    onSuccess: (response) => {
+      if (schemaQuery.data) {
+        setValues(buildFieldValues(response.config, schemaQuery.data.fields, false));
+      }
+      configQuery.refetch();
+    },
+  });
+
+  function handleSave(event: SyntheticEvent) {
+    event.preventDefault();
+    saveMutation.mutate();
   }
 
-  if (loading) {
+  if (configQuery.isPending || schemaQuery.isPending) {
     return <LoadingBlock label="Loading config…" lines={4} />;
   }
 
-  if (error || !config) {
-    return <ErrorMessage message={error || "Failed to load"} />;
+  const loadError = configQuery.error ?? schemaQuery.error;
+  if (loadError || !configQuery.data || !schemaQuery.data) {
+    return (
+      <ErrorMessage
+        message={loadError instanceof Error ? loadError.message : "Failed to load"}
+      />
+    );
   }
 
-  const groupedFields = groupConfigFields(schema);
+  const groupedFields = groupConfigFields(schemaQuery.data.fields);
 
   return (
     <div className="space-y-8">
@@ -74,6 +84,16 @@ function Settings() {
         color="purple"
         actions={[{ href: "/", label: "Overview", icon: faServer }]}
       />
+
+      {saveMutation.error ? (
+        <ErrorMessage
+          message={
+            saveMutation.error instanceof Error
+              ? saveMutation.error.message
+              : "Failed to update settings"
+          }
+        />
+      ) : null}
 
       {/* Settings Form */}
       <form onSubmit={handleSave} className="space-y-6">
@@ -122,9 +142,9 @@ function Settings() {
 
         {/* Save Button */}
         <div className="flex justify-end">
-          <Button type="submit" variant="primary" size="md" disabled={saving}>
+          <Button type="submit" variant="primary" size="md" disabled={saveMutation.isPending}>
             <FaIcon icon={faSave} className="mr-2" />
-            {saving ? "Saving…" : "Save Settings"}
+            {saveMutation.isPending ? "Saving…" : "Save Settings"}
           </Button>
         </div>
       </form>

@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { faCopy, faFolderTree } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
+import { queryKeys } from "../../lib/query-keys";
 import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import SessionProvider, {
@@ -10,40 +12,33 @@ import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
 import Button from "../../components/ui/Button";
 
+const REPO_PUBLIC_KEY_NAME = "gpg.key";
+const INSTALL_COMMAND = "sudo dnf install <package-name>";
+
 function RepositorySetup() {
   const { session } = useSession();
-  const repoHandle = session?.user.handle ?? "";
-  const [publicBaseUrl, setPublicBaseUrl] = useState("");
-  const [repoSigningEnabled, setRepoSigningEnabled] = useState(false);
-  const repoPublicKeyName = "gpg.key";
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true);
-        const [configRes, signingRes] = await Promise.all([
-          api.getConfig(),
-          api.getRepoSigningStatus(),
-        ]);
-        setPublicBaseUrl(normalizeBaseUrl(configRes.config.public_base_url));
-        setRepoSigningEnabled(signingRes.status.enabled);
-        setError(null);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load repository setup");
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
+  const setupQuery = useQuery({
+    queryKey: queryKeys.repository.setup(),
+    queryFn: async () => {
+      const [config, signing] = await Promise.all([
+        api.getConfig(),
+        api.getRepoSigningStatus(),
+      ]);
+      return {
+        publicBaseUrl: normalizeBaseUrl(config.config.public_base_url),
+        signingEnabled: signing.status.enabled,
+      };
+    },
+  });
+
+  const repoHandle = session?.user.handle ?? "";
 
   const repoRootUrl = useMemo(() => {
-    if (!publicBaseUrl) return "";
-    return `${publicBaseUrl}/repo`;
-  }, [publicBaseUrl]);
+    if (!setupQuery.data?.publicBaseUrl) return "";
+    return `${setupQuery.data.publicBaseUrl}/repo`;
+  }, [setupQuery.data?.publicBaseUrl]);
 
   const repoBaseUrl = useMemo(() => {
     if (!repoRootUrl) return "";
@@ -51,10 +46,16 @@ function RepositorySetup() {
   }, [repoRootUrl]);
 
   const repoFileContents = useMemo(
-    () => buildRepoFile(repoRootUrl, repoBaseUrl, repoHandle, repoSigningEnabled, repoPublicKeyName),
-    [repoRootUrl, repoBaseUrl, repoHandle, repoSigningEnabled, repoPublicKeyName],
+    () =>
+      buildRepoFile(
+        repoRootUrl,
+        repoBaseUrl,
+        repoHandle,
+        setupQuery.data?.signingEnabled ?? false,
+        REPO_PUBLIC_KEY_NAME,
+      ),
+    [repoRootUrl, repoBaseUrl, repoHandle, setupQuery.data?.signingEnabled],
   );
-  const installCommand = "sudo dnf install <package-name>";
 
   async function copy(label: string, value: string) {
     try {
@@ -68,12 +69,20 @@ function RepositorySetup() {
     }
   }
 
-  if (loading) {
+  if (setupQuery.isPending) {
     return <LoadingBlock label="Loading repository setup…" lines={3} />;
   }
 
-  if (error) {
-    return <ErrorMessage message={error} />;
+  if (setupQuery.error) {
+    return (
+      <ErrorMessage
+        message={
+          setupQuery.error instanceof Error
+            ? setupQuery.error.message
+            : "Failed to load repository setup"
+        }
+      />
+    );
   }
 
   return (
@@ -183,7 +192,7 @@ function RepositorySetup() {
               onClick={() =>
                 copy(
                   "usage-command",
-                  `sudo dnf clean all\nsudo dnf makecache\n${installCommand}`,
+                  `sudo dnf clean all\nsudo dnf makecache\n${INSTALL_COMMAND}`,
                 )
               }
             >

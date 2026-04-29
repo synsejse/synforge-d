@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   faKey,
   faPen,
@@ -7,6 +8,7 @@ import {
   faUserPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
+import { queryKeys } from "../../lib/query-keys";
 import type { UserResponse } from "../../lib/types";
 import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
@@ -29,11 +31,15 @@ import {
 } from "./components/model";
 
 function Users() {
+  const queryClient = useQueryClient();
   const { session } = useSession();
   const currentUserId = session?.user.id ?? null;
-  const [users, setUsers] = useState<UserResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+
+  const usersQuery = useQuery({
+    queryKey: queryKeys.users.list(),
+    queryFn: () => api.listUsers(),
+  });
+
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalState>(null);
   const [createForm, setCreateForm] =
@@ -42,22 +48,8 @@ function Users() {
   const [password, setPassword] = useState("");
   const lastFocusedRef = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
-    void load();
-  }, []);
-
-  async function load() {
-    try {
-      setLoading(true);
-      const usersRes = await api.listUsers();
-      setUsers(usersRes.users);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load users");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const invalidateUsers = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.users.list() });
 
   function openCreateModal() {
     lastFocusedRef.current =
@@ -99,6 +91,64 @@ function Users() {
     setModal({ type: "delete", user });
   }
 
+  const createMutation = useMutation({
+    mutationFn: () => api.createUser(createForm),
+    onSuccess: async () => {
+      closeModal();
+      await invalidateUsers();
+    },
+    onError: (err) =>
+      setError(err instanceof Error ? err.message : "Failed to create user"),
+  });
+
+  const editMutation = useMutation({
+    mutationFn: ({
+      userId,
+      draft,
+    }: {
+      userId: string;
+      draft: UserDraft;
+    }) => api.updateUser(userId, draft),
+    onSuccess: async () => {
+      closeModal();
+      await invalidateUsers();
+    },
+    onError: (err) =>
+      setError(err instanceof Error ? err.message : "Failed to update user"),
+  });
+
+  const passwordMutation = useMutation({
+    mutationFn: ({
+      userId,
+      newPassword,
+    }: {
+      userId: string;
+      newPassword: string;
+    }) => api.changeUserPassword(userId, { password: newPassword }),
+    onSuccess: () => {
+      closeModal();
+      setError(null);
+    },
+    onError: (err) =>
+      setError(err instanceof Error ? err.message : "Failed to change password"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (userId: string) => api.deleteUser(userId),
+    onSuccess: async () => {
+      closeModal();
+      await invalidateUsers();
+    },
+    onError: (err) =>
+      setError(err instanceof Error ? err.message : "Failed to delete user"),
+  });
+
+  const submitting =
+    createMutation.isPending ||
+    editMutation.isPending ||
+    passwordMutation.isPending ||
+    deleteMutation.isPending;
+
   function closeModal() {
     if (submitting) {
       return;
@@ -120,40 +170,23 @@ function Users() {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modal, submitting]);
 
-  async function handleCreate(event: SyntheticEvent) {
+  function handleCreate(event: SyntheticEvent) {
     event.preventDefault();
-    try {
-      setSubmitting(true);
-      await api.createUser(createForm);
-      closeModal();
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create user");
-    } finally {
-      setSubmitting(false);
-    }
+    createMutation.mutate();
   }
 
-  async function handleEdit(event: SyntheticEvent) {
+  function handleEdit(event: SyntheticEvent) {
     event.preventDefault();
     if (!modal || modal.type !== "edit" || !editForm) {
       return;
     }
-    try {
-      setSubmitting(true);
-      await api.updateUser(modal.user.user.id, editForm);
-      closeModal();
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update user");
-    } finally {
-      setSubmitting(false);
-    }
+    editMutation.mutate({ userId: modal.user.user.id, draft: editForm });
   }
 
-  async function handlePasswordChange(event: SyntheticEvent) {
+  function handlePasswordChange(event: SyntheticEvent) {
     event.preventDefault();
     if (!modal || modal.type !== "password") {
       return;
@@ -162,36 +195,32 @@ function Users() {
       setError("Password must not be empty");
       return;
     }
-    try {
-      setSubmitting(true);
-      await api.changeUserPassword(modal.user.user.id, { password });
-      closeModal();
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to change password");
-    } finally {
-      setSubmitting(false);
-    }
+    passwordMutation.mutate({
+      userId: modal.user.user.id,
+      newPassword: password,
+    });
   }
 
-  async function handleDelete() {
+  function handleDelete() {
     if (!modal || modal.type !== "delete") {
       return;
     }
-    try {
-      setSubmitting(true);
-      await api.deleteUser(modal.user.user.id);
-      closeModal();
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete user");
-    } finally {
-      setSubmitting(false);
-    }
+    deleteMutation.mutate(modal.user.user.id);
   }
 
-  if (loading) {
+  if (usersQuery.isPending) {
     return <LoadingBlock label="Loading users…" lines={4} />;
+  }
+
+  const loadError = usersQuery.error;
+  if (loadError) {
+    return (
+      <ErrorMessage
+        message={
+          loadError instanceof Error ? loadError.message : "Failed to load users"
+        }
+      />
+    );
   }
 
   return (
@@ -213,11 +242,11 @@ function Users() {
 
       {error ? <ErrorMessage message={error} /> : null}
 
-      {users.length === 0 ? (
+      {usersQuery.data.users.length === 0 ? (
         <EmptyState>No users have been created yet.</EmptyState>
       ) : (
         <UserDirectory
-          users={users}
+          users={usersQuery.data.users}
           currentUserId={currentUserId}
           onEdit={openEditModal}
           onPassword={openPasswordModal}

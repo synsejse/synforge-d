@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type SyntheticEvent } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../../lib/api";
+import { queryKeys } from "../../../lib/query-keys";
 import {
   summarizePackageAction,
   summarizePackageTargetAction,
@@ -18,9 +20,7 @@ import PackageStateSidebar from "./PackageStateSidebar";
 import SyncHistoryTable from "./SyncHistoryTable";
 import type {
   BuildEnvVar,
-  PackageBuildInventoryEntry,
   PackageResponse,
-  PublishedRepoFile,
   SpecSource,
   UpdatePackageRequest,
 } from "../../../lib/types";
@@ -28,6 +28,9 @@ import type {
 interface Props {
   packageName: string;
 }
+
+const BUILD_HISTORY_PAGE_SIZE = 12;
+const REPO_FILES_PAGE_SIZE = 20;
 
 function encodeBuildEnv(entries: BuildEnvVar[]) {
   return entries.map((entry) => `${entry.key}=${entry.value}`).join("\n");
@@ -52,108 +55,148 @@ function parseBuildEnv(input: string): BuildEnvVar[] {
 
 function parseUpdateCpuLimit(value: string, maxCpuCores: number | null): number {
   const trimmed = value.trim();
-  if (!trimmed) {
-    return 0;
-  }
+  if (!trimmed) return 0;
   const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return 0;
-  }
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
   const millicores = Math.floor(parsed * 1000);
-  if (!maxCpuCores || maxCpuCores <= 0) {
-    return millicores;
-  }
+  if (!maxCpuCores || maxCpuCores <= 0) return millicores;
   return Math.min(millicores, Math.floor(maxCpuCores * 1000));
 }
 
 function parseUpdateMemoryLimit(value: string, maxMemoryMb: number | null): number {
   const trimmed = value.trim();
-  if (!trimmed) {
-    return 0;
-  }
+  if (!trimmed) return 0;
   const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return 0;
-  }
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
   const memoryLimitMb = Math.floor(parsed);
-  if (!maxMemoryMb || maxMemoryMb <= 0) {
-    return memoryLimitMb;
-  }
+  if (!maxMemoryMb || maxMemoryMb <= 0) return memoryLimitMb;
   return Math.min(memoryLimitMb, Math.floor(maxMemoryMb));
 }
 
 function parseOptionalMegabytes(value: string): number | undefined {
   const trimmed = value.trim();
-  if (!trimmed) {
-    return undefined;
-  }
+  if (!trimmed) return undefined;
   const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return undefined;
-  }
+  if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
   return Math.floor(parsed);
 }
 
 function formatCpuLimitCores(value?: number | null): string {
-  if (!value || value <= 0) {
-    return "";
-  }
+  if (!value || value <= 0) return "";
   const cores = value / 1000;
   return Number.isInteger(cores)
     ? String(cores)
     : cores.toFixed(2).replace(/\.?0+$/, "");
 }
 
+function buildFormFromPackage(packageRes: PackageResponse): PackageEditFormState {
+  const definition = packageRes.package;
+  return {
+    repoUrl: definition.source.repo_url,
+    specPath: definition.source.spec_file,
+    poll: definition.source.poll ?? true,
+    mockChroots: definition.mock_chroots ?? [],
+    pollIntervalSeconds: String(definition.poll_interval_seconds ?? 900),
+    buildTimeoutSeconds: String(definition.build_timeout_seconds ?? 7200),
+    packageHistoryCount: String(definition.package_history_count ?? 3),
+    cpuLimitCores: formatCpuLimitCores(definition.cpu_limit_millicores),
+    cpuLimitEnabled: Number(definition.cpu_limit_millicores ?? 0) > 0,
+    memoryLimitEnabled: Number(definition.memory_limit_mb ?? 0) > 0,
+    memoryLimitMb: definition.memory_limit_mb ? String(definition.memory_limit_mb) : "",
+    ccache_enabled: definition.ccache_enabled ?? false,
+    ccacheMaxSizeMb: definition.ccache_max_size_mb
+      ? String(definition.ccache_max_size_mb)
+      : "",
+    buildEnv: encodeBuildEnv(definition.build_env ?? []),
+    enabled: definition.enabled ?? true,
+    publish_srpm: definition.publish_srpm ?? true,
+    publish_debuginfo: definition.publish_debuginfo ?? true,
+    network_access: definition.network_access ?? false,
+  };
+}
+
+const EMPTY_FORM: PackageEditFormState = {
+  repoUrl: "",
+  specPath: "",
+  poll: true,
+  mockChroots: [],
+  pollIntervalSeconds: "900",
+  buildTimeoutSeconds: "7200",
+  packageHistoryCount: "3",
+  cpuLimitCores: "",
+  cpuLimitEnabled: false,
+  memoryLimitEnabled: false,
+  memoryLimitMb: "",
+  ccache_enabled: false,
+  ccacheMaxSizeMb: "",
+  buildEnv: "",
+  enabled: true,
+  publish_srpm: true,
+  publish_debuginfo: true,
+  network_access: false,
+};
+
 export default function PackageDetail({ packageName }: Props) {
+  const queryClient = useQueryClient();
   const { confirm, notify } = useDialogs();
   const serverHardware = useServerHardware();
-  const BUILD_HISTORY_PAGE_SIZE = 12;
-  const REPO_FILES_PAGE_SIZE = 20;
-  const [pkg, setPkg] = useState<PackageResponse | null>(null);
-  const [builds, setBuilds] = useState<PackageBuildInventoryEntry[]>([]);
+
+  const packageQuery = useQuery({
+    queryKey: queryKeys.packages.detail(packageName),
+    queryFn: () => api.getPackage(packageName),
+  });
+
+  const chrootsQuery = useQuery({
+    queryKey: queryKeys.packages.mockChroots(),
+    queryFn: () => api.listMockChroots(),
+  });
+
   const [buildsOffset, setBuildsOffset] = useState(0);
-  const [buildsHasMore, setBuildsHasMore] = useState(false);
-  const [buildsTotal, setBuildsTotal] = useState<number | null>(null);
-  const [repoFiles, setRepoFiles] = useState<PublishedRepoFile[]>([]);
   const [repoFilesOffset, setRepoFilesOffset] = useState(0);
-  const [repoFilesHasMore, setRepoFilesHasMore] = useState(false);
-  const [repoFilesTotal, setRepoFilesTotal] = useState<number | null>(null);
-  const [buildsLoaded, setBuildsLoaded] = useState(false);
-  const [repoFilesLoaded, setRepoFilesLoaded] = useState(false);
-  const [buildsLoading, setBuildsLoading] = useState(false);
-  const [repoFilesLoading, setRepoFilesLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
+
+  const buildsQuery = useQuery({
+    queryKey: queryKeys.packages.builds(packageName, {
+      limit: BUILD_HISTORY_PAGE_SIZE,
+      offset: buildsOffset,
+    }),
+    queryFn: () =>
+      api.getPackageBuilds(packageName, BUILD_HISTORY_PAGE_SIZE, buildsOffset),
+    placeholderData: (previous) => previous,
+  });
+
+  const repoFilesQuery = useQuery({
+    queryKey: queryKeys.packages.repoFiles(packageName, {
+      limit: REPO_FILES_PAGE_SIZE,
+      offset: repoFilesOffset,
+    }),
+    queryFn: () =>
+      api.getRepoInventory(REPO_FILES_PAGE_SIZE, repoFilesOffset, {
+        packageName,
+      }),
+    placeholderData: (previous) => previous,
+  });
+
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
-  const [availableChroots, setAvailableChroots] = useState<string[]>([]);
+  const [form, setForm] = useState<PackageEditFormState>(EMPTY_FORM);
+  const [formInitialized, setFormInitialized] = useState(false);
   const [showSpecPicker, setShowSpecPicker] = useState(false);
   const [showChrootPicker, setShowChrootPicker] = useState(false);
   const [browseFiles, setBrowseFiles] = useState<string[]>([]);
   const [browseError, setBrowseError] = useState<string | null>(null);
-  const [browsing, setBrowsing] = useState(false);
-  const [form, setForm] = useState<PackageEditFormState>({
-    repoUrl: "",
-    specPath: "",
-    poll: true,
-    mockChroots: [] as string[],
-    pollIntervalSeconds: "900",
-    buildTimeoutSeconds: "7200",
-    packageHistoryCount: "3",
-    cpuLimitCores: "",
-    cpuLimitEnabled: false,
-    memoryLimitEnabled: false,
-    memoryLimitMb: "",
-    ccache_enabled: false,
-    ccacheMaxSizeMb: "",
-    buildEnv: "",
-    enabled: true,
-    publish_srpm: true,
-    publish_debuginfo: true,
-    network_access: false,
-  });
+
+  useEffect(() => {
+    if (!formInitialized && packageQuery.data) {
+      setForm(buildFormFromPackage(packageQuery.data));
+      setFormInitialized(true);
+    }
+  }, [formInitialized, packageQuery.data]);
+
+  useEffect(() => {
+    setBuildsOffset(0);
+    setRepoFilesOffset(0);
+    setFormInitialized(false);
+    setForm(EMPTY_FORM);
+  }, [packageName]);
 
   const selectableFiles = useMemo(
     () => browseFiles.filter((file) => file.endsWith(".spec")),
@@ -162,138 +205,17 @@ export default function PackageDetail({ packageName }: Props) {
   const maxCpuCores = serverHardware?.cpu_cores ?? null;
   const maxMemoryMb = serverHardware?.total_memory_mb ?? null;
 
-  function applyPackageState(packageRes: PackageResponse) {
-    setPkg(packageRes);
-    const definition = packageRes.package;
-    setForm({
-      repoUrl: definition.source.repo_url,
-      specPath: definition.source.spec_file,
-      poll: definition.source.poll ?? true,
-      mockChroots: definition.mock_chroots ?? [],
-      pollIntervalSeconds: String(definition.poll_interval_seconds ?? 900),
-      buildTimeoutSeconds: String(definition.build_timeout_seconds ?? 7200),
-      packageHistoryCount: String(definition.package_history_count ?? 3),
-      cpuLimitCores: formatCpuLimitCores(definition.cpu_limit_millicores),
-      cpuLimitEnabled:
-        Number(definition.cpu_limit_millicores ?? 0) > 0,
-      memoryLimitEnabled:
-        Number(definition.memory_limit_mb ?? 0) > 0,
-      memoryLimitMb: definition.memory_limit_mb
-        ? String(definition.memory_limit_mb)
-        : "",
-      ccache_enabled: definition.ccache_enabled ?? false,
-      ccacheMaxSizeMb: definition.ccache_max_size_mb
-        ? String(definition.ccache_max_size_mb)
-        : "",
-      buildEnv: encodeBuildEnv(definition.build_env ?? []),
-      enabled: definition.enabled ?? true,
-      publish_srpm: definition.publish_srpm ?? true,
-      publish_debuginfo: definition.publish_debuginfo ?? true,
-      network_access: definition.network_access ?? false,
-    });
-  }
+  const invalidatePackage = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.packages.detail(packageName) }),
+      queryClient.invalidateQueries({ queryKey: ["packages", "builds", packageName] }),
+      queryClient.invalidateQueries({
+        queryKey: ["packages", "repo-files", packageName],
+      }),
+    ]);
 
-  async function loadPrimary() {
-    try {
-      setLoading(true);
-      const packageRes = await api.getPackage(packageName);
-      api
-        .listMockChroots()
-        .then((response) => setAvailableChroots(response.chroots))
-        .catch(() => undefined);
-      applyPackageState(packageRes);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load package");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadBuildHistory(force = false, offset = buildsOffset) {
-    if (buildsLoading || (buildsLoaded && !force && offset === buildsOffset)) {
-      return;
-    }
-    try {
-      setBuildsLoading(true);
-      const buildsRes = await api.getPackageBuilds(
-        packageName,
-        BUILD_HISTORY_PAGE_SIZE,
-        offset,
-      );
-      setBuilds(buildsRes.builds);
-      setBuildsOffset(buildsRes.page.offset);
-      setBuildsHasMore(buildsRes.page.has_more);
-      setBuildsTotal(buildsRes.page.total ?? null);
-      setBuildsLoaded(true);
-      setError(null);
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Failed to load package build history",
-      );
-    } finally {
-      setBuildsLoading(false);
-    }
-  }
-
-  async function loadPackageRepoFiles(force = false, offset = repoFilesOffset) {
-    if (repoFilesLoading || (repoFilesLoaded && !force && offset === repoFilesOffset)) {
-      return;
-    }
-    try {
-      setRepoFilesLoading(true);
-      const repoFilesRes = await api.getRepoInventory(
-        REPO_FILES_PAGE_SIZE,
-        offset,
-        {
-          packageName,
-        },
-      );
-      setRepoFiles(repoFilesRes.repo_files);
-      setRepoFilesOffset(repoFilesRes.page.offset);
-      setRepoFilesHasMore(repoFilesRes.page.has_more);
-      setRepoFilesTotal(repoFilesRes.page.total ?? null);
-      setRepoFilesLoaded(true);
-      setError(null);
-    } catch (e) {
-      setError(
-        e instanceof Error
-          ? e.message
-          : "Failed to load package repository files",
-      );
-    } finally {
-      setRepoFilesLoading(false);
-    }
-  }
-
-  async function refreshVisibleData() {
-    await loadPrimary();
-    await loadBuildHistory(true);
-    await loadPackageRepoFiles(true);
-  }
-
-  useEffect(() => {
-    setBuilds([]);
-    setBuildsOffset(0);
-    setBuildsHasMore(false);
-    setBuildsTotal(null);
-    setRepoFiles([]);
-    setRepoFilesOffset(0);
-    setRepoFilesHasMore(false);
-    setRepoFilesTotal(null);
-    setBuildsLoaded(false);
-    setRepoFilesLoaded(false);
-    loadPrimary();
-    loadBuildHistory(false, 0);
-    loadPackageRepoFiles(false, 0);
-  }, [packageName]);
-
-
-
-  async function handleSave(event: SyntheticEvent) {
-    event.preventDefault();
-    setSaving(true);
-    try {
+  const saveMutation = useMutation({
+    mutationFn: () => {
       const source: SpecSource = {
         repo_url: form.repoUrl,
         spec_file: form.specPath,
@@ -319,14 +241,84 @@ export default function PackageDetail({ packageName }: Props) {
         ccache_max_size_mb: parseOptionalMegabytes(form.ccacheMaxSizeMb) ?? 0,
         build_env: parseBuildEnv(form.buildEnv),
       };
-      await api.updatePackage(packageName, request);
-      await loadPrimary();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save package");
-    } finally {
-      setSaving(false);
-    }
-  }
+      return api.updatePackage(packageName, request);
+    },
+    onSuccess: invalidatePackage,
+    onError: (err) =>
+      setError(err instanceof Error ? err.message : "Failed to save package"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.deletePackage(packageName),
+    onSuccess: () => {
+      window.location.href = "/packages/";
+    },
+    onError: (err) =>
+      setError(err instanceof Error ? err.message : "Failed to delete package"),
+  });
+
+  const triggerMutation = useMutation({
+    mutationFn: ({ action }: { action: "rebuild" | "refresh" }) =>
+      action === "rebuild"
+        ? api.rebuildPackage(packageName)
+        : api.refreshPackage(packageName),
+    onSuccess: async (response, variables) => {
+      await notify({
+        title: variables.action === "rebuild" ? "Rebuild queued" : "Refresh queued",
+        message: summarizePackageAction(response),
+      });
+      await invalidatePackage();
+    },
+    onError: (err, variables) =>
+      setError(err instanceof Error ? err.message : `Failed to ${variables.action}`),
+  });
+
+  const triggerTargetMutation = useMutation({
+    mutationFn: ({
+      mockChroot,
+      action,
+    }: {
+      mockChroot: string;
+      action: "rebuild" | "refresh";
+    }) =>
+      action === "rebuild"
+        ? api.rebuildPackageTarget(packageName, mockChroot)
+        : api.refreshPackageTarget(packageName, mockChroot),
+    onSuccess: async (response, variables) => {
+      await notify({
+        title: variables.action === "rebuild" ? "Rebuild queued" : "Refresh queued",
+        message: summarizePackageTargetAction(
+          response,
+          variables.action === "rebuild" ? "Rebuild" : "Refresh",
+        ),
+      });
+      await invalidatePackage();
+    },
+    onError: (err, variables) =>
+      setError(
+        err instanceof Error ? err.message : `Failed to ${variables.action} target`,
+      ),
+  });
+
+  const deleteJobMutation = useMutation({
+    mutationFn: (jobId: string) => api.deleteJob(jobId),
+    onSuccess: invalidatePackage,
+    onError: (err) =>
+      setError(err instanceof Error ? err.message : "Failed to delete build"),
+  });
+
+  const browseMutation = useMutation({
+    mutationFn: (repoUrl: string) => api.browseRepository({ repo_url: repoUrl }),
+    onSuccess: (response) => {
+      setBrowseFiles(response.files);
+      setBrowseError(null);
+      if (!form.specPath && response.spec_files.length > 0) {
+        setForm((current) => ({ ...current, specPath: response.spec_files[0] }));
+      }
+    },
+    onError: (err) =>
+      setBrowseError(err instanceof Error ? err.message : "Failed to browse repository"),
+  });
 
   async function handleDelete() {
     const ok = await confirm({
@@ -335,65 +327,19 @@ export default function PackageDetail({ packageName }: Props) {
       confirmLabel: "Delete",
       destructive: true,
     });
-    if (!ok) {
-      return;
-    }
-    setDeleting(true);
-    try {
-      await api.deletePackage(packageName);
-      window.location.href = "/packages/";
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete package");
-      setDeleting(false);
-    }
+    if (!ok) return;
+    deleteMutation.mutate();
   }
 
-  async function trigger(action: "rebuild" | "refresh") {
-    if (action === "refresh" && refreshing) {
+  function trigger(action: "rebuild" | "refresh") {
+    if (
+      action === "refresh" &&
+      triggerMutation.isPending &&
+      triggerMutation.variables?.action === "refresh"
+    ) {
       return;
     }
-    if (action === "refresh") {
-      setRefreshing(true);
-    }
-    try {
-      const response =
-        action === "rebuild"
-          ? await api.rebuildPackage(packageName)
-          : await api.refreshPackage(packageName);
-      await notify({
-        title: action === "rebuild" ? "Rebuild queued" : "Refresh queued",
-        message: summarizePackageAction(response),
-      });
-      await refreshVisibleData();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : `Failed to ${action}`);
-    } finally {
-      if (action === "refresh") {
-        setRefreshing(false);
-      }
-    }
-  }
-
-  async function triggerBuildTarget(
-    mockChroot: string,
-    action: "rebuild" | "refresh",
-  ) {
-    try {
-      const response =
-        action === "rebuild"
-          ? await api.rebuildPackageTarget(packageName, mockChroot)
-          : await api.refreshPackageTarget(packageName, mockChroot);
-      await notify({
-        title: action === "rebuild" ? "Rebuild queued" : "Refresh queued",
-        message: summarizePackageTargetAction(
-          response,
-          action === "rebuild" ? "Rebuild" : "Refresh",
-        ),
-      });
-      await refreshVisibleData();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : `Failed to ${action}`);
-    }
+    triggerMutation.mutate({ action });
   }
 
   async function handleDeleteJob(jobId: string) {
@@ -403,18 +349,8 @@ export default function PackageDetail({ packageName }: Props) {
       confirmLabel: "Delete",
       destructive: true,
     });
-    if (!ok) {
-      return;
-    }
-    setDeletingJobId(jobId);
-    try {
-      await api.deleteJob(jobId);
-      await refreshVisibleData();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete build");
-    } finally {
-      setDeletingJobId(null);
-    }
+    if (!ok) return;
+    deleteJobMutation.mutate(jobId);
   }
 
   function toggleChroot(chroot: string, checked: boolean) {
@@ -426,50 +362,48 @@ export default function PackageDetail({ packageName }: Props) {
     }));
   }
 
-  async function handleBrowse() {
+  function handleBrowse() {
     if (!form.repoUrl.trim()) {
       setBrowseError("Repository URL is required before browsing.");
       return;
     }
-    setBrowsing(true);
-    setBrowseError(null);
-    try {
-      const response = await api.browseRepository({
-        repo_url: form.repoUrl.trim(),
-      });
-      setBrowseFiles(response.files);
-      if (!form.specPath && response.spec_files.length > 0) {
-        setForm((current) => ({
-          ...current,
-          specPath: response.spec_files[0],
-        }));
-      }
-    } catch (e) {
-      setBrowseError(
-        e instanceof Error ? e.message : "Failed to browse repository",
-      );
-    } finally {
-      setBrowsing(false);
-    }
+    browseMutation.mutate(form.repoUrl.trim());
   }
 
-  if (loading) {
+  function handleSave(event: SyntheticEvent) {
+    event.preventDefault();
+    saveMutation.mutate();
+  }
+
+  if (packageQuery.isPending) {
     return <LoadingBlock label="Loading package…" lines={4} />;
   }
 
-  if (error || !pkg) {
-    return <ErrorMessage message={error || "Failed to load package"} />;
+  if (packageQuery.error || !packageQuery.data) {
+    return (
+      <ErrorMessage
+        message={
+          packageQuery.error instanceof Error
+            ? packageQuery.error.message
+            : "Failed to load package"
+        }
+      />
+    );
   }
+
+  const refreshing =
+    triggerMutation.isPending && triggerMutation.variables?.action === "refresh";
 
   return (
     <div className="min-w-0 space-y-8">
+      {error ? <ErrorMessage message={error} /> : null}
       <PackageDetailHeader
-        packageName={pkg.package.name}
-        description={pkg.package.description || "No description"}
-        deleting={deleting}
+        packageName={packageQuery.data.package.name}
+        description={packageQuery.data.package.description || "No description"}
+        deleting={deleteMutation.isPending}
         refreshing={refreshing}
-        onRefresh={() => void trigger("refresh")}
-        onRebuild={() => void trigger("rebuild")}
+        onRefresh={() => trigger("refresh")}
+        onRebuild={() => trigger("rebuild")}
         onDelete={() => void handleDelete()}
       />
 
@@ -479,11 +413,11 @@ export default function PackageDetail({ packageName }: Props) {
             form={form}
             maxCpuCores={maxCpuCores}
             maxMemoryMb={maxMemoryMb}
-            saving={saving}
-            availableChroots={availableChroots}
+            saving={saveMutation.isPending}
+            availableChroots={chrootsQuery.data?.chroots ?? []}
             showSpecPicker={showSpecPicker}
             showChrootPicker={showChrootPicker}
-            browsing={browsing}
+            browsing={browseMutation.isPending}
             browseError={browseError}
             selectableFiles={selectableFiles}
             onSubmit={handleSave}
@@ -498,39 +432,38 @@ export default function PackageDetail({ packageName }: Props) {
             onCloseSpecPicker={() => setShowSpecPicker(false)}
             onOpenChrootPicker={() => setShowChrootPicker(true)}
             onCloseChrootPicker={() => setShowChrootPicker(false)}
-            onBrowseRepository={() => void handleBrowse()}
+            onBrowseRepository={handleBrowse}
           />
         </div>
 
         <div className="min-w-0">
-          <PackageStateSidebar pkg={pkg} />
+          <PackageStateSidebar pkg={packageQuery.data} />
         </div>
       </section>
 
       <PackageBuildHistorySection
-        buildsLoaded={buildsLoaded}
-        buildsTotal={buildsTotal}
-        buildsLoading={buildsLoading}
-        builds={builds}
+        buildsLoaded={!buildsQuery.isPending}
+        buildsTotal={buildsQuery.data?.page.total ?? null}
+        buildsLoading={buildsQuery.isFetching}
+        builds={buildsQuery.data?.builds ?? []}
         buildsOffset={buildsOffset}
-        buildsHasMore={buildsHasMore}
+        buildsHasMore={buildsQuery.data?.page.has_more ?? false}
         onLoadPrevious={() =>
-          void loadBuildHistory(
-            true,
-            Math.max(0, buildsOffset - BUILD_HISTORY_PAGE_SIZE),
-          )
+          setBuildsOffset(Math.max(0, buildsOffset - BUILD_HISTORY_PAGE_SIZE))
         }
-        onLoadNext={() =>
-          void loadBuildHistory(true, buildsOffset + BUILD_HISTORY_PAGE_SIZE)
-        }
+        onLoadNext={() => setBuildsOffset(buildsOffset + BUILD_HISTORY_PAGE_SIZE)}
         onRefreshTarget={(mockChroot) =>
-          void triggerBuildTarget(mockChroot, "refresh")
+          triggerTargetMutation.mutate({ mockChroot, action: "refresh" })
         }
         onRebuildTarget={(mockChroot) =>
-          void triggerBuildTarget(mockChroot, "rebuild")
+          triggerTargetMutation.mutate({ mockChroot, action: "rebuild" })
         }
         onDeleteJob={(jobId) => void handleDeleteJob(jobId)}
-        deletingJobId={deletingJobId}
+        deletingJobId={
+          deleteJobMutation.isPending && deleteJobMutation.variables
+            ? deleteJobMutation.variables
+            : null
+        }
       />
 
       <section className="border-4 border-[var(--theme-border-strong)] bg-black p-6 shadow-[6px_6px_0_rgba(255,255,255,0.2)]">
@@ -544,21 +477,16 @@ export default function PackageDetail({ packageName }: Props) {
       </section>
 
       <PackageRepoFilesSection
-        repoFilesLoaded={repoFilesLoaded}
-        repoFilesTotal={repoFilesTotal}
-        repoFilesLoading={repoFilesLoading}
-        repoFiles={repoFiles}
+        repoFilesLoaded={!repoFilesQuery.isPending}
+        repoFilesTotal={repoFilesQuery.data?.page.total ?? null}
+        repoFilesLoading={repoFilesQuery.isFetching}
+        repoFiles={repoFilesQuery.data?.repo_files ?? []}
         repoFilesOffset={repoFilesOffset}
-        repoFilesHasMore={repoFilesHasMore}
+        repoFilesHasMore={repoFilesQuery.data?.page.has_more ?? false}
         onLoadPrevious={() =>
-          void loadPackageRepoFiles(
-            true,
-            Math.max(0, repoFilesOffset - REPO_FILES_PAGE_SIZE),
-          )
+          setRepoFilesOffset(Math.max(0, repoFilesOffset - REPO_FILES_PAGE_SIZE))
         }
-        onLoadNext={() =>
-          void loadPackageRepoFiles(true, repoFilesOffset + REPO_FILES_PAGE_SIZE)
-        }
+        onLoadNext={() => setRepoFilesOffset(repoFilesOffset + REPO_FILES_PAGE_SIZE)}
       />
     </div>
   );

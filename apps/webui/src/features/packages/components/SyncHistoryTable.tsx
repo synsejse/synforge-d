@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import api from "../../../lib/api";
+import { queryKeys } from "../../../lib/query-keys";
 import { formatDateTime } from "../../../lib/datetime";
 import type { SyncOperation, SyncStatus } from "../../../lib/types";
 import ErrorMessage from "../../../components/common/ErrorMessage";
@@ -28,57 +30,38 @@ function formatTrigger(trigger: SyncOperation["trigger_type"]): string {
 }
 
 export default function SyncHistoryTable({ packageName }: SyncHistoryTableProps) {
-  const [operations, setOperations] = useState<SyncOperation[]>([]);
   const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [total, setTotal] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusFilter>("all");
 
-  useEffect(() => {
-    let cancelled = false;
+  const operationsQuery = useQuery({
+    queryKey: queryKeys.sync.operations(packageName, {
+      limit: PAGE_SIZE,
+      offset,
+      status: status === "all" ? undefined : status,
+    }),
+    queryFn: () =>
+      api.listPackageSyncOperations(packageName, {
+        limit: PAGE_SIZE,
+        offset,
+        status: status === "all" ? undefined : status,
+      }),
+    placeholderData: (previous) => previous,
+  });
 
-    async function load() {
-      try {
-        setLoading(true);
-        const response = await api.listPackageSyncOperations(packageName, {
-          limit: PAGE_SIZE,
-          offset,
-          status: status === "all" ? undefined : status,
-        });
-        if (cancelled) {
-          return;
-        }
-        setOperations(response.operations);
-        setHasMore(response.page.has_more);
-        setTotal(response.page.total ?? null);
-        setError(null);
-      } catch (e) {
-        if (cancelled) {
-          return;
-        }
-        setError(e instanceof Error ? e.message : "Failed to load sync history");
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [packageName, offset, status]);
-
-  if (loading && operations.length === 0) {
+  if (operationsQuery.isPending) {
     return <LoadingBlock label="Loading sync history…" lines={4} />;
   }
 
-  if (error) {
-    return <ErrorMessage message={error} />;
+  if (operationsQuery.error || !operationsQuery.data) {
+    return (
+      <ErrorMessage
+        message={
+          operationsQuery.error instanceof Error
+            ? operationsQuery.error.message
+            : "Failed to load sync history"
+        }
+      />
+    );
   }
 
   return (
@@ -100,12 +83,12 @@ export default function SyncHistoryTable({ packageName }: SyncHistoryTableProps)
         </div>
       </div>
 
-      {operations.length === 0 ? (
+      {operationsQuery.data.operations.length === 0 ? (
         <EmptyState>No sync operations recorded for this package.</EmptyState>
       ) : (
         <div className="space-y-4">
           <div className="space-y-3 md:hidden">
-            {operations.map((operation) => (
+            {operationsQuery.data.operations.map((operation) => (
               <article
                 key={`mobile:${operation.id}`}
                 className={`border-2 p-4 ${
@@ -152,7 +135,7 @@ export default function SyncHistoryTable({ packageName }: SyncHistoryTableProps)
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800 bg-black">
-                {operations.map((operation) => (
+                {operationsQuery.data.operations.map((operation) => (
                   <tr
                     key={operation.id}
                     className={
@@ -188,12 +171,17 @@ export default function SyncHistoryTable({ packageName }: SyncHistoryTableProps)
             <PaginationControls
               onPrevious={() => setOffset((current) => Math.max(0, current - PAGE_SIZE))}
               onNext={() => setOffset((current) => current + PAGE_SIZE)}
-              previousDisabled={loading || offset === 0}
-              nextDisabled={loading || !hasMore}
+              previousDisabled={operationsQuery.isFetching || offset === 0}
+              nextDisabled={
+                operationsQuery.isFetching || !operationsQuery.data.page.has_more
+              }
               summary={
                 <>
-                  Showing {offset + 1}-{offset + operations.length}
-                  {total !== null ? ` of ${total}` : ""}
+                  Showing {offset + 1}-
+                  {offset + operationsQuery.data.operations.length}
+                  {operationsQuery.data.page.total !== null
+                    ? ` of ${operationsQuery.data.page.total}`
+                    : ""}
                 </>
               }
             />

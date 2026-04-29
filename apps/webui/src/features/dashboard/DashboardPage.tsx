@@ -1,11 +1,8 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import api from "../../lib/api";
+import { queryKeys } from "../../lib/query-keys";
 import { formatBytes } from "../../lib/bytes";
 import { formatDateTime } from "../../lib/datetime";
-import type {
-  BuildJobResponse,
-  RepoSummaryResponse,
-} from "../../lib/types";
 import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
@@ -21,69 +18,40 @@ import {
   faRocket,
 } from "@fortawesome/free-solid-svg-icons";
 
-const EMPTY_REPO_SUMMARY: RepoSummaryResponse = {
-  package_count: 0,
-  target_count: 0,
-  build_count: 0,
-  published_file_count: 0,
-  stored_bytes: 0,
-  recent_files: [],
-  targets: [],
-};
-
 function Dashboard() {
-  const [jobs, setJobs] = useState<BuildJobResponse[]>([]);
-  const [liveJobs, setLiveJobs] = useState<BuildJobResponse[]>([]);
-  const [repoSummary, setRepoSummary] = useState<RepoSummaryResponse>(
-    EMPTY_REPO_SUMMARY,
-  );
-  const [packageCount, setPackageCount] = useState(0);
-  const [enabledPackageCount, setEnabledPackageCount] = useState(0);
-  const [activeJobCount, setActiveJobCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const [
-          packagesRes,
-          enabledPackagesRes,
-          recentJobsRes,
-          activeJobsRes,
-          repositoryRes,
-        ] = await Promise.all([
+  const { data, isPending, error } = useQuery({
+    queryKey: queryKeys.dashboard(),
+    queryFn: async () => {
+      const [packages, enabledPackages, recentJobs, activeJobs, repository] =
+        await Promise.all([
           api.listPackagesPage(1, 0),
           api.listPackagesPage(1, 0, { enabled: true }),
           api.listCompletedJobs({ limit: 6, offset: 0 }),
           api.listActiveJobs({ limit: 6, offset: 0 }),
           api.getRepoSummary(),
         ]);
-        setPackageCount(packagesRes.page.total ?? packagesRes.packages.length);
-        setEnabledPackageCount(
-          enabledPackagesRes.page.total ?? enabledPackagesRes.packages.length,
-        );
-        setJobs(recentJobsRes.jobs);
-        setActiveJobCount(activeJobsRes.page.total ?? activeJobsRes.jobs.length);
-        setLiveJobs(activeJobsRes.jobs);
-        setRepoSummary(repositoryRes);
-        setError(null);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load dashboard");
-      } finally {
-        setLoading(false);
-      }
-    }
+      return {
+        packageCount: packages.page.total ?? packages.packages.length,
+        enabledPackageCount:
+          enabledPackages.page.total ?? enabledPackages.packages.length,
+        activeJobCount: activeJobs.page.total ?? activeJobs.jobs.length,
+        jobs: recentJobs.jobs,
+        liveJobs: activeJobs.jobs,
+        repoSummary: repository,
+      };
+    },
+  });
 
-    load();
-  }, []);
-
-  if (loading) {
+  if (isPending) {
     return <LoadingBlock label="Loading overview…" lines={4} />;
   }
 
   if (error) {
-    return <ErrorMessage message={error} />;
+    return (
+      <ErrorMessage
+        message={error instanceof Error ? error.message : "Failed to load dashboard"}
+      />
+    );
   }
 
   const getStatusVariant = (status: string) => {
@@ -113,27 +81,27 @@ function Dashboard() {
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Packages"
-          value={packageCount}
+          value={data.packageCount}
           detail="Registered sources"
           icon={<FaIcon icon={faBoxesStacked} />}
         />
         <MetricCard
           label="Enabled"
-          value={enabledPackageCount}
+          value={data.enabledPackageCount}
           detail="Actively buildable"
           variant="accent"
           icon={<FaIcon icon={faCircleCheck} />}
         />
         <MetricCard
           label="Active_Jobs"
-          value={activeJobCount}
+          value={data.activeJobCount}
           detail="Pending or running"
           variant="terminal"
           icon={<FaIcon icon={faRocket} />}
         />
         <MetricCard
           label="Stored"
-          value={formatBytes(repoSummary.stored_bytes)}
+          value={formatBytes(data.repoSummary.stored_bytes)}
           detail="Published repository data"
           icon={<FaIcon icon={faFolderTree} />}
         />
@@ -159,7 +127,7 @@ function Dashboard() {
         </div>
 
         <div className="p-6">
-          {jobs.length === 0 ? (
+          {data.jobs.length === 0 ? (
             <div className="flex min-h-[200px] items-center justify-center border-2 border-dashed border-[var(--theme-border)] bg-zinc-950/30 px-6 py-8">
               <div className="text-center">
                 <div className="font-mono text-sm text-zinc-500">
@@ -169,7 +137,7 @@ function Dashboard() {
             </div>
           ) : (
             <div className="grid gap-2">
-              {jobs.map((entry) => (
+              {data.jobs.map((entry) => (
                 <a
                   key={entry.job.id}
                   href={`/jobs/view/?id=${encodeURIComponent(entry.job.id)}`}
@@ -226,7 +194,7 @@ function Dashboard() {
           </div>
 
           <div className="flex-1 p-6">
-            {liveJobs.length === 0 ? (
+            {data.liveJobs.length === 0 ? (
               <div className="flex min-h-[240px] items-center justify-center border-2 border-dashed border-[var(--theme-border)] bg-zinc-950/30 px-6 py-8">
                 <div className="font-mono text-sm text-zinc-500">
                   Nothing is building right now.
@@ -234,7 +202,7 @@ function Dashboard() {
               </div>
             ) : (
               <div className="grid gap-3">
-                {liveJobs.map((entry) => (
+                {data.liveJobs.map((entry) => (
                   <a
                     key={entry.job.id}
                     href={`/jobs/view/?id=${encodeURIComponent(entry.job.id)}`}
@@ -290,7 +258,7 @@ function Dashboard() {
                   Packages
                 </div>
                 <div className="font-display mt-2 text-3xl font-black text-white">
-                  {repoSummary.package_count}
+                  {data.repoSummary.package_count}
                 </div>
               </div>
               <div className="border-l-4 border-[var(--theme-accent-lime)] bg-zinc-950/30 pl-4 pr-3 py-4">
@@ -298,7 +266,7 @@ function Dashboard() {
                   Targets
                 </div>
                 <div className="font-display mt-2 text-3xl font-black text-white">
-                  {repoSummary.target_count}
+                  {data.repoSummary.target_count}
                 </div>
               </div>
               <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
@@ -306,7 +274,7 @@ function Dashboard() {
                   Builds
                 </div>
                 <div className="font-display mt-2 text-3xl font-black text-white">
-                  {repoSummary.build_count}
+                  {data.repoSummary.build_count}
                 </div>
               </div>
               <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
@@ -314,7 +282,7 @@ function Dashboard() {
                   Files
                 </div>
                 <div className="font-display mt-2 text-3xl font-black text-white">
-                  {repoSummary.published_file_count}
+                  {data.repoSummary.published_file_count}
                 </div>
               </div>
             </div>

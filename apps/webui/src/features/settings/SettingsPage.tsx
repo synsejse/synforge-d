@@ -1,14 +1,15 @@
 import { useEffect, useState, type SyntheticEvent } from "react";
 import { faSave, faServer } from "@fortawesome/free-solid-svg-icons";
-import { settingsApi } from "./api";
+import api from "../../lib/api";
 import type { ConfigFieldDescriptor, DaemonConfig } from "../../lib/types";
+import ErrorBoundary from "../../components/common/ErrorBoundary";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
 import Button from "../../components/ui/Button";
 import PageHeader from "../../components/ui/PageHeader";
 
-export default function Settings() {
+function Settings() {
   const [config, setConfig] = useState<DaemonConfig | null>(null);
   const [schema, setSchema] = useState<ConfigFieldDescriptor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,8 +21,8 @@ export default function Settings() {
     async function load() {
       try {
         const [configRes, schemaRes] = await Promise.all([
-          settingsApi.getConfig(),
-          settingsApi.getConfigSchema(),
+          api.getConfig(),
+          api.getConfigSchema(),
         ]);
         setConfig(configRes.config);
         setSchema(schemaRes.fields);
@@ -40,7 +41,7 @@ export default function Settings() {
     setSaving(true);
     try {
       const runtimeFields = schema.filter((field) => field.editable_in_runtime);
-      const res = await settingsApi.updateRuntimeSettings({
+      const res = await api.updateRuntimeSettings({
         settings: buildSettingsPayload(runtimeFields, values),
       });
       setConfig(res.config);
@@ -206,5 +207,13 @@ function buildSettingsPayload(
         ? Number(values[field.key] ?? field.default_value)
         : (values[field.key] ?? String(field.default_value)).trim(),
     ]),
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <ErrorBoundary>
+      <Settings />
+    </ErrorBoundary>
   );
 }

@@ -42,7 +42,9 @@ async fn load_user_summary(
         .first(conn)
         .await?;
     let mut users = build_user_summaries(conn, vec![row]).await?;
-    Ok(users.pop().expect("single user summary"))
+    users
+        .pop()
+        .context("user summary missing for fetched user record")
 }
 
 async fn load_permissions_map(

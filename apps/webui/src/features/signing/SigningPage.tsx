@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { faCheckCircle, faKey, faTrash } from "@fortawesome/free-solid-svg-icons";
-import { signingApi } from "./api";
+import api from "../../lib/api";
 import type {
   RepoSigningReconcileMode,
   RepoSigningReconcileProgressView,
   RepoSigningStatusView,
 } from "../../lib/types";
+import ErrorBoundary from "../../components/common/ErrorBoundary";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import Button from "../../components/ui/Button";
 import FaIcon from "../../components/ui/FaIcon";
@@ -13,7 +14,7 @@ import LoadingBlock from "../../components/ui/LoadingBlock";
 import PageHeader from "../../components/ui/PageHeader";
 import ProgressOverlayDialog from "../../components/ui/ProgressOverlayDialog";
 
-export default function Signing() {
+function Signing() {
   const importFileRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +39,7 @@ export default function Signing() {
   async function loadStatus() {
     try {
       setLoading(true);
-      const response = await signingApi.getRepoSigningStatus();
+      const response = await api.getRepoSigningStatus();
       applyStatus(response.status);
       setError(null);
     } catch (e) {
@@ -56,7 +57,7 @@ export default function Signing() {
   const keyActionsLocked = enabled;
 
   async function pollReconcileProgress(expectedMode?: RepoSigningReconcileMode) {
-    const progress = await signingApi.getRepoSigningReconcileProgress();
+    const progress = await api.getRepoSigningReconcileProgress();
     const operation = progress.operation;
     if (!operation) {
       return null;
@@ -104,7 +105,7 @@ export default function Signing() {
     }, 500);
     try {
       await pollReconcileProgress(mode).catch(() => undefined);
-      const response = await signingApi.updateRepoSigningConfig({ enabled: nextEnabled });
+      const response = await api.updateRepoSigningConfig({ enabled: nextEnabled });
       const finalOperation = await waitForReconcileTerminalState(mode);
       if (finalOperation) {
         applyReconcileOverlay(finalOperation);
@@ -118,7 +119,7 @@ export default function Signing() {
       }
       applyStatus(response.status);
       if (nextEnabled) {
-        await signingApi.testRepoSigning();
+        await api.testRepoSigning();
         setMessage("Repository signing enabled. Signing test passed.");
       } else {
         setMessage("Repository signing disabled.");
@@ -143,7 +144,7 @@ export default function Signing() {
     }
     setGenerating(true);
     try {
-      const response = await signingApi.generateRepoSigningKey();
+      const response = await api.generateRepoSigningKey();
       applyStatus(response.status);
       setMessage(`Generated managed key ${response.key_id}.`);
       setError(null);
@@ -167,7 +168,7 @@ export default function Signing() {
     setImporting(true);
     try {
       const armoredPrivateKey = await file.text();
-      const response = await signingApi.importRepoSigningKey({ armored_private_key: armoredPrivateKey });
+      const response = await api.importRepoSigningKey({ armored_private_key: armoredPrivateKey });
       applyStatus(response.status);
       setMessage(`Imported signing key ${response.key_id} from ${file.name}.`);
       setError(null);
@@ -182,7 +183,7 @@ export default function Signing() {
   async function handleExportKey() {
     setExporting(true);
     try {
-      const response = await signingApi.exportRepoSigningKey();
+      const response = await api.exportRepoSigningKey();
       const safeKeyId = response.key_id.replace(/[^a-zA-Z0-9._-]/g, "_");
       const filename = `synforge-signing-key-${safeKeyId || "export"}.asc`;
       const contents = response.armored_private_key.endsWith("\n")
@@ -209,7 +210,7 @@ export default function Signing() {
   async function handleExportPublicKey() {
     setExportingPublic(true);
     try {
-      const response = await signingApi.exportRepoSigningPublicKey();
+      const response = await api.exportRepoSigningPublicKey();
       const safeKeyName = response.public_key_name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const filename = safeKeyName || "synforge-public-key.asc";
       const contents = response.armored_public_key.endsWith("\n")
@@ -236,7 +237,7 @@ export default function Signing() {
   async function handleDeleteKey() {
     setDeleting(true);
     try {
-      const response = await signingApi.removeRepoSigningKey();
+      const response = await api.removeRepoSigningKey();
       applyStatus(response.status);
       setMessage("Signing key deleted.");
       setError(null);
@@ -465,5 +466,13 @@ function StatusRow({ label, value }: { label: string; value: string }) {
       </dt>
       <dd className="break-all font-mono text-zinc-100 sm:truncate">{value}</dd>
     </div>
+  );
+}
+
+export default function SigningPage() {
+  return (
+    <ErrorBoundary>
+      <Signing />
+    </ErrorBoundary>
   );
 }

@@ -20,7 +20,7 @@ async fn main() -> anyhow::Result<()> {
     let app = synforge_daemon::router(
         Arc::clone(&service),
         PathBuf::from(DEFAULT_WEBUI_STATIC_DIR),
-    );
+    )?;
     tracing::info!("daemon listening on {}", listen_addr);
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal(Arc::clone(&service)))
@@ -31,9 +31,15 @@ async fn main() -> anyhow::Result<()> {
 async fn shutdown_signal(service: Arc<SynforgeService>) {
     #[cfg(unix)]
     let terminate = async {
-        let mut signal = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-            .expect("failed to install SIGTERM handler");
-        signal.recv().await;
+        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            Ok(mut signal) => {
+                signal.recv().await;
+            }
+            Err(error) => {
+                warn!("failed to install SIGTERM handler: {}", error);
+                std::future::pending::<()>().await;
+            }
+        }
     };
 
     #[cfg(not(unix))]

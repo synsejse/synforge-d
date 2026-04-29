@@ -1,9 +1,12 @@
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use tokio::sync::{mpsc, watch};
 use tokio_util::task::TaskTracker;
 use tracing::{info, warn};
+
+const HEALTH_CACHE_TTL: Duration = Duration::from_millis(1_000);
 
 use crate::service::{SynforgeService, apply_startup_runtime_overrides};
 use synforge_core::{
@@ -52,6 +55,22 @@ impl WorkerParseRunner for DaemonWorkerParseRunner {
 
 impl SynforgeService {
     pub async fn health_check(&self) -> anyhow::Result<()> {
+        let mut cache = self.health_cache.lock().await;
+        if let Some((checked_at, outcome)) = cache.as_ref()
+            && checked_at.elapsed() < HEALTH_CACHE_TTL
+        {
+            return outcome.clone().map_err(anyhow::Error::msg);
+        }
+        let outcome = self.run_health_check().await;
+        let cached = outcome
+            .as_ref()
+            .map(|()| ())
+            .map_err(|error| error.to_string());
+        *cache = Some((Instant::now(), cached));
+        outcome
+    }
+
+    async fn run_health_check(&self) -> anyhow::Result<()> {
         self.store.health_check().await?;
         self.runtime_cache.health_check().await?;
 
@@ -178,6 +197,7 @@ impl SynforgeService {
             mock_chroot_cache: MockChrootCache::default(),
             refresh_all_packages_progress: RefreshAllPackagesProgressState::default(),
             signing_reconcile_progress: SigningReconcileProgressState::default(),
+            health_cache: Default::default(),
         });
         start_worker_listener(
             DEFAULT_DAEMON_WORKER_LISTEN_ADDR.to_string(),

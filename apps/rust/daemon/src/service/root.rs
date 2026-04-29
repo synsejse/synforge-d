@@ -4,6 +4,7 @@ mod background;
 mod startup;
 
 use std::sync::Arc;
+use std::time::Instant;
 
 use synforge_core::config::DaemonConfig;
 use synforge_database::DieselStore;
@@ -15,8 +16,10 @@ use synforge_state::{
 use synforge_worker_host::{
     BuildRunner, BuildService, DockerWorkerLauncher, JobLifecycle, QueuedBuild, WorkerSessionBroker,
 };
-use tokio::sync::{mpsc, watch};
+use tokio::sync::{Mutex, mpsc, watch};
 use tokio_util::task::TaskTracker;
+
+pub(super) type HealthProbeCache = Arc<Mutex<Option<(Instant, Result<(), String>)>>>;
 
 pub struct SynforgeService {
     pub(super) config: DaemonConfig,
@@ -35,6 +38,7 @@ pub struct SynforgeService {
     pub(super) mock_chroot_cache: MockChrootCache,
     pub(super) refresh_all_packages_progress: RefreshAllPackagesProgressState,
     pub(super) signing_reconcile_progress: SigningReconcileProgressState,
+    pub(super) health_cache: HealthProbeCache,
 }
 
 impl SynforgeService {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { packagesApi } from "../api";
+import api from "../../../lib/api";
 import { formatDateTime } from "../../../lib/datetime";
 import type { SyncOperation, SyncStatus } from "../../../lib/types";
 import ErrorMessage from "../../../components/common/ErrorMessage";
@@ -42,7 +42,7 @@ export default function SyncHistoryTable({ packageName }: SyncHistoryTableProps)
     async function load() {
       try {
         setLoading(true);
-        const response = await packagesApi.listPackageSyncOperations(packageName, {
+        const response = await api.listPackageSyncOperations(packageName, {
           limit: PAGE_SIZE,
           offset,
           status: status === "all" ? undefined : status,

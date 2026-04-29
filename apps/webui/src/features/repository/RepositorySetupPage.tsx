@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { faCopy, faFolderTree } from "@fortawesome/free-solid-svg-icons";
-import { repositoryApi } from "./api";
+import api from "../../lib/api";
+import ErrorBoundary from "../../components/common/ErrorBoundary";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
 import Button from "../../components/ui/Button";
 
-export default function RepositorySetup() {
+function RepositorySetup() {
   const [publicBaseUrl, setPublicBaseUrl] = useState("");
   const [repoHandle, setRepoHandle] = useState("");
   const [repoSigningEnabled, setRepoSigningEnabled] = useState(false);
@@ -20,9 +21,9 @@ export default function RepositorySetup() {
       try {
         setLoading(true);
         const [configRes, sessionRes, signingRes] = await Promise.all([
-          repositoryApi.getConfig(),
-          repositoryApi.getSession(),
-          repositoryApi.getRepoSigningStatus(),
+          api.getConfig(),
+          api.getSession(),
+          api.getRepoSigningStatus(),
         ]);
         setPublicBaseUrl(normalizeBaseUrl(configRes.config.public_base_url));
         setRepoHandle(sessionRes.user.handle);
@@ -226,4 +227,12 @@ metadata_expire=30s`;
 
 function normalizeBaseUrl(baseUrl: string) {
   return baseUrl.replace(/\/+$/, "");
+}
+
+export default function RepositorySetupPage() {
+  return (
+    <ErrorBoundary>
+      <RepositorySetup />
+    </ErrorBoundary>
+  );
 }

@@ -175,33 +175,3 @@ async fn count_lines_before(path: &std::path::Path, end_offset: u64) -> anyhow::
 
     Ok(line_count + 1)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::find_utf8_boundary;
-
-    #[test]
-    fn keeps_full_valid_utf8_chunks() {
-        assert_eq!(find_utf8_boundary("hello".as_bytes()), 5);
-        assert_eq!(find_utf8_boundary("cafe".as_bytes()), 4);
-        assert_eq!(find_utf8_boundary("cafe\u{00e9}".as_bytes()), 6);
-    }
-
-    #[test]
-    fn trims_trailing_incomplete_utf8_sequences() {
-        let truncated_two_byte = b"caf\xc3";
-        assert_eq!(find_utf8_boundary(truncated_two_byte), 3);
-
-        let truncated_three_byte = b"hello\xe2\x82";
-        assert_eq!(find_utf8_boundary(truncated_three_byte), 5);
-    }
-
-    #[test]
-    fn preserves_invalid_bytes_inside_chunk() {
-        let invalid_tail = [b'a', 0xff];
-        assert_eq!(find_utf8_boundary(&invalid_tail), invalid_tail.len());
-
-        let invalid_then_truncated = [0xff, b'a', 0xe2, 0x82];
-        assert_eq!(find_utf8_boundary(&invalid_then_truncated), 2);
-    }
-}

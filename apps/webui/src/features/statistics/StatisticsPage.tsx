@@ -10,13 +10,14 @@ import {
   faRocket,
   faTriangleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
-import { statisticsApi } from "./api";
+import api from "../../lib/api";
 import { formatDateTime } from "../../lib/datetime";
 import type {
   CacheStatsResponse,
   RepoSummaryResponse,
   SyncMetricsResponse,
 } from "../../lib/types";
+import ErrorBoundary from "../../components/common/ErrorBoundary";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
@@ -38,7 +39,7 @@ function formatSeconds(value: number | null | undefined): string {
   return `${hours}h ${minutes}m`;
 }
 
-export default function Statistics() {
+function Statistics() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cacheStats, setCacheStats] = useState<CacheStatsResponse | null>(null);
@@ -59,12 +60,12 @@ export default function Statistics() {
           enabledPackagesRes,
           activeJobsRes,
         ] = await Promise.all([
-          statisticsApi.getCacheStats(),
-          statisticsApi.getSyncMetrics(),
-          statisticsApi.getRepoSummary(),
-          statisticsApi.listPackagesPage(1, 0),
-          statisticsApi.listPackagesPage(1, 0, { enabled: true }),
-          statisticsApi.listActiveJobs({ limit: 1, offset: 0 }),
+          api.getCacheStats(),
+          api.getSyncMetrics(),
+          api.getRepoSummary(),
+          api.listPackagesPage(1, 0),
+          api.listPackagesPage(1, 0, { enabled: true }),
+          api.listActiveJobs({ limit: 1, offset: 0 }),
         ]);
         setCacheStats(cacheStatsRes);
         setSyncMetrics(syncMetricsRes);
@@ -237,5 +238,13 @@ function StatRow({ label, value }: { label: string; value: string }) {
       </div>
       <div className="break-words font-mono text-sm text-zinc-200 sm:truncate">{value}</div>
     </div>
+  );
+}
+
+export default function StatisticsPage() {
+  return (
+    <ErrorBoundary>
+      <Statistics />
+    </ErrorBoundary>
   );
 }

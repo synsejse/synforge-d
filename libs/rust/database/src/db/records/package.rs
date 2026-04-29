@@ -63,153 +63,208 @@ pub(crate) async fn package_response_from_record(
     conn: &mut AsyncPgConnection,
     record: PackageRecord,
 ) -> anyhow::Result<PackageResponse> {
-    let mock_chroots = load_package_mock_chroots(conn, &record.name).await?;
-    let package = PackageDefinition {
-        name: record.name.clone(),
-        description: record.description,
-        enabled: record.enabled,
-        repo_subdir: record.repo_subdir,
-        publish_srpm: record.publish_srpm,
-        publish_debuginfo: record.publish_debuginfo,
-        network_access: record.network_access,
-        mock_chroots,
-        source: SpecSource {
-            repo_url: record.source_repo_url,
-            spec_file: record.source_spec_file,
-            poll: record.source_poll,
-        },
-        poll_interval_seconds: record.poll_interval_seconds as u64,
-        build_timeout_seconds: record.build_timeout_seconds as u64,
-        package_history_count: record.package_history_count as u64,
-        cpu_limit_millicores: record
-            .cpu_limit_millicores
-            .and_then(|value| u64::try_from(value).ok())
-            .filter(|value| *value > 0),
-        memory_limit_mb: record
-            .memory_limit_mb
-            .and_then(|value| u64::try_from(value).ok())
-            .filter(|value| *value > 0),
-        ccache_enabled: record.ccache_enabled,
-        ccache_max_size_mb: record
-            .ccache_max_size_mb
-            .and_then(|value| u64::try_from(value).ok())
-            .filter(|value| *value > 0),
-        build_env: serde_json::from_value::<Vec<BuildEnvVar>>(record.build_env_json)
-            .unwrap_or_default(),
-        spec_file: PathBuf::from(record.spec_file),
-        version: record.version,
-        release: record.release,
-    };
-    let state = compute_package_state(conn, &record.name, &package.mock_chroots).await?;
-    Ok(PackageResponse { package, state })
+    let mut responses = package_responses_from_records(conn, vec![record]).await?;
+    Ok(responses.pop().expect("input record produces one response"))
 }
 
-pub(crate) async fn load_package_mock_chroots(
+pub(crate) async fn package_responses_from_records(
     conn: &mut AsyncPgConnection,
-    package_name: &str,
-) -> anyhow::Result<Vec<String>> {
-    Ok(
-        package_mock_chroots::table
-            .filter(package_mock_chroots::package_name.eq(package_name))
-            .order(package_mock_chroots::mock_chroot.asc())
-            .select(package_mock_chroots::mock_chroot)
-            .load(conn)
-            .await?,
-    )
-}
+    records: Vec<PackageRecord>,
+) -> anyhow::Result<Vec<PackageResponse>> {
+    if records.is_empty() {
+        return Ok(Vec::new());
+    }
+    let names: Vec<String> = records.iter().map(|r| r.name.clone()).collect();
 
-pub(crate) async fn compute_package_state(
-    conn: &mut AsyncPgConnection,
-    package_name: &str,
-    mock_chroots: &[String],
-) -> anyhow::Result<PackageRuntimeState> {
-    let last_success = build_jobs::table
-        .filter(build_jobs::package_name.eq(package_name))
+    let chroot_rows: Vec<(String, String)> = package_mock_chroots::table
+        .filter(package_mock_chroots::package_name.eq_any(&names))
+        .order((
+            package_mock_chroots::package_name.asc(),
+            package_mock_chroots::mock_chroot.asc(),
+        ))
+        .select((
+            package_mock_chroots::package_name,
+            package_mock_chroots::mock_chroot,
+        ))
+        .load(conn)
+        .await?;
+    let mut chroots_by_pkg: HashMap<String, Vec<String>> = HashMap::new();
+    for (pkg, chroot) in chroot_rows {
+        chroots_by_pkg.entry(pkg).or_default().push(chroot);
+    }
+
+    let target_success_rows: Vec<(String, String, Uuid, String)> = build_jobs::table
+        .filter(build_jobs::package_name.eq_any(&names))
         .filter(build_jobs::status.eq(BuildStatus::Succeeded))
-        .order(build_jobs::finished_at.desc())
-        .select((build_jobs::id, build_jobs::revision))
-        .first::<(Uuid, String)>(conn)
-        .await
-        .optional()?;
+        .order((
+            build_jobs::package_name.asc(),
+            build_jobs::mock_chroot.asc(),
+            build_jobs::finished_at.desc(),
+        ))
+        .distinct_on((build_jobs::package_name, build_jobs::mock_chroot))
+        .select((
+            build_jobs::package_name,
+            build_jobs::mock_chroot,
+            build_jobs::id,
+            build_jobs::revision,
+        ))
+        .load(conn)
+        .await?;
+    let mut target_success: HashMap<(String, String), (Uuid, String)> = HashMap::new();
+    for (pkg, chroot, id, revision) in target_success_rows {
+        target_success.insert((pkg, chroot), (id, revision));
+    }
 
-    let active_job = build_jobs::table
-        .filter(build_jobs::package_name.eq(package_name))
+    let target_active_rows: Vec<(String, String, Uuid, BuildStatus)> = build_jobs::table
+        .filter(build_jobs::package_name.eq_any(&names))
         .filter(
             build_jobs::status
                 .eq(BuildStatus::Pending)
                 .or(build_jobs::status.eq(BuildStatus::Running)),
         )
-        .order(build_jobs::created_at.desc())
-        .select(build_jobs::id)
-        .first::<Uuid>(conn)
-        .await
-        .optional()?;
-
-    let mut targets = Vec::with_capacity(mock_chroots.len());
-    for mock_chroot in mock_chroots {
-        let last_success = build_jobs::table
-            .filter(build_jobs::package_name.eq(package_name))
-            .filter(build_jobs::mock_chroot.eq(mock_chroot))
-            .filter(build_jobs::status.eq(BuildStatus::Succeeded))
-            .order(build_jobs::finished_at.desc())
-            .select((build_jobs::id, build_jobs::revision))
-            .first::<(Uuid, String)>(conn)
-            .await
-            .optional()?;
-
-        let active_job = build_jobs::table
-            .filter(build_jobs::package_name.eq(package_name))
-            .filter(build_jobs::mock_chroot.eq(mock_chroot))
-            .filter(
-                build_jobs::status
-                    .eq(BuildStatus::Pending)
-                    .or(build_jobs::status.eq(BuildStatus::Running)),
-            )
-            .order(build_jobs::created_at.desc())
-            .select((build_jobs::id, build_jobs::status))
-            .first::<(Uuid, BuildStatus)>(conn)
-            .await
-            .optional()?;
-
-        let backoff = build_failure_backoff::table
-            .find((package_name, mock_chroot.as_str()))
-            .select((
-                build_failure_backoff::consecutive_failures,
-                build_failure_backoff::next_eligible_at,
-            ))
-            .first::<(i32, OffsetDateTime)>(conn)
-            .await
-            .optional()?;
-        let backoff_until = backoff
-            .as_ref()
-            .map(|(_, next_eligible_at)| format_timestamp(*next_eligible_at));
-        let backoff_remaining_seconds = backoff
-            .as_ref()
-            .map(|(_, next_eligible_at)| *next_eligible_at)
-            .and_then(|next_eligible_at| {
-                let wait_seconds = (next_eligible_at - now_utc()).whole_seconds();
-                if wait_seconds > 0 {
-                    Some(wait_seconds as u64)
-                } else {
-                    None
-                }
-            });
-
-        targets.push(PackageTargetRuntimeState {
-            mock_chroot: mock_chroot.clone(),
-            last_revision: last_success.as_ref().map(|(_, revision)| revision.clone()),
-            last_successful_build_id: last_success.as_ref().map(|(id, _)| *id),
-            active_job_id: active_job.as_ref().map(|(id, _)| *id),
-            active_status: active_job.as_ref().map(|(_, status)| *status),
-            backoff_until,
-            backoff_remaining_seconds,
-        });
+        .order((
+            build_jobs::package_name.asc(),
+            build_jobs::mock_chroot.asc(),
+            build_jobs::created_at.desc(),
+        ))
+        .distinct_on((build_jobs::package_name, build_jobs::mock_chroot))
+        .select((
+            build_jobs::package_name,
+            build_jobs::mock_chroot,
+            build_jobs::id,
+            build_jobs::status,
+        ))
+        .load(conn)
+        .await?;
+    let mut target_active: HashMap<(String, String), (Uuid, BuildStatus)> = HashMap::new();
+    for (pkg, chroot, id, status) in target_active_rows {
+        target_active.insert((pkg, chroot), (id, status));
     }
 
-    Ok(PackageRuntimeState {
-        last_revision: last_success.as_ref().map(|(_, revision)| revision.clone()),
-        last_successful_build_id: last_success.as_ref().map(|(id, _)| *id),
-        active_job_id: active_job,
-        targets,
-    })
+    let backoff_rows: Vec<(String, String, OffsetDateTime)> = build_failure_backoff::table
+        .filter(build_failure_backoff::package_name.eq_any(&names))
+        .select((
+            build_failure_backoff::package_name,
+            build_failure_backoff::mock_chroot,
+            build_failure_backoff::next_eligible_at,
+        ))
+        .load(conn)
+        .await?;
+    let mut backoff_map: HashMap<(String, String), OffsetDateTime> = HashMap::new();
+    for (pkg, chroot, next) in backoff_rows {
+        backoff_map.insert((pkg, chroot), next);
+    }
+
+    let pkg_success_rows: Vec<(String, Uuid, String)> = build_jobs::table
+        .filter(build_jobs::package_name.eq_any(&names))
+        .filter(build_jobs::status.eq(BuildStatus::Succeeded))
+        .order((
+            build_jobs::package_name.asc(),
+            build_jobs::finished_at.desc(),
+        ))
+        .distinct_on(build_jobs::package_name)
+        .select((build_jobs::package_name, build_jobs::id, build_jobs::revision))
+        .load(conn)
+        .await?;
+    let mut pkg_success: HashMap<String, (Uuid, String)> = HashMap::new();
+    for (pkg, id, revision) in pkg_success_rows {
+        pkg_success.insert(pkg, (id, revision));
+    }
+
+    let pkg_active_rows: Vec<(String, Uuid)> = build_jobs::table
+        .filter(build_jobs::package_name.eq_any(&names))
+        .filter(
+            build_jobs::status
+                .eq(BuildStatus::Pending)
+                .or(build_jobs::status.eq(BuildStatus::Running)),
+        )
+        .order((
+            build_jobs::package_name.asc(),
+            build_jobs::created_at.desc(),
+        ))
+        .distinct_on(build_jobs::package_name)
+        .select((build_jobs::package_name, build_jobs::id))
+        .load(conn)
+        .await?;
+    let mut pkg_active: HashMap<String, Uuid> = HashMap::new();
+    for (pkg, id) in pkg_active_rows {
+        pkg_active.insert(pkg, id);
+    }
+
+    let now = now_utc();
+    let mut responses = Vec::with_capacity(records.len());
+    for record in records {
+        let chroots = chroots_by_pkg.remove(&record.name).unwrap_or_default();
+        let mut targets = Vec::with_capacity(chroots.len());
+        for chroot in &chroots {
+            let key = (record.name.clone(), chroot.clone());
+            let last = target_success.get(&key);
+            let active = target_active.get(&key);
+            let next_eligible = backoff_map.get(&key).copied();
+            let backoff_until = next_eligible.map(format_timestamp);
+            let backoff_remaining_seconds = next_eligible.and_then(|next| {
+                let wait = (next - now).whole_seconds();
+                (wait > 0).then_some(wait as u64)
+            });
+            targets.push(PackageTargetRuntimeState {
+                mock_chroot: chroot.clone(),
+                last_revision: last.map(|(_, revision)| revision.clone()),
+                last_successful_build_id: last.map(|(id, _)| *id),
+                active_job_id: active.map(|(id, _)| *id),
+                active_status: active.map(|(_, status)| *status),
+                backoff_until,
+                backoff_remaining_seconds,
+            });
+        }
+        let pkg_last = pkg_success.get(&record.name);
+        let pkg_active_id = pkg_active.get(&record.name).copied();
+
+        let package = PackageDefinition {
+            name: record.name.clone(),
+            description: record.description,
+            enabled: record.enabled,
+            repo_subdir: record.repo_subdir,
+            publish_srpm: record.publish_srpm,
+            publish_debuginfo: record.publish_debuginfo,
+            network_access: record.network_access,
+            mock_chroots: chroots,
+            source: SpecSource {
+                repo_url: record.source_repo_url,
+                spec_file: record.source_spec_file,
+                poll: record.source_poll,
+            },
+            poll_interval_seconds: record.poll_interval_seconds as u64,
+            build_timeout_seconds: record.build_timeout_seconds as u64,
+            package_history_count: record.package_history_count as u64,
+            cpu_limit_millicores: record
+                .cpu_limit_millicores
+                .and_then(|value| u64::try_from(value).ok())
+                .filter(|value| *value > 0),
+            memory_limit_mb: record
+                .memory_limit_mb
+                .and_then(|value| u64::try_from(value).ok())
+                .filter(|value| *value > 0),
+            ccache_enabled: record.ccache_enabled,
+            ccache_max_size_mb: record
+                .ccache_max_size_mb
+                .and_then(|value| u64::try_from(value).ok())
+                .filter(|value| *value > 0),
+            build_env: serde_json::from_value::<Vec<BuildEnvVar>>(record.build_env_json)
+                .unwrap_or_default(),
+            spec_file: PathBuf::from(record.spec_file),
+            version: record.version,
+            release: record.release,
+        };
+
+        responses.push(PackageResponse {
+            package,
+            state: PackageRuntimeState {
+                last_revision: pkg_last.map(|(_, revision)| revision.clone()),
+                last_successful_build_id: pkg_last.map(|(id, _)| *id),
+                active_job_id: pkg_active_id,
+                targets,
+            },
+        });
+    }
+    Ok(responses)
 }

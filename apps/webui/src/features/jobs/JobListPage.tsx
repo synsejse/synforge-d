@@ -4,7 +4,7 @@ import {
   faFilter,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
-import { jobsApi } from "./api";
+import api from "../../lib/api";
 import type {
   BuildJobResponse,
   JobResourceUsageSample,
@@ -17,6 +17,7 @@ import {
 } from "../../lib/job-status";
 import type { JobViewMode } from "./types";
 import JobListTable from "./components/JobListTable";
+import ErrorBoundary from "../../components/common/ErrorBoundary";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
@@ -33,7 +34,7 @@ function normalizeStatusFilter(value: string | null): "all" | HistoryBuildStatus
   return isHistoryBuildStatus(value) ? value : "all";
 }
 
-export default function JobList() {
+function JobList() {
   const [jobs, setJobs] = useState<BuildJobResponse[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -75,13 +76,13 @@ export default function JobList() {
       setLoading(true);
       const res =
         nextMode === "active"
-          ? await jobsApi.listActiveJobs({
+          ? await api.listActiveJobs({
               limit: pageSize,
               offset: nextOffset,
               packageName: nextPackageFilter,
               mockChroot: nextTargetFilter,
             })
-          : await jobsApi.listCompletedJobs({
+          : await api.listCompletedJobs({
               limit: pageSize,
               offset: nextOffset,
               status: nextFilter,
@@ -123,7 +124,7 @@ export default function JobList() {
   }, []);
 
   useEffect(() => {
-    jobsApi
+    api
       .getServerHardware()
       .then((hardware) => setServerHardware(hardware))
       .catch(() => undefined);
@@ -145,7 +146,7 @@ export default function JobList() {
     let cancelled = false;
     const pollUsage = async () => {
       try {
-        const response = await jobsApi.listJobUsage();
+        const response = await api.listJobUsage();
         if (cancelled) return;
         const next: Record<string, JobResourceUsageSample> = {};
         for (const sample of response.samples) {
@@ -169,7 +170,7 @@ export default function JobList() {
   async function handleDelete(job: BuildJobResponse) {
     if (!confirm(`Delete job ${job.job.id}?`)) return;
     try {
-      await jobsApi.deleteJob(job.job.id);
+      await api.deleteJob(job.job.id);
       await load();
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to delete job");
@@ -184,7 +185,7 @@ export default function JobList() {
     if (!confirm(`Delete ${failedCount} failed or timed out jobs?`)) return;
     try {
       setPruning(true);
-      await jobsApi.pruneFailedJobs();
+      await api.pruneFailedJobs();
       await load();
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to prune failed jobs");
@@ -203,7 +204,7 @@ export default function JobList() {
     }
     try {
       setKillingJobId(job.job.id);
-      await jobsApi.killJob(job.job.id);
+      await api.killJob(job.job.id);
       await load();
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to kill job");
@@ -379,5 +380,13 @@ export default function JobList() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function JobListPage() {
+  return (
+    <ErrorBoundary>
+      <JobList />
+    </ErrorBoundary>
   );
 }

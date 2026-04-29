@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from "react";
-import { jobsApi } from "../api";
+import api from "../../../lib/api";
 import { API_BASE } from "../../../lib/api/client";
 import { formatDateTime } from "../../../lib/datetime";
 import type {
@@ -47,8 +47,8 @@ export default function JobDetail({ jobId }: Props) {
   async function loadJob() {
     try {
       const [jobRes, artifactRes] = await Promise.all([
-        jobsApi.getJob(jobId),
-        jobsApi.listJobArtifacts(jobId),
+        api.getJob(jobId),
+        api.listJobArtifacts(jobId),
       ]);
       setJob(jobRes);
       setArtifacts(artifactRes.artifacts);
@@ -68,7 +68,7 @@ export default function JobDetail({ jobId }: Props) {
   }, [jobId]);
 
   useEffect(() => {
-    jobsApi
+    api
       .getServerHardware()
       .then((hardware) => setServerHardware(hardware))
       .catch(() => undefined);
@@ -106,7 +106,7 @@ export default function JobDetail({ jobId }: Props) {
     let cancelled = false;
     const pollUsage = async () => {
       try {
-        const response = await jobsApi.getJobUsage(jobId);
+        const response = await api.getJobUsage(jobId);
         if (cancelled) return;
         setLatestUsage(response.sample ?? null);
       } catch {
@@ -127,7 +127,7 @@ export default function JobDetail({ jobId }: Props) {
     if (!confirm(`Delete job ${jobId}?`)) return;
     try {
       setDeleting(true);
-      await jobsApi.deleteJob(jobId);
+      await api.deleteJob(jobId);
       window.location.href = "/jobs/";
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to delete job");
@@ -139,7 +139,7 @@ export default function JobDetail({ jobId }: Props) {
     if (!job) return;
     if (!confirm(`Retry build for ${job.job.package_name}?`)) return;
     try {
-      const res = await jobsApi.retryJob(jobId);
+      const res = await api.retryJob(jobId);
       window.location.href = `/jobs/view/?id=${encodeURIComponent(res.job.id)}`;
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to retry job");
@@ -150,7 +150,7 @@ export default function JobDetail({ jobId }: Props) {
     if (!confirm(`Kill active job ${jobId}?`)) return;
     try {
       setKilling(true);
-      await jobsApi.killJob(jobId);
+      await api.killJob(jobId);
       await loadJob();
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to kill job");

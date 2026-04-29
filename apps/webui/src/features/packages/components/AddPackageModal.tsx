@@ -7,7 +7,7 @@ import {
   type SyntheticEvent,
 } from "react";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import { packagesApi } from "../api";
+import api from "../../../lib/api";
 import type {
   CreatePackageRequest,
   ServerHardwareResponse,
@@ -96,7 +96,7 @@ export default function AddPackageModal({
   useEffect(() => {
     async function loadChroots() {
       try {
-        const response = await packagesApi.listMockChroots();
+        const response = await api.listMockChroots();
         setAvailableChroots(response.chroots);
         setMockChroots((current) => {
           if (current.some((value) => response.chroots.includes(value))) {
@@ -118,7 +118,7 @@ export default function AddPackageModal({
   }, []);
 
   useEffect(() => {
-    packagesApi
+    api
       .getServerHardware()
       .then((response) => setServerHardware(response))
       .catch(() => undefined);
@@ -140,7 +140,7 @@ export default function AddPackageModal({
     setBrowsing(true);
     setBrowseError(null);
     try {
-      const response = await packagesApi.browseRepository({ repo_url: trimmedRepoUrl });
+      const response = await api.browseRepository({ repo_url: trimmedRepoUrl });
       setBrowseFiles(response.files);
       if (!specPath && response.spec_files.length > 0) {
         setSpecPath(response.spec_files[0]);
@@ -186,7 +186,7 @@ export default function AddPackageModal({
     };
 
     try {
-      await packagesApi.createPackage(request);
+      await api.createPackage(request);
       onSuccess();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create package");

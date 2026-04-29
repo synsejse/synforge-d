@@ -3,7 +3,7 @@ import {
   faPlus,
   faRotate,
 } from "@fortawesome/free-solid-svg-icons";
-import { packagesApi } from "./api";
+import api from "../../lib/api";
 import { summarizePackageAction } from "../../lib/package-actions";
 import type {
   PackageResponse,
@@ -11,6 +11,7 @@ import type {
 } from "../../lib/types";
 import AddPackageModal from "./components/AddPackageModal";
 import PackageCard from "./components/PackageCard";
+import ErrorBoundary from "../../components/common/ErrorBoundary";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import Button from "../../components/ui/Button";
@@ -18,7 +19,7 @@ import Select from "../../components/ui/Select";
 import PageHeader from "../../components/ui/PageHeader";
 import ProgressOverlayDialog from "../../components/ui/ProgressOverlayDialog";
 
-export default function PackageList() {
+function PackageList() {
   const [packages, setPackages] = useState<PackageResponse[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(() => {
@@ -62,7 +63,7 @@ export default function PackageList() {
   ) {
     try {
       setLoading(true);
-      const res = await packagesApi.listPackagesPage(pageSize, nextOffset, {
+      const res = await api.listPackagesPage(pageSize, nextOffset, {
         search: nextSearch,
         enabled: nextEnabled === "all" ? "all" : nextEnabled === "true",
       });
@@ -101,7 +102,7 @@ export default function PackageList() {
   async function handleDelete(name: string) {
     if (!confirm(`Delete package "${name}"?`)) return;
     try {
-      await packagesApi.deletePackage(name);
+      await api.deletePackage(name);
       await load();
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to delete package");
@@ -123,8 +124,8 @@ export default function PackageList() {
     try {
       const response =
         isRefresh
-          ? await packagesApi.refreshPackage(name)
-          : await packagesApi.rebuildPackage(name);
+          ? await api.refreshPackage(name)
+          : await api.rebuildPackage(name);
       alert(summarizePackageAction(response));
       await load();
     } catch (e) {
@@ -179,7 +180,7 @@ export default function PackageList() {
   }
 
   async function pollRefreshAllProgress() {
-    const progress = await packagesApi.getRefreshAllPackagesProgress();
+    const progress = await api.getRefreshAllPackagesProgress();
     if (!progress.operation) {
       return;
     }
@@ -206,7 +207,7 @@ export default function PackageList() {
         void pollRefreshAllProgress().catch(() => undefined);
       }, 500);
       await pollRefreshAllProgress().catch(() => undefined);
-      const response = await packagesApi.refreshAllPackages();
+      const response = await api.refreshAllPackages();
       applyRefreshAllProgress(response.operation);
       await pollRefreshAllProgress().catch(() => undefined);
       await load();
@@ -373,5 +374,13 @@ export default function PackageList() {
         closeDisabled={refreshingAll}
       />
     </div>
+  );
+}
+
+export default function PackageListPage() {
+  return (
+    <ErrorBoundary>
+      <PackageList />
+    </ErrorBoundary>
   );
 }

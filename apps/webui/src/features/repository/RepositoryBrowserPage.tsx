@@ -5,9 +5,10 @@ import {
   faHardDrive,
   faHammer,
 } from "@fortawesome/free-solid-svg-icons";
-import { repositoryApi } from "./api";
+import api from "../../lib/api";
 import { formatBytes } from "../../lib/bytes";
 import type { PublishedRepoFile, RepoSummaryResponse } from "../../lib/types";
+import ErrorBoundary from "../../components/common/ErrorBoundary";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
@@ -28,7 +29,7 @@ const EMPTY_REPO_SUMMARY: RepoSummaryResponse = {
   targets: [],
 };
 
-export default function RepositoryBrowser() {
+function RepositoryBrowser() {
   const [summary, setSummary] = useState<RepoSummaryResponse>(EMPTY_REPO_SUMMARY);
   const [files, setFiles] = useState<PublishedRepoFile[]>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -75,8 +76,8 @@ export default function RepositoryBrowser() {
     try {
       setLoading(true);
       const [summaryRes, inventoryRes] = await Promise.all([
-        repositoryApi.getRepoSummary(),
-        repositoryApi.getRepoInventory(PAGE_SIZE, nextOffset, {
+        api.getRepoSummary(),
+        api.getRepoInventory(PAGE_SIZE, nextOffset, {
           packageName: nextPackageFilter,
           mockChroot: nextTargetFilter,
           kind: nextKindFilter,
@@ -366,5 +367,13 @@ export default function RepositoryBrowser() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function RepositoryBrowserPage() {
+  return (
+    <ErrorBoundary>
+      <RepositoryBrowser />
+    </ErrorBoundary>
   );
 }

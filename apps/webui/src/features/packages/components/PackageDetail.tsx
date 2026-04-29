@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type SyntheticEvent } from "react";
-import { packagesApi } from "../api";
+import api from "../../../lib/api";
 import {
   summarizePackageAction,
   summarizePackageTargetAction,
@@ -195,12 +195,12 @@ export default function PackageDetail({ packageName }: Props) {
   async function loadPrimary() {
     try {
       setLoading(true);
-      const packageRes = await packagesApi.getPackage(packageName);
-      packagesApi
+      const packageRes = await api.getPackage(packageName);
+      api
         .getServerHardware()
         .then((response) => setServerHardware(response))
         .catch(() => undefined);
-      packagesApi
+      api
         .listMockChroots()
         .then((response) => setAvailableChroots(response.chroots))
         .catch(() => undefined);
@@ -219,7 +219,7 @@ export default function PackageDetail({ packageName }: Props) {
     }
     try {
       setBuildsLoading(true);
-      const buildsRes = await packagesApi.getPackageBuilds(
+      const buildsRes = await api.getPackageBuilds(
         packageName,
         BUILD_HISTORY_PAGE_SIZE,
         offset,
@@ -245,7 +245,7 @@ export default function PackageDetail({ packageName }: Props) {
     }
     try {
       setRepoFilesLoading(true);
-      const repoFilesRes = await packagesApi.getRepoInventory(
+      const repoFilesRes = await api.getRepoInventory(
         REPO_FILES_PAGE_SIZE,
         offset,
         {
@@ -322,7 +322,7 @@ export default function PackageDetail({ packageName }: Props) {
         ccache_max_size_mb: parseOptionalMegabytes(form.ccacheMaxSizeMb) ?? 0,
         build_env: parseBuildEnv(form.buildEnv),
       };
-      await packagesApi.updatePackage(packageName, request);
+      await api.updatePackage(packageName, request);
       await loadPrimary();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save package");
@@ -341,7 +341,7 @@ export default function PackageDetail({ packageName }: Props) {
     }
     setDeleting(true);
     try {
-      await packagesApi.deletePackage(packageName);
+      await api.deletePackage(packageName);
       window.location.href = "/packages/";
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete package");
@@ -359,8 +359,8 @@ export default function PackageDetail({ packageName }: Props) {
     try {
       const response =
         action === "rebuild"
-          ? await packagesApi.rebuildPackage(packageName)
-          : await packagesApi.refreshPackage(packageName);
+          ? await api.rebuildPackage(packageName)
+          : await api.refreshPackage(packageName);
       alert(summarizePackageAction(response));
       await refreshVisibleData();
     } catch (e) {
@@ -379,8 +379,8 @@ export default function PackageDetail({ packageName }: Props) {
     try {
       const response =
         action === "rebuild"
-          ? await packagesApi.rebuildPackageTarget(packageName, mockChroot)
-          : await packagesApi.refreshPackageTarget(packageName, mockChroot);
+          ? await api.rebuildPackageTarget(packageName, mockChroot)
+          : await api.refreshPackageTarget(packageName, mockChroot);
       alert(
         summarizePackageTargetAction(
           response,
@@ -403,7 +403,7 @@ export default function PackageDetail({ packageName }: Props) {
     }
     setDeletingJobId(jobId);
     try {
-      await packagesApi.deleteJob(jobId);
+      await api.deleteJob(jobId);
       await refreshVisibleData();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete build");
@@ -429,7 +429,7 @@ export default function PackageDetail({ packageName }: Props) {
     setBrowsing(true);
     setBrowseError(null);
     try {
-      const response = await packagesApi.browseRepository({
+      const response = await api.browseRepository({
         repo_url: form.repoUrl.trim(),
       });
       setBrowseFiles(response.files);

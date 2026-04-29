@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { dashboardApi } from "./api";
+import api from "../../lib/api";
 import { formatBytes } from "../../lib/bytes";
 import { formatDateTime } from "../../lib/datetime";
 import type {
   BuildJobResponse,
   RepoSummaryResponse,
 } from "../../lib/types";
+import ErrorBoundary from "../../components/common/ErrorBoundary";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
@@ -30,7 +31,7 @@ const EMPTY_REPO_SUMMARY: RepoSummaryResponse = {
   targets: [],
 };
 
-export default function Dashboard() {
+function Dashboard() {
   const [jobs, setJobs] = useState<BuildJobResponse[]>([]);
   const [liveJobs, setLiveJobs] = useState<BuildJobResponse[]>([]);
   const [repoSummary, setRepoSummary] = useState<RepoSummaryResponse>(
@@ -52,11 +53,11 @@ export default function Dashboard() {
           activeJobsRes,
           repositoryRes,
         ] = await Promise.all([
-          dashboardApi.listPackagesPage(1, 0),
-          dashboardApi.listPackagesPage(1, 0, { enabled: true }),
-          dashboardApi.listCompletedJobs({ limit: 6, offset: 0 }),
-          dashboardApi.listActiveJobs({ limit: 6, offset: 0 }),
-          dashboardApi.getRepoSummary(),
+          api.listPackagesPage(1, 0),
+          api.listPackagesPage(1, 0, { enabled: true }),
+          api.listCompletedJobs({ limit: 6, offset: 0 }),
+          api.listActiveJobs({ limit: 6, offset: 0 }),
+          api.getRepoSummary(),
         ]);
         setPackageCount(packagesRes.page.total ?? packagesRes.packages.length);
         setEnabledPackageCount(
@@ -321,5 +322,13 @@ export default function Dashboard() {
         </article>
       </section>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <ErrorBoundary>
+      <Dashboard />
+    </ErrorBoundary>
   );
 }

@@ -158,7 +158,7 @@ impl BuildService {
         let mut last_polled_at = self
             .last_polled_at
             .lock()
-            .expect("build service poll throttle mutex poisoned");
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         if let Some(last_polled_at) = last_polled_at.get(package_name)
             && now.duration_since(*last_polled_at) < interval
         {

@@ -35,12 +35,9 @@ impl JobLifecycle {
         }
     }
 
+    #[tracing::instrument(skip_all, fields(job_id = %job_id, container_id = %container_id))]
     pub async fn mark_running(&self, job_id: Uuid, container_id: &str) -> anyhow::Result<()> {
-        info!(
-            job_id = %job_id,
-            container_id = %container_id,
-            "marking build as running"
-        );
+        info!("marking build as running");
         self.store
             .set_job_running(job_id, Some(container_id))
             .await
@@ -54,18 +51,20 @@ impl JobLifecycle {
         Ok(job.job.status == BuildStatus::Pending)
     }
 
+    #[tracing::instrument(
+        skip_all,
+        fields(
+            job_id = %build.job_id,
+            package_name = %build.package.name,
+            mock_chroot = %build.mock_chroot,
+        )
+    )]
     pub async fn fail_launch(
         &self,
         build: &QueuedBuild,
         error_message: &str,
     ) -> anyhow::Result<()> {
-        error!(
-            job_id = %build.job_id,
-            package_name = %build.package.name,
-            mock_chroot = %build.mock_chroot,
-            error = error_message,
-            "build launch failed"
-        );
+        error!(error = error_message, "build launch failed");
         self.store
             .finish_job(
                 build.job_id,
@@ -88,6 +87,14 @@ impl JobLifecycle {
         Ok(())
     }
 
+    #[tracing::instrument(
+        skip_all,
+        fields(
+            job_id = %build.job_id,
+            package_name = %build.package.name,
+            mock_chroot = %build.mock_chroot,
+        )
+    )]
     pub async fn finalize_execution(
         &self,
         build: &QueuedBuild,
@@ -217,11 +224,13 @@ impl JobLifecycle {
             .await
     }
 
+    #[tracing::instrument(skip_all, fields(reason = %message))]
     pub async fn abort_unfinished_jobs(&self, message: &str) -> anyhow::Result<()> {
-        warn!(reason = message, "aborting unfinished jobs");
+        warn!("aborting unfinished jobs");
         self.store.abort_unfinished_jobs(message).await
     }
 
+    #[tracing::instrument(skip_all, fields(package_name = %package.name, mock_chroot = %mock_chroot))]
     async fn prune_old_build_history(
         &self,
         package: &PackageDefinition,
@@ -245,7 +254,7 @@ impl JobLifecycle {
         for job_id in old_job_ids {
             let published_files = self.store.list_published_repo_files_for_job(job_id).await?;
             self.remove_published_files(&published_files).await?;
-            let _ = self.store.delete_job(job_id).await?;
+            self.store.delete_job(job_id).await?;
         }
 
         Ok(())

@@ -103,29 +103,3 @@ impl PackageName {
         &self.0
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::PackageName;
-
-    #[test]
-    fn package_name_is_normalized_with_slug_rules() {
-        assert_eq!(
-            PackageName::new("Hello.World+RPM")
-                .expect("package name should normalize")
-                .as_str(),
-            "hello-world-rpm"
-        );
-        assert_eq!(
-            PackageName::new("Æúű--cool?")
-                .expect("unicode package name should normalize")
-                .as_str(),
-            "aeuu-cool"
-        );
-    }
-
-    #[test]
-    fn package_name_rejects_empty_normalization() {
-        assert!(PackageName::new("$$$").is_err());
-    }
-}

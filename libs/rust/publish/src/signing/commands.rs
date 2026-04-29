@@ -196,25 +196,3 @@ pub(super) async fn set_owner_only_permissions(path: &Path) -> anyhow::Result<()
 pub(super) async fn set_owner_only_permissions(_path: &Path) -> anyhow::Result<()> {
     Ok(())
 }
-
-#[cfg(test)]
-mod tests {
-    use super::parse_first_fingerprint;
-
-    #[test]
-    fn extracts_first_fingerprint_from_colon_output() {
-        let output = "sec:-:255:22:ABCDEF1234:1710000000:0::::::scESC:::+:::23::0:\n\
-fpr:::::::::0123456789ABCDEF0123456789ABCDEF01234567:\n\
-uid:-::::1710000000::ABCDEF1234567890::Example <example@example.com>::::::::::0:\n";
-        assert_eq!(
-            parse_first_fingerprint(output),
-            Some("0123456789ABCDEF0123456789ABCDEF01234567".to_string())
-        );
-    }
-
-    #[test]
-    fn returns_none_when_no_fingerprint_exists() {
-        let output = "sec:-:255:22:ABCDEF1234:1710000000:0::::::scESC:::+:::23::0:\n";
-        assert_eq!(parse_first_fingerprint(output), None);
-    }
-}

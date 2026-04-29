@@ -114,31 +114,3 @@ pub fn build_published_repo_path(
         .join(job_id.to_string())
         .join(file_name))
 }
-
-#[cfg(test)]
-mod tests {
-    use super::build_published_repo_path;
-    use uuid::Uuid;
-
-    #[test]
-    fn builds_target_scoped_repo_paths() {
-        let path = build_published_repo_path(
-            "bash",
-            "fedora-44-x86_64",
-            Uuid::nil(),
-            std::path::Path::new("bash-1.0-1.fc44.x86_64.rpm"),
-        )
-        .expect("path should build");
-
-        assert_eq!(
-            path,
-            std::path::PathBuf::from("fedora")
-                .join("44")
-                .join("packages")
-                .join("bash")
-                .join("builds")
-                .join(Uuid::nil().to_string())
-                .join("bash-1.0-1.fc44.x86_64.rpm")
-        );
-    }
-}

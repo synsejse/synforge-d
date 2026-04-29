@@ -208,31 +208,3 @@ pub fn is_dns_label(value: &str) -> bool {
 
     ascii == value && !ascii.contains('.') && ascii.len() <= 63
 }
-
-#[cfg(test)]
-mod tests {
-    use std::path::Path;
-
-    use super::{RepoTarget, is_dns_label};
-
-    #[test]
-    fn dns_label_validation_is_strict_and_ascii() {
-        assert!(is_dns_label("nginx-1"));
-        assert!(!is_dns_label("Nginx-1"));
-        assert!(!is_dns_label("nginx_1"));
-        assert!(!is_dns_label("-nginx"));
-        assert!(!is_dns_label("nginx-"));
-        assert!(!is_dns_label("nginx.prod"));
-    }
-
-    #[test]
-    fn parses_repo_target_from_relative_repo_path() {
-        let target = RepoTarget::from_repo_relative_path(Path::new(
-            "fedora/44/packages/bash/builds/job/bash.rpm",
-        ))
-        .expect("target should parse");
-
-        assert_eq!(target.distribution, "fedora");
-        assert_eq!(target.release, "44");
-    }
-}

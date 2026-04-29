@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import type { CSSProperties, UIEvent } from "react";
 
-import { jobsApi } from "../api";
+import api from "../../../lib/api";
 import { formatBytes } from "../../../lib/bytes";
 import type { LogManifestResponse } from "../../../lib/types";
 import EmptyState from "../../../components/ui/EmptyState";
@@ -100,7 +100,7 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
   }, [currentLog?.text]);
 
   async function loadManifest() {
-    const response = await jobsApi.getJobLogManifest(jobId);
+    const response = await api.getJobLogManifest(jobId);
     setManifest(response);
     setActiveSourcePath((current) => {
       if (current) {
@@ -131,13 +131,13 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
 
     try {
       const response = reset
-        ? await jobsApi.getJobLogChunk(jobId, {
+        ? await api.getJobLogChunk(jobId, {
             source: sourcePath,
-            cursor: (await jobsApi.getJobLogMeta(jobId, sourcePath)).max_cursor,
+            cursor: (await api.getJobLogMeta(jobId, sourcePath)).max_cursor,
             offset: -INITIAL_WINDOW_BYTES,
             limit: INITIAL_WINDOW_BYTES,
           })
-        : await jobsApi.getJobLogChunk(jobId, {
+        : await api.getJobLogChunk(jobId, {
             source: sourcePath,
             cursor,
             limit: CHUNK_SIZE,
@@ -170,7 +170,7 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
     }
     setDownloading(true);
     try {
-      await jobsApi.downloadJobLog(jobId, activeSourcePath);
+      await api.downloadJobLog(jobId, activeSourcePath);
     } finally {
       setDownloading(false);
     }

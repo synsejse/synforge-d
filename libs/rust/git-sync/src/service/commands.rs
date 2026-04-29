@@ -87,11 +87,13 @@ pub trait RefreshAllProgressStore {
     async fn save_refresh_all_packages_progress(&self, progress: RefreshAllPackagesProgressView);
 }
 
+#[tracing::instrument(skip_all, fields(operation_id))]
 pub async fn trigger_refresh_all_packages<D>(deps: &D) -> anyhow::Result<RefreshAllPackagesResponse>
 where
     D: EnabledPackageCatalog + ManualRefreshScheduler + RefreshAllProgressStore + Send + Sync,
 {
     let operation_id = Uuid::now_v7();
+    tracing::Span::current().record("operation_id", tracing::field::display(&operation_id));
     let mut progress = RefreshAllPackagesProgressView {
         operation_id,
         state: RefreshAllPackagesState::Running,
@@ -214,6 +216,7 @@ where
     })
 }
 
+#[tracing::instrument(skip(deps), fields(package_name = %package_name))]
 pub async fn delete_package<D>(deps: &D, package_name: &str) -> anyhow::Result<()>
 where
     D: PackageDeletionJobReader + PackageDeletionRunner + PackageDeleter + Send + Sync,
@@ -238,6 +241,7 @@ where
     deps.delete_package(package_name).await
 }
 
+#[tracing::instrument(skip(deps), fields(package_name = %request.name))]
 pub async fn create_package<D>(
     deps: &D,
     request: CreatePackageRequest,
@@ -290,6 +294,7 @@ where
     deps.get_package(&request.name).await
 }
 
+#[tracing::instrument(skip(deps, request), fields(package_name = %package_name))]
 pub async fn update_package<D>(
     deps: &D,
     package_name: &str,

@@ -44,7 +44,7 @@ pub use self::openapi::ApiDoc;
 pub(crate) use self::session_cookie::{clear_session_cookie, create_session_cookie};
 pub(crate) use self::state::AppState;
 
-pub fn router(service: Arc<SynforgeService>, web_root: PathBuf) -> Router {
+pub fn router(service: Arc<SynforgeService>, web_root: PathBuf) -> anyhow::Result<Router> {
     let state = AppState {
         service: Arc::clone(&service),
     };
@@ -54,7 +54,7 @@ pub fn router(service: Arc<SynforgeService>, web_root: PathBuf) -> Router {
         .add(ReferrerPolicy::no_referrer())
         .add(CrossOriginOpenerPolicy::same_origin())
         .try_into()
-        .expect("failed to construct HelmetLayer");
+        .map_err(|error| anyhow::anyhow!("failed to construct HelmetLayer: {error}"))?;
     let api = packages::router()
         .merge(jobs::router())
         .merge(artifacts::router())
@@ -89,7 +89,7 @@ pub fn router(service: Arc<SynforgeService>, web_root: PathBuf) -> Router {
             authenticate_repo_request,
         ));
 
-    Router::<AppState>::new()
+    Ok(Router::<AppState>::new()
         .route("/healthz", get(healthz))
         .route("/readyz", get(readyz))
         .merge(docs)
@@ -101,5 +101,5 @@ pub fn router(service: Arc<SynforgeService>, web_root: PathBuf) -> Router {
         .layer(DefaultBodyLimit::max(DEFAULT_WEBUI_MAX_REQUEST_BODY_BYTES))
         .layer(security_layer)
         .layer(TraceLayer::new_for_http())
-        .with_state(state)
+        .with_state(state))
 }

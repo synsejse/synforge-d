@@ -6,8 +6,9 @@ import {
   faTrash,
   faUserPlus,
 } from "@fortawesome/free-solid-svg-icons";
-import { usersApi } from "./api";
+import api from "../../lib/api";
 import type { SessionResponse, UserResponse } from "../../lib/types";
+import ErrorBoundary from "../../components/common/ErrorBoundary";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import EmptyState from "../../components/ui/EmptyState";
 import FaIcon from "../../components/ui/FaIcon";
@@ -24,7 +25,7 @@ import {
   togglePermission,
 } from "./components/model";
 
-export default function Users() {
+function Users() {
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,8 +46,8 @@ export default function Users() {
     try {
       setLoading(true);
       const [usersRes, sessionRes] = await Promise.all([
-        usersApi.listUsers(),
-        usersApi.getSession(),
+        api.listUsers(),
+        api.getSession(),
       ]);
       setUsers(usersRes.users);
       setCurrentUserId((sessionRes as SessionResponse).user.id);
@@ -125,7 +126,7 @@ export default function Users() {
     event.preventDefault();
     try {
       setSubmitting(true);
-      await usersApi.createUser(createForm);
+      await api.createUser(createForm);
       closeModal();
       await load();
     } catch (e) {
@@ -142,7 +143,7 @@ export default function Users() {
     }
     try {
       setSubmitting(true);
-      await usersApi.updateUser(modal.user.user.id, editForm);
+      await api.updateUser(modal.user.user.id, editForm);
       closeModal();
       await load();
     } catch (e) {
@@ -163,7 +164,7 @@ export default function Users() {
     }
     try {
       setSubmitting(true);
-      await usersApi.changeUserPassword(modal.user.user.id, { password });
+      await api.changeUserPassword(modal.user.user.id, { password });
       closeModal();
       setError(null);
     } catch (e) {
@@ -179,7 +180,7 @@ export default function Users() {
     }
     try {
       setSubmitting(true);
-      await usersApi.deleteUser(modal.user.user.id);
+      await api.deleteUser(modal.user.user.id);
       closeModal();
       await load();
     } catch (e) {
@@ -400,5 +401,13 @@ export default function Users() {
         </UserModalShell>
       ) : null}
     </div>
+  );
+}
+
+export default function UsersPage() {
+  return (
+    <ErrorBoundary>
+      <Users />
+    </ErrorBoundary>
   );
 }

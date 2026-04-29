@@ -132,7 +132,11 @@ where
         }
         if let Some(task) = heartbeat_task {
             task.abort();
-            let _ = task.await;
+            if let Err(error) = task.await
+                && !error.is_cancelled()
+            {
+                warn!(?error, "worker heartbeat task panicked");
+            }
         }
         publish_worker_result(
             transport.as_ref(),

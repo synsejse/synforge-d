@@ -9,7 +9,7 @@ use synforge_core::config::DaemonConfig;
 use synforge_database::{DieselStore, GitCacheStore};
 use tokio::process::Command;
 use tokio::sync::Mutex;
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Clone)]
 pub(crate) struct GitMirrorCache {
@@ -87,8 +87,14 @@ impl GitMirrorCache {
             .unwrap_or(0);
 
         if !mirror_exists {
-            if tokio::fs::try_exists(&mirror_dir).await? {
-                let _ = tokio::fs::remove_dir_all(&mirror_dir).await;
+            if tokio::fs::try_exists(&mirror_dir).await?
+                && let Err(error) = tokio::fs::remove_dir_all(&mirror_dir).await
+            {
+                warn!(
+                    ?error,
+                    mirror_dir = %mirror_dir.display(),
+                    "failed to remove stale git mirror directory before re-clone"
+                );
             }
             self.clone_mirror(&repo_url, &mirror_dir).await?;
             last_fetched_at = now;

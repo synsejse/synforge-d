@@ -28,11 +28,7 @@ pub(super) async fn list_packages(
         .select(PackageRecord::as_select())
         .load(&mut conn)
         .await?;
-    let mut responses = Vec::with_capacity(rows.len());
-    for record in rows {
-        responses.push(package_response_from_record(&mut conn, record).await?);
-    }
-    Ok(responses)
+    package_responses_from_records(&mut conn, rows).await
 }
 
 pub(super) async fn count_packages(

@@ -1,10 +1,8 @@
-const publicApiUrl = document.body.dataset.publicApiUrl || "";
+import { apiPath } from "../../lib/api/script-helpers";
+import type { SessionResponse } from "../../lib/types";
+
 const authMode = document.body.dataset.authMode || "protected";
 const appShell = document.getElementById("app-shell");
-
-function apiPath(path: string): string {
-    return `${publicApiUrl}${path}`;
-}
 
 function currentReturnPath(): string {
     return `${window.location.pathname}${window.location.search}${window.location.hash}`;
@@ -53,6 +51,13 @@ async function requireSession(): Promise<void> {
         redirectToLogin("Use a Synforge account to access the console.");
         return;
     }
+    const session = (await response.json()) as SessionResponse;
+    document.body.dataset.session = JSON.stringify(session);
+    window.dispatchEvent(
+        new CustomEvent<SessionResponse>("synforge:session-loaded", {
+            detail: session,
+        }),
+    );
     appShell?.classList.remove("hidden");
 }
 

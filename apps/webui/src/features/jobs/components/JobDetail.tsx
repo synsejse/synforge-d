@@ -9,7 +9,9 @@ import type {
   ServerHardwareResponse,
 } from "../../../lib/types";
 import ErrorMessage from "../../../components/common/ErrorMessage";
-import { useDialogs } from "../../../components/common/useDialogs";
+import { useDialogs } from "../../../components/common/DialogsProvider";
+import { usePageVisible } from "../../../components/common/PageVisibilityProvider";
+import { useServerHardware } from "../../../components/common/ServerHardwareProvider";
 import LoadingBlock from "../../../components/ui/LoadingBlock";
 import FaIcon from "../../../components/ui/FaIcon";
 import Badge from "../../../components/ui/Badge";
@@ -32,7 +34,9 @@ const USAGE_POLL_INTERVAL_MS = 1000;
 const TabbedLogViewer = lazy(() => import("./TabbedLogViewer"));
 
 export default function JobDetail({ jobId }: Props) {
-  const { confirm, notify, element: dialogs } = useDialogs();
+  const { confirm, notify } = useDialogs();
+  const pageVisible = usePageVisible();
+  const serverHardware = useServerHardware();
   const [job, setJob] = useState<BuildJobResponse | null>(null);
   const [artifacts, setArtifacts] = useState<BuildArtifact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,11 +44,6 @@ export default function JobDetail({ jobId }: Props) {
   const [deleting, setDeleting] = useState(false);
   const [killing, setKilling] = useState(false);
   const [latestUsage, setLatestUsage] = useState<JobResourceUsageSample | null>(null);
-  const [serverHardware, setServerHardware] = useState<ServerHardwareResponse | null>(null);
-  const [pageVisible, setPageVisible] = useState(() => {
-    if (typeof document === "undefined") return true;
-    return document.visibilityState === "visible";
-  });
 
   async function loadJob() {
     try {
@@ -68,24 +67,6 @@ export default function JobDetail({ jobId }: Props) {
   useEffect(() => {
     loadJob().catch(() => undefined);
   }, [jobId]);
-
-  useEffect(() => {
-    api
-      .getServerHardware()
-      .then((hardware) => setServerHardware(hardware))
-      .catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const updateVisibility = () => {
-      setPageVisible(document.visibilityState === "visible");
-    };
-    document.addEventListener("visibilitychange", updateVisibility);
-    return () => {
-      document.removeEventListener("visibilitychange", updateVisibility);
-    };
-  }, []);
 
   // Poll for job status updates when live
   useEffect(() => {
@@ -228,7 +209,6 @@ export default function JobDetail({ jobId }: Props) {
 
   return (
     <div className="space-y-6">
-      {dialogs}
       {/* Header */}
       <section className="border-4 border-[var(--theme-accent-orange)] bg-black p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">

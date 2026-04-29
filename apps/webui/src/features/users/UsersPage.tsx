@@ -7,9 +7,12 @@ import {
   faUserPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
-import type { SessionResponse, UserResponse } from "../../lib/types";
-import ErrorBoundary from "../../components/common/ErrorBoundary";
+import type { UserResponse } from "../../lib/types";
+import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
+import SessionProvider, {
+  useSession,
+} from "../../components/common/SessionProvider";
 import EmptyState from "../../components/ui/EmptyState";
 import FaIcon from "../../components/ui/FaIcon";
 import LoadingBlock from "../../components/ui/LoadingBlock";
@@ -26,8 +29,9 @@ import {
 } from "./components/model";
 
 function Users() {
+  const { session } = useSession();
+  const currentUserId = session?.user.id ?? null;
   const [users, setUsers] = useState<UserResponse[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,12 +49,8 @@ function Users() {
   async function load() {
     try {
       setLoading(true);
-      const [usersRes, sessionRes] = await Promise.all([
-        api.listUsers(),
-        api.getSession(),
-      ]);
+      const usersRes = await api.listUsers();
       setUsers(usersRes.users);
-      setCurrentUserId((sessionRes as SessionResponse).user.id);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load users");
@@ -406,8 +406,10 @@ function Users() {
 
 export default function UsersPage() {
   return (
-    <ErrorBoundary>
-      <Users />
-    </ErrorBoundary>
+    <PageRoot>
+      <SessionProvider>
+        <Users />
+      </SessionProvider>
+    </PageRoot>
   );
 }

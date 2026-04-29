@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import JobDetail from "./JobDetail";
+import PageRoot from "../../../components/common/PageRoot";
+import PageVisibilityProvider from "../../../components/common/PageVisibilityProvider";
+import ServerHardwareProvider from "../../../components/common/ServerHardwareProvider";
 
-export default function JobDetailLoader() {
+function JobDetailLoaderInner() {
   const [jobId, setJobId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,4 +27,16 @@ export default function JobDetailLoader() {
   }
 
   return <JobDetail jobId={jobId} />;
+}
+
+export default function JobDetailLoader() {
+  return (
+    <PageRoot>
+      <PageVisibilityProvider>
+        <ServerHardwareProvider>
+          <JobDetailLoaderInner />
+        </ServerHardwareProvider>
+      </PageVisibilityProvider>
+    </PageRoot>
+  );
 }

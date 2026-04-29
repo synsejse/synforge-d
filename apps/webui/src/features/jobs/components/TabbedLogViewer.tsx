@@ -9,6 +9,7 @@ import type { LogManifestResponse } from "../../../lib/types";
 import EmptyState from "../../../components/ui/EmptyState";
 import FaIcon from "../../../components/ui/FaIcon";
 import LoadingBlock from "../../../components/ui/LoadingBlock";
+import { usePageVisible } from "../../../components/common/PageVisibilityProvider";
 
 interface Props {
   jobId: string;
@@ -31,6 +32,7 @@ const MOBILE_LOG_VIEWPORT_HEIGHT = 420;
 const DESKTOP_LOG_VIEWPORT_HEIGHT = 600;
 
 export default function TabbedLogViewer({ jobId, isLive }: Props) {
+  const pageVisible = usePageVisible();
   const [manifest, setManifest] = useState<LogManifestResponse | null>(null);
   const [manifestLoading, setManifestLoading] = useState(true);
   const [activeSourcePath, setActiveSourcePath] = useState<string | null>(null);
@@ -45,12 +47,6 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
       ? MOBILE_LOG_VIEWPORT_HEIGHT
       : DESKTOP_LOG_VIEWPORT_HEIGHT;
   });
-  const [pageVisible, setPageVisible] = useState(() => {
-    if (typeof document === "undefined") {
-      return true;
-    }
-    return document.visibilityState === "visible";
-  });
   const pollingRef = useRef(false);
   const rawViewportRef = useRef<HTMLDivElement | null>(null);
   const logStatesRef = useRef<Record<string, LogState>>({});
@@ -59,19 +55,6 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
   useEffect(() => {
     logStatesRef.current = logStates;
   }, [logStates]);
-
-  useEffect(() => {
-    if (typeof document === "undefined") {
-      return;
-    }
-    const updateVisibility = () => {
-      setPageVisible(document.visibilityState === "visible");
-    };
-    document.addEventListener("visibilitychange", updateVisibility);
-    return () => {
-      document.removeEventListener("visibilitychange", updateVisibility);
-    };
-  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") {

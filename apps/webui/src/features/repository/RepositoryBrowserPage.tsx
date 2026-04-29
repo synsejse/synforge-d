@@ -8,7 +8,7 @@ import {
 import api from "../../lib/api";
 import { formatBytes } from "../../lib/bytes";
 import type { PublishedRepoFile, RepoSummaryResponse } from "../../lib/types";
-import ErrorBoundary from "../../components/common/ErrorBoundary";
+import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
@@ -372,8 +372,8 @@ function RepositoryBrowser() {
 
 export default function RepositoryBrowserPage() {
   return (
-    <ErrorBoundary>
+    <PageRoot>
       <RepositoryBrowser />
-    </ErrorBoundary>
+    </PageRoot>
   );
 }

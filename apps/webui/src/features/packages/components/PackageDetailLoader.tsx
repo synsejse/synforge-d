@@ -1,6 +1,8 @@
 import PackageDetail from "./PackageDetail";
+import PageRoot from "../../../components/common/PageRoot";
+import ServerHardwareProvider from "../../../components/common/ServerHardwareProvider";
 
-export default function PackageDetailLoader() {
+function PackageDetailLoaderInner() {
   const packageName = typeof window !== "undefined"
     ? new URL(window.location.href).searchParams.get("name") || ""
     : "";
@@ -14,4 +16,14 @@ export default function PackageDetailLoader() {
   }
 
   return <PackageDetail packageName={packageName} />;
+}
+
+export default function PackageDetailLoader() {
+  return (
+    <PageRoot>
+      <ServerHardwareProvider>
+        <PackageDetailLoaderInner />
+      </ServerHardwareProvider>
+    </PageRoot>
+  );
 }

@@ -1,14 +1,10 @@
-const publicApiUrl = document.body.dataset.publicApiUrl || "";
+import { apiPath } from "../../lib/api/script-helpers";
 
 const logoutButton = document.getElementById("logout-button");
 const mobileNavToggleButton = document.getElementById("mobile-nav-toggle");
 const mobileNavPanel = document.getElementById("mobile-nav-panel");
 
 let mobileNavOpen = false;
-
-function apiPath(path: string): string {
-    return `${publicApiUrl}${path}`;
-}
 
 function isDesktopNavViewport(): boolean {
     return window.matchMedia("(min-width: 1280px)").matches;

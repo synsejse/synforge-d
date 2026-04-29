@@ -2,7 +2,7 @@ import { useEffect, useState, type SyntheticEvent } from "react";
 import { faSave, faServer } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import type { ConfigFieldDescriptor, DaemonConfig } from "../../lib/types";
-import ErrorBoundary from "../../components/common/ErrorBoundary";
+import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
@@ -212,8 +212,8 @@ function buildSettingsPayload(
 
 export default function SettingsPage() {
   return (
-    <ErrorBoundary>
+    <PageRoot>
       <Settings />
-    </ErrorBoundary>
+    </PageRoot>
   );
 }

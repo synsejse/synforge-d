@@ -11,9 +11,10 @@ import type {
 } from "../../lib/types";
 import AddPackageModal from "./components/AddPackageModal";
 import PackageCard from "./components/PackageCard";
-import ErrorBoundary from "../../components/common/ErrorBoundary";
+import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
-import { useDialogs } from "../../components/common/useDialogs";
+import { useDialogs } from "../../components/common/DialogsProvider";
+import ServerHardwareProvider from "../../components/common/ServerHardwareProvider";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import Button from "../../components/ui/Button";
 import Select from "../../components/ui/Select";
@@ -21,7 +22,7 @@ import PageHeader from "../../components/ui/PageHeader";
 import ProgressOverlayDialog from "../../components/ui/ProgressOverlayDialog";
 
 function PackageList() {
-  const { confirm, notify, element: dialogs } = useDialogs();
+  const { confirm, notify } = useDialogs();
   const [packages, setPackages] = useState<PackageResponse[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(() => {
@@ -259,7 +260,6 @@ function PackageList() {
 
   return (
     <div className="space-y-8">
-      {dialogs}
       {/* Header */}
       <PageHeader
         eyebrow="PACKAGE_REGISTRY"
@@ -405,8 +405,10 @@ function PackageList() {
 
 export default function PackageListPage() {
   return (
-    <ErrorBoundary>
-      <PackageList />
-    </ErrorBoundary>
+    <PageRoot>
+      <ServerHardwareProvider>
+        <PackageList />
+      </ServerHardwareProvider>
+    </PageRoot>
   );
 }

@@ -17,7 +17,7 @@ import type {
   RepoSummaryResponse,
   SyncMetricsResponse,
 } from "../../lib/types";
-import ErrorBoundary from "../../components/common/ErrorBoundary";
+import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
@@ -243,8 +243,8 @@ function StatRow({ label, value }: { label: string; value: string }) {
 
 export default function StatisticsPage() {
   return (
-    <ErrorBoundary>
+    <PageRoot>
       <Statistics />
-    </ErrorBoundary>
+    </PageRoot>
   );
 }

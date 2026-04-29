@@ -6,7 +6,7 @@ import type {
   RepoSigningReconcileProgressView,
   RepoSigningStatusView,
 } from "../../lib/types";
-import ErrorBoundary from "../../components/common/ErrorBoundary";
+import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import Button from "../../components/ui/Button";
 import FaIcon from "../../components/ui/FaIcon";
@@ -471,8 +471,8 @@ function StatusRow({ label, value }: { label: string; value: string }) {
 
 export default function SigningPage() {
   return (
-    <ErrorBoundary>
+    <PageRoot>
       <Signing />
-    </ErrorBoundary>
+    </PageRoot>
   );
 }

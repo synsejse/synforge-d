@@ -1,4 +1,10 @@
-import { useCallback, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+  type ReactNode,
+} from "react";
 import Dialog from "../ui/Dialog";
 import Button from "../ui/Button";
 
@@ -16,6 +22,11 @@ interface NotifyOptions {
   variant?: "info" | "error";
 }
 
+interface DialogsContextValue {
+  confirm: (options: ConfirmOptions) => Promise<boolean>;
+  notify: (options: NotifyOptions) => Promise<void>;
+}
+
 interface ConfirmState {
   options: ConfirmOptions;
   resolve: (value: boolean) => void;
@@ -26,7 +37,17 @@ interface NotifyState {
   resolve: () => void;
 }
 
-export function useDialogs() {
+const DialogsContext = createContext<DialogsContextValue | null>(null);
+
+export function useDialogs(): DialogsContextValue {
+  const value = useContext(DialogsContext);
+  if (!value) {
+    throw new Error("useDialogs must be used inside <DialogsProvider>");
+  }
+  return value;
+}
+
+export default function DialogsProvider({ children }: { children: ReactNode }) {
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
   const [notifyState, setNotifyState] = useState<NotifyState | null>(null);
 
@@ -62,8 +83,9 @@ export function useDialogs() {
     setNotifyState(null);
   };
 
-  const element = (
-    <>
+  return (
+    <DialogsContext.Provider value={{ confirm, notify }}>
+      {children}
       {confirmState ? (
         <Dialog
           open
@@ -126,8 +148,6 @@ export function useDialogs() {
           </div>
         </Dialog>
       ) : null}
-    </>
+    </DialogsContext.Provider>
   );
-
-  return { confirm, notify, element };
 }

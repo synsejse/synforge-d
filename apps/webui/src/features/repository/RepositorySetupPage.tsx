@@ -1,15 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { faCopy, faFolderTree } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
-import ErrorBoundary from "../../components/common/ErrorBoundary";
+import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
+import SessionProvider, {
+  useSession,
+} from "../../components/common/SessionProvider";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
 import Button from "../../components/ui/Button";
 
 function RepositorySetup() {
+  const { session } = useSession();
+  const repoHandle = session?.user.handle ?? "";
   const [publicBaseUrl, setPublicBaseUrl] = useState("");
-  const [repoHandle, setRepoHandle] = useState("");
   const [repoSigningEnabled, setRepoSigningEnabled] = useState(false);
   const repoPublicKeyName = "gpg.key";
   const [loading, setLoading] = useState(true);
@@ -20,13 +24,11 @@ function RepositorySetup() {
     async function load() {
       try {
         setLoading(true);
-        const [configRes, sessionRes, signingRes] = await Promise.all([
+        const [configRes, signingRes] = await Promise.all([
           api.getConfig(),
-          api.getSession(),
           api.getRepoSigningStatus(),
         ]);
         setPublicBaseUrl(normalizeBaseUrl(configRes.config.public_base_url));
-        setRepoHandle(sessionRes.user.handle);
         setRepoSigningEnabled(signingRes.status.enabled);
         setError(null);
       } catch (e) {
@@ -231,8 +233,10 @@ function normalizeBaseUrl(baseUrl: string) {
 
 export default function RepositorySetupPage() {
   return (
-    <ErrorBoundary>
-      <RepositorySetup />
-    </ErrorBoundary>
+    <PageRoot>
+      <SessionProvider>
+        <RepositorySetup />
+      </SessionProvider>
+    </PageRoot>
   );
 }

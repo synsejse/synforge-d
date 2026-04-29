@@ -5,7 +5,8 @@ import {
   summarizePackageTargetAction,
 } from "../../../lib/package-actions";
 import ErrorMessage from "../../../components/common/ErrorMessage";
-import { useDialogs } from "../../../components/common/useDialogs";
+import { useDialogs } from "../../../components/common/DialogsProvider";
+import { useServerHardware } from "../../../components/common/ServerHardwareProvider";
 import LoadingBlock from "../../../components/ui/LoadingBlock";
 import PackageBuildHistorySection from "./PackageBuildHistorySection";
 import PackageEditFormSection, {
@@ -20,7 +21,6 @@ import type {
   PackageBuildInventoryEntry,
   PackageResponse,
   PublishedRepoFile,
-  ServerHardwareResponse,
   SpecSource,
   UpdatePackageRequest,
 } from "../../../lib/types";
@@ -105,7 +105,8 @@ function formatCpuLimitCores(value?: number | null): string {
 }
 
 export default function PackageDetail({ packageName }: Props) {
-  const { confirm, notify, element: dialogs } = useDialogs();
+  const { confirm, notify } = useDialogs();
+  const serverHardware = useServerHardware();
   const BUILD_HISTORY_PAGE_SIZE = 12;
   const REPO_FILES_PAGE_SIZE = 20;
   const [pkg, setPkg] = useState<PackageResponse | null>(null);
@@ -133,8 +134,6 @@ export default function PackageDetail({ packageName }: Props) {
   const [browseFiles, setBrowseFiles] = useState<string[]>([]);
   const [browseError, setBrowseError] = useState<string | null>(null);
   const [browsing, setBrowsing] = useState(false);
-  const [serverHardware, setServerHardware] =
-    useState<ServerHardwareResponse | null>(null);
   const [form, setForm] = useState<PackageEditFormState>({
     repoUrl: "",
     specPath: "",
@@ -198,10 +197,6 @@ export default function PackageDetail({ packageName }: Props) {
     try {
       setLoading(true);
       const packageRes = await api.getPackage(packageName);
-      api
-        .getServerHardware()
-        .then((response) => setServerHardware(response))
-        .catch(() => undefined);
       api
         .listMockChroots()
         .then((response) => setAvailableChroots(response.chroots))
@@ -468,7 +463,6 @@ export default function PackageDetail({ packageName }: Props) {
 
   return (
     <div className="min-w-0 space-y-8">
-      {dialogs}
       <PackageDetailHeader
         packageName={pkg.package.name}
         description={pkg.package.description || "No description"}

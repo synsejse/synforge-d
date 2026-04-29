@@ -6,7 +6,7 @@ import type {
   BuildJobResponse,
   RepoSummaryResponse,
 } from "../../lib/types";
-import ErrorBoundary from "../../components/common/ErrorBoundary";
+import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
@@ -327,8 +327,8 @@ function Dashboard() {
 
 export default function DashboardPage() {
   return (
-    <ErrorBoundary>
+    <PageRoot>
       <Dashboard />
-    </ErrorBoundary>
+    </PageRoot>
   );
 }

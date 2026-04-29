@@ -8,12 +8,9 @@ import {
 } from "react";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import api from "../../../lib/api";
-import type {
-  CreatePackageRequest,
-  ServerHardwareResponse,
-  SpecSource,
-} from "../../../lib/types";
+import type { CreatePackageRequest, SpecSource } from "../../../lib/types";
 import FaIcon from "../../../components/ui/FaIcon";
+import { useServerHardware } from "../../../components/common/ServerHardwareProvider";
 import BuildSettingsSection from "./add-package/BuildSettingsSection";
 import ChrootPickerDialog from "./add-package/ChrootPickerDialog";
 import {
@@ -34,6 +31,7 @@ export default function AddPackageModal({
   onClose,
   onSuccess,
 }: AddPackageModalProps) {
+  const serverHardware = useServerHardware();
   const [name, setName] = useState("");
   const [repoUrl, setRepoUrl] = useState("");
   const [specPath, setSpecPath] = useState("");
@@ -56,8 +54,6 @@ export default function AddPackageModal({
   const [browsing, setBrowsing] = useState(false);
   const [browseError, setBrowseError] = useState<string | null>(null);
   const [browseFiles, setBrowseFiles] = useState<string[]>([]);
-  const [serverHardware, setServerHardware] =
-    useState<ServerHardwareResponse | null>(null);
   const [availableChroots, setAvailableChroots] = useState<string[]>([]);
   const [chrootsLoading, setChrootsLoading] = useState(true);
   const [showSpecPicker, setShowSpecPicker] = useState(false);
@@ -115,13 +111,6 @@ export default function AddPackageModal({
     }
 
     loadChroots();
-  }, []);
-
-  useEffect(() => {
-    api
-      .getServerHardware()
-      .then((response) => setServerHardware(response))
-      .catch(() => undefined);
   }, []);
 
   useEffect(() => {

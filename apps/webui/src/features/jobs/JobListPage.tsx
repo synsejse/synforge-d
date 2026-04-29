@@ -8,7 +8,6 @@ import api from "../../lib/api";
 import type {
   BuildJobResponse,
   JobResourceUsageSample,
-  ServerHardwareResponse,
 } from "../../lib/types";
 import {
   HISTORY_BUILD_STATUS_LABELS,
@@ -17,9 +16,15 @@ import {
 } from "../../lib/job-status";
 import type { JobViewMode } from "./types";
 import JobListTable from "./components/JobListTable";
-import ErrorBoundary from "../../components/common/ErrorBoundary";
+import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
-import { useDialogs } from "../../components/common/useDialogs";
+import { useDialogs } from "../../components/common/DialogsProvider";
+import PageVisibilityProvider, {
+  usePageVisible,
+} from "../../components/common/PageVisibilityProvider";
+import ServerHardwareProvider, {
+  useServerHardware,
+} from "../../components/common/ServerHardwareProvider";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
 import Button from "../../components/ui/Button";
@@ -36,7 +41,9 @@ function normalizeStatusFilter(value: string | null): "all" | HistoryBuildStatus
 }
 
 function JobList() {
-  const { confirm, notify, element: dialogs } = useDialogs();
+  const { confirm, notify } = useDialogs();
+  const pageVisible = usePageVisible();
+  const serverHardware = useServerHardware();
   const [jobs, setJobs] = useState<BuildJobResponse[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -59,12 +66,7 @@ function JobList() {
   const [targetFilter, setTargetFilter] = useState("");
   const [pruning, setPruning] = useState(false);
   const [killingJobId, setKillingJobId] = useState<string | null>(null);
-  const [pageVisible, setPageVisible] = useState(() => {
-    if (typeof document === "undefined") return true;
-    return document.visibilityState === "visible";
-  });
   const [usageByJob, setUsageByJob] = useState<Record<string, JobResourceUsageSample>>({});
-  const [serverHardware, setServerHardware] = useState<ServerHardwareResponse | null>(null);
   const pageSize = 50;
 
   async function load(
@@ -123,24 +125,6 @@ function JobList() {
 
   useEffect(() => {
     load();
-  }, []);
-
-  useEffect(() => {
-    api
-      .getServerHardware()
-      .then((hardware) => setServerHardware(hardware))
-      .catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const updateVisibility = () => {
-      setPageVisible(document.visibilityState === "visible");
-    };
-    document.addEventListener("visibilitychange", updateVisibility);
-    return () => {
-      document.removeEventListener("visibilitychange", updateVisibility);
-    };
   }, []);
 
   useEffect(() => {
@@ -249,7 +233,6 @@ function JobList() {
 
   return (
     <div className="space-y-6">
-      {dialogs}
       {/* Header */}
       <PageHeader
         eyebrow="JOB_ACTIVITY"
@@ -412,8 +395,12 @@ function JobList() {
 
 export default function JobListPage() {
   return (
-    <ErrorBoundary>
-      <JobList />
-    </ErrorBoundary>
+    <PageRoot>
+      <PageVisibilityProvider>
+        <ServerHardwareProvider>
+          <JobList />
+        </ServerHardwareProvider>
+      </PageVisibilityProvider>
+    </PageRoot>
   );
 }

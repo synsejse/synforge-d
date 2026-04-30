@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "@tanstack/react-router";
 import {
-  faArrowDownWideShort,
   faBoxesStacked,
   faBookOpen,
   faChartSimple,
@@ -20,7 +19,6 @@ const navItems = [
   { href: "/packages", label: "Packages", icon: faBoxesStacked, description: "Sources and history" },
   { href: "/statistics", label: "Statistics", icon: faChartSimple, description: "Telemetry and cache" },
   { href: "/repository", label: "Repository", icon: faFolderTree, description: "Published files" },
-  { href: "/repository/use", label: "Add Repo", icon: faArrowDownWideShort, description: "Fedora setup" },
   { href: "/jobs", label: "Jobs", icon: faChartLine, description: "Runs and live traces" },
   { href: "/users", label: "Users", icon: faUsers, description: "Accounts and permissions" },
   { href: "/docs", label: "Docs", icon: faBookOpen, description: "API reference" },

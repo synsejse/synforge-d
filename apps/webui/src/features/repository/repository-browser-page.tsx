@@ -6,6 +6,7 @@ import {
   faBullseye,
   faHardDrive,
   faHammer,
+  faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import { repositoryQueries } from "../../lib/queries";
 import { formatBytes } from "../../lib/bytes";
@@ -100,7 +101,10 @@ function RepositoryBrowser() {
         title="Repository Control"
         description="Published packages, builds, and files."
         color="green"
-        actions={[{ to: "/packages", label: "Packages", icon: faBoxesStacked }]}
+        actions={[
+          { to: "/packages", label: "Packages", icon: faBoxesStacked },
+          { to: "/repository/use", label: "Add Repo", icon: faPlus, variant: "primary" },
+        ]}
       />
 
       {/* Metrics */}

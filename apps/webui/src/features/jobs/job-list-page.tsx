@@ -165,6 +165,22 @@ function JobList() {
     });
   }
 
+  function clearAllFilters() {
+    setPackageInput("");
+    setTargetInput("");
+    setFilters({
+      filter: "all",
+      packageFilter: "",
+      targetFilter: "",
+      offset: 0,
+    });
+  }
+
+  const activeFilterCount =
+    (filters.filter !== "all" ? 1 : 0) +
+    (filters.packageFilter ? 1 : 0) +
+    (filters.targetFilter ? 1 : 0);
+
   function setOffset(offset: number) {
     setFilters({ offset });
   }
@@ -299,11 +315,22 @@ function JobList() {
                 className="w-full border-2 border-[var(--theme-border-strong)] bg-black px-4 py-2.5 font-mono text-sm text-white transition focus:border-[var(--theme-accent-lime)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)] focus:ring-offset-2 focus:ring-offset-black"
               />
             </div>
-            <div className="flex items-end">
-              <Button variant="primary" className="w-full" onClick={applyTextFilters}>
+            <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-end">
+              <Button variant="primary" className="w-full sm:flex-1" onClick={applyTextFilters}>
                 <FaIcon icon={faFilter} />
                 Apply Filters
               </Button>
+              {activeFilterCount > 0 ? (
+                <Button
+                  variant="ghost"
+                  className="w-full sm:w-auto"
+                  onClick={clearAllFilters}
+                  aria-label="Clear all filters"
+                  title="Clear all filters"
+                >
+                  Clear ({activeFilterCount})
+                </Button>
+              ) : null}
             </div>
           </div>
         </div>

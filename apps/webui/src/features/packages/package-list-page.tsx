@@ -22,6 +22,7 @@ import Select from "../../components/ui/select";
 import PageHeader from "../../components/ui/page-header";
 import ProgressOverlayDialog from "../../components/ui/progress-overlay-dialog";
 import PaginationControls from "../../components/common/pagination-controls";
+import FilterBar from "../../components/common/filter-bar";
 
 const PAGE_SIZE = 50;
 
@@ -230,51 +231,56 @@ function PackageList() {
       />
 
       {/* Filters */}
-      <div className="border-2 border-white bg-black p-4 sm:p-5">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_220px_auto]">
-          <div>
-            <label className="block">
-              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
-                Search
-              </span>
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-                placeholder="Filter by name or description"
-                className="w-full border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
-              />
-            </label>
-          </div>
-          <div>
-            <label className="block">
-              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
-                Status
-              </span>
-              <Select
-                value={enabledFilter}
-                onValueChange={(val) => setEnabledFilter(val as EnabledFilter)}
-                options={[
-                  { value: "all", label: "All" },
-                  { value: "true", label: "Enabled" },
-                  { value: "false", label: "Disabled" },
-                ]}
-              />
-            </label>
-          </div>
-          <div className="flex items-end md:col-span-2 xl:col-span-1">
-            <Button
-              variant="secondary"
-              size="md"
-              className="w-full xl:w-auto"
-              onClick={applyFilters}
-            >
-              Apply Filters
-            </Button>
-          </div>
+      <FilterBar
+        activeCount={
+          (search ? 1 : 0) + (enabledFilter !== "all" ? 1 : 0)
+        }
+        onClear={() => {
+          setSearchInput("");
+          setSearch("");
+          setEnabledFilter("all");
+        }}
+        trailing={
+          <Button
+            variant="secondary"
+            size="md"
+            className="w-full xl:w-auto"
+            onClick={applyFilters}
+          >
+            Apply Filters
+          </Button>
+        }
+      >
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+          <label className="block">
+            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
+              Search
+            </span>
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && applyFilters()}
+              placeholder="Filter by name or description"
+              className="w-full border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
+              Status
+            </span>
+            <Select
+              value={enabledFilter}
+              onValueChange={(val) => setEnabledFilter(val as EnabledFilter)}
+              options={[
+                { value: "all", label: "All" },
+                { value: "true", label: "Enabled" },
+                { value: "false", label: "Disabled" },
+              ]}
+            />
+          </label>
         </div>
-      </div>
+      </FilterBar>
 
       {/* Package Cards */}
       {listQuery.data.packages.length === 0 ? (

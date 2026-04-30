@@ -20,6 +20,7 @@ import MetricCard from "../../components/ui/metric-card";
 import PageHeader from "../../components/ui/page-header";
 import Badge from "../../components/ui/badge";
 import PaginationControls from "../../components/common/pagination-controls";
+import FilterBar from "../../components/common/filter-bar";
 
 const PAGE_SIZE = 50;
 
@@ -138,9 +139,30 @@ function RepositoryBrowser() {
       </div>
 
       {/* Filters */}
-      <form onSubmit={handleApply} className="border-2 border-white bg-black p-5">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_auto_auto]">
-          <div>
+      <form onSubmit={handleApply}>
+        <FilterBar
+          activeCount={
+            (filters.packageFilter ? 1 : 0) +
+            (filters.targetFilter ? 1 : 0) +
+            (filters.kindFilter !== "all" ? 1 : 0)
+          }
+          onClear={() => {
+            setPackageInput("");
+            setTargetInput("");
+            setFilters({
+              offset: 0,
+              packageFilter: "",
+              targetFilter: "",
+              kindFilter: "all",
+            });
+          }}
+          trailing={
+            <Button type="submit" variant="secondary" size="md">
+              Apply Filters
+            </Button>
+          }
+        >
+          <div className="grid gap-4 md:grid-cols-3">
             <label className="block">
               <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
                 Package
@@ -153,8 +175,6 @@ function RepositoryBrowser() {
                 className="w-full border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
               />
             </label>
-          </div>
-          <div>
             <label className="block">
               <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
                 Target
@@ -167,8 +187,6 @@ function RepositoryBrowser() {
                 className="w-full border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
               />
             </label>
-          </div>
-          <div>
             <label className="block">
               <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
                 Kind
@@ -187,12 +205,7 @@ function RepositoryBrowser() {
               />
             </label>
           </div>
-          <div className="flex items-end md:col-span-2 xl:col-span-1">
-            <Button type="submit" variant="secondary" size="md">
-              Apply Filters
-            </Button>
-          </div>
-        </div>
+        </FilterBar>
       </form>
 
       {/* Files Table */}

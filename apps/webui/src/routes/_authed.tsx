@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import AppShell from "../components/common/AppShell";
+import AppShell from "../components/common/app-shell";
 import { sessionQueries } from "../lib/queries/session";
 import { ApiClientError } from "../lib/api";
 

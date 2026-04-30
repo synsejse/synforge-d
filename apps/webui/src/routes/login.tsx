@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import LoginPage from "../features/auth/LoginPage";
+import LoginPage from "../features/auth/login-page";
 
 interface LoginSearch {
   next?: string;

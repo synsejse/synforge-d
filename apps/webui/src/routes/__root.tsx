@@ -1,7 +1,7 @@
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
-import ErrorBoundary from "../components/common/ErrorBoundary";
-import DialogsProvider from "../components/common/DialogsProvider";
+import ErrorBoundary from "../components/common/error-boundary";
+import DialogsProvider from "../components/common/dialogs-provider";
 
 export interface RouterContext {
   queryClient: QueryClient;

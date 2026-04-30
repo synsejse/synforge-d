@@ -8,7 +8,7 @@ import {
   faUserPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
-import { queryKeys } from "../../lib/query-keys";
+import { usersQueries } from "../../lib/queries";
 import type { UserResponse } from "../../lib/types";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import { useSession } from "../../components/common/SessionProvider";
@@ -32,10 +32,7 @@ function Users() {
   const { session } = useSession();
   const currentUserId = session?.user.id ?? null;
 
-  const usersQuery = useQuery({
-    queryKey: queryKeys.users.list(),
-    queryFn: () => api.listUsers(),
-  });
+  const usersQuery = useQuery(usersQueries.list());
 
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalState>(null);
@@ -46,7 +43,7 @@ function Users() {
   const lastFocusedRef = useRef<HTMLElement | null>(null);
 
   const invalidateUsers = () =>
-    queryClient.invalidateQueries({ queryKey: queryKeys.users.list() });
+    queryClient.invalidateQueries({ queryKey: usersQueries.list().queryKey });
 
   function openCreateModal() {
     lastFocusedRef.current =

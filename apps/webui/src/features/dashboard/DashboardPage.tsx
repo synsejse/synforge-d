@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import api from "../../lib/api";
-import { queryKeys } from "../../lib/query-keys";
+import { dashboardQueries } from "../../lib/queries";
 import { formatBytes } from "../../lib/bytes";
 import { formatDateTime } from "../../lib/datetime";
 import ErrorMessage from "../../components/common/ErrorMessage";
@@ -18,28 +17,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 function Dashboard() {
-  const { data, isPending, error } = useQuery({
-    queryKey: queryKeys.dashboard(),
-    queryFn: async () => {
-      const [packages, enabledPackages, recentJobs, activeJobs, repository] =
-        await Promise.all([
-          api.listPackagesPage(1, 0),
-          api.listPackagesPage(1, 0, { enabled: true }),
-          api.listCompletedJobs({ limit: 6, offset: 0 }),
-          api.listActiveJobs({ limit: 6, offset: 0 }),
-          api.getRepoSummary(),
-        ]);
-      return {
-        packageCount: packages.page.total ?? packages.packages.length,
-        enabledPackageCount:
-          enabledPackages.page.total ?? enabledPackages.packages.length,
-        activeJobCount: activeJobs.page.total ?? activeJobs.jobs.length,
-        jobs: recentJobs.jobs,
-        liveJobs: activeJobs.jobs,
-        repoSummary: repository,
-      };
-    },
-  });
+  const { data, isPending, error } = useQuery(dashboardQueries.overview());
 
   if (isPending) {
     return <LoadingBlock label="Loading overview…" lines={4} />;

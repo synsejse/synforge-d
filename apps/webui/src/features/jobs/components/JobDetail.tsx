@@ -2,7 +2,7 @@ import { Suspense, lazy } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../../lib/api";
 import { API_BASE } from "../../../lib/api/client";
-import { queryKeys } from "../../../lib/query-keys";
+import { jobsQueries } from "../../../lib/queries";
 import { formatDateTime } from "../../../lib/datetime";
 import type {
   BuildArtifact,
@@ -43,14 +43,7 @@ export default function JobDetail({ jobId }: Props) {
   const serverHardware = useServerHardware();
 
   const jobQuery = useQuery({
-    queryKey: queryKeys.jobs.detail(jobId),
-    queryFn: async () => {
-      const [job, artifacts] = await Promise.all([
-        api.getJob(jobId),
-        api.listJobArtifacts(jobId),
-      ]);
-      return { job, artifacts: artifacts.artifacts };
-    },
+    ...jobsQueries.detail(jobId),
     refetchInterval: (query) =>
       isLiveStatus(query.state.data?.job.job.status) ? POLL_INTERVAL_MS : false,
   });
@@ -58,18 +51,14 @@ export default function JobDetail({ jobId }: Props) {
   const isLive = isLiveStatus(jobQuery.data?.job.job.status);
 
   const usageQuery = useQuery({
-    queryKey: queryKeys.jobs.usage(jobId),
-    queryFn: () => api.getJobUsage(jobId),
+    ...jobsQueries.usage(jobId),
     enabled: isLive,
     refetchInterval: isLive ? USAGE_POLL_INTERVAL_MS : false,
   });
   const latestUsage = usageQuery.data?.sample ?? null;
 
   const invalidateJob = () =>
-    Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.detail(jobId) }),
-      queryClient.invalidateQueries({ queryKey: ["jobs"] }),
-    ]);
+    queryClient.invalidateQueries({ queryKey: ["jobs"] });
 
   const deleteMutation = useMutation({
     mutationFn: () => api.deleteJob(jobId),

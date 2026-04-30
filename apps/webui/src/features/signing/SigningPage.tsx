@@ -2,7 +2,7 @@ import { useRef, useState, type ChangeEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { faCheckCircle, faKey, faTrash } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
-import { queryKeys } from "../../lib/query-keys";
+import { signingQueries } from "../../lib/queries";
 import type {
   RepoSigningReconcileMode,
   RepoSigningReconcileProgressView,
@@ -57,23 +57,19 @@ function Signing() {
   const [reconcileMode, setReconcileMode] =
     useState<RepoSigningReconcileMode | null>(null);
 
-  const statusQuery = useQuery({
-    queryKey: queryKeys.signing.status(),
-    queryFn: () => api.getRepoSigningStatus(),
-  });
+  const statusQuery = useQuery(signingQueries.status());
   const status = statusQuery.data?.status;
   const enabled = status?.enabled ?? false;
   const keyActionsLocked = enabled;
 
   const progressQuery = useQuery({
-    queryKey: queryKeys.signing.reconcileProgress(),
-    queryFn: () => api.getRepoSigningReconcileProgress(),
+    ...signingQueries.reconcileProgress(),
     enabled: overlayOpen,
     refetchInterval: overlayOpen ? 500 : false,
   });
 
   const refreshStatus = () =>
-    queryClient.invalidateQueries({ queryKey: queryKeys.signing.status() });
+    queryClient.invalidateQueries({ queryKey: signingQueries.status().queryKey });
 
   const toggleMutation = useMutation({
     mutationFn: async (nextEnabled: boolean) => {

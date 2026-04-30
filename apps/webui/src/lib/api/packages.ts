@@ -15,155 +15,141 @@ import type {
   ServerHardwareResponse,
   UpdatePackageRequest,
 } from "../types";
-import { BaseApiClient } from "./client";
+import { request } from "./client";
 
-export class PackageApiClient extends BaseApiClient {
-  async listPackages(): Promise<PackageListResponse> {
-    return this.listPackagesPage(50, 0);
-  }
+export function listPackages(): Promise<PackageListResponse> {
+  return listPackagesPage(50, 0);
+}
 
-  async listPackagesPage(
-    limit = 50,
-    offset = 0,
-    options: { search?: string; enabled?: boolean | "all" } = {},
-  ): Promise<PackageListResponse> {
-    const params = new URLSearchParams({
-      limit: String(limit),
-      offset: String(offset),
-    });
-    if (options.search?.trim()) {
-      params.set("search", options.search.trim());
-    }
-    if (options.enabled !== undefined && options.enabled !== "all") {
-      params.set("enabled", String(options.enabled));
-    }
-    return this.request("GET", `/api/v1/packages?${params.toString()}`);
+export function listPackagesPage(
+  limit = 50,
+  offset = 0,
+  options: { search?: string; enabled?: boolean | "all" } = {},
+): Promise<PackageListResponse> {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+  if (options.search?.trim()) {
+    params.set("search", options.search.trim());
   }
+  if (options.enabled !== undefined && options.enabled !== "all") {
+    params.set("enabled", String(options.enabled));
+  }
+  return request("GET", `/api/v1/packages?${params.toString()}`);
+}
 
-  async getPackage(name: string): Promise<PackageResponse> {
-    return this.request("GET", `/api/v1/packages/${encodeURIComponent(name)}`);
-  }
+export function getPackage(name: string): Promise<PackageResponse> {
+  return request("GET", `/api/v1/packages/${encodeURIComponent(name)}`);
+}
 
-  async createPackage(req: CreatePackageRequest): Promise<PackageResponse> {
-    return this.request("POST", "/api/v1/packages", req);
-  }
+export function createPackage(req: CreatePackageRequest): Promise<PackageResponse> {
+  return request("POST", "/api/v1/packages", req);
+}
 
-  async browseRepository(
-    req: BrowseRepositoryRequest,
-  ): Promise<BrowseRepositoryResponse> {
-    return this.request("POST", "/api/v1/repositories/browse", req);
-  }
+export function browseRepository(
+  req: BrowseRepositoryRequest,
+): Promise<BrowseRepositoryResponse> {
+  return request("POST", "/api/v1/repositories/browse", req);
+}
 
-  async listMockChroots(): Promise<MockChrootListResponse> {
-    return this.request("GET", "/api/v1/mock/chroots");
-  }
+export function listMockChroots(): Promise<MockChrootListResponse> {
+  return request("GET", "/api/v1/mock/chroots");
+}
 
-  async updatePackage(
-    name: string,
-    req: UpdatePackageRequest,
-  ): Promise<PackageResponse> {
-    return this.request(
-      "PUT",
-      `/api/v1/packages/${encodeURIComponent(name)}`,
-      req,
-    );
-  }
+export function updatePackage(
+  name: string,
+  req: UpdatePackageRequest,
+): Promise<PackageResponse> {
+  return request("PUT", `/api/v1/packages/${encodeURIComponent(name)}`, req);
+}
 
-  async deletePackage(name: string): Promise<void> {
-    return this.request("DELETE", `/api/v1/packages/${encodeURIComponent(name)}`);
-  }
+export function deletePackage(name: string): Promise<void> {
+  return request("DELETE", `/api/v1/packages/${encodeURIComponent(name)}`);
+}
 
-  async getPackageBuilds(
-    name: string,
-    limit = 12,
-    offset = 0,
-  ): Promise<PackageBuildHistoryResponse> {
-    const params = new URLSearchParams({
-      limit: String(limit),
-      offset: String(offset),
-    });
-    return this.request(
-      "GET",
-      `/api/v1/packages/${encodeURIComponent(name)}/builds?${params.toString()}`,
-    );
-  }
+export function getPackageBuilds(
+  name: string,
+  limit = 12,
+  offset = 0,
+): Promise<PackageBuildHistoryResponse> {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+  return request(
+    "GET",
+    `/api/v1/packages/${encodeURIComponent(name)}/builds?${params.toString()}`,
+  );
+}
 
-  async getRepoInventory(
-    limit = 50,
-    offset = 0,
-    options: {
-      packageName?: string;
-      mockChroot?: string;
-      kind?: "rpm" | "srpm" | "log" | "other" | "all";
-    } = {},
-  ): Promise<RepoInventoryResponse> {
-    const params = new URLSearchParams({
-      limit: String(limit),
-      offset: String(offset),
-    });
-    if (options.packageName?.trim()) {
-      params.set("package_name", options.packageName.trim());
-    }
-    if (options.mockChroot?.trim()) {
-      params.set("mock_chroot", options.mockChroot.trim());
-    }
-    if (options.kind && options.kind !== "all") {
-      params.set("kind", options.kind);
-    }
-    return this.request("GET", `/api/v1/repo/files?${params.toString()}`);
+export function getRepoInventory(
+  limit = 50,
+  offset = 0,
+  options: {
+    packageName?: string;
+    mockChroot?: string;
+    kind?: "rpm" | "srpm" | "log" | "other" | "all";
+  } = {},
+): Promise<RepoInventoryResponse> {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+  if (options.packageName?.trim()) {
+    params.set("package_name", options.packageName.trim());
   }
+  if (options.mockChroot?.trim()) {
+    params.set("mock_chroot", options.mockChroot.trim());
+  }
+  if (options.kind && options.kind !== "all") {
+    params.set("kind", options.kind);
+  }
+  return request("GET", `/api/v1/repo/files?${params.toString()}`);
+}
 
-  async getRepoSummary(): Promise<RepoSummaryResponse> {
-    return this.request("GET", "/api/v1/repo/summary");
-  }
+export function getRepoSummary(): Promise<RepoSummaryResponse> {
+  return request("GET", "/api/v1/repo/summary");
+}
 
-  async getServerHardware(): Promise<ServerHardwareResponse> {
-    return this.request("GET", "/api/v1/system/hardware");
-  }
+export function getServerHardware(): Promise<ServerHardwareResponse> {
+  return request("GET", "/api/v1/system/hardware");
+}
 
-  async rebuildPackage(name: string): Promise<PackageActionResponse> {
-    return this.request(
-      "POST",
-      `/api/v1/packages/${encodeURIComponent(name)}/rebuild`,
-      {},
-    );
-  }
+export function rebuildPackage(name: string): Promise<PackageActionResponse> {
+  return request("POST", `/api/v1/packages/${encodeURIComponent(name)}/rebuild`, {});
+}
 
-  async refreshPackage(name: string): Promise<PackageActionResponse> {
-    return this.request(
-      "POST",
-      `/api/v1/packages/${encodeURIComponent(name)}/refresh`,
-      {},
-    );
-  }
+export function refreshPackage(name: string): Promise<PackageActionResponse> {
+  return request("POST", `/api/v1/packages/${encodeURIComponent(name)}/refresh`, {});
+}
 
-  async refreshAllPackages(): Promise<RefreshAllPackagesResponse> {
-    return this.request("POST", "/api/v1/packages/refresh-all", {});
-  }
+export function refreshAllPackages(): Promise<RefreshAllPackagesResponse> {
+  return request("POST", "/api/v1/packages/refresh-all", {});
+}
 
-  async getRefreshAllPackagesProgress(): Promise<RefreshAllPackagesProgressResponse> {
-    return this.request("GET", "/api/v1/packages/refresh-all/progress");
-  }
+export function getRefreshAllPackagesProgress(): Promise<RefreshAllPackagesProgressResponse> {
+  return request("GET", "/api/v1/packages/refresh-all/progress");
+}
 
-  async rebuildPackageTarget(
-    name: string,
-    mockChroot: string,
-  ): Promise<PackageActionTargetResult> {
-    return this.request(
-      "POST",
-      `/api/v1/packages/${encodeURIComponent(name)}/targets/${encodeURIComponent(mockChroot)}/rebuild`,
-      {},
-    );
-  }
+export function rebuildPackageTarget(
+  name: string,
+  mockChroot: string,
+): Promise<PackageActionTargetResult> {
+  return request(
+    "POST",
+    `/api/v1/packages/${encodeURIComponent(name)}/targets/${encodeURIComponent(mockChroot)}/rebuild`,
+    {},
+  );
+}
 
-  async refreshPackageTarget(
-    name: string,
-    mockChroot: string,
-  ): Promise<PackageActionTargetResult> {
-    return this.request(
-      "POST",
-      `/api/v1/packages/${encodeURIComponent(name)}/targets/${encodeURIComponent(mockChroot)}/refresh`,
-      {},
-    );
-  }
+export function refreshPackageTarget(
+  name: string,
+  mockChroot: string,
+): Promise<PackageActionTargetResult> {
+  return request(
+    "POST",
+    `/api/v1/packages/${encodeURIComponent(name)}/targets/${encodeURIComponent(mockChroot)}/refresh`,
+    {},
+  );
 }

@@ -1,6 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import AppShell from "../components/common/AppShell";
-import ServerHardwareProvider from "../components/common/ServerHardwareProvider";
 import { sessionQueries } from "../lib/queries/session";
 import { ApiClientError } from "../lib/api";
 
@@ -32,10 +31,8 @@ export const Route = createFileRoute("/_authed")({
 
 function AuthedLayout() {
   return (
-    <ServerHardwareProvider>
-      <AppShell>
-        <Outlet />
-      </AppShell>
-    </ServerHardwareProvider>
+    <AppShell>
+      <Outlet />
+    </AppShell>
   );
 }

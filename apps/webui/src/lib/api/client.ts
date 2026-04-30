@@ -14,59 +14,61 @@ export class ApiClientError extends Error {
   }
 }
 
-function shouldTriggerAuthRequired(path: string): boolean {
-  return path === "/api/v1/session";
+function jsonHeaders(): HeadersInit {
+  return { "Content-Type": "application/json" };
 }
 
-export class BaseApiClient {
-  protected authHeaders(contentType = true): Record<string, string> {
-    const headers: Record<string, string> = {};
-    if (contentType) {
-      headers["Content-Type"] = "application/json";
+function emitAuthRequired(path: string, error: ApiError) {
+  if (typeof window === "undefined") return;
+  if (path !== "/api/v1/session") return;
+  window.dispatchEvent(
+    new CustomEvent("synforge:auth-required", { detail: { path, error } }),
+  );
+}
+
+export async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: jsonHeaders(),
+    credentials: "include",
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  if (!res.ok) {
+    const error: ApiError = await res.json().catch(() => ({
+      code: "internal_error",
+      message: res.statusText,
+    }));
+    if (res.status === 401) {
+      emitAuthRequired(path, error);
     }
-    return headers;
+    throw new ApiClientError(res.status, error);
   }
 
-  protected async request<T>(
-    method: string,
-    path: string,
-    body?: unknown,
-  ): Promise<T> {
-    const headers = this.authHeaders();
-
-    const res = await fetch(`${API_BASE}${path}`, {
-      method,
-      headers,
-      credentials: "include",
-      body: body ? JSON.stringify(body) : undefined,
-    });
-
-    if (!res.ok) {
-      const error: ApiError = await res.json().catch(() => ({
-        code: "internal_error",
-        message: res.statusText,
-      }));
-      if (
-        res.status === 401 &&
-        typeof window !== "undefined" &&
-        shouldTriggerAuthRequired(path)
-      ) {
-        window.dispatchEvent(
-          new CustomEvent("synforge:auth-required", {
-            detail: {
-              path,
-              error,
-            },
-          }),
-        );
-      }
-      throw new ApiClientError(res.status, error);
-    }
-
-    if (res.status === 204) {
-      return undefined as T;
-    }
-
-    return res.json();
+  if (res.status === 204) {
+    return undefined as T;
   }
+
+  return res.json();
+}
+
+export async function downloadStream(path: string): Promise<Response> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error: ApiError = await res.json().catch(() => ({
+      code: "internal_error",
+      message: res.statusText,
+    }));
+    throw new ApiClientError(res.status, error);
+  }
+
+  return res;
 }

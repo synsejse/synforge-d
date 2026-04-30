@@ -1,5 +1,4 @@
 import type {
-  ApiError,
   BuildArtifact,
   BuildJobListResponse,
   BuildJobResponse,
@@ -12,8 +11,7 @@ import type {
   LogMetaResponse,
   PruneJobsResponse,
 } from "../types";
-import { API_BASE, ApiClientError } from "./client";
-import { PackageApiClient } from "./packages";
+import { downloadStream, request } from "./client";
 
 interface GetJobLogChunkOptions {
   cursor?: number;
@@ -30,193 +28,156 @@ interface ListJobsOptions {
   mockChroot?: string;
 }
 
-export class JobApiClient extends PackageApiClient {
-  private async listJobsByScope(
-    scope: "active" | "completed",
-    options: ListJobsOptions = {},
-  ): Promise<BuildJobListResponse> {
-    const params = new URLSearchParams();
-    params.set("scope", scope);
-    if (options.limit !== undefined) {
-      params.set("limit", String(options.limit));
-    }
-    if (options.offset !== undefined) {
-      params.set("offset", String(options.offset));
-    }
-    if (options.status && options.status !== "all") {
-      params.set("status", options.status);
-    }
-    if (options.packageName?.trim()) {
-      params.set("package_name", options.packageName.trim());
-    }
-    if (options.mockChroot?.trim()) {
-      params.set("mock_chroot", options.mockChroot.trim());
-    }
-    return this.request("GET", `/api/v1/jobs?${params.toString()}`);
+function listJobsByScope(
+  scope: "active" | "completed",
+  options: ListJobsOptions = {},
+): Promise<BuildJobListResponse> {
+  const params = new URLSearchParams();
+  params.set("scope", scope);
+  if (options.limit !== undefined) params.set("limit", String(options.limit));
+  if (options.offset !== undefined) params.set("offset", String(options.offset));
+  if (options.status && options.status !== "all") {
+    params.set("status", options.status);
   }
-
-  async listCompletedJobs(
-    options: ListJobsOptions = {},
-  ): Promise<BuildJobListResponse> {
-    return this.listJobsByScope("completed", options);
+  if (options.packageName?.trim()) {
+    params.set("package_name", options.packageName.trim());
   }
-
-  async listActiveJobs(
-    options: Omit<ListJobsOptions, "status"> = {},
-  ): Promise<BuildJobListResponse> {
-    return this.listJobsByScope("active", options);
+  if (options.mockChroot?.trim()) {
+    params.set("mock_chroot", options.mockChroot.trim());
   }
+  return request("GET", `/api/v1/jobs?${params.toString()}`);
+}
 
-  async getJob(id: string): Promise<BuildJobResponse> {
-    return this.request("GET", `/api/v1/jobs/${encodeURIComponent(id)}`);
-  }
+export function listCompletedJobs(
+  options: ListJobsOptions = {},
+): Promise<BuildJobListResponse> {
+  return listJobsByScope("completed", options);
+}
 
-  async listJobUsage(): Promise<JobResourceUsageListResponse> {
-    return this.request("GET", "/api/v1/jobs/usage");
-  }
+export function listActiveJobs(
+  options: Omit<ListJobsOptions, "status"> = {},
+): Promise<BuildJobListResponse> {
+  return listJobsByScope("active", options);
+}
 
-  async getJobUsage(id: string): Promise<JobResourceUsageResponse> {
-    return this.request("GET", `/api/v1/jobs/${encodeURIComponent(id)}/usage`);
-  }
+export function getJob(id: string): Promise<BuildJobResponse> {
+  return request("GET", `/api/v1/jobs/${encodeURIComponent(id)}`);
+}
 
-  async listJobArtifacts(id: string): Promise<JobArtifactListResponse> {
-    return this.request("GET", `/api/v1/jobs/${encodeURIComponent(id)}/artifacts`);
-  }
+export function listJobUsage(): Promise<JobResourceUsageListResponse> {
+  return request("GET", "/api/v1/jobs/usage");
+}
 
-  async getJobArtifactMeta(
-    id: string,
-    file: string,
-  ): Promise<JobArtifactMetaResponse> {
-    return this.request(
-      "GET",
-      `/api/v1/jobs/${encodeURIComponent(id)}/artifacts/${file
-        .split("/")
-        .map(encodeURIComponent)
-        .join("/")}/meta`,
-    );
-  }
+export function getJobUsage(id: string): Promise<JobResourceUsageResponse> {
+  return request("GET", `/api/v1/jobs/${encodeURIComponent(id)}/usage`);
+}
 
-  async getJobLogManifest(id: string): Promise<LogManifestResponse> {
-    return this.request("GET", `/api/v1/jobs/${encodeURIComponent(id)}/logs`);
-  }
+export function listJobArtifacts(id: string): Promise<JobArtifactListResponse> {
+  return request("GET", `/api/v1/jobs/${encodeURIComponent(id)}/artifacts`);
+}
 
-  async getJobLogMeta(id: string, source: string): Promise<LogMetaResponse> {
-    return this.request(
-      "GET",
-      `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(source)}/meta`,
-    );
-  }
-
-  async getJobLogChunk(
-    id: string,
-    options: GetJobLogChunkOptions,
-  ): Promise<LogChunkResponse> {
-    const params = new URLSearchParams({
-      limit: String(options.limit ?? 65536),
-    });
-    if (options.cursor !== undefined) {
-      params.set("cursor", String(options.cursor));
-    }
-    if (options.offset !== undefined) {
-      params.set("offset", String(options.offset));
-    }
-    return this.request(
-      "GET",
-      `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(options.source)}/chunks?${params.toString()}`,
-    );
-  }
-
-  async downloadJobLog(id: string, source: string): Promise<void> {
-    const path = `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(source)}/chunks`;
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: "GET",
-      headers: this.authHeaders(false),
-      credentials: "include",
-    });
-
-    if (!res.ok) {
-      const error: ApiError = await res.json().catch(() => ({
-        code: "internal_error",
-        message: res.statusText,
-      }));
-      throw new ApiClientError(res.status, error);
-    }
-
-    let fullLog = "";
-    let cursor = 0;
-    let complete = false;
-
-    while (!complete) {
-      const chunk = await this.getJobLogChunk(id, {
-        cursor,
-        limit: 1024 * 1024,
-        source,
-      });
-      fullLog += chunk.contents;
-      cursor = chunk.cursor;
-      complete = chunk.complete;
-    }
-
-    const blob = new Blob([fullLog], { type: "text/plain;charset=utf-8" });
-    const objectUrl = window.URL.createObjectURL(blob);
-    const fileName = source;
-    const anchor = document.createElement("a");
-    anchor.href = objectUrl;
-    anchor.download = fileName;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    window.URL.revokeObjectURL(objectUrl);
-  }
-
-  async deleteJob(id: string): Promise<BuildJobResponse> {
-    return this.request("DELETE", `/api/v1/jobs/${encodeURIComponent(id)}`);
-  }
-
-  async killJob(id: string): Promise<BuildJobResponse> {
-    return this.request("POST", `/api/v1/jobs/${encodeURIComponent(id)}/kill`, {});
-  }
-
-  async retryJob(id: string): Promise<BuildJobResponse> {
-    return this.request("POST", `/api/v1/jobs/${encodeURIComponent(id)}/retry`, {});
-  }
-
-  async pruneFailedJobs(): Promise<PruneJobsResponse> {
-    return this.request("POST", "/api/v1/jobs/prune-failed", {});
-  }
-
-  async downloadJobArtifact(id: string, artifact: BuildArtifact): Promise<void> {
-    const path = `/api/v1/jobs/${encodeURIComponent(id)}/artifacts/${artifact.file
+export function getJobArtifactMeta(
+  id: string,
+  file: string,
+): Promise<JobArtifactMetaResponse> {
+  return request(
+    "GET",
+    `/api/v1/jobs/${encodeURIComponent(id)}/artifacts/${file
       .split("/")
-      .map((segment) => encodeURIComponent(segment))
-      .join("/")}/content`;
+      .map(encodeURIComponent)
+      .join("/")}/meta`,
+  );
+}
 
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: "GET",
-      headers: this.authHeaders(false),
-      credentials: "include",
+export function getJobLogManifest(id: string): Promise<LogManifestResponse> {
+  return request("GET", `/api/v1/jobs/${encodeURIComponent(id)}/logs`);
+}
+
+export function getJobLogMeta(id: string, source: string): Promise<LogMetaResponse> {
+  return request(
+    "GET",
+    `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(source)}/meta`,
+  );
+}
+
+export function getJobLogChunk(
+  id: string,
+  options: GetJobLogChunkOptions,
+): Promise<LogChunkResponse> {
+  const params = new URLSearchParams({
+    limit: String(options.limit ?? 65536),
+  });
+  if (options.cursor !== undefined) params.set("cursor", String(options.cursor));
+  if (options.offset !== undefined) params.set("offset", String(options.offset));
+  return request(
+    "GET",
+    `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(options.source)}/chunks?${params.toString()}`,
+  );
+}
+
+export async function downloadJobLog(id: string, source: string): Promise<void> {
+  const path = `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(source)}/chunks`;
+  await downloadStream(path);
+
+  let fullLog = "";
+  let cursor = 0;
+  let complete = false;
+
+  while (!complete) {
+    const chunk = await getJobLogChunk(id, {
+      cursor,
+      limit: 1024 * 1024,
+      source,
     });
-
-    if (!res.ok) {
-      const error: ApiError = await res.json().catch(() => ({
-        code: "internal_error",
-        message: res.statusText,
-      }));
-      throw new ApiClientError(res.status, error);
-    }
-
-    const blob = await res.blob();
-    const objectUrl = window.URL.createObjectURL(blob);
-    const disposition = res.headers.get("content-disposition") || "";
-    const match = disposition.match(/filename="([^"]+)"/i);
-    const fallbackName = artifact.file.split("/").at(-1) || "artifact.bin";
-    const fileName = match?.[1] || fallbackName;
-    const anchor = document.createElement("a");
-    anchor.href = objectUrl;
-    anchor.download = fileName;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    window.URL.revokeObjectURL(objectUrl);
+    fullLog += chunk.contents;
+    cursor = chunk.cursor;
+    complete = chunk.complete;
   }
+
+  const blob = new Blob([fullLog], { type: "text/plain;charset=utf-8" });
+  triggerDownload(blob, source);
+}
+
+export function deleteJob(id: string): Promise<BuildJobResponse> {
+  return request("DELETE", `/api/v1/jobs/${encodeURIComponent(id)}`);
+}
+
+export function killJob(id: string): Promise<BuildJobResponse> {
+  return request("POST", `/api/v1/jobs/${encodeURIComponent(id)}/kill`, {});
+}
+
+export function retryJob(id: string): Promise<BuildJobResponse> {
+  return request("POST", `/api/v1/jobs/${encodeURIComponent(id)}/retry`, {});
+}
+
+export function pruneFailedJobs(): Promise<PruneJobsResponse> {
+  return request("POST", "/api/v1/jobs/prune-failed", {});
+}
+
+export async function downloadJobArtifact(
+  id: string,
+  artifact: BuildArtifact,
+): Promise<void> {
+  const path = `/api/v1/jobs/${encodeURIComponent(id)}/artifacts/${artifact.file
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/")}/content`;
+
+  const res = await downloadStream(path);
+  const blob = await res.blob();
+  const disposition = res.headers.get("content-disposition") || "";
+  const match = disposition.match(/filename="([^"]+)"/i);
+  const fallbackName = artifact.file.split("/").at(-1) || "artifact.bin";
+  triggerDownload(blob, match?.[1] || fallbackName);
+}
+
+function triggerDownload(blob: Blob, filename: string): void {
+  const objectUrl = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(objectUrl);
 }

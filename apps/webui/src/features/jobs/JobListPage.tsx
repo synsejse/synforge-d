@@ -6,7 +6,7 @@ import {
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
-import { queryKeys } from "../../lib/query-keys";
+import { jobsQueries } from "../../lib/queries";
 import type { BuildJobResponse } from "../../lib/types";
 import {
   HISTORY_BUILD_STATUS_LABELS,
@@ -90,43 +90,19 @@ function JobList() {
     syncUrl(filters);
   }, [filters]);
 
-  const jobsQuery = useQuery({
-    queryKey:
-      filters.mode === "active"
-        ? queryKeys.jobs.active({
-            limit: PAGE_SIZE,
-            offset: filters.offset,
-            packageName: filters.packageFilter,
-            mockChroot: filters.targetFilter,
-          })
-        : queryKeys.jobs.completed({
-            limit: PAGE_SIZE,
-            offset: filters.offset,
-            status: filters.filter,
-            packageName: filters.packageFilter,
-            mockChroot: filters.targetFilter,
-          }),
-    queryFn: () =>
-      filters.mode === "active"
-        ? api.listActiveJobs({
-            limit: PAGE_SIZE,
-            offset: filters.offset,
-            packageName: filters.packageFilter,
-            mockChroot: filters.targetFilter,
-          })
-        : api.listCompletedJobs({
-            limit: PAGE_SIZE,
-            offset: filters.offset,
-            status: filters.filter,
-            packageName: filters.packageFilter,
-            mockChroot: filters.targetFilter,
-          }),
-    placeholderData: (previous) => previous,
-  });
+  const jobsQuery = useQuery(
+    jobsQueries.list({
+      scope: filters.mode === "active" ? "active" : "completed",
+      limit: PAGE_SIZE,
+      offset: filters.offset,
+      status: filters.mode === "active" ? undefined : filters.filter,
+      packageName: filters.packageFilter,
+      mockChroot: filters.targetFilter,
+    }),
+  );
 
   const usageQuery = useQuery({
-    queryKey: queryKeys.jobs.usageList(),
-    queryFn: () => api.listJobUsage(),
+    ...jobsQueries.usageList(),
     enabled: filters.mode === "active",
     refetchInterval: filters.mode === "active" ? USAGE_POLL_INTERVAL_MS : false,
   });

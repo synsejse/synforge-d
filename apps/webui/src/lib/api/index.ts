@@ -1,9 +1,17 @@
-import { ApiClientError } from "./client";
-import { SyncApiClient } from "./sync";
+import * as configApi from "./config";
+import * as jobsApi from "./jobs";
+import * as packagesApi from "./packages";
+import * as syncApi from "./sync";
+import * as usersApi from "./users";
 
-export class ApiClient extends SyncApiClient {}
+export { ApiClientError, API_BASE } from "./client";
 
-export { ApiClientError };
+export const api = {
+  ...configApi,
+  ...jobsApi,
+  ...packagesApi,
+  ...syncApi,
+  ...usersApi,
+};
 
-export const api = new ApiClient();
 export default api;

@@ -1,2 +1,2 @@
-export { ApiClient, ApiClientError, api } from "./api/index";
-export { default } from "./api/index";
+export { ApiClientError, API_BASE, default } from "./api/index";
+export { api } from "./api/index";

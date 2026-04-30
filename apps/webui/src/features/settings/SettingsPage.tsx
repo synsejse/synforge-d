@@ -2,7 +2,7 @@ import { useEffect, useState, type SyntheticEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { faSave, faServer } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
-import { queryKeys } from "../../lib/query-keys";
+import { configQueries } from "../../lib/queries";
 import type { ConfigFieldDescriptor, DaemonConfig } from "../../lib/types";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
@@ -11,14 +11,8 @@ import Button from "../../components/ui/Button";
 import PageHeader from "../../components/ui/PageHeader";
 
 function Settings() {
-  const configQuery = useQuery({
-    queryKey: queryKeys.config.effective(),
-    queryFn: () => api.getConfig(),
-  });
-  const schemaQuery = useQuery({
-    queryKey: queryKeys.config.schema(),
-    queryFn: () => api.getConfigSchema(),
-  });
+  const configQuery = useQuery(configQueries.effective());
+  const schemaQuery = useQuery(configQueries.schema());
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [valuesInitialized, setValuesInitialized] = useState(false);

@@ -10,8 +10,7 @@ import {
   faRocket,
   faTriangleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
-import api from "../../lib/api";
-import { queryKeys } from "../../lib/query-keys";
+import { statisticsQueries } from "../../lib/queries";
 import { formatDateTime } from "../../lib/datetime";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
@@ -35,27 +34,7 @@ function formatSeconds(value: number | null | undefined): string {
 }
 
 function Statistics() {
-  const { data, isPending, error } = useQuery({
-    queryKey: queryKeys.statistics.overview(),
-    queryFn: async () => {
-      const [cache, sync, repo, packages, enabled, active] = await Promise.all([
-        api.getCacheStats(),
-        api.getSyncMetrics(),
-        api.getRepoSummary(),
-        api.listPackagesPage(1, 0),
-        api.listPackagesPage(1, 0, { enabled: true }),
-        api.listActiveJobs({ limit: 1, offset: 0 }),
-      ]);
-      return {
-        cacheStats: cache,
-        syncMetrics: sync,
-        repoSummary: repo,
-        packageCount: packages.page.total ?? packages.packages.length,
-        enabledPackageCount: enabled.page.total ?? enabled.packages.length,
-        activeJobCount: active.page.total ?? active.jobs.length,
-      };
-    },
-  });
+  const { data, isPending, error } = useQuery(statisticsQueries.overview());
 
   if (isPending) {
     return <LoadingBlock label="Loading statistics…" lines={4} />;

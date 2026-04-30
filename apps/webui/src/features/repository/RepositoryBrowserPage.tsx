@@ -6,8 +6,7 @@ import {
   faHardDrive,
   faHammer,
 } from "@fortawesome/free-solid-svg-icons";
-import api from "../../lib/api";
-import { queryKeys } from "../../lib/query-keys";
+import { repositoryQueries } from "../../lib/queries";
 import { formatBytes } from "../../lib/bytes";
 import type { PublishedRepoFile } from "../../lib/types";
 import ErrorMessage from "../../components/common/ErrorMessage";
@@ -80,27 +79,17 @@ function RepositoryBrowser() {
     syncUrl(filters);
   }, [filters]);
 
-  const summaryQuery = useQuery({
-    queryKey: queryKeys.repository.summary(),
-    queryFn: () => api.getRepoSummary(),
-  });
+  const summaryQuery = useQuery(repositoryQueries.summary());
 
-  const inventoryQuery = useQuery({
-    queryKey: queryKeys.repository.inventory({
+  const inventoryQuery = useQuery(
+    repositoryQueries.inventory({
       limit: PAGE_SIZE,
       offset: filters.offset,
       packageName: filters.packageFilter,
       mockChroot: filters.targetFilter,
       kind: filters.kindFilter,
     }),
-    queryFn: () =>
-      api.getRepoInventory(PAGE_SIZE, filters.offset, {
-        packageName: filters.packageFilter,
-        mockChroot: filters.targetFilter,
-        kind: filters.kindFilter,
-      }),
-    placeholderData: (previous) => previous,
-  });
+  );
 
   function handleApply(event: SyntheticEvent) {
     event.preventDefault();

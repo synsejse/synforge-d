@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type SyntheticEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../../lib/api";
-import { queryKeys } from "../../../lib/query-keys";
+import { packagesQueries } from "../../../lib/queries";
 import {
   summarizePackageAction,
   summarizePackageTargetAction,
@@ -141,40 +141,25 @@ export default function PackageDetail({ packageName }: Props) {
   const { confirm, notify } = useDialogs();
   const serverHardware = useServerHardware();
 
-  const packageQuery = useQuery({
-    queryKey: queryKeys.packages.detail(packageName),
-    queryFn: () => api.getPackage(packageName),
-  });
-
-  const chrootsQuery = useQuery({
-    queryKey: queryKeys.packages.mockChroots(),
-    queryFn: () => api.listMockChroots(),
-  });
+  const packageQuery = useQuery(packagesQueries.detail(packageName));
+  const chrootsQuery = useQuery(packagesQueries.mockChroots());
 
   const [buildsOffset, setBuildsOffset] = useState(0);
   const [repoFilesOffset, setRepoFilesOffset] = useState(0);
 
-  const buildsQuery = useQuery({
-    queryKey: queryKeys.packages.builds(packageName, {
+  const buildsQuery = useQuery(
+    packagesQueries.builds(packageName, {
       limit: BUILD_HISTORY_PAGE_SIZE,
       offset: buildsOffset,
     }),
-    queryFn: () =>
-      api.getPackageBuilds(packageName, BUILD_HISTORY_PAGE_SIZE, buildsOffset),
-    placeholderData: (previous) => previous,
-  });
+  );
 
-  const repoFilesQuery = useQuery({
-    queryKey: queryKeys.packages.repoFiles(packageName, {
+  const repoFilesQuery = useQuery(
+    packagesQueries.repoFiles(packageName, {
       limit: REPO_FILES_PAGE_SIZE,
       offset: repoFilesOffset,
     }),
-    queryFn: () =>
-      api.getRepoInventory(REPO_FILES_PAGE_SIZE, repoFilesOffset, {
-        packageName,
-      }),
-    placeholderData: (previous) => previous,
-  });
+  );
 
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<PackageEditFormState>(EMPTY_FORM);
@@ -206,13 +191,7 @@ export default function PackageDetail({ packageName }: Props) {
   const maxMemoryMb = serverHardware?.total_memory_mb ?? null;
 
   const invalidatePackage = () =>
-    Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.packages.detail(packageName) }),
-      queryClient.invalidateQueries({ queryKey: ["packages", "builds", packageName] }),
-      queryClient.invalidateQueries({
-        queryKey: ["packages", "repo-files", packageName],
-      }),
-    ]);
+    queryClient.invalidateQueries({ queryKey: ["packages"] });
 
   const saveMutation = useMutation({
     mutationFn: () => {

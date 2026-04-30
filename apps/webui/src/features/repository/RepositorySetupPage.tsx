@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { faCopy, faFolderTree } from "@fortawesome/free-solid-svg-icons";
-import api from "../../lib/api";
-import { queryKeys } from "../../lib/query-keys";
+import { repositoryQueries } from "../../lib/queries";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import { useSession } from "../../components/common/SessionProvider";
 import LoadingBlock from "../../components/ui/LoadingBlock";
@@ -16,19 +15,7 @@ function RepositorySetup() {
   const { session } = useSession();
   const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
 
-  const setupQuery = useQuery({
-    queryKey: queryKeys.repository.setup(),
-    queryFn: async () => {
-      const [config, signing] = await Promise.all([
-        api.getConfig(),
-        api.getRepoSigningStatus(),
-      ]);
-      return {
-        publicBaseUrl: normalizeBaseUrl(config.config.public_base_url),
-        signingEnabled: signing.status.enabled,
-      };
-    },
-  });
+  const setupQuery = useQuery(repositoryQueries.setup());
 
   const repoHandle = session?.user.handle ?? "";
 
@@ -231,10 +218,6 @@ password=<password>
 enabled=1
 ${signingLines}
 metadata_expire=30s`;
-}
-
-function normalizeBaseUrl(baseUrl: string) {
-  return baseUrl.replace(/\/+$/, "");
 }
 
 export default function RepositorySetupPage() {

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import api from "../../../lib/api";
-import { queryKeys } from "../../../lib/query-keys";
+import { syncQueries } from "../../../lib/queries";
 import { formatDateTime } from "../../../lib/datetime";
 import type { SyncOperation, SyncStatus } from "../../../lib/types";
 import ErrorMessage from "../../../components/common/ErrorMessage";
@@ -33,20 +32,13 @@ export default function SyncHistoryTable({ packageName }: SyncHistoryTableProps)
   const [offset, setOffset] = useState(0);
   const [status, setStatus] = useState<StatusFilter>("all");
 
-  const operationsQuery = useQuery({
-    queryKey: queryKeys.sync.operations(packageName, {
+  const operationsQuery = useQuery(
+    syncQueries.operations(packageName, {
       limit: PAGE_SIZE,
       offset,
       status: status === "all" ? undefined : status,
     }),
-    queryFn: () =>
-      api.listPackageSyncOperations(packageName, {
-        limit: PAGE_SIZE,
-        offset,
-        status: status === "all" ? undefined : status,
-      }),
-    placeholderData: (previous) => previous,
-  });
+  );
 
   if (operationsQuery.isPending) {
     return <LoadingBlock label="Loading sync history…" lines={4} />;

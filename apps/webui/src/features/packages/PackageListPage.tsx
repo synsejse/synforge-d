@@ -5,7 +5,7 @@ import {
   faRotate,
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
-import { queryKeys } from "../../lib/query-keys";
+import { packagesQueries } from "../../lib/queries";
 import { summarizePackageAction } from "../../lib/package-actions";
 import type { RefreshAllPackagesProgressView } from "../../lib/types";
 import AddPackageModal from "./components/AddPackageModal";
@@ -87,20 +87,14 @@ function PackageList() {
     syncUrl(offset, search, enabledFilter);
   }, [offset, search, enabledFilter]);
 
-  const listQuery = useQuery({
-    queryKey: queryKeys.packages.list({
+  const listQuery = useQuery(
+    packagesQueries.list({
       limit: PAGE_SIZE,
       offset,
       search,
       enabled: enabledFilter === "all" ? "all" : enabledFilter === "true",
     }),
-    queryFn: () =>
-      api.listPackagesPage(PAGE_SIZE, offset, {
-        search,
-        enabled: enabledFilter === "all" ? "all" : enabledFilter === "true",
-      }),
-    placeholderData: (previous) => previous,
-  });
+  );
 
   const invalidatePackages = () =>
     queryClient.invalidateQueries({ queryKey: ["packages"] });
@@ -143,8 +137,7 @@ function PackageList() {
   });
 
   const progressQuery = useQuery({
-    queryKey: queryKeys.packages.refreshAllProgress(),
-    queryFn: () => api.getRefreshAllPackagesProgress(),
+    ...packagesQueries.refreshAllProgress(),
     enabled: refreshOverlayOpen,
     refetchInterval: refreshOverlayOpen ? 500 : false,
   });

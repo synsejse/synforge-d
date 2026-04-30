@@ -19,18 +19,10 @@ export const Route = createFileRoute("/_authed/repository/")({
     offset:
       typeof search.offset === "number" ? search.offset : Number(search.offset ?? 0) || 0,
     packageFilter:
-      typeof search.packageFilter === "string"
-        ? search.packageFilter
-        : typeof search.package === "string"
-          ? search.package
-          : "",
+      typeof search.packageFilter === "string" ? search.packageFilter : "",
     targetFilter:
-      typeof search.targetFilter === "string"
-        ? search.targetFilter
-        : typeof search.target === "string"
-          ? search.target
-          : "",
-    kindFilter: readKind(search.kindFilter ?? search.kind),
+      typeof search.targetFilter === "string" ? search.targetFilter : "",
+    kindFilter: readKind(search.kindFilter),
   }),
   component: RepositoryBrowserPage,
 });

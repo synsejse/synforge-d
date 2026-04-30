@@ -239,6 +239,10 @@ impl DaemonConfig {
         self.worker_runtime_root().join("cache").join("ccache")
     }
 
+    pub fn worker_mock_cache_root(&self) -> PathBuf {
+        self.worker_runtime_root().join("cache").join("mock")
+    }
+
     pub fn worker_runtime_host_path(&self) -> Option<PathBuf> {
         std::env::var(WORKER_JOBS_HOST_PATH_ENV_VAR)
             .ok()
@@ -254,5 +258,10 @@ impl DaemonConfig {
     pub fn worker_ccache_host_path(&self) -> Option<PathBuf> {
         self.worker_runtime_host_path()
             .map(|root| root.join("cache").join("ccache"))
+    }
+
+    pub fn worker_mock_cache_host_path(&self) -> Option<PathBuf> {
+        self.worker_runtime_host_path()
+            .map(|root| root.join("cache").join("mock"))
     }
 }

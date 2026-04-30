@@ -19,17 +19,29 @@ impl DockerWorkerLauncher {
         let host_ccache_root = config.worker_ccache_host_path().ok_or_else(|| {
             anyhow::anyhow!("SYNFORGE_WORKER_JOBS_PATH is required for worker ccache bind mounts")
         })?;
+        let host_mock_cache_root = config.worker_mock_cache_host_path().ok_or_else(|| {
+            anyhow::anyhow!(
+                "SYNFORGE_WORKER_JOBS_PATH is required for worker mock cache bind mounts"
+            )
+        })?;
 
-        let host_mock_root = host_jobs_root.join(payload.job_id.to_string()).join("mock");
-        let host_mock_lib = host_mock_root.join("lib");
-        let host_mock_cache = host_mock_root.join("cache");
+        let host_mock_lib = host_jobs_root
+            .join(payload.job_id.to_string())
+            .join("mock")
+            .join("lib");
+        let host_mock_cache_dir = host_mock_cache_root
+            .join(&build.package.name)
+            .join(&build.mock_chroot);
 
         let container_jobs_root = config.worker_jobs_root();
         let container_mock_root = container_jobs_root
             .join(payload.job_id.to_string())
             .join("mock");
         let container_mock_lib_dir = container_mock_root.join("lib");
-        let container_mock_cache_dir = container_mock_root.join("cache");
+        let container_mock_cache_dir = config
+            .worker_mock_cache_root()
+            .join(&build.package.name)
+            .join(&build.mock_chroot);
         tokio::fs::create_dir_all(&container_mock_lib_dir).await?;
         tokio::fs::create_dir_all(&container_mock_cache_dir).await?;
 
@@ -45,7 +57,7 @@ impl DockerWorkerLauncher {
             ),
             format!(
                 "{}:{}:rw,z",
-                host_mock_cache.display(),
+                host_mock_cache_dir.display(),
                 worker_mock_cache.display()
             ),
         ];

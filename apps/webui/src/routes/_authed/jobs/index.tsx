@@ -26,21 +26,13 @@ function readFilter(value: unknown): "all" | HistoryBuildStatus {
 export const Route = createFileRoute("/_authed/jobs/")({
   validateSearch: (search: Record<string, unknown>): JobsListSearch => ({
     mode: readMode(search.mode),
-    filter: readFilter(search.filter ?? search.status),
+    filter: readFilter(search.filter),
     offset:
       typeof search.offset === "number" ? search.offset : Number(search.offset ?? 0) || 0,
     packageFilter:
-      typeof search.packageFilter === "string"
-        ? search.packageFilter
-        : typeof search.package === "string"
-          ? search.package
-          : "",
+      typeof search.packageFilter === "string" ? search.packageFilter : "",
     targetFilter:
-      typeof search.targetFilter === "string"
-        ? search.targetFilter
-        : typeof search.target === "string"
-          ? search.target
-          : "",
+      typeof search.targetFilter === "string" ? search.targetFilter : "",
   }),
   component: JobListPage,
 });

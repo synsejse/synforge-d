@@ -26,6 +26,7 @@ import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import Select from "../../components/ui/select";
 import PageHeader from "../../components/ui/page-header";
+import PaginationControls from "../../components/common/pagination-controls";
 
 const PAGE_SIZE = 50;
 const USAGE_POLL_INTERVAL_MS = 1000;
@@ -322,29 +323,13 @@ function JobList() {
         {/* Pagination */}
         {(filters.offset > 0 || jobsQuery.data.page.has_more) && (
           <div className="border-t-4 border-[var(--theme-border-strong)] bg-zinc-950 px-6 py-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="font-mono text-sm text-zinc-500">
-                Showing {filters.offset + 1}-{filters.offset + jobsQuery.data.jobs.length}
-              </div>
-              <div className="flex w-full gap-3 sm:w-auto">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setOffset(Math.max(0, filters.offset - PAGE_SIZE))}
-                  disabled={filters.offset === 0}
-                >
-                  ← Previous
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setOffset(filters.offset + PAGE_SIZE)}
-                  disabled={!jobsQuery.data.page.has_more}
-                >
-                  Next →
-                </Button>
-              </div>
-            </div>
+            <PaginationControls
+              onPrevious={() => setOffset(Math.max(0, filters.offset - PAGE_SIZE))}
+              onNext={() => setOffset(filters.offset + PAGE_SIZE)}
+              previousDisabled={filters.offset === 0}
+              nextDisabled={!jobsQuery.data.page.has_more}
+              summary={`Showing ${filters.offset + 1}-${filters.offset + jobsQuery.data.jobs.length}`}
+            />
           </div>
         )}
       </div>

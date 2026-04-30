@@ -11,6 +11,7 @@ import ErrorMessage from "../../../components/common/error-message";
 import { useDialogs } from "../../../components/common/dialogs-provider";
 import { useServerHardware } from "../../../components/common/server-hardware-provider";
 import LoadingBlock from "../../../components/ui/loading-block";
+import Breadcrumbs from "../../../components/ui/breadcrumbs";
 import PackageBuildHistorySection from "./package-build-history-section";
 import PackageEditFormSection, {
   type PackageEditFormState,
@@ -377,6 +378,12 @@ export default function PackageDetail({ packageName }: Props) {
 
   return (
     <div className="min-w-0 space-y-8">
+      <Breadcrumbs
+        items={[
+          { label: "Packages", to: "/packages" },
+          { label: packageQuery.data.package.name },
+        ]}
+      />
       {error ? <ErrorMessage message={error} /> : null}
       <PackageDetailHeader
         packageName={packageQuery.data.package.name}

@@ -20,6 +20,7 @@ import Button from "../../components/ui/button";
 import Select from "../../components/ui/select";
 import PageHeader from "../../components/ui/page-header";
 import ProgressOverlayDialog from "../../components/ui/progress-overlay-dialog";
+import PaginationControls from "../../components/common/pagination-controls";
 
 const PAGE_SIZE = 50;
 
@@ -304,28 +305,16 @@ function PackageList() {
 
       {/* Pagination */}
       {listQuery.data.packages.length > 0 && (
-        <div className="flex flex-col gap-3 border-2 border-white bg-black p-4 sm:flex-row sm:items-center sm:justify-between">
-          <Button
-            variant="secondary"
-            size="md"
-            className="w-full sm:w-auto"
-            onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
-            disabled={listQuery.isFetching || offset === 0}
-          >
-            Previous
-          </Button>
-          <span className="font-mono text-sm text-zinc-400">
-            Offset: {offset}
-          </span>
-          <Button
-            variant="secondary"
-            size="md"
-            className="w-full sm:w-auto"
-            onClick={() => setOffset(offset + PAGE_SIZE)}
-            disabled={listQuery.isFetching || !listQuery.data.page.has_more}
-          >
-            Next
-          </Button>
+        <div className="border-2 border-white bg-black p-4">
+          <PaginationControls
+            onPrevious={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+            onNext={() => setOffset(offset + PAGE_SIZE)}
+            previousDisabled={listQuery.isFetching || offset === 0}
+            nextDisabled={
+              listQuery.isFetching || !listQuery.data.page.has_more
+            }
+            summary={`Offset: ${offset}`}
+          />
         </div>
       )}
 

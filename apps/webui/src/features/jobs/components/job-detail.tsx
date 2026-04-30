@@ -17,6 +17,7 @@ import LoadingBlock from "../../../components/ui/loading-block";
 import FaIcon from "../../../components/ui/fa-icon";
 import Badge from "../../../components/ui/badge";
 import Button from "../../../components/ui/button";
+import Breadcrumbs from "../../../components/ui/breadcrumbs";
 import {
   faArrowLeft,
   faDownload,
@@ -153,6 +154,14 @@ export default function JobDetail({ jobId }: Props) {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs
+        items={[
+          { label: "Jobs", to: "/jobs" },
+          { label: jobQuery.data.job.job.package_name, to: "/packages/view", search: { name: jobQuery.data.job.job.package_name } },
+          { label: jobId },
+        ]}
+      />
+
       {/* Header */}
       <section className="border-4 border-[var(--theme-accent-orange)] bg-black p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">

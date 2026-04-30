@@ -19,6 +19,7 @@ import Select from "../../components/ui/select";
 import MetricCard from "../../components/ui/metric-card";
 import PageHeader from "../../components/ui/page-header";
 import Badge from "../../components/ui/badge";
+import PaginationControls from "../../components/common/pagination-controls";
 
 const PAGE_SIZE = 50;
 
@@ -317,30 +318,20 @@ function RepositoryBrowser() {
 
         {/* Pagination */}
         {inventoryQuery.data.repo_files.length > 0 && (
-          <div className="flex flex-col gap-3 border-t-2 border-zinc-800 bg-black px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <Button
-              variant="secondary"
-              size="md"
-              onClick={() =>
+          <div className="border-t-2 border-zinc-800 bg-black px-6 py-4">
+            <PaginationControls
+              onPrevious={() =>
                 setFilters({ offset: Math.max(0, filters.offset - PAGE_SIZE) })
               }
-              disabled={inventoryQuery.isFetching || filters.offset === 0}
-            >
-              Previous
-            </Button>
-            <span className="font-mono text-sm text-zinc-400">
-              Offset: {filters.offset}
-            </span>
-            <Button
-              variant="secondary"
-              size="md"
-              onClick={() => setFilters({ offset: filters.offset + PAGE_SIZE })}
-              disabled={
+              onNext={() =>
+                setFilters({ offset: filters.offset + PAGE_SIZE })
+              }
+              previousDisabled={inventoryQuery.isFetching || filters.offset === 0}
+              nextDisabled={
                 inventoryQuery.isFetching || !inventoryQuery.data.page.has_more
               }
-            >
-              Next
-            </Button>
+              summary={`Offset: ${filters.offset}`}
+            />
           </div>
         )}
       </div>

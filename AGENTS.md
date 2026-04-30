@@ -15,7 +15,7 @@
 - `libs/rust/worker`: worker runtime logic used by containerized build workers
 - `apps/rust/daemon`: main daemon binary serving the API, repo endpoints, docs, and built frontend
 - `apps/rust/worker`: worker binary
-- `apps/webui`: Astro + React frontend
+- `apps/webui`: Vite + React + TanStack Router SPA
 
 Generated artifacts: `target/`, `apps/webui/dist/`, `apps/webui/node_modules/`.
 
@@ -28,7 +28,7 @@ Generated artifacts: `target/`, `apps/webui/dist/`, `apps/webui/node_modules/`.
 - `synforge-publish` owns repo publication, signing, object storage, and repo-file resolution.
 - `synforge-worker-host` owns daemon-side worker orchestration and build lifecycle.
 - `apps/rust/daemon` owns HTTP transport, startup, background loops, and composition wiring.
-- `apps/webui/src/pages` should stay thin route files.
+- `apps/webui/src/routes` should stay thin TanStack Router route files.
 - `apps/webui/src/features` should own feature-specific UI, helpers, and local state.
 - `apps/webui/src/lib` should remain cross-feature and generic only.
 - `apps/webui/src/generated/api` is the home for generated OpenAPI artifacts.
@@ -37,7 +37,7 @@ Generated artifacts: `target/`, `apps/webui/dist/`, `apps/webui/node_modules/`.
 
 - Non-generated source files should target `< 400` lines.
 - Composition roots should target `< 250` lines.
-- Astro page route files should target `< 30` lines.
+- TanStack Router route files should target `< 50` lines.
 - Generated files and lockfiles are excluded from these size targets.
 - Keep HTTP routes, page URLs, env/config names, and DB schema stable during structural refactors unless the change explicitly targets one of those contracts.
 

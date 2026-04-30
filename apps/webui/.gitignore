@@ -1,9 +1,7 @@
 # build output
 dist/
 # generated types
-.astro/
-openapi.json
-src/lib/generated/
+src/generated/
 
 # dependencies
 node_modules/

@@ -24,7 +24,7 @@ The default compose stack runs PostgreSQL for relational state, Redis for hot ru
 - `libs/rust/worker-host`: worker launch, session/socket protocol, and build execution
 - `libs/rust/publish`: object storage, repo publication, and signing
 - `apps/rust/daemon`: main process, service composition, API, docs, repo endpoints, and built WebUI
-- `apps/webui`: Astro + React frontend, organized toward `src/features/*` ownership
+- `apps/webui`: Vite + React + TanStack Router SPA, organized toward `src/features/*` ownership
 
 ## What you can do
 

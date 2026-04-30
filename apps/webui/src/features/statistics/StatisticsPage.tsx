@@ -13,7 +13,6 @@ import {
 import api from "../../lib/api";
 import { queryKeys } from "../../lib/query-keys";
 import { formatDateTime } from "../../lib/datetime";
-import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
@@ -220,9 +219,5 @@ function StatRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function StatisticsPage() {
-  return (
-    <PageRoot>
-      <Statistics />
-    </PageRoot>
-  );
+  return <Statistics />;
 }

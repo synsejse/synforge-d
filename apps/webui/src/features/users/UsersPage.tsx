@@ -10,11 +10,8 @@ import {
 import api from "../../lib/api";
 import { queryKeys } from "../../lib/query-keys";
 import type { UserResponse } from "../../lib/types";
-import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
-import SessionProvider, {
-  useSession,
-} from "../../components/common/SessionProvider";
+import { useSession } from "../../components/common/SessionProvider";
 import EmptyState from "../../components/ui/EmptyState";
 import FaIcon from "../../components/ui/FaIcon";
 import LoadingBlock from "../../components/ui/LoadingBlock";
@@ -434,11 +431,5 @@ function Users() {
 }
 
 export default function UsersPage() {
-  return (
-    <PageRoot>
-      <SessionProvider>
-        <Users />
-      </SessionProvider>
-    </PageRoot>
-  );
+  return <Users />;
 }

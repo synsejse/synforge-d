@@ -3,7 +3,6 @@ import api from "../../lib/api";
 import { queryKeys } from "../../lib/query-keys";
 import { formatBytes } from "../../lib/bytes";
 import { formatDateTime } from "../../lib/datetime";
-import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
@@ -294,9 +293,5 @@ function Dashboard() {
 }
 
 export default function DashboardPage() {
-  return (
-    <PageRoot>
-      <Dashboard />
-    </PageRoot>
-  );
+  return <Dashboard />;
 }

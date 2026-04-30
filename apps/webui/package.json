@@ -6,19 +6,18 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "astro dev",
+    "dev": "vite",
     "predev": "npm run generate:api",
     "generate:openapi": "mkdir -p src/generated/api && cargo run -q -p synforge-daemon --bin openapi-export > src/generated/api/openapi.json",
     "generate:types": "openapi-typescript src/generated/api/openapi.json -o src/generated/api/api-schema.ts",
     "generate:api": "npm run generate:openapi && npm run generate:types",
-    "build": "astro build",
+    "build": "tsc --noEmit && vite build",
     "prebuild": "sh -c 'if [ -f src/generated/api/openapi.json ]; then npm run generate:types:fromfile; else echo \"Skipping OpenAPI type regeneration: src/generated/api/openapi.json missing\"; fi'",
     "generate:types:fromfile": "openapi-typescript src/generated/api/openapi.json -o src/generated/api/api-schema.ts",
-    "preview": "astro preview",
-    "astro": "astro"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@astrojs/react": "^5.0.3",
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
     "@fortawesome/free-solid-svg-icons": "^7.2.0",
     "@fortawesome/react-fontawesome": "^3.3.0",
@@ -38,10 +37,11 @@
     "@radix-ui/themes": "^3.3.0",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/react-query": "^5.100.6",
+    "@tanstack/react-router": "^1.168.26",
+    "@tanstack/router-plugin": "^1.167.29",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "ansi-to-react": "^6.2.6",
-    "astro": "^6.1.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
@@ -52,7 +52,9 @@
     "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.9",
+    "@tanstack/react-query-devtools": "^5.100.6",
+    "@tanstack/router-devtools": "^1.166.13",
+    "@vitejs/plugin-react": "^5.2.0",
     "openapi-fetch": "^0.17.0",
     "openapi-typescript": "^7.13.0",
     "typescript": "^5.9.3",

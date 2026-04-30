@@ -4,7 +4,6 @@ import { faSave, faServer } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import { queryKeys } from "../../lib/query-keys";
 import type { ConfigFieldDescriptor, DaemonConfig } from "../../lib/types";
-import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
@@ -231,9 +230,5 @@ function buildSettingsPayload(
 }
 
 export default function SettingsPage() {
-  return (
-    <PageRoot>
-      <Settings />
-    </PageRoot>
-  );
+  return <Settings />;
 }

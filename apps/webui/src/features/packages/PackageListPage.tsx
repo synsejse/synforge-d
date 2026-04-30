@@ -10,10 +10,8 @@ import { summarizePackageAction } from "../../lib/package-actions";
 import type { RefreshAllPackagesProgressView } from "../../lib/types";
 import AddPackageModal from "./components/AddPackageModal";
 import PackageCard from "./components/PackageCard";
-import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import { useDialogs } from "../../components/common/DialogsProvider";
-import ServerHardwareProvider from "../../components/common/ServerHardwareProvider";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import Button from "../../components/ui/Button";
 import Select from "../../components/ui/Select";
@@ -385,11 +383,5 @@ function PackageList() {
 }
 
 export default function PackageListPage() {
-  return (
-    <PageRoot>
-      <ServerHardwareProvider>
-        <PackageList />
-      </ServerHardwareProvider>
-    </PageRoot>
-  );
+  return <PackageList />;
 }

@@ -3,11 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { faCopy, faFolderTree } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import { queryKeys } from "../../lib/query-keys";
-import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
-import SessionProvider, {
-  useSession,
-} from "../../components/common/SessionProvider";
+import { useSession } from "../../components/common/SessionProvider";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
 import Button from "../../components/ui/Button";
@@ -241,11 +238,5 @@ function normalizeBaseUrl(baseUrl: string) {
 }
 
 export default function RepositorySetupPage() {
-  return (
-    <PageRoot>
-      <SessionProvider>
-        <RepositorySetup />
-      </SessionProvider>
-    </PageRoot>
-  );
+  return <RepositorySetup />;
 }

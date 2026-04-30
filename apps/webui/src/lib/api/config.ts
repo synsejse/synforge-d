@@ -21,6 +21,10 @@ export class ConfigApiClient extends JobApiClient {
     return this.request("GET", "/api/v1/session");
   }
 
+  async getSetupStatus(): Promise<{ initialized: boolean }> {
+    return this.request("GET", "/api/v1/setup/status");
+  }
+
   async login(req: SessionLoginRequest): Promise<SessionResponse> {
     return this.request("POST", "/api/v1/session/login", req);
   }

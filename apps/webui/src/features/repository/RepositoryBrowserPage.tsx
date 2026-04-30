@@ -10,7 +10,6 @@ import api from "../../lib/api";
 import { queryKeys } from "../../lib/query-keys";
 import { formatBytes } from "../../lib/bytes";
 import type { PublishedRepoFile } from "../../lib/types";
-import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
@@ -392,9 +391,5 @@ function RepositoryBrowser() {
 }
 
 export default function RepositoryBrowserPage() {
-  return (
-    <PageRoot>
-      <RepositoryBrowser />
-    </PageRoot>
-  );
+  return <RepositoryBrowser />;
 }

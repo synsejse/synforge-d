@@ -1,0 +1,242 @@
+import { useEffect, useRef } from "react";
+import { useRouter } from "@tanstack/react-router";
+import { createSetupController } from "./setup-client";
+
+const API_BASE = import.meta.env.PUBLIC_API_URL ?? "";
+
+function apiPath(path: string): string {
+  return `${API_BASE}${path}`;
+}
+
+export default function SetupPage() {
+  const router = useRouter();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    let cancelled = false;
+
+    const redirectToLogin = (message?: string) => {
+      router.navigate({
+        to: "/login",
+        search: message ? { message } : {},
+      });
+    };
+
+    const setup = createSetupController({
+      apiPath,
+      showAuthScreen: redirectToLogin,
+    });
+
+    void setup
+      .loadInitialState()
+      .then((status) => {
+        if (cancelled) return;
+        if (status.initialized) {
+          redirectToLogin(
+            "Synforge is already initialized. Sign in to continue.",
+          );
+          return;
+        }
+        setup.showSetupScreen(
+          "Configure daemon settings and create the initial admin account.",
+        );
+      })
+      .catch(() => {
+        if (cancelled) return;
+        redirectToLogin("Failed to load daemon configuration.");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  return (
+    <div
+      ref={containerRef}
+      id="setup-screen"
+      className="hidden min-h-full items-start justify-center px-3 py-3 sm:px-6 sm:py-6 lg:items-center lg:py-12"
+    >
+      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden border-4 border-white bg-black shadow-[6px_6px_0_rgba(255,255,255,0.25)] sm:max-h-[calc(100dvh-3rem)] lg:max-h-[calc(100dvh-6rem)] xl:max-w-3xl">
+        <div className="mb-6 shrink-0 border-b-2 border-zinc-800 px-4 pb-5 pt-5 sm:mb-8 sm:px-8 sm:pb-6 sm:pt-8">
+          <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[var(--theme-accent-lime)]">
+            Synforge
+          </p>
+          <h1 className="mt-3 font-mono text-3xl font-bold uppercase text-zinc-50">
+            First Run Setup
+          </h1>
+          <p id="setup-message" className="mt-3 text-sm leading-6 text-zinc-400">
+            Configure daemon settings and create the initial admin account.
+          </p>
+          <p
+            id="setup-step-label"
+            className="mt-3 font-mono text-xs font-bold uppercase tracking-[0.22em] text-zinc-500"
+          >
+            Step 1 of 3 · Configuration
+          </p>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-0 sm:px-8 sm:pb-8">
+          <form id="setup-form" className="pb-1">
+            <div id="setup-step-config" className="space-y-4">
+              <div className="grid gap-4 xl:grid-cols-2">
+                <div id="setup-config-fields" className="contents" />
+              </div>
+            </div>
+
+            <div id="setup-step-admin" className="hidden space-y-4">
+              <div className="grid gap-4 xl:grid-cols-2">
+                <label className="block">
+                  <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-300">
+                    Admin handle
+                  </span>
+                  <input
+                    id="setup-admin-handle"
+                    type="text"
+                    defaultValue="admin"
+                    required
+                    className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-100 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-300">
+                    Admin display name
+                  </span>
+                  <input
+                    id="setup-admin-display-name"
+                    type="text"
+                    defaultValue="Administrator"
+                    required
+                    className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-100 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+                  />
+                </label>
+                <label className="block xl:col-span-2">
+                  <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-300">
+                    Admin password
+                  </span>
+                  <input
+                    id="setup-admin-password"
+                    type="password"
+                    required
+                    placeholder="Choose a strong password"
+                    className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-100 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+                  />
+                </label>
+                <label className="block xl:col-span-2">
+                  <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-300">
+                    Confirm password
+                  </span>
+                  <input
+                    id="setup-admin-password-confirm"
+                    type="password"
+                    required
+                    placeholder="Re-enter admin password"
+                    className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-100 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div id="setup-step-signing" className="hidden space-y-4">
+              <section className="border-2 border-zinc-700 bg-black p-5">
+                <h2 className="font-mono text-lg font-bold uppercase text-white">
+                  Signing
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-zinc-400">
+                  Configure repository signing before initialization. You can keep
+                  signing disabled, generate a managed key, or import an existing
+                  key file.
+                </p>
+                <div className="mt-5 space-y-5">
+                  <div>
+                    <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-400">
+                      Signing State
+                    </p>
+                    <button
+                      id="setup-signing-toggle-button"
+                      type="button"
+                      className="border-2 border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72]"
+                    >
+                      Disable Signing
+                    </button>
+                    <p
+                      id="setup-signing-state-note"
+                      className="mt-2 font-mono text-xs text-zinc-500"
+                    >
+                      Signing will be enabled after initialization.
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-400">
+                      Key Lifecycle
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        id="setup-signing-generate-button"
+                        type="button"
+                        className="border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-200 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
+                      >
+                        Generate Key
+                      </button>
+                      <button
+                        id="setup-signing-import-button"
+                        type="button"
+                        className="border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-200 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
+                      >
+                        Import Key File
+                      </button>
+                    </div>
+                    <input
+                      id="setup-signing-import-file"
+                      type="file"
+                      accept=".asc,.key,.pgp,.gpg,text/plain"
+                      className="hidden"
+                    />
+                    <p
+                      id="setup-signing-key-note"
+                      className="mt-2 font-mono text-xs text-zinc-500"
+                    >
+                      Managed key generation is selected.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <p
+              id="setup-error"
+              className="mt-4 hidden border-2 border-[var(--theme-error-red)] bg-black px-3 py-2 text-sm text-zinc-200"
+            />
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <button
+                id="setup-back-button"
+                type="button"
+                className="hidden border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-200 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
+              >
+                Back
+              </button>
+              <div className="ml-auto flex items-center gap-3">
+                <button
+                  id="setup-next-button"
+                  type="button"
+                  className="border-2 border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72]"
+                >
+                  Continue
+                </button>
+                <button
+                  id="setup-submit-button"
+                  type="submit"
+                  className="hidden border-2 border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72]"
+                >
+                  Initialize Synforge
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}

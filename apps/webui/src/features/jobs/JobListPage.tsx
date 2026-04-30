@@ -15,12 +15,9 @@ import {
 } from "../../lib/job-status";
 import type { JobViewMode } from "./types";
 import JobListTable from "./components/JobListTable";
-import PageRoot from "../../components/common/PageRoot";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import { useDialogs } from "../../components/common/DialogsProvider";
-import ServerHardwareProvider, {
-  useServerHardware,
-} from "../../components/common/ServerHardwareProvider";
+import { useServerHardware } from "../../components/common/ServerHardwareProvider";
 import LoadingBlock from "../../components/ui/LoadingBlock";
 import FaIcon from "../../components/ui/FaIcon";
 import Button from "../../components/ui/Button";
@@ -420,11 +417,5 @@ function JobList() {
 }
 
 export default function JobListPage() {
-  return (
-    <PageRoot>
-      <ServerHardwareProvider>
-        <JobList />
-      </ServerHardwareProvider>
-    </PageRoot>
-  );
+  return <JobList />;
 }

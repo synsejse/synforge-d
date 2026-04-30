@@ -1,6 +1,7 @@
 import type {
   ConfigSchemaResponse,
   EffectiveConfigResponse,
+  SetupInitializeRequest,
   ExportRepoSigningKeyResponse,
   ExportRepoSigningPublicKeyResponse,
   GenerateRepoSigningKeyResponse,
@@ -22,6 +23,10 @@ export function getSession(): Promise<SessionResponse> {
 
 export function getSetupStatus(): Promise<{ initialized: boolean }> {
   return request("GET", "/api/v1/setup/status");
+}
+
+export function initializeSetup(req: SetupInitializeRequest): Promise<void> {
+  return request("POST", "/api/v1/setup/initialize", req);
 }
 
 export function login(req: SessionLoginRequest): Promise<SessionResponse> {

@@ -64,7 +64,7 @@ export default function PackageBuildHistorySection({
   };
 
   return (
-    <section className="border-4 border-white bg-black p-6 shadow-[6px_6px_0_rgba(255,255,255,0.2)]">
+    <section className="border-4 border-white bg-black p-6 shadow-card-md">
       <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
           <h2 className="font-mono text-xl font-bold uppercase text-white">Build History</h2>

@@ -32,12 +32,12 @@ const colorMap: Record<HeaderColor, { border: string; text: string }> = {
     text: "text-[var(--theme-accent-orange)]",
   },
   cyan: {
-    border: "border-cyan-400",
-    text: "text-cyan-400",
+    border: "border-[var(--theme-accent-cyan)]",
+    text: "text-[var(--theme-accent-cyan)]",
   },
   purple: {
-    border: "border-purple-400",
-    text: "text-purple-400",
+    border: "border-[var(--theme-accent-violet)]",
+    text: "text-[var(--theme-accent-violet)]",
   },
   white: {
     border: "border-white",

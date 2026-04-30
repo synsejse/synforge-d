@@ -210,8 +210,8 @@ function JobList() {
       />
 
       {/* Mode Toggle + Filters */}
-      <div className="border-4 border-[var(--theme-border-strong)] bg-black shadow-[4px_4px_0_rgba(255,255,255,0.1)]">
-        <div className="border-b-4 border-[var(--theme-border-strong)] bg-gradient-to-r from-zinc-900 to-black px-6 py-4">
+      <div className="border-4 border-[var(--theme-border-strong)] bg-black shadow-card-sm">
+        <div className="border-b-4 border-[var(--theme-border-strong)] app-section-band px-6 py-4">
           <div className="flex flex-wrap items-center gap-4">
             {/* Mode Toggle */}
             <div className="flex border-2 border-[var(--theme-border-strong)]">

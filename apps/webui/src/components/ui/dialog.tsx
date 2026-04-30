@@ -34,7 +34,7 @@ export default function Dialog({
             "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
             "data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]",
             "data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
-            "shadow-[8px_8px_0_rgba(255,255,255,0.3)]"
+            "shadow-card-lg"
           )}
         >
           <div className="border-b-2 border-[var(--theme-border-strong)] bg-[var(--theme-surface)] px-6 py-5">

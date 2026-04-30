@@ -86,8 +86,8 @@ function Dashboard() {
       </section>
 
       {/* Recent Jobs Table */}
-      <section className="border-4 border-[var(--theme-border-strong)] bg-black shadow-[4px_4px_0_rgba(255,255,255,0.1)]">
-        <div className="flex items-end justify-between gap-4 border-b-4 border-[var(--theme-border-strong)] bg-gradient-to-r from-zinc-900 to-black px-6 py-5">
+      <section className="border-4 border-[var(--theme-border-strong)] bg-black shadow-card-sm">
+        <div className="flex items-end justify-between gap-4 border-b-4 border-[var(--theme-border-strong)] app-section-band px-6 py-5">
           <div>
             <div className="font-mono text-xs font-bold uppercase tracking-[0.25em] text-zinc-500">
               Recent_Jobs
@@ -220,8 +220,8 @@ function Dashboard() {
         </article>
 
         {/* Repository Snapshot */}
-        <article className="border-4 border-[var(--theme-border-strong)] bg-black shadow-[4px_4px_0_rgba(255,255,255,0.1)]">
-          <div className="border-b-4 border-[var(--theme-border-strong)] bg-gradient-to-r from-zinc-900 to-black px-6 py-5">
+        <article className="border-4 border-[var(--theme-border-strong)] bg-black shadow-card-sm">
+          <div className="border-b-4 border-[var(--theme-border-strong)] app-section-band px-6 py-5">
             <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.25em] text-zinc-500">
               <FaIcon icon={faFolderTree} />
               Published_Repository

@@ -142,7 +142,7 @@ function RepositorySetup() {
                   const value = rest.join('=');
                   return (
                     <div key={i}>
-                      <span className="text-cyan-400">{key}</span>
+                      <span className="text-[var(--theme-accent-cyan)]">{key}</span>
                       <span className="text-zinc-500">=</span>
                       <span className="text-[var(--theme-accent-lime)]">{value}</span>
                     </div>
@@ -187,9 +187,9 @@ function RepositorySetup() {
           </div>
           <div className="overflow-x-auto">
             <pre className="p-6 font-mono text-sm leading-7">
-              <div><span className="text-[var(--theme-accent-orange)]">$</span> <span className="text-cyan-400">sudo</span> <span className="text-zinc-100">dnf clean all</span></div>
-              <div><span className="text-[var(--theme-accent-orange)]">$</span> <span className="text-cyan-400">sudo</span> <span className="text-zinc-100">dnf makecache</span></div>
-              <div><span className="text-[var(--theme-accent-orange)]">$</span> <span className="text-cyan-400">sudo</span> <span className="text-zinc-100">dnf install</span> <span className="text-[var(--theme-terminal-green)]">&lt;package-name&gt;</span></div>
+              <div><span className="text-[var(--theme-accent-orange)]">$</span> <span className="text-[var(--theme-accent-cyan)]">sudo</span> <span className="text-zinc-100">dnf clean all</span></div>
+              <div><span className="text-[var(--theme-accent-orange)]">$</span> <span className="text-[var(--theme-accent-cyan)]">sudo</span> <span className="text-zinc-100">dnf makecache</span></div>
+              <div><span className="text-[var(--theme-accent-orange)]">$</span> <span className="text-[var(--theme-accent-cyan)]">sudo</span> <span className="text-zinc-100">dnf install</span> <span className="text-[var(--theme-terminal-green)]">&lt;package-name&gt;</span></div>
             </pre>
           </div>
         </div>

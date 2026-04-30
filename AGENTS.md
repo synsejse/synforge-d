@@ -41,6 +41,23 @@ Generated artifacts: `target/`, `apps/webui/dist/`, `apps/webui/node_modules/`.
 - Generated files and lockfiles are excluded from these size targets.
 - Keep HTTP routes, page URLs, env/config names, and DB schema stable during structural refactors unless the change explicitly targets one of those contracts.
 
+## WebUI Design System
+
+- Theme tokens live in `apps/webui/src/styles/global.css` as CSS custom properties (`--theme-*`, `--shadow-brutal-*`, `--shadow-card-*`) and are wired to Tailwind v4 via `@theme`.
+- Prefer the **semantic utilities** exposed by `@theme` (`bg-surface`, `bg-surface-alt`, `text-muted`, `text-soft`, `border-strong`, `shadow-brutal-sm/md`, `shadow-card-sm/md/lg`, `text-accent-lime`, `text-accent-cyan`, `text-accent-violet`) over `var()` references in className strings, and over raw `bg-zinc-*` / `text-zinc-*` utilities.
+- Existing zinc-* utilities (`bg-zinc-950`, `text-zinc-400`, `border-zinc-700` etc.) are bridged to the same tokens via `@layer utilities` `!important` overrides in global.css. Do not introduce new zinc-* usage in new code; the bridge will be removed once feature pages migrate.
+- Off-brand color literals (`text-cyan-400`, `border-purple-400`, etc.) are not allowed in components — use `--theme-accent-cyan`, `--theme-accent-violet`, or another brand token.
+- Inline shadow literals (`shadow-[2px_2px_0_rgba(...)]`) are not allowed when a token matches; reach for `shadow-brutal-sm/md` for black-cast button shadows and `shadow-card-sm/md/lg` for white-cast surface shadows.
+- Reusable section patterns: `.app-section-band` (horizontal gradient header strip) and `.app-section-band-vertical` (sidebar). Use these instead of inlining `bg-gradient-to-* from-zinc-900 to-black`.
+- The app is dark-only. Do not add `data-theme` switches or `prefers-color-scheme` branches without first proposing a light-theme phase.
+
+## WebUI Spacing Rhythm
+
+- Vertical page rhythm: `space-y-6` between top-level page sections, `space-y-4` between sub-sections.
+- Section padding: `p-5 sm:p-6` for standard cards; `p-6 sm:p-8` for hero/PageHeader containers; `px-6 py-4` for card header bands.
+- Grid/flex gaps: `gap-4` is the default, `gap-3` for dense filter rows, `gap-6` for split-pane layouts.
+- Deviate only with reason — compact tables, dense toolbars, or fixed-aspect cards may justify smaller scales.
+
 ## Current Product/Behavior Notes
 
 - Overview dashboard is intentionally reduced to high-signal cards; detailed system metrics moved to `/statistics`.

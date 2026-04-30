@@ -4,8 +4,7 @@
 @import "tailwindcss";
 
 :root {
-  /* Brutalist Dark Theme - LOCKED */
-  color-scheme: dark;
+  /* Brutalist Dark Theme — single source */
   --theme-body: #0a0a0a;
   --theme-text: #e4e4e7;
   --theme-surface: #000000;
@@ -22,17 +21,46 @@
   --theme-selection: rgba(255, 255, 255, 0.2);
   --theme-grid-line: rgba(255, 255, 255, 0.035);
   --theme-header-divider: rgba(255, 255, 255, 0.08);
-  
+
   /* Brutalist Accents */
   --theme-accent-lime: #BFFF00;
   --theme-accent-orange: #FF6B00;
+  --theme-accent-cyan: #22d3ee;
+  --theme-accent-violet: #c084fc;
   --theme-terminal-green: #00FF41;
   --theme-error-red: #FF3333;
-  
-  /* Sharp Shadows (no blur) */
-  --shadow-brutal-sm: 2px 2px 0 rgba(0, 0, 0, 0.5);
-  --shadow-brutal-md: 4px 4px 0 rgba(0, 0, 0, 0.6);
-  --shadow-brutal-lg: 6px 6px 0 rgba(0, 0, 0, 0.7);
+
+  /* Sharp Shadows (no blur) — actual values used by components */
+  --shadow-brutal-sm: 2px 2px 0 rgba(0, 0, 0, 0.8);
+  --shadow-brutal-md: 4px 4px 0 rgba(0, 0, 0, 0.9);
+  --shadow-card-sm: 4px 4px 0 rgba(255, 255, 255, 0.1);
+  --shadow-card-md: 6px 6px 0 rgba(255, 255, 255, 0.2);
+  --shadow-card-lg: 8px 8px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Tailwind v4: expose tokens as semantic utilities (bg-surface, text-muted, shadow-brutal-sm, etc.) */
+@theme {
+  --color-surface: var(--theme-surface);
+  --color-surface-alt: var(--theme-surface-alt);
+  --color-surface-hover: var(--theme-surface-hover);
+  --color-body: var(--theme-body);
+  --color-border-subtle: var(--theme-border);
+  --color-border-strong: var(--theme-border-strong);
+  --color-text-strong: var(--theme-text-strong);
+  --color-text-muted: var(--theme-text-muted);
+  --color-text-soft: var(--theme-text-soft);
+  --color-accent-lime: var(--theme-accent-lime);
+  --color-accent-orange: var(--theme-accent-orange);
+  --color-accent-cyan: var(--theme-accent-cyan);
+  --color-accent-violet: var(--theme-accent-violet);
+  --color-success: var(--theme-terminal-green);
+  --color-error: var(--theme-error-red);
+
+  --shadow-brutal-sm: var(--shadow-brutal-sm);
+  --shadow-brutal-md: var(--shadow-brutal-md);
+  --shadow-card-sm: var(--shadow-card-sm);
+  --shadow-card-md: var(--shadow-card-md);
+  --shadow-card-lg: var(--shadow-card-lg);
 }
 
 html,
@@ -203,6 +231,9 @@ input[type="number"]:focus::-webkit-inner-spin-button {
 }
 
 @layer utilities {
+  /* Legacy zinc-* token bridge — kept until feature pages migrate to semantic
+     utilities (bg-surface, text-muted, etc.). When that sweep lands, this
+     block can be removed. */
   .bg-black { background-color: var(--theme-surface) !important; }
   .bg-zinc-950 { background-color: var(--theme-surface-alt) !important; }
   .bg-zinc-100 { background-color: var(--theme-primary-bg) !important; }
@@ -220,11 +251,18 @@ input[type="number"]:focus::-webkit-inner-spin-button {
   .divide-white\/10 > :not([hidden]) ~ :not([hidden]),
   .divide-white\/5 > :not([hidden]) ~ :not([hidden]) { border-color: color-mix(in srgb, var(--theme-border) 70%, transparent) !important; }
   .border-white\/8 { border-color: var(--theme-header-divider) !important; }
+
+  /* Reusable section patterns — replace ad-hoc inline gradients/shadows. */
+  .app-section-band {
+    background-image: linear-gradient(to right, var(--theme-surface-hover), var(--theme-surface));
+  }
+  .app-section-band-vertical {
+    background-image: linear-gradient(to bottom, var(--theme-surface-hover), var(--theme-surface));
+  }
 }
 
 /* Brutalist Background System */
-html[data-theme="black"] .app-chrome,
-html[data-theme="dark"] .app-chrome {
+html .app-chrome {
   background: #0a0a0a;
   background-image:
     /* Scanline effect - horizontal lines for technical feel */
@@ -265,31 +303,6 @@ html[data-theme="dark"] .app-chrome {
     );
 }
 
-html[data-theme="light"] .app-chrome {
-  background: #f5f5f5;
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 0, 0, 0.02) 2px,
-      rgba(0, 0, 0, 0.02) 4px
-    ),
-    repeating-linear-gradient(
-      135deg,
-      transparent 0px,
-      transparent 40px,
-      rgba(191, 255, 0, 0.03) 40px,
-      rgba(191, 255, 0, 0.03) 80px
-    ),
-    linear-gradient(
-      180deg,
-      #ffffff 0%,
-      #f5f5f5 50%,
-      #ececec 100%
-    );
-}
-
 /* Brutalist Grid Overlay */
 .app-grid {
   background-image:
@@ -299,7 +312,7 @@ html[data-theme="light"] .app-chrome {
     /* Secondary grid - larger cells with accent */
     linear-gradient(rgba(191, 255, 0, 0.02) 1px, transparent 1px),
     linear-gradient(90deg, rgba(191, 255, 0, 0.02) 1px, transparent 1px);
-  background-size: 
+  background-size:
     24px 24px,
     24px 24px,
     120px 120px,

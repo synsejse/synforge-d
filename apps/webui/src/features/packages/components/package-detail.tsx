@@ -447,7 +447,7 @@ export default function PackageDetail({ packageName }: Props) {
         }
       />
 
-      <section className="border-4 border-[var(--theme-border-strong)] bg-black p-6 shadow-[6px_6px_0_rgba(255,255,255,0.2)]">
+      <section className="border-4 border-[var(--theme-border-strong)] bg-black p-6 shadow-card-md">
         <div className="mb-5">
           <h2 className="font-mono text-xl font-bold uppercase text-white">Sync History</h2>
           <p className="mt-2 text-sm text-zinc-400">

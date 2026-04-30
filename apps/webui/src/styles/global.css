@@ -259,6 +259,26 @@ input[type="number"]:focus::-webkit-inner-spin-button {
   .app-section-band-vertical {
     background-image: linear-gradient(to bottom, var(--theme-surface-hover), var(--theme-surface));
   }
+  /* Standard section card (border-2, bg-surface, padded). For hero/header
+     containers use .app-section-hero (border-4, bigger padding). */
+  .app-section {
+    border-width: 2px;
+    border-color: var(--theme-border-strong);
+    background-color: var(--theme-surface);
+    padding: 1.25rem;
+  }
+  @media (min-width: 40rem) {
+    .app-section { padding: 1.5rem; }
+  }
+  .app-section-hero {
+    border-width: 4px;
+    border-color: var(--theme-border-strong);
+    background-color: var(--theme-surface);
+    padding: 1.5rem;
+  }
+  @media (min-width: 40rem) {
+    .app-section-hero { padding: 2rem; }
+  }
 }
 
 /* Brutalist Background System */

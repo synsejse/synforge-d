@@ -26,7 +26,7 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: faSliders, description: "Daemon config" },
 ];
 
-const DESKTOP_QUERY = "(min-width: 1280px)";
+const DESKTOP_QUERY = "(min-width: 1024px)";
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -57,8 +57,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="box-border min-h-full w-full max-w-full px-2 py-2 sm:px-3 sm:py-3 lg:h-screen lg:overflow-hidden lg:px-5 lg:py-5">
-      <div className="grid min-h-full min-w-0 gap-3 xl:h-full xl:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="flex min-w-0 flex-col border-4 border-white app-section-band-vertical p-0 shadow-card-md xl:min-h-0">
+      <div className="grid min-h-full min-w-0 gap-3 lg:h-full lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="flex min-w-0 flex-col border-4 border-white app-section-band-vertical p-0 shadow-card-md lg:min-h-0">
           <div className="border-b-4 border-[var(--theme-border-strong)] bg-black px-4 py-4 sm:px-6 sm:py-5">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
@@ -74,7 +74,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 aria-controls="mobile-nav-panel"
                 aria-expanded={mobileNavOpen}
                 onClick={() => setMobileNavOpen((open) => !open)}
-                className="xl:hidden border-2 border-[var(--theme-border-strong)] bg-black px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-200 transition hover:border-white hover:bg-[var(--theme-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+                className="lg:hidden border-2 border-[var(--theme-border-strong)] bg-black px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-200 transition hover:border-white hover:bg-[var(--theme-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
               >
                 {mobileNavOpen ? "Close" : "Menu"}
               </button>
@@ -83,7 +83,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
           <div
             id="mobile-nav-panel"
-            className={`${showNav ? "" : "hidden"} xl:flex xl:min-h-0 xl:flex-1 xl:flex-col`}
+            className={`${showNav ? "" : "hidden"} lg:flex lg:min-h-0 lg:flex-1 lg:flex-col`}
           >
             <Navigation
               items={navItems}
@@ -92,7 +92,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               }}
             />
 
-            <div className="border-t-4 border-[var(--theme-border-strong)] xl:mt-auto">
+            <div className="border-t-4 border-[var(--theme-border-strong)] lg:mt-auto">
               <div className="bg-black px-5 py-5">
                 <div className="font-mono text-xs font-bold uppercase tracking-[0.25em] text-zinc-500">
                   Session
@@ -114,7 +114,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           tabIndex={-1}
           className="min-h-0 min-w-0 overflow-x-auto overflow-y-auto border-4 border-white bg-black p-3 shadow-card-md sm:p-5 lg:p-8"
         >
-          <div className="min-w-0">{children}</div>
+          <div className="mx-auto min-w-0 max-w-[96rem]">{children}</div>
         </main>
       </div>
     </div>

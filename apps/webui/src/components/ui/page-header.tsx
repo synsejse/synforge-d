@@ -51,6 +51,7 @@ interface Props {
   description: string;
   color?: HeaderColor;
   actions?: Array<ActionLink | ActionButton>;
+  sticky?: boolean;
 }
 
 export default function PageHeader({
@@ -59,11 +60,13 @@ export default function PageHeader({
   description,
   color = "lime",
   actions = [],
+  sticky = false,
 }: Props) {
   const colors = colorMap[color];
+  const stickyClasses = sticky ? "sticky top-0 z-10" : "";
 
   return (
-    <section className={`border-4 ${colors.border} bg-black p-6`}>
+    <section className={`border-4 ${colors.border} bg-black p-6 ${stickyClasses}`}>
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 flex-1">
           <p className={`font-mono text-xs font-bold uppercase tracking-[0.3em] ${colors.text}`}>

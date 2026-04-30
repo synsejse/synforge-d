@@ -15,6 +15,7 @@ import AddPackageModal from "./components/add-package-modal";
 import PackageCard from "./components/package-card";
 import ErrorMessage from "../../components/common/error-message";
 import { useDialogs } from "../../components/common/dialogs-provider";
+import { useToast } from "../../components/common/toast-provider";
 import LoadingBlock from "../../components/ui/loading-block";
 import Button from "../../components/ui/button";
 import Select from "../../components/ui/select";
@@ -51,7 +52,8 @@ function refreshTitle(state: RefreshAllPackagesProgressView["state"]): string {
 
 function PackageList() {
   const queryClient = useQueryClient();
-  const { confirm, notify } = useDialogs();
+  const { confirm } = useDialogs();
+  const toast = useToast();
   const navigate = route.useNavigate();
   const rawSearch = route.useSearch();
   const offset = rawSearch.offset ?? 0;
@@ -84,32 +86,29 @@ function PackageList() {
     mutationFn: (name: string) => api.deletePackage(name),
     onSuccess: invalidatePackages,
     onError: (error) =>
-      notify({
-        title: "Delete failed",
-        message: error instanceof Error ? error.message : "Failed to delete package",
-        variant: "error",
-      }),
+      toast.error(
+        "Delete failed",
+        error instanceof Error ? error.message : "Failed to delete package",
+      ),
   });
 
   const triggerMutation = useMutation({
     mutationFn: ({ name, action }: { name: string; action: "refresh" | "rebuild" }) =>
       action === "refresh" ? api.refreshPackage(name) : api.rebuildPackage(name),
-    onSuccess: async (response, variables) => {
-      await notify({
-        title: variables.action === "refresh" ? "Refresh queued" : "Rebuild queued",
-        message: summarizePackageAction(response),
-      });
-      await invalidatePackages();
+    onSuccess: (response, variables) => {
+      toast.success(
+        variables.action === "refresh" ? "Refresh queued" : "Rebuild queued",
+        summarizePackageAction(response),
+      );
+      void invalidatePackages();
     },
     onError: (error, variables) =>
-      notify({
-        title: `${variables.action === "refresh" ? "Refresh" : "Rebuild"} failed`,
-        message:
-          error instanceof Error
-            ? error.message
-            : `Failed to ${variables.action} package`,
-        variant: "error",
-      }),
+      toast.error(
+        `${variables.action === "refresh" ? "Refresh" : "Rebuild"} failed`,
+        error instanceof Error
+          ? error.message
+          : `Failed to ${variables.action} package`,
+      ),
   });
 
   const refreshAllMutation = useMutation({

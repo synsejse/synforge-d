@@ -16,25 +16,13 @@ interface ConfirmOptions {
   destructive?: boolean;
 }
 
-interface NotifyOptions {
-  title: string;
-  message: string;
-  variant?: "info" | "error";
-}
-
 interface DialogsContextValue {
   confirm: (options: ConfirmOptions) => Promise<boolean>;
-  notify: (options: NotifyOptions) => Promise<void>;
 }
 
 interface ConfirmState {
   options: ConfirmOptions;
   resolve: (value: boolean) => void;
-}
-
-interface NotifyState {
-  options: NotifyOptions;
-  resolve: () => void;
 }
 
 const DialogsContext = createContext<DialogsContextValue | null>(null);
@@ -49,20 +37,11 @@ export function useDialogs(): DialogsContextValue {
 
 export default function DialogsProvider({ children }: { children: ReactNode }) {
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
-  const [notifyState, setNotifyState] = useState<NotifyState | null>(null);
 
   const confirm = useCallback(
     (options: ConfirmOptions) =>
       new Promise<boolean>((resolve) => {
         setConfirmState({ options, resolve });
-      }),
-    [],
-  );
-
-  const notify = useCallback(
-    (options: NotifyOptions) =>
-      new Promise<void>((resolve) => {
-        setNotifyState({ options, resolve });
       }),
     [],
   );
@@ -75,16 +54,8 @@ export default function DialogsProvider({ children }: { children: ReactNode }) {
     setConfirmState(null);
   };
 
-  const closeNotify = () => {
-    if (!notifyState) {
-      return;
-    }
-    notifyState.resolve();
-    setNotifyState(null);
-  };
-
   return (
-    <DialogsContext.Provider value={{ confirm, notify }}>
+    <DialogsContext.Provider value={{ confirm }}>
       {children}
       {confirmState ? (
         <Dialog
@@ -113,37 +84,6 @@ export default function DialogsProvider({ children }: { children: ReactNode }) {
               autoFocus
             >
               {confirmState.options.confirmLabel ?? "Confirm"}
-            </Button>
-          </div>
-        </Dialog>
-      ) : null}
-      {notifyState ? (
-        <Dialog
-          open
-          onOpenChange={(open) => {
-            if (!open) closeNotify();
-          }}
-          title={notifyState.options.title}
-          showClose={false}
-        >
-          <p
-            className={
-              notifyState.options.variant === "error"
-                ? "font-mono text-sm text-[var(--theme-error-red)]"
-                : "font-mono text-sm text-zinc-200"
-            }
-          >
-            {notifyState.options.message}
-          </p>
-          <div className="mt-6 flex justify-end">
-            <Button
-              type="button"
-              variant="primary"
-              size="md"
-              onClick={closeNotify}
-              autoFocus
-            >
-              OK
             </Button>
           </div>
         </Dialog>

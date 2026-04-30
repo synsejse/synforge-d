@@ -9,6 +9,7 @@ import {
 } from "../../../lib/package-actions";
 import ErrorMessage from "../../../components/common/error-message";
 import { useDialogs } from "../../../components/common/dialogs-provider";
+import { useToast } from "../../../components/common/toast-provider";
 import { useServerHardware } from "../../../components/common/server-hardware-provider";
 import LoadingBlock from "../../../components/ui/loading-block";
 import Breadcrumbs from "../../../components/ui/breadcrumbs";
@@ -141,7 +142,8 @@ const EMPTY_FORM: PackageEditFormState = {
 export default function PackageDetail({ packageName }: Props) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { confirm, notify } = useDialogs();
+  const { confirm } = useDialogs();
+  const toast = useToast();
   const serverHardware = useServerHardware();
 
   const packageQuery = useQuery(packagesQueries.detail(packageName));
@@ -244,12 +246,12 @@ export default function PackageDetail({ packageName }: Props) {
       action === "rebuild"
         ? api.rebuildPackage(packageName)
         : api.refreshPackage(packageName),
-    onSuccess: async (response, variables) => {
-      await notify({
-        title: variables.action === "rebuild" ? "Rebuild queued" : "Refresh queued",
-        message: summarizePackageAction(response),
-      });
-      await invalidatePackage();
+    onSuccess: (response, variables) => {
+      toast.success(
+        variables.action === "rebuild" ? "Rebuild queued" : "Refresh queued",
+        summarizePackageAction(response),
+      );
+      void invalidatePackage();
     },
     onError: (err, variables) =>
       setError(err instanceof Error ? err.message : `Failed to ${variables.action}`),
@@ -266,15 +268,15 @@ export default function PackageDetail({ packageName }: Props) {
       action === "rebuild"
         ? api.rebuildPackageTarget(packageName, mockChroot)
         : api.refreshPackageTarget(packageName, mockChroot),
-    onSuccess: async (response, variables) => {
-      await notify({
-        title: variables.action === "rebuild" ? "Rebuild queued" : "Refresh queued",
-        message: summarizePackageTargetAction(
+    onSuccess: (response, variables) => {
+      toast.success(
+        variables.action === "rebuild" ? "Rebuild queued" : "Refresh queued",
+        summarizePackageTargetAction(
           response,
           variables.action === "rebuild" ? "Rebuild" : "Refresh",
         ),
-      });
-      await invalidatePackage();
+      );
+      void invalidatePackage();
     },
     onError: (err, variables) =>
       setError(

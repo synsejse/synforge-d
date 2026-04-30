@@ -12,6 +12,7 @@ import type {
 } from "../../../lib/types";
 import ErrorMessage from "../../../components/common/error-message";
 import { useDialogs } from "../../../components/common/dialogs-provider";
+import { useToast } from "../../../components/common/toast-provider";
 import { useServerHardware } from "../../../components/common/server-hardware-provider";
 import LoadingBlock from "../../../components/ui/loading-block";
 import FaIcon from "../../../components/ui/fa-icon";
@@ -42,7 +43,8 @@ function isLiveStatus(status: string | undefined): boolean {
 export default function JobDetail({ jobId }: Props) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { confirm, notify } = useDialogs();
+  const { confirm } = useDialogs();
+  const toast = useToast();
   const serverHardware = useServerHardware();
 
   const jobQuery = useQuery({
@@ -69,11 +71,10 @@ export default function JobDetail({ jobId }: Props) {
       navigate({ to: "/jobs" });
     },
     onError: (error) =>
-      notify({
-        title: "Delete failed",
-        message: error instanceof Error ? error.message : "Failed to delete job",
-        variant: "error",
-      }),
+      toast.error(
+        "Delete failed",
+        error instanceof Error ? error.message : "Failed to delete job",
+      ),
   });
 
   const retryMutation = useMutation({
@@ -82,22 +83,20 @@ export default function JobDetail({ jobId }: Props) {
       navigate({ to: "/jobs/view", search: { id: response.job.id } });
     },
     onError: (error) =>
-      notify({
-        title: "Retry failed",
-        message: error instanceof Error ? error.message : "Failed to retry job",
-        variant: "error",
-      }),
+      toast.error(
+        "Retry failed",
+        error instanceof Error ? error.message : "Failed to retry job",
+      ),
   });
 
   const killMutation = useMutation({
     mutationFn: () => api.killJob(jobId),
     onSuccess: invalidateJob,
     onError: (error) =>
-      notify({
-        title: "Kill failed",
-        message: error instanceof Error ? error.message : "Failed to kill job",
-        variant: "error",
-      }),
+      toast.error(
+        "Kill failed",
+        error instanceof Error ? error.message : "Failed to kill job",
+      ),
   });
 
   async function handleDelete() {

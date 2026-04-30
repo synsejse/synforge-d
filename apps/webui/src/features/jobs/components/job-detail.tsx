@@ -19,6 +19,7 @@ import FaIcon from "../../../components/ui/fa-icon";
 import Badge from "../../../components/ui/badge";
 import Button from "../../../components/ui/button";
 import Breadcrumbs from "../../../components/ui/breadcrumbs";
+import { DisclosureGroup, Disclosure } from "../../../components/ui/disclosure";
 import {
   faArrowLeft,
   faDownload,
@@ -314,15 +315,14 @@ export default function JobDetail({ jobId }: Props) {
         </div>
       </div>
 
-      {/* Artifacts */}
+      {/* Artifacts — collapsed by default; users dig in when needed. */}
       {jobQuery.data.artifacts.length > 0 && (
-        <div className="border-4 border-[var(--theme-border-strong)] bg-black shadow-card-sm">
-          <div className="border-b-4 border-[var(--theme-border-strong)] app-section-band px-6 py-4">
-            <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white">
-              Build_Artifacts
-            </h2>
-          </div>
-          <div className="p-6">
+        <DisclosureGroup>
+          <Disclosure
+            value="artifacts"
+            title="Build Artifacts"
+            description={`${jobQuery.data.artifacts.length} ${jobQuery.data.artifacts.length === 1 ? "artifact" : "artifacts"} produced by this build.`}
+          >
             <div className="grid gap-2">
               {jobQuery.data.artifacts.map((artifact) => {
                 const signingBadge = getArtifactSigningBadge(artifact);
@@ -364,8 +364,8 @@ export default function JobDetail({ jobId }: Props) {
                 );
               })}
             </div>
-          </div>
-        </div>
+          </Disclosure>
+        </DisclosureGroup>
       )}
     </div>
   );

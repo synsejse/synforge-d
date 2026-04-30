@@ -9,6 +9,7 @@ import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import PageHeader from "../../components/ui/page-header";
+import { DisclosureGroup, Disclosure } from "../../components/ui/disclosure";
 
 function Settings() {
   const configQuery = useQuery(configQueries.effective());
@@ -90,48 +91,69 @@ function Settings() {
 
       {/* Settings Form */}
       <form onSubmit={handleSave} className="space-y-6">
-        {groupedFields.map((section) => {
-          const runtimeFields = section.fields.filter((field) => field.editable_in_runtime);
-          const readOnlyFields = section.fields.filter((field) => !field.editable_in_runtime);
+        <DisclosureGroup
+          defaultValue={groupedFields
+            .filter((s) => s.fields.length > 0)
+            .slice(0, 1)
+            .map((s) => s.key)}
+        >
+          {groupedFields.map((section) => {
+            const runtimeFields = section.fields.filter(
+              (field) => field.editable_in_runtime,
+            );
+            const readOnlyFields = section.fields.filter(
+              (field) => !field.editable_in_runtime,
+            );
 
-          if (runtimeFields.length === 0 && readOnlyFields.length === 0) {
-            return null;
-          }
+            if (runtimeFields.length === 0 && readOnlyFields.length === 0) {
+              return null;
+            }
 
-          return (
-            <div key={section.key} className="border-2 border-white bg-black">
-              <div className="border-b-2 border-zinc-800 bg-black px-6 py-5">
-                <h2 className="font-mono text-lg font-bold uppercase text-white">
-                  {section.label}
-                </h2>
-              </div>
-              <div className="grid gap-6 p-6 xl:grid-cols-2">
-                {runtimeFields.map((field) => (
-                  <ConfigFieldInput
-                    key={field.key}
-                    field={field}
-                    value={values[field.key] || ""}
-                    onChange={(next) =>
-                      setValues((current) => ({
-                        ...current,
-                        [field.key]: next,
-                      }))
-                    }
-                  />
-                ))}
-                {readOnlyFields.map((field) => (
-                  <ConfigFieldInput
-                    key={field.key}
-                    field={field}
-                    value={values[field.key] || ""}
-                    onChange={() => undefined}
-                    disabled
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
+            const editableCount = runtimeFields.length;
+            const readOnlyCount = readOnlyFields.length;
+            const trailingCount =
+              [
+                editableCount > 0 ? `${editableCount} editable` : null,
+                readOnlyCount > 0 ? `${readOnlyCount} read-only` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ");
+
+            return (
+              <Disclosure
+                key={section.key}
+                value={section.key}
+                title={section.label}
+                description={trailingCount || undefined}
+              >
+                <div className="grid gap-6 xl:grid-cols-2">
+                  {runtimeFields.map((field) => (
+                    <ConfigFieldInput
+                      key={field.key}
+                      field={field}
+                      value={values[field.key] || ""}
+                      onChange={(next) =>
+                        setValues((current) => ({
+                          ...current,
+                          [field.key]: next,
+                        }))
+                      }
+                    />
+                  ))}
+                  {readOnlyFields.map((field) => (
+                    <ConfigFieldInput
+                      key={field.key}
+                      field={field}
+                      value={values[field.key] || ""}
+                      onChange={() => undefined}
+                      disabled
+                    />
+                  ))}
+                </div>
+              </Disclosure>
+            );
+          })}
+        </DisclosureGroup>
 
         {/* Save Button */}
         <div className="flex justify-end">

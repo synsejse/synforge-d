@@ -13,6 +13,7 @@ import { useToast } from "../../../components/common/toast-provider";
 import { useServerHardware } from "../../../components/common/server-hardware-provider";
 import LoadingBlock from "../../../components/ui/loading-block";
 import Breadcrumbs from "../../../components/ui/breadcrumbs";
+import { DisclosureGroup, Disclosure } from "../../../components/ui/disclosure";
 import PackageBuildHistorySection from "./package-build-history-section";
 import PackageEditFormSection, {
   type PackageEditFormState,
@@ -456,15 +457,15 @@ export default function PackageDetail({ packageName }: Props) {
         }
       />
 
-      <section className="border-4 border-[var(--theme-border-strong)] bg-black p-6 shadow-card-md">
-        <div className="mb-5">
-          <h2 className="font-mono text-xl font-bold uppercase text-white">Sync History</h2>
-          <p className="mt-2 text-sm text-zinc-400">
-            Source sync outcomes for this package across poll and manual triggers.
-          </p>
-        </div>
-        <SyncHistoryTable packageName={packageName} />
-      </section>
+      <DisclosureGroup>
+        <Disclosure
+          value="sync"
+          title="Sync History"
+          description="Source sync outcomes across poll and manual triggers."
+        >
+          <SyncHistoryTable packageName={packageName} />
+        </Disclosure>
+      </DisclosureGroup>
 
       <PackageRepoFilesSection
         repoFilesLoaded={!repoFilesQuery.isPending}

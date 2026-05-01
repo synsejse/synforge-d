@@ -124,4 +124,14 @@ pub trait JobStore: Send + Sync {
         mock_chroot: &str,
         keep: usize,
     ) -> anyhow::Result<Vec<Uuid>>;
+
+    /// Returns raw `(created_at, status)` rows for build jobs since
+    /// `cutoff`, ordered ascending. Filtered to completion-bearing
+    /// statuses (succeeded / failed / timed_out) — pending and running
+    /// don't represent a historical outcome. The service layer folds
+    /// these into time-bucketed counts.
+    async fn list_recent_build_status_events(
+        &self,
+        cutoff: OffsetDateTime,
+    ) -> anyhow::Result<Vec<(OffsetDateTime, String)>>;
 }

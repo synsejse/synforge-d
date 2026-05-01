@@ -82,3 +82,46 @@ pub struct ServerHardwareResponse {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub total_memory_mb: Option<u64>,
 }
+
+/// One bucket on a histogram-style time series. `succeeded` and `failed`
+/// counts cover the same interval starting at `timestamp` and lasting
+/// `bucket_seconds` (from the parent response).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct TimeSeriesPoint {
+    pub timestamp: String,
+    pub succeeded: u64,
+    pub failed: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct TimeSeriesResponse {
+    /// Echo of the requested range token: `"24h" | "7d" | "30d"`.
+    pub range: String,
+    /// Width of each bucket in seconds.
+    pub bucket_seconds: u64,
+    /// First bucket's timestamp (oldest, snapped to bucket boundary).
+    pub started_at: String,
+    pub points: Vec<TimeSeriesPoint>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, IntoParams, ToSchema)]
+pub struct TimeSeriesQuery {
+    /// Window of history to bucket. One of `"24h"`, `"7d"`, `"30d"`.
+    /// Defaults to `"24h"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub range: Option<String>,
+}
+
+/// Resolves a range token into
+/// `(bucket_unit, bucket_seconds, window_seconds, canonical_label)`.
+/// `bucket_unit` is the precision string we hand to PostgreSQL's
+/// `date_trunc` ("hour" or "day"); `bucket_seconds` is the matching
+/// width used for empty-bucket fill on the service side.
+/// Unknown values fall back to 24h so the frontend can't poison the daemon.
+pub fn resolve_time_range(range: Option<&str>) -> (&'static str, u64, i64, &'static str) {
+    match range.unwrap_or("24h") {
+        "7d" => ("hour", 3_600, 7 * 24 * 3600, "7d"),    // 168 hourly points
+        "30d" => ("day", 86_400, 30 * 24 * 3600, "30d"), // 30 daily points
+        _ => ("hour", 3_600, 24 * 3600, "24h"),          // 24 hourly points
+    }
+}

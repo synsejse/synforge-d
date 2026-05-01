@@ -8,15 +8,18 @@ use anyhow::Context;
 use synforge_core::{
     api::{
         BuildJobListResponse, BuildJobResponse, JobArtifactListResponse, JobArtifactMetaResponse,
-        PruneJobsResponse, build_page_info, normalize_pagination,
+        PruneJobsResponse, TimeSeriesResponse, build_page_info, normalize_pagination,
+        resolve_time_range,
     },
     error::SynforgeError,
-    model::BuildStatus,
+    model::{BuildStatus, format_timestamp},
 };
 use synforge_database::jobs::PostgresJobStore;
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 use super::SynforgeService;
+use super::sync::{SeriesBucket, bucket_succeeded_failed_events, snap_to_bucket};
 use synforge_database::JobStore;
 
 impl SynforgeService {
@@ -216,5 +219,38 @@ impl SynforgeService {
             }
         }
         Ok(PruneJobsResponse { deleted_jobs })
+    }
+
+    pub async fn get_jobs_timeseries(
+        &self,
+        range: Option<String>,
+    ) -> anyhow::Result<TimeSeriesResponse> {
+        let (_unit, bucket_seconds, window_seconds, label) =
+            resolve_time_range(range.as_deref());
+        let now = OffsetDateTime::now_utc();
+        let cutoff =
+            snap_to_bucket(now - time::Duration::seconds(window_seconds), bucket_seconds);
+        let events = self.store.list_recent_build_status_events(cutoff).await?;
+
+        // Jobs have richer status enum than sync; "failed" and "timed_out"
+        // both count toward the failure tally.
+        let points = bucket_succeeded_failed_events(
+            cutoff,
+            now,
+            bucket_seconds,
+            events,
+            |status| match status {
+                "succeeded" => Some(SeriesBucket::Succeeded),
+                "failed" | "timed_out" => Some(SeriesBucket::Failed),
+                _ => None,
+            },
+        );
+
+        Ok(TimeSeriesResponse {
+            range: label.to_string(),
+            bucket_seconds,
+            started_at: format_timestamp(cutoff),
+            points,
+        })
     }
 }

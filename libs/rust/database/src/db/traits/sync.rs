@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use synforge_core::sync::{SyncOperation, SyncStatus};
+use time::OffsetDateTime;
 
 #[async_trait]
 pub trait SyncStore: Send + Sync {
@@ -27,4 +28,12 @@ pub trait SyncStore: Send + Sync {
     ) -> anyhow::Result<u64>;
 
     async fn get_sync_metrics(&self) -> anyhow::Result<(usize, usize, Option<String>)>;
+
+    /// Returns the raw `(created_at, status)` rows for every sync operation
+    /// recorded since `cutoff`, ordered ascending. The service layer folds
+    /// these into time-bucketed succeeded/failed counts.
+    async fn list_recent_sync_status_events(
+        &self,
+        cutoff: OffsetDateTime,
+    ) -> anyhow::Result<Vec<(OffsetDateTime, String)>>;
 }

@@ -42,4 +42,11 @@ impl SyncStore for DieselStore {
     async fn get_sync_metrics(&self) -> anyhow::Result<(usize, usize, Option<String>)> {
         sync::get_sync_metrics(self).await
     }
+
+    async fn list_recent_sync_status_events(
+        &self,
+        cutoff: time::OffsetDateTime,
+    ) -> anyhow::Result<Vec<(time::OffsetDateTime, String)>> {
+        sync::list_recent_sync_status_events(self, cutoff).await
+    }
 }

@@ -100,6 +100,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/timeseries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_jobs_timeseries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/usage": {
         parameters: {
             query?: never;
@@ -756,6 +772,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sync/timeseries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_sync_timeseries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system/hardware": {
         parameters: {
             query?: never;
@@ -1393,6 +1425,37 @@ export interface components {
             signature_path: string;
             signed: boolean;
         };
+        /**
+         * @description One bucket on a histogram-style time series. `succeeded` and `failed`
+         *     counts cover the same interval starting at `timestamp` and lasting
+         *     `bucket_seconds` (from the parent response).
+         */
+        TimeSeriesPoint: {
+            /** Format: int64 */
+            failed: number;
+            /** Format: int64 */
+            succeeded: number;
+            timestamp: string;
+        };
+        TimeSeriesQuery: {
+            /**
+             * @description Window of history to bucket. One of `"24h"`, `"7d"`, `"30d"`.
+             *     Defaults to `"24h"`.
+             */
+            range?: string | null;
+        };
+        TimeSeriesResponse: {
+            /**
+             * Format: int64
+             * @description Width of each bucket in seconds.
+             */
+            bucket_seconds: number;
+            points: components["schemas"]["TimeSeriesPoint"][];
+            /** @description Echo of the requested range token: `"24h" | "7d" | "30d"`. */
+            range: string;
+            /** @description First bucket's timestamp (oldest, snapped to bucket boundary). */
+            started_at: string;
+        };
         UpdatePackageRequest: {
             build_env?: components["schemas"]["BuildEnvVar"][] | null;
             /** Format: int64 */
@@ -1637,6 +1700,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PruneJobsResponse"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    get_jobs_timeseries: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Window of history to bucket. One of `"24h"`, `"7d"`, `"30d"`.
+                 *     Defaults to `"24h"`.
+                 */
+                range?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bucketed completed-job counts over time */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimeSeriesResponse"];
                 };
             };
             401: {
@@ -3386,6 +3483,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncOperationListResponse"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    get_sync_timeseries: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Window of history to bucket. One of `"24h"`, `"7d"`, `"30d"`.
+                 *     Defaults to `"24h"`.
+                 */
+                range?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bucketed sync-operation counts over time */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimeSeriesResponse"];
                 };
             };
             401: {

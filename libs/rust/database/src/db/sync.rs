@@ -132,6 +132,24 @@ pub(super) async fn count_sync_operations(
     Ok(count as u64)
 }
 
+/// Selects raw `(created_at, status)` rows for sync operations since
+/// `cutoff`. Bucketing into time windows happens at the service layer
+/// where we already need to fold succeeded/failed counts and fill empty
+/// buckets — keeps this query a plain Diesel select.
+pub(super) async fn list_recent_sync_status_events(
+    store: &DieselStore,
+    cutoff: OffsetDateTime,
+) -> anyhow::Result<Vec<(OffsetDateTime, String)>> {
+    let mut conn = store.get_connection().await?;
+    let rows: Vec<(OffsetDateTime, String)> = sync_operations::table
+        .filter(sync_operations::created_at.gt(&cutoff))
+        .select((sync_operations::created_at, sync_operations::status))
+        .order_by(sync_operations::created_at.asc())
+        .load(&mut conn)
+        .await?;
+    Ok(rows)
+}
+
 pub(super) async fn get_sync_metrics(
     store: &DieselStore,
 ) -> anyhow::Result<(usize, usize, Option<String>)> {

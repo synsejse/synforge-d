@@ -5,17 +5,36 @@ use axum::extract::{Path, Query, State};
 use axum::routing::get;
 use synforge_core::api::{
     PackageSyncOperationListQuery, SyncMetricsResponse, SyncOperationListQuery,
-    SyncOperationListResponse,
+    SyncOperationListResponse, TimeSeriesQuery, TimeSeriesResponse,
 };
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/sync/operations", get(list_sync_operations))
         .route("/sync/metrics", get(get_sync_metrics))
+        .route("/sync/timeseries", get(get_sync_timeseries))
         .route(
             "/packages/{name}/sync/operations",
             get(list_package_sync_operations),
         )
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/sync/timeseries",
+    tag = "Sync",
+    params(TimeSeriesQuery),
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "Bucketed sync-operation counts over time", body = TimeSeriesResponse),
+        (status = 401, body = synforge_core::api::ApiError)
+    )
+)]
+pub(super) async fn get_sync_timeseries(
+    State(state): State<AppState>,
+    Query(query): Query<TimeSeriesQuery>,
+) -> Result<Json<TimeSeriesResponse>, AppError> {
+    Ok(Json(state.service.get_sync_timeseries(query.range).await?))
 }
 
 #[utoipa::path(

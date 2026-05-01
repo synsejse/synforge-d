@@ -3,6 +3,8 @@ import type {
   SyncMetricsResponse,
   SyncOperationListQuery,
   SyncOperationListResponse,
+  TimeRange,
+  TimeSeriesResponse,
 } from "../types";
 import { request } from "./client";
 
@@ -42,6 +44,12 @@ export function listPackageSyncOperations(
 
 export function getSyncMetrics(): Promise<SyncMetricsResponse> {
   return request("GET", "/api/v1/sync/metrics");
+}
+
+export function getSyncTimeseries(
+  range: TimeRange = "24h",
+): Promise<TimeSeriesResponse> {
+  return request("GET", `/api/v1/sync/timeseries?range=${range}`);
 }
 
 export function getCacheStats(): Promise<CacheStatsResponse> {

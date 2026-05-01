@@ -10,6 +10,8 @@ import type {
   LogManifestResponse,
   LogMetaResponse,
   PruneJobsResponse,
+  TimeRange,
+  TimeSeriesResponse,
 } from "../types";
 import { downloadStream, request } from "./client";
 
@@ -152,6 +154,12 @@ export function retryJob(id: string): Promise<BuildJobResponse> {
 
 export function pruneFailedJobs(): Promise<PruneJobsResponse> {
   return request("POST", "/api/v1/jobs/prune-failed", {});
+}
+
+export function getJobsTimeseries(
+  range: TimeRange = "24h",
+): Promise<TimeSeriesResponse> {
+  return request("GET", `/api/v1/jobs/timeseries?range=${range}`);
 }
 
 export async function downloadJobArtifact(

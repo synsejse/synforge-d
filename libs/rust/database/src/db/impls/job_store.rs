@@ -177,4 +177,11 @@ impl JobStore for DieselStore {
     ) -> anyhow::Result<Vec<Uuid>> {
         job::list_prunable_successful_job_ids(self, package_name, mock_chroot, keep).await
     }
+
+    async fn list_recent_build_status_events(
+        &self,
+        cutoff: time::OffsetDateTime,
+    ) -> anyhow::Result<Vec<(time::OffsetDateTime, String)>> {
+        job::list_recent_build_status_events(self, cutoff).await
+    }
 }

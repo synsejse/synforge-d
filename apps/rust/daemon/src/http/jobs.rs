@@ -5,7 +5,8 @@ use axum::extract::{Path, Query, State};
 use axum::routing::{get, post};
 use synforge_core::api::{
     BuildJobListResponse, BuildJobResponse, JobListQuery, JobListScope,
-    JobResourceUsageListResponse, JobResourceUsageResponse, PruneJobsResponse,
+    JobResourceUsageListResponse, JobResourceUsageResponse, PruneJobsResponse, TimeSeriesQuery,
+    TimeSeriesResponse,
 };
 use uuid::Uuid;
 
@@ -13,11 +14,30 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/jobs", get(list_jobs))
         .route("/jobs/usage", get(list_job_usage))
+        .route("/jobs/timeseries", get(get_jobs_timeseries))
         .route("/jobs/prune-failed", post(prune_failed_jobs))
         .route("/jobs/{id}/kill", post(kill_job))
         .route("/jobs/{id}/retry", post(retry_job))
         .route("/jobs/{id}", get(get_job).delete(delete_job))
         .route("/jobs/{id}/usage", get(get_job_usage))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/jobs/timeseries",
+    tag = "Jobs",
+    params(TimeSeriesQuery),
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "Bucketed completed-job counts over time", body = TimeSeriesResponse),
+        (status = 401, body = synforge_core::api::ApiError)
+    )
+)]
+pub(super) async fn get_jobs_timeseries(
+    State(state): State<AppState>,
+    Query(query): Query<TimeSeriesQuery>,
+) -> Result<Json<TimeSeriesResponse>, AppError> {
+    Ok(Json(state.service.get_jobs_timeseries(query.range).await?))
 }
 
 #[utoipa::path(

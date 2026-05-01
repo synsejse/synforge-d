@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import api from "../api";
+import type { TimeRange } from "../types";
 
 export const statisticsQueries = {
   overview: () =>
@@ -22,6 +23,18 @@ export const statisticsQueries = {
           enabledPackageCount: enabled.page.total ?? enabled.packages.length,
           activeJobCount: active.page.total ?? active.jobs.length,
         };
+      },
+    }),
+
+  timeseries: (range: TimeRange) =>
+    queryOptions({
+      queryKey: ["statistics", "timeseries", range] as const,
+      queryFn: async () => {
+        const [sync, jobs] = await Promise.all([
+          api.getSyncTimeseries(range),
+          api.getJobsTimeseries(range),
+        ]);
+        return { sync, jobs };
       },
     }),
 };

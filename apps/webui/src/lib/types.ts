@@ -127,3 +127,6 @@ export type MockChrootCacheStats = ApiSchema["MockChrootCacheStats"];
 export type GitMirrorCacheStats = ApiSchema["GitMirrorCacheStats"];
 export type CacheStatsResponse = ApiSchema["CacheStatsResponse"];
 export type ServerHardwareResponse = ApiSchema["ServerHardwareResponse"];
+export type TimeSeriesPoint = ApiSchema["TimeSeriesPoint"];
+export type TimeSeriesResponse = ApiSchema["TimeSeriesResponse"];
+export type TimeRange = "24h" | "7d" | "30d";

@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
+import { getRouteApi } from "@tanstack/react-router";
 import {
   faBoxesStacked,
+  faChartLine,
   faCircleCheck,
   faClockRotateLeft,
   faDatabase,
@@ -12,6 +14,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { statisticsQueries } from "../../lib/queries";
 import { formatDateTime } from "../../lib/datetime";
+import type { TimeRange } from "../../lib/types";
 import ErrorMessage from "../../components/common/error-message";
 import { usePageVisible } from "../../components/common/page-visibility-provider";
 import LoadingBlock from "../../components/ui/loading-block";
@@ -19,8 +22,13 @@ import FaIcon from "../../components/ui/fa-icon";
 import MetricCard from "../../components/ui/metric-card";
 import PageHeader from "../../components/ui/page-header";
 import RatioBar from "../../components/ui/ratio-bar";
+import TimeRangeSelector from "../../components/ui/time-range-selector";
+import TimeSeriesChart from "../../components/ui/time-series-chart";
 
 const STATS_REFRESH_INTERVAL_MS = 15_000;
+const TIMESERIES_REFRESH_INTERVAL_MS = 30_000;
+
+const route = getRouteApi("/_authed/statistics");
 
 function formatSeconds(value: number | null | undefined): string {
   if (value == null) {
@@ -39,9 +47,20 @@ function formatSeconds(value: number | null | undefined): string {
 
 function Statistics() {
   const visible = usePageVisible();
+  const navigate = route.useNavigate();
+  const search = route.useSearch();
+  const range: TimeRange = search.range ?? "24h";
+  const setRange = (next: TimeRange) =>
+    navigate({ search: (prev) => ({ ...prev, range: next }) });
+
   const { data, isPending, error } = useQuery({
     ...statisticsQueries.overview(),
     refetchInterval: visible ? STATS_REFRESH_INTERVAL_MS : false,
+  });
+
+  const timeseriesQuery = useQuery({
+    ...statisticsQueries.timeseries(range),
+    refetchInterval: visible ? TIMESERIES_REFRESH_INTERVAL_MS : false,
   });
 
   if (isPending) {
@@ -138,8 +157,49 @@ function Statistics() {
         />
       </section>
 
-      {/* Ratio visualizations — point-in-time distributions. Time-series
-          rendering will land once the API exposes historical buckets. */}
+      {/* Time-series — sync and build activity over a selectable window. */}
+      <section className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
+              Activity_Over_Time
+            </h2>
+            <p className="mt-1 font-mono text-xs text-soft">
+              Stacked succeeded vs failed counts. Switch the window to zoom out.
+            </p>
+          </div>
+          <TimeRangeSelector value={range} onChange={setRange} />
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-2">
+          <article className="border-4 border-edge-strong bg-black p-5">
+            <div className="mb-3 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.2em] text-accent-cyan">
+              <FaIcon icon={faRotate} />
+              Sync_Operations
+            </div>
+            <TimeSeriesChart
+              data={timeseriesQuery.data?.sync}
+              isLoading={timeseriesQuery.isPending}
+              emptyLabel="No sync activity in this window."
+            />
+          </article>
+
+          <article className="border-4 border-edge-strong bg-black p-5">
+            <div className="mb-3 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.2em] text-accent-lime">
+              <FaIcon icon={faChartLine} />
+              Build_Jobs
+            </div>
+            <TimeSeriesChart
+              data={timeseriesQuery.data?.jobs}
+              isLoading={timeseriesQuery.isPending}
+              emptyLabel="No completed builds in this window."
+            />
+          </article>
+        </div>
+      </section>
+
+      {/* Ratio visualizations — point-in-time distributions to complement
+          the time-series above. */}
       <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         <article className="border-4 border-edge-strong bg-black p-6">
           <h3 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">

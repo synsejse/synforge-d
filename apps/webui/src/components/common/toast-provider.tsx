@@ -40,17 +40,17 @@ export function useToast(): ToastContextValue {
 }
 
 const variantBorder: Record<ToastVariant, string> = {
-  info: "border-[var(--theme-border-strong)]",
-  success: "border-[var(--theme-terminal-green)]",
-  error: "border-[var(--theme-error-red)]",
-  warning: "border-[var(--theme-accent-orange)]",
+  info: "border-edge-strong",
+  success: "border-success",
+  error: "border-error",
+  warning: "border-accent-orange",
 };
 
 const variantAccent: Record<ToastVariant, string> = {
-  info: "text-[var(--theme-accent-lime)]",
-  success: "text-[var(--theme-terminal-green)]",
-  error: "text-[var(--theme-error-red)]",
-  warning: "text-[var(--theme-accent-orange)]",
+  info: "text-accent-lime",
+  success: "text-success",
+  error: "text-error",
+  warning: "text-accent-orange",
 };
 
 const DEFAULT_DURATION = 5000;
@@ -123,14 +123,14 @@ export default function ToastProvider({ children }: { children: ReactNode }) {
                     {entry.title}
                   </ToastPrimitive.Title>
                   {entry.message ? (
-                    <ToastPrimitive.Description className="mt-1 font-mono text-sm text-[var(--theme-text-strong)]">
+                    <ToastPrimitive.Description className="mt-1 font-mono text-sm text-strong">
                       {entry.message}
                     </ToastPrimitive.Description>
                   ) : null}
                 </div>
                 <ToastPrimitive.Close
                   aria-label="Close"
-                  className="shrink-0 border-2 border-[var(--theme-border-strong)] bg-black px-2 py-1 font-mono text-xs uppercase tracking-[0.15em] text-[var(--theme-text-muted)] transition hover:border-white hover:text-white focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+                  className="shrink-0 border-2 border-edge-strong bg-black px-2 py-1 font-mono text-xs uppercase tracking-[0.15em] text-muted transition hover:border-white hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime"
                 >
                   ×
                 </ToastPrimitive.Close>

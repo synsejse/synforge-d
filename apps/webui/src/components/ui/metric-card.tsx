@@ -19,19 +19,19 @@ export default function MetricCard({
   className,
 }: MetricCardProps) {
   const borderColor = {
-    default: "border-[var(--theme-border-strong)]",
-    accent: "border-[var(--theme-accent-lime)]",
-    terminal: "border-[var(--theme-terminal-green)]",
-    success: "border-[var(--theme-terminal-green)]",
-    error: "border-[var(--theme-error-red)]",
+    default: "border-edge-strong",
+    accent: "border-accent-lime",
+    terminal: "border-success",
+    success: "border-success",
+    error: "border-error",
   }[variant];
 
   const textColor = {
     default: "text-white",
-    accent: "text-[var(--theme-accent-lime)]",
-    terminal: "text-[var(--theme-terminal-green)]",
-    success: "text-[var(--theme-terminal-green)]",
-    error: "text-[var(--theme-error-red)]",
+    accent: "text-accent-lime",
+    terminal: "text-success",
+    success: "text-success",
+    error: "text-error",
   }[variant];
 
   return (
@@ -47,18 +47,18 @@ export default function MetricCard({
       
       <div className="relative">
         {icon && (
-          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center border-2 border-zinc-700 bg-zinc-950 text-xl text-zinc-400">
+          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center border-2 border-edge-strong bg-surface-alt text-xl text-muted">
             {icon}
           </div>
         )}
-        <div className="font-mono text-xs font-bold uppercase tracking-[0.25em] text-[var(--theme-text-soft)]">
+        <div className="font-mono text-xs font-bold uppercase tracking-[0.25em] text-soft">
           {label}
         </div>
         <div className={cn("font-display mt-3 text-4xl font-black uppercase tracking-tighter", textColor)}>
           {value}
         </div>
         {detail && (
-          <div className="mt-2 font-mono text-xs text-[var(--theme-text-muted)]">
+          <div className="mt-2 font-mono text-xs text-muted">
             {detail}
           </div>
         )}
@@ -69,10 +69,10 @@ export default function MetricCard({
         <div
           className={cn(
             "absolute bottom-0 right-0 h-3 w-3",
-            variant === "accent" && "bg-[var(--theme-accent-lime)]",
-            variant === "terminal" && "bg-[var(--theme-terminal-green)]",
-            variant === "success" && "bg-[var(--theme-terminal-green)]",
-            variant === "error" && "bg-[var(--theme-error-red)]"
+            variant === "accent" && "bg-accent-lime",
+            variant === "terminal" && "bg-success",
+            variant === "success" && "bg-success",
+            variant === "error" && "bg-error"
           )}
         ></div>
       )}

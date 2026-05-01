@@ -44,7 +44,7 @@ interface DataTableProps<T> {
 }
 
 const TH_CLASS =
-  "sticky top-0 z-10 bg-[var(--theme-surface-alt)] px-4 py-3 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-[var(--theme-text-soft)] border-b-2 border-[var(--theme-border-strong)]";
+  "sticky top-0 z-10 bg-surface-alt px-4 py-3 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft border-b-2 border-edge-strong";
 
 const TD_CLASS = "px-4 py-3 align-middle";
 
@@ -100,7 +100,7 @@ export default function DataTable<T>({
           <article
             key={`m-${rowKey(row)}`}
             className={cn(
-              "border-2 border-[var(--theme-border-strong)] bg-black p-4",
+              "border-2 border-edge-strong bg-black p-4",
               rowClassName?.(row),
             )}
           >
@@ -115,10 +115,10 @@ export default function DataTable<T>({
               ) : null}
             </div>
             {fieldCols.length > 0 ? (
-              <dl className="mt-3 space-y-2 font-mono text-xs text-[var(--theme-text-muted)]">
+              <dl className="mt-3 space-y-2 font-mono text-xs text-muted">
                 {fieldCols.map((col) => (
                   <div key={col.key} className="break-all">
-                    <dt className="inline text-[var(--theme-text-soft)]">
+                    <dt className="inline text-soft">
                       {col.header}:
                     </dt>{" "}
                     <dd className="inline">{col.cell(row)}</dd>
@@ -131,7 +131,7 @@ export default function DataTable<T>({
       </div>
 
       {/* Desktop sticky-header table */}
-      <div className="hidden overflow-auto border-2 border-[var(--theme-border-strong)] md:block">
+      <div className="hidden overflow-auto border-2 border-edge-strong md:block">
         <table className="w-full" style={{ minWidth }}>
           <thead>
             <tr>
@@ -146,12 +146,12 @@ export default function DataTable<T>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-[var(--theme-border)] bg-black">
+          <tbody className="divide-y divide-edge bg-black">
             {rows.map((row) => (
               <tr
                 key={rowKey(row)}
                 className={cn(
-                  "transition-colors hover:bg-[var(--theme-surface-alt)]",
+                  "transition-colors hover:bg-surface-alt",
                   rowClassName?.(row),
                 )}
               >

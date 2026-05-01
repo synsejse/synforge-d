@@ -262,7 +262,7 @@ function PackageList() {
       >
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
           <label className="block">
-            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
+            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
               Search
             </span>
             <input
@@ -271,11 +271,11 @@ function PackageList() {
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               placeholder="Filter by name or description"
-              className="w-full border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+              className="w-full border-2 border-edge-strong bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
             />
           </label>
           <label className="block">
-            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
+            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
               Status
             </span>
             <Select
@@ -293,11 +293,11 @@ function PackageList() {
 
       {/* Package Cards */}
       {listQuery.data.packages.length === 0 ? (
-        <div className="border-2 border-zinc-700 bg-black p-12 text-center">
-          <p className="font-mono text-sm font-bold uppercase tracking-[0.3em] text-zinc-500">
+        <div className="border-2 border-edge-strong bg-black p-12 text-center">
+          <p className="font-mono text-sm font-bold uppercase tracking-[0.3em] text-soft">
             NO_PACKAGES_CONFIGURED
           </p>
-          <p className="mt-2 text-sm text-zinc-600">
+          <p className="mt-2 text-sm text-soft">
             Add a spec source to start building.
           </p>
         </div>

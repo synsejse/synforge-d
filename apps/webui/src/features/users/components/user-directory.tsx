@@ -26,24 +26,24 @@ export default function UserDirectory({
   onDelete,
 }: UserDirectoryProps) {
   return (
-    <section className="overflow-hidden border-2 border-zinc-700 bg-black">
-      <div className="border-b-2 border-zinc-800 bg-zinc-950 px-6 py-5">
+    <section className="overflow-hidden border-2 border-edge-strong bg-black">
+      <div className="border-b-2 border-edge bg-surface-alt px-6 py-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center border-2 border-zinc-700 bg-black text-white">
+          <div className="flex h-10 w-10 items-center justify-center border-2 border-edge-strong bg-black text-white">
             <FaIcon icon={faUsers} />
           </div>
           <div>
             <h2 className="font-mono text-lg font-bold uppercase tracking-[0.15em] text-white">
               User Directory
             </h2>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-soft">
               Handles, permissions, and repository traffic at a glance.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="divide-y divide-zinc-800">
+      <div className="divide-y divide-edge">
         {users.map((entry) => {
           const isCurrentUser = currentUserId === entry.user.id;
           return (
@@ -54,16 +54,16 @@ export default function UserDirectory({
                     <h3 className="font-mono text-xl font-semibold uppercase text-white">
                       {entry.user.display_name}
                     </h3>
-                    <span className="border-2 border-zinc-700 bg-zinc-950 px-2.5 py-1 text-xs uppercase tracking-[0.18em] text-zinc-300">
+                    <span className="border-2 border-edge-strong bg-surface-alt px-2.5 py-1 text-xs uppercase tracking-[0.18em] text-muted">
                       {entry.user.active ? "active" : "disabled"}
                     </span>
                     {isCurrentUser ? (
-                      <span className="border-2 border-[var(--theme-accent-lime)] bg-zinc-950 px-2.5 py-1 text-xs uppercase tracking-[0.18em] text-[var(--theme-accent-lime)]">
+                      <span className="border-2 border-accent-lime bg-surface-alt px-2.5 py-1 text-xs uppercase tracking-[0.18em] text-accent-lime">
                         current
                       </span>
                     ) : null}
                   </div>
-                  <div className="mt-2 font-mono text-sm text-zinc-400">
+                  <div className="mt-2 font-mono text-sm text-muted">
                     @{entry.user.handle}
                   </div>
                 </div>
@@ -95,18 +95,18 @@ export default function UserDirectory({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-4 border-t-2 border-zinc-800 pt-4">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t-2 border-edge pt-4">
                 <div className="flex flex-wrap gap-2">
                   {entry.user.permissions.map((permission) => (
                     <span
                       key={`${entry.user.id}:${permission}`}
-                      className="border-2 border-zinc-700 bg-zinc-950 px-3 py-1 text-xs uppercase tracking-[0.18em] text-zinc-300"
+                      className="border-2 border-edge-strong bg-surface-alt px-3 py-1 text-xs uppercase tracking-[0.18em] text-muted"
                     >
                       {permission}
                     </span>
                   ))}
                 </div>
-                <dl className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-zinc-400">
+                <dl className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted">
                   <CompactMetric
                     label="Repo Usage"
                     value={formatBytes(entry.metrics.downloaded_bytes)}
@@ -132,10 +132,10 @@ export default function UserDirectory({
 function CompactMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-2 leading-none">
-      <dt className="self-center font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+      <dt className="self-center font-mono text-[10px] uppercase tracking-[0.18em] text-soft">
         {label}
       </dt>
-      <dd className="self-center font-mono text-sm font-medium text-zinc-200">{value}</dd>
+      <dd className="self-center font-mono text-sm font-medium text-strong">{value}</dd>
     </div>
   );
 }

@@ -209,8 +209,8 @@ export default function AddPackageModal({
         aria-labelledby={titleId}
         className="flex max-h-[calc(100dvh-3rem)] w-full max-w-3xl flex-col border-4 border-white bg-black shadow-[6px_6px_0_rgba(255,255,255,0.25)]"
       >
-        <div className="border-b-2 border-zinc-800 px-6 py-5">
-          <p className="font-mono text-xs font-bold uppercase tracking-[0.28em] text-[var(--theme-accent-lime)]">
+        <div className="border-b-2 border-edge px-6 py-5">
+          <p className="font-mono text-xs font-bold uppercase tracking-[0.28em] text-accent-lime">
             Package
           </p>
           <h2 id={titleId} className="mt-2 font-mono text-2xl font-bold uppercase text-white">
@@ -276,7 +276,7 @@ export default function AddPackageModal({
           />
 
           {error && (
-             <div className="border-2 border-zinc-700 bg-black px-4 py-3 text-sm text-zinc-200">
+             <div className="border-2 border-edge-strong bg-black px-4 py-3 text-sm text-strong">
               {error}
             </div>
           )}
@@ -285,14 +285,14 @@ export default function AddPackageModal({
             <button
               type="button"
               onClick={onClose}
-               className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
+               className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-               className="border-2 border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72] disabled:opacity-70"
+               className="border-2 border-accent-lime bg-accent-lime px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72] disabled:opacity-70"
             >
               <FaIcon icon={faPlus} className="mr-2" />
               {submitting ? "Adding…" : "Add Package"}

@@ -34,10 +34,10 @@ const columns: DataTableColumn<SyncOperation>[] = [
     mobile: "title",
     cell: (op) => (
       <div>
-        <div className="font-mono text-sm text-[var(--theme-text-strong)]">
+        <div className="font-mono text-sm text-strong">
           {formatDateTime(op.created_at)}
         </div>
-        <div className="mt-1 font-mono text-xs uppercase tracking-[0.14em] text-[var(--theme-text-soft)] md:hidden">
+        <div className="mt-1 font-mono text-xs uppercase tracking-[0.14em] text-soft md:hidden">
           {formatTrigger(op.trigger_type)}
         </div>
       </div>
@@ -47,7 +47,7 @@ const columns: DataTableColumn<SyncOperation>[] = [
     key: "trigger",
     header: "Trigger",
     mobile: "hidden",
-    className: "font-mono text-xs uppercase tracking-[0.14em] text-[var(--theme-text-muted)]",
+    className: "font-mono text-xs uppercase tracking-[0.14em] text-muted",
     cell: (op) => formatTrigger(op.trigger_type),
   },
   {
@@ -63,13 +63,13 @@ const columns: DataTableColumn<SyncOperation>[] = [
   {
     key: "revision",
     header: "Revision",
-    className: "font-mono text-sm text-[var(--theme-text-strong)]",
+    className: "font-mono text-sm text-strong",
     cell: (op) => op.revision || "—",
   },
   {
     key: "error",
     header: "Error",
-    className: "font-mono text-xs text-[var(--theme-text-muted)]",
+    className: "font-mono text-xs text-muted",
     cell: (op) => op.error_message || "—",
   },
 ];
@@ -103,7 +103,7 @@ export default function SyncHistoryTable({ packageName }: SyncHistoryTableProps)
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
+        <div className="font-mono text-xs uppercase tracking-[0.18em] text-soft">
           Filter status
         </div>
         <div className="w-full md:w-56">
@@ -134,7 +134,7 @@ export default function SyncHistoryTable({ packageName }: SyncHistoryTableProps)
       />
 
       {operationsQuery.data && operations.length > 0 ? (
-        <div className="border-2 border-zinc-700 bg-black px-4 py-3">
+        <div className="border-2 border-edge-strong bg-black px-4 py-3">
           <PaginationControls
             onPrevious={() => setOffset((current) => Math.max(0, current - PAGE_SIZE))}
             onNext={() => setOffset((current) => current + PAGE_SIZE)}

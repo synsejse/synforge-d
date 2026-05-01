@@ -17,7 +17,7 @@ function JobView() {
   if (!id) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <div className="font-mono text-sm text-zinc-500">
+        <div className="font-mono text-sm text-soft">
           No job ID provided
         </div>
       </div>

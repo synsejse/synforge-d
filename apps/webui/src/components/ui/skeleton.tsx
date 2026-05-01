@@ -7,7 +7,7 @@ interface SkeletonProps {
 }
 
 const baseClass =
-  "animate-pulse border-2 border-[var(--theme-border-strong)] bg-[var(--theme-surface-alt)]";
+  "animate-pulse border-2 border-edge-strong bg-surface-alt";
 
 export function Skeleton({ className, width, height }: SkeletonProps) {
   const style: React.CSSProperties = {};
@@ -43,7 +43,7 @@ export function SkeletonTable({ columns, rows = 5, className }: SkeletonTablePro
       role="status"
       aria-live="polite"
       className={cn(
-        "border-2 border-[var(--theme-border-strong)] bg-black p-4 space-y-3",
+        "border-2 border-edge-strong bg-black p-4 space-y-3",
         className,
       )}
     >
@@ -66,7 +66,7 @@ export function SkeletonCard({ lines = 3, className }: SkeletonCardProps) {
       role="status"
       aria-live="polite"
       className={cn(
-        "border-2 border-[var(--theme-border-strong)] bg-black p-5 space-y-3",
+        "border-2 border-edge-strong bg-black p-5 space-y-3",
         className,
       )}
     >

@@ -37,19 +37,19 @@ export default function Dialog({
             "shadow-card-lg"
           )}
         >
-          <div className="border-b-2 border-[var(--theme-border-strong)] bg-[var(--theme-surface)] px-6 py-5">
+          <div className="border-b-2 border-edge-strong bg-surface px-6 py-5">
             <DialogPrimitive.Title className="font-display text-2xl font-bold uppercase tracking-tight text-white">
               {title}
             </DialogPrimitive.Title>
             {description && (
-              <DialogPrimitive.Description className="mt-2 font-mono text-sm text-[var(--theme-text-muted)]">
+              <DialogPrimitive.Description className="mt-2 font-mono text-sm text-muted">
                 {description}
               </DialogPrimitive.Description>
             )}
             {showClose && (
               <DialogPrimitive.Close asChild>
                 <button
-                  className="absolute right-4 top-5 border-2 border-[var(--theme-border-strong)] bg-transparent p-2 text-[var(--theme-text-muted)] transition-all hover:border-white hover:text-white focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+                  className="absolute right-4 top-5 border-2 border-edge-strong bg-transparent p-2 text-muted transition-all hover:border-white hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime"
                   aria-label="Close"
                 >
                   <svg

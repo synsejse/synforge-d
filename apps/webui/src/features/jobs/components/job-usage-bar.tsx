@@ -88,10 +88,10 @@ function UsageBarRow({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3 font-mono text-xs uppercase tracking-[0.12em]">
-        <span className="text-zinc-500">{label}</span>
+        <span className="text-soft">{label}</span>
         <span className={valueClass}>{value}</span>
       </div>
-      <div className="h-5 border-2 border-zinc-700 bg-black p-[3px]">
+      <div className="h-5 border-2 border-edge-strong bg-black p-[3px]">
         <div
           className={`h-full transition-all duration-700 ${fillClass}`}
           style={{ width: `${hasSample ? percent : 0}%` }}

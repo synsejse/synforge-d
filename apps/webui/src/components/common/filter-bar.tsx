@@ -37,7 +37,7 @@ export default function FilterBar({
       className={`border-2 border-white bg-black ${className}`.trim()}
     >
       {/* Mobile toggle row */}
-      <div className="flex items-center justify-between gap-3 border-b-2 border-[var(--theme-border-strong)] bg-[var(--theme-surface-alt)] px-4 py-3 md:hidden">
+      <div className="flex items-center justify-between gap-3 border-b-2 border-edge-strong bg-surface-alt px-4 py-3 md:hidden">
         <button
           type="button"
           onClick={() => setMobileOpen((open) => !open)}
@@ -48,7 +48,7 @@ export default function FilterBar({
           <FaIcon icon={faFilter} />
           Filters
           {activeCount > 0 ? (
-            <span className="border-2 border-[var(--theme-accent-lime)] bg-black px-2 py-0.5 text-[10px] text-[var(--theme-accent-lime)]">
+            <span className="border-2 border-accent-lime bg-black px-2 py-0.5 text-[10px] text-accent-lime">
               {activeCount}
             </span>
           ) : null}
@@ -57,7 +57,7 @@ export default function FilterBar({
           <button
             type="button"
             onClick={onClear}
-            className="flex items-center gap-1 font-mono text-xs uppercase tracking-[0.15em] text-[var(--theme-text-muted)] transition hover:text-white focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+            className="flex items-center gap-1 font-mono text-xs uppercase tracking-[0.15em] text-muted transition hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime"
           >
             <FaIcon icon={faXmark} />
             Clear
@@ -73,12 +73,12 @@ export default function FilterBar({
         {children}
 
         {(showClear || trailing) ? (
-          <div className="mt-4 flex flex-wrap items-center justify-end gap-3 border-t-2 border-[var(--theme-border)] pt-4">
+          <div className="mt-4 flex flex-wrap items-center justify-end gap-3 border-t-2 border-edge pt-4">
             {showClear ? (
               <button
                 type="button"
                 onClick={onClear}
-                className="hidden md:flex items-center gap-2 border-2 border-[var(--theme-border-strong)] bg-black px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-[0.15em] text-[var(--theme-text-muted)] transition hover:border-white hover:text-white focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+                className="hidden md:flex items-center gap-2 border-2 border-edge-strong bg-black px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition hover:border-white hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime"
               >
                 <FaIcon icon={faXmark} />
                 Clear filters

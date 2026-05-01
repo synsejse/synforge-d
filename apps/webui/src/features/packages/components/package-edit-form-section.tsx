@@ -101,7 +101,7 @@ export default function PackageEditFormSection({
       <form onSubmit={onSubmit} className="min-w-0 border-4 border-white bg-black p-4 sm:p-6">
         <div className="mb-6">
           <h2 className="font-mono text-xl font-bold uppercase text-white">Edit Package</h2>
-          <p className="mt-2 text-sm text-zinc-400">
+          <p className="mt-2 text-sm text-muted">
             Update the tracked repository, selected spec path, polling behavior,
             and package state from one place.
           </p>
@@ -123,7 +123,7 @@ export default function PackageEditFormSection({
               <button
                 type="button"
                 onClick={onOpenSpecPicker}
-                className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
+                className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt"
               >
                 <FaIcon icon={faMagnifyingGlass} className="mr-2" />
                 Browse repository
@@ -135,7 +135,7 @@ export default function PackageEditFormSection({
               value={form.specPath}
               onChange={(event) => onFormChange({ specPath: event.target.value })}
               placeholder="path/to/package.spec"
-              className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]"
+              className="w-full border-2 border-edge-strong bg-black px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-accent-lime"
               required
             />
           </FieldGroup>
@@ -170,16 +170,16 @@ export default function PackageEditFormSection({
               min={1}
               className="md:col-span-2"
             />
-            <p className="md:col-span-2 -mt-2 text-xs text-zinc-500">
+            <p className="md:col-span-2 -mt-2 text-xs text-soft">
               Leave blank to use Mock&apos;s default cache size. Applies per package and mock chroot.
             </p>
 
-            <div className="border-2 border-zinc-700 bg-zinc-950 p-4 md:col-span-2">
+            <div className="border-2 border-edge-strong bg-surface-alt p-4 md:col-span-2">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+                <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
                   CPU limit (cores)
                 </span>
-                <label className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-300">
+                <label className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-muted">
                   <input
                     type="checkbox"
                     checked={form.cpuLimitEnabled}
@@ -196,8 +196,8 @@ export default function PackageEditFormSection({
                 </label>
               </div>
               <div
-                className={`mt-4 border-2 border-zinc-800 px-3 py-4 transition ${
-                  form.cpuLimitEnabled ? "bg-black" : "bg-zinc-900/60 opacity-70"
+                className={`mt-4 border-2 border-edge px-3 py-4 transition ${
+                  form.cpuLimitEnabled ? "bg-black" : "bg-surface-hover/60 opacity-70"
                 }`}
               >
                 <input
@@ -211,25 +211,25 @@ export default function PackageEditFormSection({
                   }
                   disabled={!form.cpuLimitEnabled}
                   aria-label="CPU limit in cores"
-                  className="h-3 w-full cursor-pointer appearance-none bg-zinc-900 accent-[var(--theme-accent-lime)] disabled:cursor-not-allowed [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-black [&::-moz-range-thumb]:bg-[var(--theme-accent-lime)] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-black [&::-webkit-slider-thumb]:bg-[var(--theme-accent-lime)]"
+                  className="h-3 w-full cursor-pointer appearance-none bg-surface-hover accent-accent-lime disabled:cursor-not-allowed [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-black [&::-moz-range-thumb]:bg-accent-lime [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-black [&::-webkit-slider-thumb]:bg-accent-lime"
                 />
               </div>
               <div className="mt-3 flex items-center justify-between gap-3 font-mono text-xs font-bold uppercase tracking-[0.12em]">
-                <span className="text-[var(--theme-accent-lime)]">
+                <span className="text-accent-lime">
                   {form.cpuLimitEnabled ? `${cpuSliderValue} cores` : "Unlimited"}
                 </span>
-                <span className="text-zinc-500">
+                <span className="text-soft">
                   {CPU_MIN_CORES} - {cpuSliderMax} cores
                 </span>
               </div>
             </div>
 
-            <div className="border-2 border-zinc-700 bg-zinc-950 p-4 md:col-span-2">
+            <div className="border-2 border-edge-strong bg-surface-alt p-4 md:col-span-2">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+                <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
                   Memory limit (MB)
                 </span>
-                <label className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-300">
+                <label className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-muted">
                   <input
                     type="checkbox"
                     checked={form.memoryLimitEnabled}
@@ -246,8 +246,8 @@ export default function PackageEditFormSection({
                 </label>
               </div>
               <div
-                className={`mt-4 border-2 border-zinc-800 px-3 py-4 transition ${
-                  form.memoryLimitEnabled ? "bg-black" : "bg-zinc-900/60 opacity-70"
+                className={`mt-4 border-2 border-edge px-3 py-4 transition ${
+                  form.memoryLimitEnabled ? "bg-black" : "bg-surface-hover/60 opacity-70"
                 }`}
               >
                 <input
@@ -261,14 +261,14 @@ export default function PackageEditFormSection({
                   }
                   disabled={!form.memoryLimitEnabled}
                   aria-label="Memory limit in megabytes"
-                  className="h-3 w-full cursor-pointer appearance-none bg-zinc-900 accent-[var(--theme-accent-lime)] disabled:cursor-not-allowed [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-black [&::-moz-range-thumb]:bg-[var(--theme-accent-lime)] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-black [&::-webkit-slider-thumb]:bg-[var(--theme-accent-lime)]"
+                  className="h-3 w-full cursor-pointer appearance-none bg-surface-hover accent-accent-lime disabled:cursor-not-allowed [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-black [&::-moz-range-thumb]:bg-accent-lime [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-black [&::-webkit-slider-thumb]:bg-accent-lime"
                 />
               </div>
               <div className="mt-3 flex items-center justify-between gap-3 font-mono text-xs font-bold uppercase tracking-[0.12em]">
-                <span className="text-[var(--theme-accent-lime)]">
+                <span className="text-accent-lime">
                   {form.memoryLimitEnabled ? `${memorySliderValue} MB` : "Unlimited"}
                 </span>
-                <span className="text-zinc-500">
+                <span className="text-soft">
                   {MEMORY_MIN_MB} - {memorySliderMax} MB
                 </span>
               </div>
@@ -282,7 +282,7 @@ export default function PackageEditFormSection({
                 <button
                   type="button"
                   onClick={onOpenChrootPicker}
-                  className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
+                  className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt"
                 >
                   Choose chroots
                 </button>
@@ -351,7 +351,7 @@ export default function PackageEditFormSection({
             <button
               type="submit"
               disabled={saving}
-              className="border-2 border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72] disabled:opacity-70"
+              className="border-2 border-accent-lime bg-accent-lime px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72] disabled:opacity-70"
             >
               <FaIcon icon={faSave} className="mr-2" />
               {saving ? "Saving…" : "Save Changes"}
@@ -371,17 +371,17 @@ export default function PackageEditFormSection({
               type="button"
               onClick={onBrowseRepository}
               disabled={browsing}
-              className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950 disabled:opacity-60"
+              className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt disabled:opacity-60"
             >
               <FaIcon icon={faMagnifyingGlass} className="mr-2" />
               {browsing ? "Browsing…" : "Load repository files"}
             </button>
             {browseError ? (
-              <div className="border-2 border-zinc-700 bg-black px-4 py-3 text-sm text-zinc-200">
+              <div className="border-2 border-edge-strong bg-black px-4 py-3 text-sm text-strong">
                 {browseError}
               </div>
             ) : null}
-            <div className="max-h-[50vh] overflow-auto border-2 border-zinc-700 bg-black">
+            <div className="max-h-[50vh] overflow-auto border-2 border-edge-strong bg-black">
               {selectableFiles.length > 0 ? (
                 selectableFiles.map((file) => (
                   <button
@@ -391,17 +391,17 @@ export default function PackageEditFormSection({
                       onFormChange({ specPath: file });
                       onCloseSpecPicker();
                     }}
-                    className={`block w-full break-all border-b-2 border-zinc-800 px-4 py-2 text-left font-mono text-sm transition last:border-b-0 ${
+                    className={`block w-full break-all border-b-2 border-edge px-4 py-2 text-left font-mono text-sm transition last:border-b-0 ${
                       form.specPath === file
-                        ? "bg-zinc-950 text-white"
-                        : "bg-black text-zinc-300 hover:bg-zinc-950"
+                        ? "bg-surface-alt text-white"
+                        : "bg-black text-muted hover:bg-surface-alt"
                     }`}
                   >
                     {file}
                   </button>
                 ))
               ) : (
-                <div className="px-4 py-3 text-sm text-zinc-400">
+                <div className="px-4 py-3 text-sm text-muted">
                   No spec files loaded yet.
                 </div>
               )}
@@ -416,12 +416,12 @@ export default function PackageEditFormSection({
           subtitle="Select one or more build targets."
           onClose={onCloseChrootPicker}
         >
-          <div className="max-h-[50vh] overflow-y-auto border-2 border-zinc-700 bg-black">
-            <div className="divide-y divide-zinc-800">
+          <div className="max-h-[50vh] overflow-y-auto border-2 border-edge-strong bg-black">
+            <div className="divide-y divide-edge">
               {availableChroots.map((chroot) => (
                 <label
                   key={chroot}
-                  className="flex items-center justify-between gap-4 px-4 py-3 text-sm text-zinc-200 hover:bg-zinc-950"
+                  className="flex items-center justify-between gap-4 px-4 py-3 text-sm text-strong hover:bg-surface-alt"
                 >
                   <span className="font-mono">{chroot}</span>
                   <input

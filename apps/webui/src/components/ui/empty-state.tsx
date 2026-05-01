@@ -20,7 +20,7 @@ export default function EmptyState({
   children,
   className,
 }: Props) {
-  const wrapperClass = `border-2 border-dashed border-[var(--theme-border-strong)] bg-black p-8 text-center font-mono text-sm text-[var(--theme-text-muted)] ${className ?? ""}`;
+  const wrapperClass = `border-2 border-dashed border-edge-strong bg-black p-8 text-center font-mono text-sm text-muted ${className ?? ""}`;
 
   const hasStructuredContent = Boolean(title || description || icon || action);
 
@@ -33,7 +33,7 @@ export default function EmptyState({
       {icon ? (
         <FaIcon
           icon={icon}
-          className="mb-4 text-3xl text-[var(--theme-text-soft)]"
+          className="mb-4 text-3xl text-soft"
         />
       ) : null}
       {title ? (
@@ -42,7 +42,7 @@ export default function EmptyState({
         </div>
       ) : null}
       {description ? (
-        <p className="mx-auto mt-2 max-w-md text-sm text-[var(--theme-text-muted)]">
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted">
           {description}
         </p>
       ) : null}

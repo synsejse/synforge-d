@@ -141,11 +141,11 @@ function Statistics() {
       {/* Ratio visualizations — point-in-time distributions. Time-series
           rendering will land once the API exposes historical buckets. */}
       <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        <article className="border-4 border-[var(--theme-border-strong)] bg-black p-6">
+        <article className="border-4 border-edge-strong bg-black p-6">
           <h3 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
             Sync_Outcomes_24h
           </h3>
-          <p className="mt-1 font-mono text-xs text-[var(--theme-text-soft)]">
+          <p className="mt-1 font-mono text-xs text-soft">
             Distribution of source-sync attempts in the last 24 hours.
           </p>
           <div className="mt-4">
@@ -166,11 +166,11 @@ function Statistics() {
           </div>
         </article>
 
-        <article className="border-4 border-[var(--theme-border-strong)] bg-black p-6">
+        <article className="border-4 border-edge-strong bg-black p-6">
           <h3 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
             Mock_Chroot_Cache
           </h3>
-          <p className="mt-1 font-mono text-xs text-[var(--theme-text-soft)]">
+          <p className="mt-1 font-mono text-xs text-soft">
             Hit / miss / stale-served counts since daemon start.
           </p>
           <div className="mt-4">
@@ -196,11 +196,11 @@ function Statistics() {
           </div>
         </article>
 
-        <article className="border-4 border-[var(--theme-border-strong)] bg-black p-6">
+        <article className="border-4 border-edge-strong bg-black p-6">
           <h3 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
             Git_Mirror_Health
           </h3>
-          <p className="mt-1 font-mono text-xs text-[var(--theme-text-soft)]">
+          <p className="mt-1 font-mono text-xs text-soft">
             Healthy vs stale tracked mirrors right now.
           </p>
           <div className="mt-4">
@@ -223,13 +223,13 @@ function Statistics() {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-2">
-        <article className="border-4 border-[var(--theme-border-strong)] bg-black">
-          <header className="border-b-4 border-[var(--theme-border-strong)] bg-zinc-950 px-6 py-4">
+        <article className="border-4 border-edge-strong bg-black">
+          <header className="border-b-4 border-edge-strong bg-surface-alt px-6 py-4">
             <h2 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
               Mock_Chroot_Cache
             </h2>
           </header>
-          <div className="grid gap-px bg-zinc-800">
+          <div className="grid gap-px bg-edge">
             <StatRow label="Worker image" value={chrootCache.worker_image ?? "-"} />
             <StatRow label="TTL" value={formatSeconds(chrootCache.ttl_seconds)} />
             <StatRow label="Hit count" value={String(chrootCache.hit_count)} />
@@ -245,13 +245,13 @@ function Statistics() {
           </div>
         </article>
 
-        <article className="border-4 border-[var(--theme-border-strong)] bg-black">
-          <header className="border-b-4 border-[var(--theme-border-strong)] bg-zinc-950 px-6 py-4">
+        <article className="border-4 border-edge-strong bg-black">
+          <header className="border-b-4 border-edge-strong bg-surface-alt px-6 py-4">
             <h2 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
               Git_Mirror_Cache
             </h2>
           </header>
-          <div className="grid gap-px bg-zinc-800">
+          <div className="grid gap-px bg-edge">
             <StatRow label="Mirror root" value={mirrorCache.mirror_root} />
             <StatRow
               label="Refresh TTL"
@@ -287,10 +287,10 @@ function Statistics() {
 function StatRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-2 bg-black px-4 py-3 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-3 sm:px-5">
-      <div className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-500">
+      <div className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-soft">
         {label}
       </div>
-      <div className="break-words font-mono text-sm text-zinc-200 sm:truncate">{value}</div>
+      <div className="break-words font-mono text-sm text-strong sm:truncate">{value}</div>
     </div>
   );
 }

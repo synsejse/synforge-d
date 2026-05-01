@@ -68,13 +68,13 @@ export default function PackageBuildHistorySection({
       <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
           <h2 className="font-mono text-xl font-bold uppercase text-white">Build History</h2>
-          <p className="mt-2 text-sm text-zinc-400">
+          <p className="mt-2 text-sm text-muted">
             Build activity for this package, including revisions, outcomes, and
             managed repo ownership.
           </p>
         </div>
         {buildsLoaded ? (
-          <div className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs uppercase tracking-[0.2em] text-zinc-400">
+          <div className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs uppercase tracking-[0.2em] text-muted">
             {buildsTotal ?? builds.length} total builds
           </div>
         ) : null}
@@ -96,38 +96,38 @@ export default function PackageBuildHistorySection({
               return (
                 <article
                   key={`mobile:${entry.build.job.id}`}
-                  className="border-2 border-zinc-700 bg-black p-4"
+                  className="border-2 border-edge-strong bg-black p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <Link
                         to="/jobs/view"
                         search={{ id: entry.build.job.id }}
-                        className="font-mono text-sm font-bold uppercase text-white transition duration-100 ease-linear hover:text-[var(--theme-accent-lime)]"
+                        className="font-mono text-sm font-bold uppercase text-white transition duration-100 ease-linear hover:text-accent-lime"
                       >
                         {entry.build.job.mock_chroot}
                       </Link>
-                      <div className="mt-1 break-all font-mono text-xs text-zinc-500">
+                      <div className="mt-1 break-all font-mono text-xs text-soft">
                         {entry.build.job.id}
                       </div>
                     </div>
                     <StatusPill status={entry.build.job.status} />
                   </div>
                   <div className="mt-4 space-y-2 text-sm">
-                    <div className="font-mono text-zinc-300">
-                      <span className="text-zinc-500">Revision:</span>{" "}
+                    <div className="font-mono text-muted">
+                      <span className="text-soft">Revision:</span>{" "}
                       <span className="break-all">{entry.build.job.revision}</span>
                     </div>
-                    <div className="font-mono text-zinc-400">
-                      <span className="text-zinc-500">Trigger:</span> {entry.build.job.trigger}
+                    <div className="font-mono text-muted">
+                      <span className="text-soft">Trigger:</span> {entry.build.job.trigger}
                     </div>
-                    <div className="font-mono text-zinc-400">
-                      <span className="text-zinc-500">Created:</span>{" "}
+                    <div className="font-mono text-muted">
+                      <span className="text-soft">Created:</span>{" "}
                       {formatDateTime(entry.build.job.created_at)}
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-mono text-zinc-400">
-                        <span className="text-zinc-500">Repo files:</span> {publishedFiles.length}
+                      <span className="font-mono text-muted">
+                        <span className="text-soft">Repo files:</span> {publishedFiles.length}
                       </span>
                       <Badge variant={signingSummary.variant}>
                         {signingSummary.label}
@@ -138,7 +138,7 @@ export default function PackageBuildHistorySection({
                     <Link
                       to="/jobs/view"
                         search={{ id: entry.build.job.id }}
-                      className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-300 transition-all duration-100 ease-linear hover:text-[var(--theme-accent-lime)]"
+                      className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-muted transition-all duration-100 ease-linear hover:text-accent-lime"
                     >
                       <FaIcon icon={faFolderOpen} className="mr-2" />
                       Open Job
@@ -147,14 +147,14 @@ export default function PackageBuildHistorySection({
                       <>
                         <button
                           onClick={() => onRefreshTarget(entry.build.job.mock_chroot)}
-                          className="text-left font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition-all duration-100 ease-linear hover:text-white"
+                          className="text-left font-mono text-xs font-bold uppercase tracking-[0.1em] text-soft transition-all duration-100 ease-linear hover:text-white"
                         >
                           <FaIcon icon={faRotate} className="mr-2" />
                           Refresh Target
                         </button>
                         <button
                           onClick={() => onRebuildTarget(entry.build.job.mock_chroot)}
-                          className="text-left font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition-all duration-100 ease-linear hover:text-white"
+                          className="text-left font-mono text-xs font-bold uppercase tracking-[0.1em] text-soft transition-all duration-100 ease-linear hover:text-white"
                         >
                           <FaIcon icon={faHammer} className="mr-2" />
                           Rebuild Target
@@ -164,7 +164,7 @@ export default function PackageBuildHistorySection({
                     <button
                       onClick={() => onDeleteJob(entry.build.job.id)}
                       disabled={live || deletingJobId === entry.build.job.id}
-                      className="text-left font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition-all duration-100 ease-linear hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      className="text-left font-mono text-xs font-bold uppercase tracking-[0.1em] text-soft transition-all duration-100 ease-linear hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <FaIcon icon={faTrash} className="mr-2" />
                       {deletingJobId === entry.build.job.id ? "Deleting…" : "Delete Build"}
@@ -174,9 +174,9 @@ export default function PackageBuildHistorySection({
               );
             })}
           </div>
-          <div className="hidden overflow-hidden border-2 border-zinc-700 md:block">
+          <div className="hidden overflow-hidden border-2 border-edge-strong md:block">
             <table className="w-full">
-              <thead className="border-b-2 border-zinc-700 bg-zinc-950 text-left font-mono text-xs uppercase tracking-[0.2em] text-zinc-500">
+              <thead className="border-b-2 border-edge-strong bg-surface-alt text-left font-mono text-xs uppercase tracking-[0.2em] text-soft">
                 <tr>
                   <th className="px-4 py-3">Target</th>
                   <th className="px-4 py-3">Revision</th>
@@ -188,7 +188,7 @@ export default function PackageBuildHistorySection({
                   <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800 bg-black">
+              <tbody className="divide-y divide-edge bg-black">
                 {builds.map((entry) => {
                   const publishedFiles = entry.repo_files;
                   const signingSummary = getBuildSigningSummary(entry);
@@ -196,28 +196,28 @@ export default function PackageBuildHistorySection({
                     entry.build.job.status === "pending" ||
                     entry.build.job.status === "running";
                   return (
-                    <tr key={entry.build.job.id} className="hover:bg-zinc-950">
-                      <td className="px-4 py-3 text-sm font-mono text-zinc-300">
+                    <tr key={entry.build.job.id} className="hover:bg-surface-alt">
+                      <td className="px-4 py-3 text-sm font-mono text-muted">
                         {entry.build.job.mock_chroot}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-mono text-sm text-zinc-200">
+                        <div className="font-mono text-sm text-strong">
                           {entry.build.job.revision}
                         </div>
-                        <div className="mt-1 font-mono text-xs text-zinc-500">
+                        <div className="mt-1 font-mono text-xs text-soft">
                           {entry.build.job.id}
                         </div>
                       </td>
                       <td className="px-4 py-3">
                         <StatusPill status={entry.build.job.status} />
                       </td>
-                      <td className="px-4 py-3 font-mono text-sm text-zinc-400">
+                      <td className="px-4 py-3 font-mono text-sm text-muted">
                         {entry.build.job.trigger}
                       </td>
-                      <td className="px-4 py-3 font-mono text-sm text-zinc-400">
+                      <td className="px-4 py-3 font-mono text-sm text-muted">
                         {formatDateTime(entry.build.job.created_at)}
                       </td>
-                      <td className="px-4 py-3 font-mono text-sm text-zinc-300">
+                      <td className="px-4 py-3 font-mono text-sm text-muted">
                         {publishedFiles.length}
                       </td>
                       <td className="px-4 py-3">
@@ -230,7 +230,7 @@ export default function PackageBuildHistorySection({
                           <Link
                             to="/jobs/view"
                         search={{ id: entry.build.job.id }}
-                            className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-300 transition-all duration-100 ease-linear hover:text-[var(--theme-accent-lime)]"
+                            className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-muted transition-all duration-100 ease-linear hover:text-accent-lime"
                           >
                             <FaIcon icon={faFolderOpen} className="mr-2" />
                             Open Job
@@ -241,7 +241,7 @@ export default function PackageBuildHistorySection({
                                 onClick={() =>
                                   onRefreshTarget(entry.build.job.mock_chroot)
                                 }
-                                className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition-all duration-100 ease-linear hover:text-white"
+                                className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-soft transition-all duration-100 ease-linear hover:text-white"
                               >
                                 <FaIcon icon={faRotate} className="mr-2" />
                                 Refresh Target
@@ -250,7 +250,7 @@ export default function PackageBuildHistorySection({
                                 onClick={() =>
                                   onRebuildTarget(entry.build.job.mock_chroot)
                                 }
-                                className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition-all duration-100 ease-linear hover:text-white"
+                                className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-soft transition-all duration-100 ease-linear hover:text-white"
                               >
                                 <FaIcon icon={faHammer} className="mr-2" />
                                 Rebuild Target
@@ -260,7 +260,7 @@ export default function PackageBuildHistorySection({
                           <button
                             onClick={() => onDeleteJob(entry.build.job.id)}
                             disabled={live || deletingJobId === entry.build.job.id}
-                            className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition-all duration-100 ease-linear hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                            className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-soft transition-all duration-100 ease-linear hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <FaIcon icon={faTrash} className="mr-2" />
                             {deletingJobId === entry.build.job.id
@@ -275,7 +275,7 @@ export default function PackageBuildHistorySection({
               </tbody>
             </table>
           </div>
-           <div className="border-2 border-zinc-700 bg-black px-4 py-3">
+           <div className="border-2 border-edge-strong bg-black px-4 py-3">
             <PaginationControls
               onPrevious={onLoadPrevious}
               onNext={onLoadNext}

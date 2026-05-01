@@ -42,7 +42,7 @@ export default function SourceBasicsSection({
   return (
     <>
       <label className="block">
-        <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+        <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
           Package name
         </span>
         <input
@@ -51,12 +51,12 @@ export default function SourceBasicsSection({
           onChange={(event) => setName(event.target.value)}
           placeholder="mesa"
           required
-          className="w-full border-2 border-zinc-700 bg-zinc-950 px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]"
+          className="w-full border-2 border-edge-strong bg-surface-alt px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-accent-lime"
         />
       </label>
 
       <label className="block">
-        <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+        <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
           Git repository URL
         </span>
         <input
@@ -65,7 +65,7 @@ export default function SourceBasicsSection({
           onChange={(event) => setRepoUrl(event.target.value)}
           placeholder="https://github.com/example/repo.git"
           required
-          className="w-full border-2 border-zinc-700 bg-zinc-950 px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]"
+          className="w-full border-2 border-edge-strong bg-surface-alt px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-accent-lime"
         />
       </label>
 
@@ -77,7 +77,7 @@ export default function SourceBasicsSection({
           onChange={setCcacheEnabled}
         />
 
-        <label className="block border-2 border-zinc-700 bg-zinc-950 px-4 py-3">
+        <label className="block border-2 border-edge-strong bg-surface-alt px-4 py-3">
           <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.1em] text-white">
             Shared ccache size (MB)
           </span>
@@ -87,9 +87,9 @@ export default function SourceBasicsSection({
             value={ccacheMaxSizeMb}
             onChange={(event) => setCcacheMaxSizeMb(event.target.value)}
             placeholder="Blank uses Mock default"
-            className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]"
+            className="w-full border-2 border-edge-strong bg-black px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-accent-lime"
           />
-          <span className="mt-2 block text-xs text-zinc-500">
+          <span className="mt-2 block text-xs text-soft">
             Applies per package and mock chroot.
           </span>
         </label>
@@ -145,13 +145,13 @@ function ToggleCard({
 }) {
   return (
     <label
-      className={`flex items-center justify-between border-2 border-zinc-700 bg-zinc-950 px-4 py-3 ${className}`}
+      className={`flex items-center justify-between border-2 border-edge-strong bg-surface-alt px-4 py-3 ${className}`}
     >
       <span>
         <span className="block font-mono text-xs font-bold uppercase tracking-[0.1em] text-white">
           {label}
         </span>
-        <span className="mt-1 block text-xs text-zinc-500">{description}</span>
+        <span className="mt-1 block text-xs text-soft">{description}</span>
       </span>
       <input
         type="checkbox"

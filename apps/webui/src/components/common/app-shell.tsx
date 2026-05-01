@@ -97,10 +97,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <div className="box-border min-h-full w-full max-w-full px-2 py-2 sm:px-3 sm:py-3 lg:h-screen lg:overflow-hidden lg:px-5 lg:py-5">
       <div className={`grid min-h-full min-w-0 gap-3 lg:h-full ${gridCols}`}>
         <aside className="flex min-w-0 flex-col border-4 border-white app-section-band-vertical p-0 shadow-card-md lg:min-h-0">
-          <div className="border-b-4 border-[var(--theme-border-strong)] bg-black px-4 py-4 sm:px-6 sm:py-5 lg:px-3 lg:py-3">
+          <div className="border-b-4 border-edge-strong bg-black px-4 py-4 sm:px-6 sm:py-5 lg:px-3 lg:py-3">
             <div className="flex items-center justify-between gap-3">
               <div className={`min-w-0 ${isRail ? "lg:hidden" : ""}`}>
-                <div className="font-mono text-xs font-bold uppercase tracking-[0.35em] text-[var(--theme-accent-lime)]">
+                <div className="font-mono text-xs font-bold uppercase tracking-[0.35em] text-accent-lime">
                   Synforge
                 </div>
                 <h1 className="font-display mt-2 text-xl font-extrabold uppercase tracking-tighter text-white sm:text-2xl">
@@ -110,7 +110,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               {isRail ? (
                 <div
                   aria-hidden="true"
-                  className="hidden lg:flex h-10 w-10 items-center justify-center border-2 border-[var(--theme-accent-lime)] bg-black font-mono text-base font-extrabold uppercase tracking-tighter text-[var(--theme-accent-lime)]"
+                  className="hidden lg:flex h-10 w-10 items-center justify-center border-2 border-accent-lime bg-black font-mono text-base font-extrabold uppercase tracking-tighter text-accent-lime"
                 >
                   S
                 </div>
@@ -120,7 +120,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 aria-controls="mobile-nav-panel"
                 aria-expanded={mobileNavOpen}
                 onClick={() => setMobileNavOpen((open) => !open)}
-                className="lg:hidden border-2 border-[var(--theme-border-strong)] bg-black px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-200 transition hover:border-white hover:bg-[var(--theme-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+                className="lg:hidden border-2 border-edge-strong bg-black px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-strong transition hover:border-white hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-accent-lime"
               >
                 {mobileNavOpen ? "Close" : "Menu"}
               </button>
@@ -139,10 +139,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
               }}
             />
 
-            <div className="border-t-4 border-[var(--theme-border-strong)] lg:mt-auto">
+            <div className="border-t-4 border-edge-strong lg:mt-auto">
               <div className={`bg-black ${isRail ? "lg:px-2 lg:py-3" : "px-5 py-5"}`}>
                 {!isRail ? (
-                  <div className="font-mono text-xs font-bold uppercase tracking-[0.25em] text-zinc-500">
+                  <div className="font-mono text-xs font-bold uppercase tracking-[0.25em] text-soft">
                     Session
                   </div>
                 ) : null}
@@ -153,7 +153,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                         type="button"
                         onClick={handleLogout}
                         aria-label="Change account"
-                        className="flex h-10 items-center justify-center border-2 border-[var(--theme-border-strong)] bg-black text-zinc-200 transition hover:border-white hover:bg-[var(--theme-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+                        className="flex h-10 items-center justify-center border-2 border-edge-strong bg-black text-strong transition hover:border-white hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-accent-lime"
                       >
                         <FaIcon icon={faRightFromBracket} />
                       </button>
@@ -163,13 +163,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="mt-3 w-full border-2 border-[var(--theme-border-strong)] bg-black px-4 py-2.5 text-left font-mono text-sm font-medium text-zinc-200 transition hover:border-white hover:bg-[var(--theme-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+                    className="mt-3 w-full border-2 border-edge-strong bg-black px-4 py-2.5 text-left font-mono text-sm font-medium text-strong transition hover:border-white hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-accent-lime"
                   >
                     Change account
                   </button>
                 )}
               </div>
-              <div className="hidden lg:block border-t-2 border-[var(--theme-border)] bg-black">
+              <div className="hidden lg:block border-t-2 border-edge bg-black">
                 <Tooltip
                   content={isRail ? "Expand sidebar" : "Collapse sidebar"}
                   side="right"
@@ -179,7 +179,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                     onClick={toggleRail}
                     aria-label={isRail ? "Expand sidebar" : "Collapse sidebar"}
                     aria-pressed={isRail}
-                    className={`group flex w-full items-center gap-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-text-soft)] transition hover:bg-[var(--theme-surface-hover)] hover:text-white focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)] ${isRail ? "justify-center" : ""}`}
+                    className={`group flex w-full items-center gap-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-soft transition hover:bg-surface-hover hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime ${isRail ? "justify-center" : ""}`}
                   >
                     <FaIcon icon={isRail ? faAnglesRight : faAnglesLeft} />
                     {!isRail ? <span>Collapse</span> : null}

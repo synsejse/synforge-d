@@ -38,7 +38,7 @@ export default function JobListTable({
     return (
       <div className="flex min-h-[300px] items-center justify-center px-6 py-12">
         <div className="text-center">
-          <div className="font-mono text-sm text-zinc-500">
+          <div className="font-mono text-sm text-soft">
             {mode === "active" ? "No active jobs" : "No jobs found"}
           </div>
         </div>
@@ -64,7 +64,7 @@ export default function JobListTable({
       </div>
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[640px] lg:min-w-[980px]">
-          <thead className="border-b-2 border-[var(--theme-border-strong)] bg-zinc-950">
+          <thead className="border-b-2 border-edge-strong bg-surface-alt">
             <tr>
               {[
                 "Package",
@@ -77,7 +77,7 @@ export default function JobListTable({
                 <th
                   key={label}
                   scope="col"
-                  className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500"
+                  className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft"
                 >
                   {label}
                 </th>
@@ -85,14 +85,14 @@ export default function JobListTable({
               {mode === "active" && (
                 <th
                   scope="col"
-                  className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500"
+                  className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft"
                 >
                   Live Usage
                 </th>
               )}
               <th
                 scope="col"
-                className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500"
+                className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft"
               >
                 Actions
               </th>
@@ -140,17 +140,17 @@ function MobileJobCard({
 }: JobRowProps) {
   const isLive = isLiveJob(entry);
   return (
-    <article className="border-2 border-zinc-700 bg-black p-4">
+    <article className="border-2 border-edge-strong bg-black p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <JobLink entry={entry} />
-          <div className="mt-1 break-all font-mono text-xs text-zinc-600">
+          <div className="mt-1 break-all font-mono text-xs text-soft">
             {entry.job.id}
           </div>
         </div>
         <JobStatusBadge entry={entry} />
       </div>
-      <div className="mt-3 space-y-2 font-mono text-xs text-zinc-400">
+      <div className="mt-3 space-y-2 font-mono text-xs text-muted">
         <JobFact label="Target">
           <Badge variant="ghost">{entry.job.mock_chroot}</Badge>
         </JobFact>
@@ -160,7 +160,7 @@ function MobileJobCard({
         </JobFact>
         <JobFact label="Created">{formatDateTime(entry.job.created_at)}</JobFact>
         {mode === "active" && isLive && (
-          <div className="space-y-3 border-2 border-zinc-700 bg-zinc-950 px-3 py-3">
+          <div className="space-y-3 border-2 border-edge-strong bg-surface-alt px-3 py-3">
             <JobUsageBar usage={usage} serverHardware={serverHardware} />
           </div>
         )}
@@ -191,14 +191,14 @@ function DesktopJobRow({
   const isLive = isLiveJob(entry);
   return (
     <tr
-      className={`border-b-2 border-[var(--theme-border)] transition-all hover:bg-zinc-950 ${
-        index % 2 === 0 ? "bg-black" : "bg-zinc-950/40"
+      className={`border-b-2 border-edge transition-all hover:bg-surface-alt ${
+        index % 2 === 0 ? "bg-black" : "bg-surface-alt/40"
       }`}
     >
       <td className="px-5 py-4">
         <div className="min-w-[160px]">
           <JobLink entry={entry} />
-          <div className="mt-1 max-w-[200px] truncate font-mono text-xs text-zinc-600">
+          <div className="mt-1 max-w-[200px] truncate font-mono text-xs text-soft">
             {entry.job.id}
           </div>
         </div>
@@ -207,27 +207,27 @@ function DesktopJobRow({
         <Badge variant="ghost">{entry.job.mock_chroot}</Badge>
       </td>
       <td className="px-5 py-4">
-        <div className="max-w-[300px] truncate font-mono text-sm text-zinc-300">
+        <div className="max-w-[300px] truncate font-mono text-sm text-muted">
           {entry.job.revision}
         </div>
       </td>
       <td className="px-5 py-4">
         <JobStatusBadge entry={entry} />
       </td>
-      <td className="px-5 py-4 font-mono text-sm text-zinc-400">
+      <td className="px-5 py-4 font-mono text-sm text-muted">
         {formatDurationBetween(entry.job.created_at, entry.job.finished_at)}
       </td>
-      <td className="px-5 py-4 font-mono text-sm text-zinc-400">
+      <td className="px-5 py-4 font-mono text-sm text-muted">
         {formatDateTime(entry.job.created_at)}
       </td>
       {mode === "active" && (
         <td className="px-5 py-4">
           {isLive && usage ? (
-            <div className="min-w-[320px] border-2 border-zinc-700 bg-zinc-950 p-3">
+            <div className="min-w-[320px] border-2 border-edge-strong bg-surface-alt p-3">
               <JobUsageBar usage={usage} serverHardware={serverHardware} />
             </div>
           ) : (
-            <span className="font-mono text-xs text-zinc-600">-</span>
+            <span className="font-mono text-xs text-soft">-</span>
           )}
         </td>
       )}
@@ -311,7 +311,7 @@ function JobFact({
 }) {
   return (
     <div className="break-all">
-      <span className="text-zinc-500">{label}:</span> {children}
+      <span className="text-soft">{label}:</span> {children}
     </div>
   );
 }
@@ -321,7 +321,7 @@ function JobLink({ entry }: { entry: BuildJobResponse }) {
     <Link
       to="/jobs/view"
       search={{ id: entry.job.id }}
-      className="font-display font-bold text-white transition hover:text-[var(--theme-accent-lime)]"
+      className="font-display font-bold text-white transition hover:text-accent-lime"
     >
       {entry.job.package_name}
     </Link>

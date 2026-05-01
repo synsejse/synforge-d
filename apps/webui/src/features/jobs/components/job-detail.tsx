@@ -163,14 +163,14 @@ export default function JobDetail({ jobId }: Props) {
       />
 
       {/* Header */}
-      <section className="border-4 border-[var(--theme-accent-orange)] bg-black p-6">
+      <section className="border-4 border-accent-orange bg-black p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
               <Badge variant={getStatusVariant(jobQuery.data.job.job.status)} pulse={isLive}>
                 {jobQuery.data.job.job.status}
               </Badge>
-              <span className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[var(--theme-accent-orange)]">
+              <span className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-accent-orange">
                 JOB_DETAILS
               </span>
             </div>
@@ -178,14 +178,14 @@ export default function JobDetail({ jobId }: Props) {
               {jobQuery.data.job.job.package_name}
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-4">
-              <div className="font-mono text-sm text-zinc-400">
-                <span className="text-zinc-600">Target:</span> {jobQuery.data.job.job.mock_chroot}
+              <div className="font-mono text-sm text-muted">
+                <span className="text-soft">Target:</span> {jobQuery.data.job.job.mock_chroot}
               </div>
-              <div className="font-mono text-sm text-zinc-400">
-                <span className="text-zinc-600">Trigger:</span> {jobQuery.data.job.job.trigger}
+              <div className="font-mono text-sm text-muted">
+                <span className="text-soft">Trigger:</span> {jobQuery.data.job.job.trigger}
               </div>
-              <div className="font-mono text-sm text-zinc-400">
-                <span className="text-zinc-600">Created:</span> {formatDateTime(jobQuery.data.job.job.created_at)}
+              <div className="font-mono text-sm text-muted">
+                <span className="text-soft">Created:</span> {formatDateTime(jobQuery.data.job.job.created_at)}
               </div>
             </div>
           </div>
@@ -219,47 +219,47 @@ export default function JobDetail({ jobId }: Props) {
       </section>
 
       {/* Job Metadata */}
-      <div className="border-4 border-[var(--theme-border-strong)] bg-black shadow-card-sm">
-        <div className="border-b-4 border-[var(--theme-border-strong)] app-section-band px-6 py-4">
+      <div className="border-4 border-edge-strong bg-black shadow-card-sm">
+        <div className="border-b-4 border-edge-strong app-section-band px-6 py-4">
           <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white">
             Build_Metadata
           </h2>
         </div>
         <div className="grid gap-6 p-6 md:grid-cols-2 lg:grid-cols-3">
-          <div className="border-l-4 border-[var(--theme-accent-lime)] bg-zinc-950/30 pl-4 pr-3 py-4">
-            <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+          <div className="border-l-4 border-accent-lime bg-surface-alt/30 pl-4 pr-3 py-4">
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-soft">
               Job ID
             </div>
             <div className="mt-2 break-all font-mono text-sm text-white">
               {jobQuery.data.job.job.id}
             </div>
           </div>
-          <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
-            <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+          <div className="border-l-4 border-edge-strong bg-surface-alt/30 pl-4 pr-3 py-4">
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-soft">
               Package
             </div>
             <div className="mt-2 font-display text-base font-bold text-white">
               {jobQuery.data.job.job.package_name}
             </div>
           </div>
-          <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
-            <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+          <div className="border-l-4 border-edge-strong bg-surface-alt/30 pl-4 pr-3 py-4">
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-soft">
               Mock Chroot
             </div>
             <div className="mt-2 font-mono text-sm text-white">
               {jobQuery.data.job.job.mock_chroot}
             </div>
           </div>
-          <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
-            <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+          <div className="border-l-4 border-edge-strong bg-surface-alt/30 pl-4 pr-3 py-4">
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-soft">
               Revision
             </div>
             <div className="mt-2 break-all font-mono text-sm text-white">
               {jobQuery.data.job.job.revision}
             </div>
           </div>
-          <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
-            <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+          <div className="border-l-4 border-edge-strong bg-surface-alt/30 pl-4 pr-3 py-4">
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-soft">
               Created At
             </div>
             <div className="mt-2 font-mono text-sm text-white">
@@ -267,8 +267,8 @@ export default function JobDetail({ jobId }: Props) {
             </div>
           </div>
           {jobQuery.data.job.job.finished_at && (
-            <div className="border-l-4 border-zinc-700 bg-zinc-950/30 pl-4 pr-3 py-4">
-              <div className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+            <div className="border-l-4 border-edge-strong bg-surface-alt/30 pl-4 pr-3 py-4">
+              <div className="font-mono text-xs font-bold uppercase tracking-wider text-soft">
                 Finished At
               </div>
               <div className="mt-2 font-mono text-sm text-white">
@@ -280,8 +280,8 @@ export default function JobDetail({ jobId }: Props) {
       </div>
 
       {isLive && (
-        <div className="border-4 border-[var(--theme-accent-lime)] bg-black shadow-[4px_4px_0_rgba(180,255,130,0.2)]">
-          <div className="border-b-4 border-[var(--theme-accent-lime)] bg-zinc-950 px-6 py-4">
+        <div className="border-4 border-accent-lime bg-black shadow-[4px_4px_0_rgba(180,255,130,0.2)]">
+          <div className="border-b-4 border-accent-lime bg-surface-alt px-6 py-4">
             <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white">
               Live_Resource_Usage
             </h2>
@@ -299,11 +299,11 @@ export default function JobDetail({ jobId }: Props) {
       )}
 
       {/* Build Logs */}
-      <div className="border-4 border-[var(--theme-terminal-green)] bg-black shadow-[4px_4px_0_rgba(0,255,65,0.2)]">
-        <div className="border-b-4 border-[var(--theme-terminal-green)] bg-black px-4 py-4 sm:px-6">
+      <div className="border-4 border-success bg-black shadow-[4px_4px_0_rgba(0,255,65,0.2)]">
+        <div className="border-b-4 border-success bg-black px-4 py-4 sm:px-6">
           <div className="flex items-center gap-2">
-            <FaIcon icon={faTerminal} className="text-[var(--theme-terminal-green)]" />
-            <h2 className="font-display text-xl font-bold uppercase tracking-tight text-[var(--theme-terminal-green)]">
+            <FaIcon icon={faTerminal} className="text-success" />
+            <h2 className="font-display text-xl font-bold uppercase tracking-tight text-success">
               Build_Logs
             </h2>
           </div>
@@ -329,13 +329,13 @@ export default function JobDetail({ jobId }: Props) {
                 return (
                   <div
                     key={`${artifact.id}:${artifact.file}`}
-                    className="flex flex-col gap-4 border-2 border-[var(--theme-border)] bg-zinc-950/40 px-4 py-4 transition-all hover:border-[var(--theme-border-strong)] hover:bg-zinc-950 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+                    className="flex flex-col gap-4 border-2 border-edge bg-surface-alt/40 px-4 py-4 transition-all hover:border-edge-strong hover:bg-surface-alt sm:flex-row sm:items-center sm:justify-between sm:px-5"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="break-all font-mono text-sm text-white">
                         {artifact.file}
                       </div>
-                      <div className="mt-1 font-mono text-xs text-zinc-600">
+                      <div className="mt-1 font-mono text-xs text-soft">
                         {artifact.size_bytes.toLocaleString()} bytes
                       </div>
                     </div>
@@ -456,22 +456,22 @@ function UsageBar({
 }) {
   const hasSample = value !== "-";
   return (
-    <div className="space-y-3 border-2 border-zinc-700 bg-zinc-950 p-5">
+    <div className="space-y-3 border-2 border-edge-strong bg-surface-alt p-5">
       <div className="flex items-center justify-between gap-3">
-        <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-500">
+        <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-soft">
           {label}
         </span>
         <span className={`font-mono text-sm font-bold uppercase tracking-[0.12em] ${accentClass}`}>
           {value}
         </span>
       </div>
-      <div className="h-10 border-2 border-zinc-700 bg-black p-1">
+      <div className="h-10 border-2 border-edge-strong bg-black p-1">
         <div
           className={`h-full ${colorClass} transition-all duration-700`}
           style={{ width: `${hasSample ? percent : 0}%` }}
         />
       </div>
-      <div className="font-mono text-xs uppercase tracking-[0.1em] text-zinc-500">
+      <div className="font-mono text-xs uppercase tracking-[0.1em] text-soft">
         {hasSample ? `${percent.toFixed(1)}%` : "WAITING_FOR_SAMPLE"}
       </div>
     </div>

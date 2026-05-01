@@ -178,7 +178,7 @@ function RepositoryBrowser() {
         >
           <div className="grid gap-4 md:grid-cols-3">
             <label className="block">
-              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
+              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
                 Package
               </span>
               <input
@@ -186,11 +186,11 @@ function RepositoryBrowser() {
                 value={packageInput}
                 onChange={(e) => setPackageInput(e.target.value)}
                 placeholder="Filter by package name"
-                className="w-full border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+                className="w-full border-2 border-edge-strong bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
               />
             </label>
             <label className="block">
-              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
+              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
                 Target
               </span>
               <input
@@ -198,11 +198,11 @@ function RepositoryBrowser() {
                 value={targetInput}
                 onChange={(e) => setTargetInput(e.target.value)}
                 placeholder="Filter by target"
-                className="w-full border-2 border-zinc-700 bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+                className="w-full border-2 border-edge-strong bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
               />
             </label>
             <label className="block">
-              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
+              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
                 Kind
               </span>
               <Select
@@ -224,7 +224,7 @@ function RepositoryBrowser() {
 
       {/* Files Table */}
       <div className="border-2 border-white bg-black">
-        <div className="border-b-2 border-zinc-800 bg-black px-6 py-4">
+        <div className="border-b-2 border-edge bg-black px-6 py-4">
           <h2 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
             Published Files
           </h2>
@@ -232,7 +232,7 @@ function RepositoryBrowser() {
         
         {inventoryQuery.data.repo_files.length === 0 ? (
           <div className="px-6 py-12 text-center">
-            <p className="font-mono text-sm text-zinc-500">
+            <p className="font-mono text-sm text-soft">
               No files match the current filters.
             </p>
           </div>
@@ -245,12 +245,12 @@ function RepositoryBrowser() {
                 return (
                   <article
                     key={`mobile:${file.job_id}:${file.path}`}
-                    className="border-2 border-zinc-700 bg-black p-4"
+                    className="border-2 border-edge-strong bg-black p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="font-mono text-sm text-white">{file.package_name}</div>
-                        <div className="mt-1 font-mono text-xs text-zinc-500">
+                        <div className="mt-1 font-mono text-xs text-soft">
                           {file.mock_chroot || "unknown"}
                         </div>
                       </div>
@@ -261,16 +261,16 @@ function RepositoryBrowser() {
                     <div className="mt-3">
                       <a
                         href={`/repo/${file.path}`}
-                        className="break-all font-mono text-sm text-[var(--theme-accent-lime)] transition duration-100 ease-linear hover:text-white"
+                        className="break-all font-mono text-sm text-accent-lime transition duration-100 ease-linear hover:text-white"
                       >
                         {fileName}
                       </a>
-                      <div className="mt-1 break-all font-mono text-xs text-zinc-500">
+                      <div className="mt-1 break-all font-mono text-xs text-soft">
                         {file.path}
                       </div>
                     </div>
-                    <div className="mt-3 font-mono text-xs text-zinc-400">
-                      <span className="text-zinc-500">Size:</span> {formatBytes(file.size_bytes)}
+                    <div className="mt-3 font-mono text-xs text-muted">
+                      <span className="text-soft">Size:</span> {formatBytes(file.size_bytes)}
                     </div>
                   </article>
                 );
@@ -279,23 +279,23 @@ function RepositoryBrowser() {
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[640px] lg:min-w-[900px]">
                 <thead>
-                  <tr className="border-b-2 border-zinc-800">
-                    <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                  <tr className="border-b-2 border-edge">
+                    <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft">
                       Package
                     </th>
-                    <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                    <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft">
                       Target
                     </th>
-                    <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                    <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft">
                       File
                     </th>
-                    <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                    <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft">
                       Repo Path
                     </th>
-                    <th className="px-6 py-4 text-right font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                    <th className="px-6 py-4 text-right font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft">
                       Size
                     </th>
-                    <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                    <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft">
                       Signing
                     </th>
                   </tr>
@@ -307,26 +307,26 @@ function RepositoryBrowser() {
                     return (
                       <tr
                         key={`${file.job_id}:${file.path}`}
-                        className="border-b border-zinc-900 transition duration-100 ease-linear hover:bg-zinc-950"
+                        className="border-b border-edge transition duration-100 ease-linear hover:bg-surface-alt"
                       >
                         <td className="px-6 py-4 font-mono text-sm text-white">
                           {file.package_name}
                         </td>
-                        <td className="px-6 py-4 font-mono text-sm text-zinc-400">
+                        <td className="px-6 py-4 font-mono text-sm text-muted">
                           {file.mock_chroot || "unknown"}
                         </td>
                         <td className="px-6 py-4">
                           <a
                             href={`/repo/${file.path}`}
-                            className="break-all font-mono text-sm text-[var(--theme-accent-lime)] transition duration-100 ease-linear hover:text-white"
+                            className="break-all font-mono text-sm text-accent-lime transition duration-100 ease-linear hover:text-white"
                           >
                             {fileName}
                           </a>
                         </td>
-                        <td className="px-6 py-4 font-mono text-sm text-zinc-500">
+                        <td className="px-6 py-4 font-mono text-sm text-soft">
                           {file.path}
                         </td>
-                        <td className="px-6 py-4 text-right font-mono text-sm text-zinc-400">
+                        <td className="px-6 py-4 text-right font-mono text-sm text-muted">
                           {formatBytes(file.size_bytes)}
                         </td>
                         <td className="px-6 py-4">
@@ -345,7 +345,7 @@ function RepositoryBrowser() {
 
         {/* Pagination */}
         {inventoryQuery.data.repo_files.length > 0 && (
-          <div className="border-t-2 border-zinc-800 bg-black px-6 py-4">
+          <div className="border-t-2 border-edge bg-black px-6 py-4">
             <PaginationControls
               onPrevious={() =>
                 setFilters({ offset: Math.max(0, filters.offset - PAGE_SIZE) })

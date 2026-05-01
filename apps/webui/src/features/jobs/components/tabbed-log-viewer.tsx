@@ -226,9 +226,9 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
   return (
     <div className="space-y-0">
       {/* Tabs with Controls */}
-      <div className="border-2 border-zinc-700 border-b-0 bg-zinc-950">
+      <div className="border-2 border-edge-strong border-b-0 bg-surface-alt">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div className="min-w-0 overflow-x-auto border-b-2 border-zinc-700 md:border-b-0">
+          <div className="min-w-0 overflow-x-auto border-b-2 border-edge-strong md:border-b-0">
             <div className="flex min-w-max">
               {(manifest?.sources ?? []).map((source) => {
                 const shortLabel = source.file.split("/").pop() || source.file;
@@ -239,13 +239,13 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
                     title={source.file}
                     className={`shrink-0 whitespace-nowrap px-3 py-3 font-mono text-xs font-bold uppercase tracking-[0.15em] transition sm:px-5 ${
                       activeSourcePath === source.file
-                        ? "border-b-4 border-[var(--theme-terminal-green)] bg-black text-[var(--theme-terminal-green)]"
-                        : "text-zinc-500 hover:bg-black/50 hover:text-zinc-300"
+                        ? "border-b-4 border-success bg-black text-success"
+                        : "text-soft hover:bg-black/50 hover:text-muted"
                     }`}
                   >
                     {shortLabel}
                     {source.size > 0 && (
-                      <span className="ml-2 text-[10px] text-zinc-600">
+                      <span className="ml-2 text-[10px] text-soft">
                         {formatBytes(source.size, "metric")}
                       </span>
                     )}
@@ -255,7 +255,7 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
-            <label className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.15em] text-zinc-400">
+            <label className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.15em] text-muted">
               <input
                 type="checkbox"
                 checked={followLogs}
@@ -266,7 +266,7 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
             <button
               onClick={handleDownloadLog}
               disabled={!activeSourcePath || downloading}
-              className="inline-flex w-full items-center justify-center font-mono text-xs font-bold uppercase tracking-[0.1em] text-zinc-500 transition hover:text-[var(--theme-terminal-green)] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              className="inline-flex w-full items-center justify-center font-mono text-xs font-bold uppercase tracking-[0.1em] text-soft transition hover:text-success disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               <FaIcon icon={faDownload} className="mr-2" />
               {downloading ? "Downloading…" : "Download"}
@@ -276,7 +276,7 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
       </div>
 
       {/* Log Content */}
-      <div className="border-2 border-zinc-700 bg-black">
+      <div className="border-2 border-edge-strong bg-black">
         {logLines.length === 0 && !currentLog?.loading ? (
           <div className="px-5 py-8">
             <EmptyState>No log content available yet.</EmptyState>
@@ -380,7 +380,7 @@ function VirtualizedAnsiLines({
             <div
               key={`${sourcePath}:${index}`}
               style={style}
-              className="whitespace-pre px-3 text-[var(--theme-terminal-green)] hover:bg-zinc-950/30 sm:px-5"
+              className="whitespace-pre px-3 text-success hover:bg-surface-alt/30 sm:px-5"
             >
               <Ansi>{line || " "}</Ansi>
             </div>

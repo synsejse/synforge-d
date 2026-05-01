@@ -68,13 +68,13 @@ export default function LoginPage() {
     <div className="flex min-h-full items-center justify-center px-3 py-6 sm:px-6 sm:py-12">
       <div className="w-full max-w-md border-4 border-white bg-black p-4 shadow-[6px_6px_0_rgba(255,255,255,0.25)] sm:p-8">
         <div className="mb-8">
-          <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[var(--theme-accent-lime)]">
+          <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-accent-lime">
             Synforge
           </p>
-          <h1 className="mt-3 font-mono text-3xl font-bold uppercase text-zinc-50">
+          <h1 className="mt-3 font-mono text-3xl font-bold uppercase text-strong">
             Authorize WebUI
           </h1>
-          <p className="mt-3 text-sm leading-6 text-zinc-400">
+          <p className="mt-3 text-sm leading-6 text-muted">
             {search.message ??
               "Enter a valid account handle and password to manage packages, builds, and logs."}
           </p>
@@ -82,7 +82,7 @@ export default function LoginPage() {
 
         <form className="space-y-4" onSubmit={onSubmit}>
           <label className="block">
-            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-300">
+            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted">
               Handle
             </span>
             <input
@@ -91,11 +91,11 @@ export default function LoginPage() {
               placeholder="admin"
               value={handle}
               onChange={(e) => setHandle(e.target.value)}
-              className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-100 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+              className="w-full border-2 border-edge-strong bg-black px-4 py-3 font-mono text-sm text-strong outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
             />
           </label>
           <label className="block">
-            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-300">
+            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted">
               Password
             </span>
             <input
@@ -104,18 +104,18 @@ export default function LoginPage() {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-100 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+              className="w-full border-2 border-edge-strong bg-black px-4 py-3 font-mono text-sm text-strong outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
             />
           </label>
           {error ? (
-            <p className="border-2 border-[var(--theme-error-red)] bg-black px-3 py-2 text-sm text-zinc-200">
+            <p className="border-2 border-error bg-black px-3 py-2 text-sm text-strong">
               {error}
             </p>
           ) : null}
           <button
             type="submit"
             disabled={loginMutation.isPending}
-            className="w-full border-2 border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72] disabled:opacity-60"
+            className="w-full border-2 border-accent-lime bg-accent-lime px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72] disabled:opacity-60"
           >
             {loginMutation.isPending ? "Signing in…" : "Enter Console"}
           </button>

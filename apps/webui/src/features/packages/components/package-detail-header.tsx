@@ -23,25 +23,25 @@ export default function PackageDetailHeader({
   onDelete,
 }: PackageDetailHeaderProps) {
   return (
-    <section className="min-w-0 border-4 border-[var(--theme-accent-lime)] bg-black p-4 sm:p-6">
+    <section className="min-w-0 border-4 border-accent-lime bg-black p-4 sm:p-6">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 flex-1 space-y-3">
           <Link
             to="/packages"
-            className="inline-flex items-center font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400 transition-all duration-100 ease-linear hover:text-zinc-100"
+            className="inline-flex items-center font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition-all duration-100 ease-linear hover:text-strong"
           >
             <FaIcon icon={faArrowLeft} className="mr-2" />
             Back to packages
           </Link>
           <div>
-            <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[var(--theme-accent-lime)]">
+            <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-accent-lime">
               PACKAGE_CONTROL
             </p>
             <h1 className="mt-2 break-all font-mono text-2xl font-bold uppercase text-white sm:text-3xl">
               {packageName}
             </h1>
           </div>
-          <p className="max-w-3xl text-sm text-zinc-400">
+          <p className="max-w-3xl text-sm text-muted">
             {description}
           </p>
         </div>
@@ -60,7 +60,7 @@ export default function PackageDetailHeader({
           </Button>
           <button
             onClick={onRebuild}
-            className="w-full border-2 border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72] sm:w-auto"
+            className="w-full border-2 border-accent-lime bg-accent-lime px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72] sm:w-auto"
           >
             <FaIcon icon={faHammer} className="mr-2" />
             Rebuild
@@ -68,7 +68,7 @@ export default function PackageDetailHeader({
           <button
             onClick={onDelete}
             disabled={deleting}
-            className="w-full border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950 disabled:opacity-60 sm:w-auto"
+            className="w-full border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt disabled:opacity-60 sm:w-auto"
           >
             <FaIcon icon={faTrash} className="mr-2" />
             {deleting ? "Deleting…" : "Delete Package"}

@@ -67,7 +67,7 @@ export function Disclosure({
     <AccordionPrimitive.Item
       value={value}
       className={cn(
-        "border-2 border-[var(--theme-border-strong)] bg-black",
+        "border-2 border-edge-strong bg-black",
         className,
       )}
     >
@@ -75,9 +75,9 @@ export function Disclosure({
         <AccordionPrimitive.Trigger
           className={cn(
             "group flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors",
-            "hover:bg-[var(--theme-surface-alt)]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-accent-lime)] focus-visible:ring-offset-2 focus-visible:ring-offset-black",
-            "data-[state=open]:border-b-2 data-[state=open]:border-[var(--theme-border-strong)]",
+            "hover:bg-surface-alt",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime focus-visible:ring-offset-2 focus-visible:ring-offset-black",
+            "data-[state=open]:border-b-2 data-[state=open]:border-edge-strong",
           )}
         >
           <div className="min-w-0 flex-1">
@@ -85,7 +85,7 @@ export function Disclosure({
               {title}
             </div>
             {description ? (
-              <p className="mt-1 font-mono text-xs text-[var(--theme-text-muted)]">
+              <p className="mt-1 font-mono text-xs text-muted">
                 {description}
               </p>
             ) : null}
@@ -97,7 +97,7 @@ export function Disclosure({
           ) : null}
           <FaIcon
             icon={faChevronDown}
-            className="shrink-0 text-[var(--theme-text-muted)] transition-transform duration-200 group-data-[state=open]:rotate-180"
+            className="shrink-0 text-muted transition-transform duration-200 group-data-[state=open]:rotate-180"
           />
         </AccordionPrimitive.Trigger>
       </AccordionPrimitive.Header>

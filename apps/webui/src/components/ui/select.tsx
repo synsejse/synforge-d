@@ -31,9 +31,9 @@ export default function Select({
     >
       <SelectPrimitive.Trigger
         className={cn(
-          "inline-flex w-full items-center justify-between gap-2 border-2 border-[var(--theme-border-strong)] bg-black px-4 py-2.5 font-mono text-sm text-white transition-colors",
-          "hover:border-[var(--theme-text-muted)] hover:bg-[var(--theme-surface-hover)]",
-          "focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)] focus:ring-offset-2 focus:ring-offset-black",
+          "inline-flex w-full items-center justify-between gap-2 border-2 border-edge-strong bg-black px-4 py-2.5 font-mono text-sm text-white transition-colors",
+          "hover:border-muted hover:bg-surface-hover",
+          "focus:outline-none focus:ring-2 focus:ring-accent-lime focus:ring-offset-2 focus:ring-offset-black",
           "disabled:cursor-not-allowed disabled:opacity-40",
           className
         )}
@@ -74,10 +74,10 @@ export default function Select({
                 key={option.value}
                 value={option.value}
                 className={cn(
-                  "relative flex cursor-pointer select-none items-center px-4 py-2.5 font-mono text-sm text-[var(--theme-text-muted)] outline-none transition-colors",
-                  "hover:bg-[var(--theme-accent-lime)] hover:text-black",
-                  "focus:bg-[var(--theme-accent-lime)] focus:text-black",
-                  "data-[state=checked]:bg-[var(--theme-terminal-green)] data-[state=checked]:text-black data-[state=checked]:font-bold"
+                  "relative flex cursor-pointer select-none items-center px-4 py-2.5 font-mono text-sm text-muted outline-none transition-colors",
+                  "hover:bg-accent-lime hover:text-black",
+                  "focus:bg-accent-lime focus:text-black",
+                  "data-[state=checked]:bg-success data-[state=checked]:text-black data-[state=checked]:font-bold"
                 )}
               >
                 <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>

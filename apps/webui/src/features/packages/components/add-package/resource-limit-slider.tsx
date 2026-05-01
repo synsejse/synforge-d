@@ -24,12 +24,12 @@ export default function ResourceLimitSlider({
   value,
 }: ResourceLimitSliderProps) {
   return (
-    <div className="border-2 border-zinc-700 bg-zinc-950 p-4 lg:col-span-2">
+    <div className="border-2 border-edge-strong bg-surface-alt p-4 lg:col-span-2">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+        <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
           {label}
         </span>
-        <label className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-300">
+        <label className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-muted">
           <input
             type="checkbox"
             checked={enabled}
@@ -39,8 +39,8 @@ export default function ResourceLimitSlider({
         </label>
       </div>
       <div
-        className={`mt-4 border-2 border-zinc-800 px-3 py-4 transition ${
-          enabled ? "bg-black" : "bg-zinc-900/60 opacity-70"
+        className={`mt-4 border-2 border-edge px-3 py-4 transition ${
+          enabled ? "bg-black" : "bg-surface-hover/60 opacity-70"
         }`}
       >
         <input
@@ -52,14 +52,14 @@ export default function ResourceLimitSlider({
           onChange={(event) => onValueChange(event.target.value)}
           disabled={!enabled}
           aria-label={label}
-          className="h-3 w-full cursor-pointer appearance-none bg-zinc-900 accent-[var(--theme-accent-lime)] disabled:cursor-not-allowed [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-black [&::-moz-range-thumb]:bg-[var(--theme-accent-lime)] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-black [&::-webkit-slider-thumb]:bg-[var(--theme-accent-lime)]"
+          className="h-3 w-full cursor-pointer appearance-none bg-surface-hover accent-accent-lime disabled:cursor-not-allowed [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-black [&::-moz-range-thumb]:bg-accent-lime [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-black [&::-webkit-slider-thumb]:bg-accent-lime"
         />
       </div>
       <div className="mt-3 flex items-center justify-between gap-3 font-mono text-xs font-bold uppercase tracking-[0.12em]">
-        <span className="text-[var(--theme-accent-lime)]">
+        <span className="text-accent-lime">
           {enabled ? `${value} ${unit}` : "Unlimited"}
         </span>
-        <span className="text-zinc-500">
+        <span className="text-soft">
           {min} - {max} {unit}
         </span>
       </div>

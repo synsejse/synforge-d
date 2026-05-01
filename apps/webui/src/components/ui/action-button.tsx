@@ -22,12 +22,12 @@ type ButtonActionProps = CommonProps &
   };
 
 const baseClasses =
-  "inline-flex min-w-[96px] items-center justify-center gap-2 border-2 px-3 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] transition-all duration-100 ease-linear sm:min-w-[108px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-accent-lime)] focus-visible:ring-offset-2 focus-visible:ring-offset-black";
+  "inline-flex min-w-[96px] items-center justify-center gap-2 border-2 px-3 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] transition-all duration-100 ease-linear sm:min-w-[108px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime focus-visible:ring-offset-2 focus-visible:ring-offset-black";
 
 function variantClasses(variant: CommonProps["variant"] = "default") {
   return variant === "primary"
-    ? "border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] text-black shadow-brutal-sm hover:translate-x-[-1px] hover:translate-y-[-1px]"
-    : "border-[var(--theme-border-strong)] bg-black text-zinc-200 hover:border-white hover:bg-zinc-950";
+    ? "border-accent-lime bg-accent-lime text-black shadow-brutal-sm hover:translate-x-[-1px] hover:translate-y-[-1px]"
+    : "border-edge-strong bg-black text-strong hover:border-white hover:bg-surface-alt";
 }
 
 export default function ActionButton(props: LinkActionProps | ButtonActionProps) {

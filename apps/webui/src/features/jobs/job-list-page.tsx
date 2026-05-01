@@ -239,12 +239,12 @@ function JobList() {
       />
 
       {/* Mode Toggle + Filters */}
-      <div className="border-4 border-[var(--theme-border-strong)] bg-black shadow-card-sm">
-        <div className="border-b-4 border-[var(--theme-border-strong)] app-section-band px-6 py-4">
+      <div className="border-4 border-edge-strong bg-black shadow-card-sm">
+        <div className="border-b-4 border-edge-strong app-section-band px-6 py-4">
           <div className="flex flex-wrap items-center gap-4">
             {/* Mode Toggle */}
             <div
-              className="flex border-2 border-[var(--theme-border-strong)]"
+              className="flex border-2 border-edge-strong"
               role="group"
               aria-label="Job view mode"
             >
@@ -254,8 +254,8 @@ function JobList() {
                 aria-pressed={filters.mode === "history"}
                 className={`px-5 py-2.5 font-mono text-sm font-bold uppercase tracking-wider transition-all ${
                   filters.mode === "history"
-                    ? "bg-[var(--theme-accent-lime)] text-black"
-                    : "bg-black text-[var(--theme-text-muted)] hover:text-white"
+                    ? "bg-accent-lime text-black"
+                    : "bg-black text-muted hover:text-white"
                 }`}
               >
                 History
@@ -264,10 +264,10 @@ function JobList() {
                 type="button"
                 onClick={() => setMode("active")}
                 aria-pressed={filters.mode === "active"}
-                className={`border-l-2 border-[var(--theme-border-strong)] px-5 py-2.5 font-mono text-sm font-bold uppercase tracking-wider transition-all ${
+                className={`border-l-2 border-edge-strong px-5 py-2.5 font-mono text-sm font-bold uppercase tracking-wider transition-all ${
                   filters.mode === "active"
-                    ? "bg-[var(--theme-terminal-green)] text-black"
-                    : "bg-black text-[var(--theme-text-muted)] hover:text-white"
+                    ? "bg-success text-black"
+                    : "bg-black text-muted hover:text-white"
                 }`}
               >
                 Active
@@ -309,10 +309,10 @@ function JobList() {
         </div>
 
         {/* Search Filters */}
-        <div className="border-b-4 border-[var(--theme-border-strong)] bg-black px-6 py-4">
+        <div className="border-b-4 border-edge-strong bg-black px-6 py-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div>
-              <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+              <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-wider text-soft">
                 Package
               </label>
               <input
@@ -321,11 +321,11 @@ function JobList() {
                 onChange={(e) => setPackageInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && applyTextFilters()}
                 placeholder="Filter by package..."
-                className="w-full border-2 border-[var(--theme-border-strong)] bg-black px-4 py-2.5 font-mono text-sm text-white transition focus:border-[var(--theme-accent-lime)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)] focus:ring-offset-2 focus:ring-offset-black"
+                className="w-full border-2 border-edge-strong bg-black px-4 py-2.5 font-mono text-sm text-white transition focus:border-accent-lime focus:outline-none focus:ring-2 focus:ring-accent-lime focus:ring-offset-2 focus:ring-offset-black"
               />
             </div>
             <div>
-              <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-wider text-zinc-500">
+              <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-wider text-soft">
                 Target
               </label>
               <input
@@ -334,7 +334,7 @@ function JobList() {
                 onChange={(e) => setTargetInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && applyTextFilters()}
                 placeholder="Filter by target..."
-                className="w-full border-2 border-[var(--theme-border-strong)] bg-black px-4 py-2.5 font-mono text-sm text-white transition focus:border-[var(--theme-accent-lime)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent-lime)] focus:ring-offset-2 focus:ring-offset-black"
+                className="w-full border-2 border-edge-strong bg-black px-4 py-2.5 font-mono text-sm text-white transition focus:border-accent-lime focus:outline-none focus:ring-2 focus:ring-accent-lime focus:ring-offset-2 focus:ring-offset-black"
               />
             </div>
             <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-end">
@@ -369,7 +369,7 @@ function JobList() {
 
         {/* Pagination */}
         {(filters.offset > 0 || jobsQuery.data.page.has_more) && (
-          <div className="border-t-4 border-[var(--theme-border-strong)] bg-zinc-950 px-6 py-4">
+          <div className="border-t-4 border-edge-strong bg-surface-alt px-6 py-4">
             <PaginationControls
               onPrevious={() => setOffset(Math.max(0, filters.offset - PAGE_SIZE))}
               onNext={() => setOffset(filters.offset + PAGE_SIZE)}

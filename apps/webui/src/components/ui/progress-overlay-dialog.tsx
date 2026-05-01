@@ -35,16 +35,16 @@ export default function ProgressOverlayDialog({
         <h3 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
           {title}
         </h3>
-        <p className="mt-3 font-mono text-xs uppercase tracking-[0.16em] text-zinc-400">
+        <p className="mt-3 font-mono text-xs uppercase tracking-[0.16em] text-muted">
           {detail}
         </p>
-        <div className="mt-4 h-3 w-full overflow-hidden border border-zinc-600 bg-zinc-900">
+        <div className="mt-4 h-3 w-full overflow-hidden border border-edge-strong bg-surface-hover">
           <div
-            className="h-full bg-[var(--theme-terminal-green)] transition-[width] duration-300"
+            className="h-full bg-success transition-[width] duration-300"
             style={{ width: `${normalizedProgress}%` }}
           />
         </div>
-        <p className="mt-2 text-right font-mono text-xs text-zinc-300">
+        <p className="mt-2 text-right font-mono text-xs text-muted">
           {Math.round(normalizedProgress)}%
         </p>
         <div className="mt-4 flex justify-end">

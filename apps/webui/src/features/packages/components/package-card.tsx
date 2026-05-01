@@ -39,19 +39,19 @@ export default function PackageCard({
     backoffTargets.length > 0 ? summarizeBackoffTargets(backoffTargets) : null;
 
   return (
-    <article key={entry.package.name} className="border-2 border-zinc-700 bg-black">
-      <div className="flex flex-col gap-5 border-b-2 border-zinc-700 px-4 py-4 sm:px-5 sm:py-5 xl:flex-row xl:items-start xl:justify-between">
+    <article key={entry.package.name} className="border-2 border-edge-strong bg-black">
+      <div className="flex flex-col gap-5 border-b-2 border-edge-strong px-4 py-4 sm:px-5 sm:py-5 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 flex-1 space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <Link
                 to="/packages/view"
                 search={{ name: entry.package.name }}
-                className="font-mono text-lg font-bold uppercase text-white transition-all duration-100 ease-linear hover:text-[var(--theme-accent-lime)]"
+                className="font-mono text-lg font-bold uppercase text-white transition-all duration-100 ease-linear hover:text-accent-lime"
               >
                 {entry.package.name}
               </Link>
-              <div className="mt-1 max-w-3xl text-sm text-zinc-500">
+              <div className="mt-1 max-w-3xl text-sm text-soft">
                 {entry.package.description || "No description"}
               </div>
             </div>
@@ -59,7 +59,7 @@ export default function PackageCard({
               {backoffSummary ? (
                 <span
                   title={backoffSummary.details}
-                  className="border-2 border-[var(--theme-accent-orange)] bg-black px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--theme-accent-orange)]"
+                  className="border-2 border-accent-orange bg-black px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-accent-orange"
                 >
                   Backoff {backoffSummary.count}
                 </span>
@@ -69,43 +69,43 @@ export default function PackageCard({
           </div>
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="border-2 border-zinc-700 bg-zinc-950/40 px-4 py-3">
-              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+            <div className="border-2 border-edge-strong bg-surface-alt/40 px-4 py-3">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-soft">
                 Version
               </div>
-              <div className="mt-2 font-mono text-sm text-zinc-200">
+              <div className="mt-2 font-mono text-sm text-strong">
                 {entry.package.version}-{entry.package.release}
               </div>
             </div>
-            <div className="border-2 border-zinc-700 bg-zinc-950/40 px-4 py-3">
-              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+            <div className="border-2 border-edge-strong bg-surface-alt/40 px-4 py-3">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-soft">
                 Targets
               </div>
-              <div className="mt-2 font-mono text-sm text-zinc-300">
+              <div className="mt-2 font-mono text-sm text-muted">
                 {formatMockChroots(entry.package.mock_chroots)}
               </div>
             </div>
-            <div className="border-2 border-zinc-700 bg-zinc-950/40 px-4 py-3 md:col-span-2">
-              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+            <div className="border-2 border-edge-strong bg-surface-alt/40 px-4 py-3 md:col-span-2">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-soft">
                 Repository
               </div>
-              <div className="mt-2 break-all font-mono text-sm text-zinc-300">
+              <div className="mt-2 break-all font-mono text-sm text-muted">
                 {entry.package.source.repo_url}
               </div>
             </div>
-            <div className="border-2 border-zinc-700 bg-zinc-950/40 px-4 py-3 md:col-span-2">
-              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+            <div className="border-2 border-edge-strong bg-surface-alt/40 px-4 py-3 md:col-span-2">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-soft">
                 Spec File
               </div>
-              <div className="mt-2 break-all font-mono text-sm text-zinc-300">
+              <div className="mt-2 break-all font-mono text-sm text-muted">
                 {entry.package.source.spec_file}
               </div>
             </div>
-            <div className="border-2 border-zinc-700 bg-zinc-950/40 px-4 py-3 md:col-span-2">
-              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+            <div className="border-2 border-edge-strong bg-surface-alt/40 px-4 py-3 md:col-span-2">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-soft">
                 Last Revision
               </div>
-              <div className="mt-2 break-all font-mono text-sm text-zinc-400">
+              <div className="mt-2 break-all font-mono text-sm text-muted">
                 {entry.state.last_revision || "None yet"}
               </div>
             </div>
@@ -144,7 +144,7 @@ export default function PackageCard({
             onClick={() => onDelete(entry.package.name)}
             icon={faTrash}
             aria-label={`Delete package ${entry.package.name}`}
-             className="w-full text-zinc-300 sm:w-auto"
+             className="w-full text-muted sm:w-auto"
            >
              Delete
            </ActionButton>
@@ -152,8 +152,8 @@ export default function PackageCard({
       </div>
 
       {backoffSummary ? (
-        <div className="border-b-2 border-zinc-700 bg-zinc-950 px-4 py-3 text-xs text-zinc-300 sm:px-5">
-          <span className="font-mono uppercase tracking-[0.14em] text-[var(--theme-accent-orange)]">
+        <div className="border-b-2 border-edge-strong bg-surface-alt px-4 py-3 text-xs text-muted sm:px-5">
+          <span className="font-mono uppercase tracking-[0.14em] text-accent-orange">
             Failure backoff active:
           </span>{" "}
           <span className="font-mono">{backoffSummary.details}</span>
@@ -161,21 +161,21 @@ export default function PackageCard({
       ) : null}
 
       <div className="px-4 py-4 sm:px-5">
-        <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+        <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-soft">
           Target State
         </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {entry.state.targets.map((target) => (
             <div
               key={`${entry.package.name}:${target.mock_chroot}`}
-              className="border-2 border-zinc-700 bg-zinc-950/40 px-4 py-3"
+              className="border-2 border-edge-strong bg-surface-alt/40 px-4 py-3"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="font-mono text-sm text-zinc-100">
+                  <div className="font-mono text-sm text-strong">
                     {target.mock_chroot}
                   </div>
-                  <div className="mt-1 text-xs text-zinc-500">
+                  <div className="mt-1 text-xs text-soft">
                     {target.active_job_id
                       ? `Active job ${target.active_job_id}`
                       : target.last_successful_build_id
@@ -185,11 +185,11 @@ export default function PackageCard({
                 </div>
                 <StatusPill status={targetStatus(target)} />
               </div>
-              <div className="mt-3 border-t-2 border-zinc-700 pt-3">
-                <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+              <div className="mt-3 border-t-2 border-edge-strong pt-3">
+                <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-soft">
                   Revision
                 </div>
-                <div className="mt-2 break-all font-mono text-sm text-zinc-400">
+                <div className="mt-2 break-all font-mono text-sm text-muted">
                   {compactRevision(target.last_revision)}
                 </div>
               </div>

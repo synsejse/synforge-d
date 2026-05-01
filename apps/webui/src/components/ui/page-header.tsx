@@ -20,24 +20,24 @@ type HeaderColor = "lime" | "green" | "orange" | "cyan" | "purple" | "white";
 
 const colorMap: Record<HeaderColor, { border: string; text: string }> = {
   lime: {
-    border: "border-[var(--theme-accent-lime)]",
-    text: "text-[var(--theme-accent-lime)]",
+    border: "border-accent-lime",
+    text: "text-accent-lime",
   },
   green: {
-    border: "border-[var(--theme-terminal-green)]",
-    text: "text-[var(--theme-terminal-green)]",
+    border: "border-success",
+    text: "text-success",
   },
   orange: {
-    border: "border-[var(--theme-accent-orange)]",
-    text: "text-[var(--theme-accent-orange)]",
+    border: "border-accent-orange",
+    text: "text-accent-orange",
   },
   cyan: {
-    border: "border-[var(--theme-accent-cyan)]",
-    text: "text-[var(--theme-accent-cyan)]",
+    border: "border-accent-cyan",
+    text: "text-accent-cyan",
   },
   purple: {
-    border: "border-[var(--theme-accent-violet)]",
-    text: "text-[var(--theme-accent-violet)]",
+    border: "border-accent-violet",
+    text: "text-accent-violet",
   },
   white: {
     border: "border-white",
@@ -75,7 +75,7 @@ export default function PageHeader({
           <h1 className="mt-2 font-mono text-3xl font-bold uppercase text-white">
             {title}
           </h1>
-          <p className="mt-2 text-sm text-zinc-400">{description}</p>
+          <p className="mt-2 text-sm text-muted">{description}</p>
         </div>
         {actions.length > 0 ? (
           <div className="flex flex-wrap gap-3">

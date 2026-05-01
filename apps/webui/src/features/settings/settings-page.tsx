@@ -180,7 +180,7 @@ function ConfigFieldInput({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
+      <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
         {field.label}
       </span>
       <input
@@ -188,11 +188,11 @@ function ConfigFieldInput({
         min={field.min_value ?? undefined}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)] disabled:text-zinc-600 disabled:opacity-60"
+        className="w-full border-2 border-edge-strong bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime disabled:text-soft disabled:opacity-60"
         required={field.required}
         disabled={disabled}
       />
-      <span className="mt-2 block text-xs text-zinc-600">{field.description}</span>
+      <span className="mt-2 block text-xs text-soft">{field.description}</span>
     </label>
   );
 }

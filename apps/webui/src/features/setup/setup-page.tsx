@@ -25,16 +25,16 @@ const STEP_DESCRIPTIONS: Record<Step, string> = {
 };
 
 const inputClass =
-  "w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-100 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]";
+  "w-full border-2 border-edge-strong bg-black px-4 py-3 font-mono text-sm text-strong outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime";
 
 const labelTitleClass =
-  "mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-300";
+  "mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted";
 
 const primaryButtonClass =
-  "border-2 border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72]";
+  "border-2 border-accent-lime bg-accent-lime px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72]";
 
 const secondaryButtonClass =
-  "border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-200 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950";
+  "border-2 border-edge-strong bg-black px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-strong transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt";
 
 interface AdminForm {
   handle: string;
@@ -246,7 +246,7 @@ export default function SetupPage() {
   if (statusQuery.error || schemaQuery.error) {
     return (
       <div className="flex min-h-full items-center justify-center px-3 py-12">
-        <p className="border-2 border-[var(--theme-error-red)] bg-black px-4 py-3 font-mono text-sm text-zinc-200">
+        <p className="border-2 border-error bg-black px-4 py-3 font-mono text-sm text-strong">
           Failed to load daemon configuration.
         </p>
       </div>
@@ -256,17 +256,17 @@ export default function SetupPage() {
   return (
     <div className="flex min-h-full items-start justify-center px-3 py-3 sm:px-6 sm:py-6 lg:items-center lg:py-12">
       <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden border-4 border-white bg-black shadow-[6px_6px_0_rgba(255,255,255,0.25)] sm:max-h-[calc(100dvh-3rem)] lg:max-h-[calc(100dvh-6rem)] xl:max-w-3xl">
-        <header className="mb-6 shrink-0 border-b-2 border-zinc-800 px-4 pb-5 pt-5 sm:mb-8 sm:px-8 sm:pb-6 sm:pt-8">
-          <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[var(--theme-accent-lime)]">
+        <header className="mb-6 shrink-0 border-b-2 border-edge px-4 pb-5 pt-5 sm:mb-8 sm:px-8 sm:pb-6 sm:pt-8">
+          <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-accent-lime">
             Synforge
           </p>
-          <h1 className="mt-3 font-mono text-3xl font-bold uppercase text-zinc-50">
+          <h1 className="mt-3 font-mono text-3xl font-bold uppercase text-strong">
             First Run Setup
           </h1>
-          <p className="mt-3 text-sm leading-6 text-zinc-400">
+          <p className="mt-3 text-sm leading-6 text-muted">
             {STEP_DESCRIPTIONS[step]}
           </p>
-          <p className="mt-3 font-mono text-xs font-bold uppercase tracking-[0.22em] text-zinc-500">
+          <p className="mt-3 font-mono text-xs font-bold uppercase tracking-[0.22em] text-soft">
             {STEP_LABELS[step]}
           </p>
         </header>
@@ -313,7 +313,7 @@ export default function SetupPage() {
           ) : null}
 
           {error ? (
-            <p className="mt-4 border-2 border-[var(--theme-error-red)] bg-black px-3 py-2 text-sm text-zinc-200">
+            <p className="mt-4 border-2 border-error bg-black px-3 py-2 text-sm text-strong">
               {error}
             </p>
           ) : null}
@@ -363,7 +363,7 @@ function ConfigStep({
         {sections.map((section) => (
           <section
             key={section.label}
-            className="xl:col-span-2 border-2 border-zinc-700 bg-black p-5"
+            className="xl:col-span-2 border-2 border-edge-strong bg-black p-5"
           >
             <h2 className="font-mono text-lg font-bold uppercase text-white">
               {section.label}
@@ -380,7 +380,7 @@ function ConfigStep({
                     onChange={(e) => onChange(field.key, e.target.value)}
                     className={inputClass}
                   />
-                  <span className="mt-2 block text-xs text-zinc-500">
+                  <span className="mt-2 block text-xs text-soft">
                     {field.description}
                   </span>
                 </label>
@@ -411,9 +411,9 @@ function SigningStep({
   const buttonBase =
     "border-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px]";
   const activeClass =
-    "border-[var(--theme-accent-lime)] bg-[var(--theme-accent-lime)] text-black hover:bg-[#d8ff72]";
+    "border-accent-lime bg-accent-lime text-black hover:bg-[#d8ff72]";
   const idleClass =
-    "border-zinc-700 bg-black text-zinc-200 hover:border-white hover:bg-zinc-950";
+    "border-edge-strong bg-black text-strong hover:border-white hover:bg-surface-alt";
 
   const keyNote = !signing.enabled
     ? "Key actions are disabled while signing is disabled."
@@ -425,16 +425,16 @@ function SigningStep({
 
   return (
     <div className="space-y-4">
-      <section className="border-2 border-zinc-700 bg-black p-5">
+      <section className="border-2 border-edge-strong bg-black p-5">
         <h2 className="font-mono text-lg font-bold uppercase text-white">Signing</h2>
-        <p className="mt-3 text-sm leading-6 text-zinc-400">
+        <p className="mt-3 text-sm leading-6 text-muted">
           Configure repository signing before initialization. You can keep signing
           disabled, generate a managed key, or import an existing key file.
         </p>
 
         <div className="mt-5 space-y-5">
           <div>
-            <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-400">
+            <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted">
               Signing State
             </p>
             <button
@@ -444,7 +444,7 @@ function SigningStep({
             >
               {signing.enabled ? "Disable Signing" : "Enable Signing"}
             </button>
-            <p className="mt-2 font-mono text-xs text-zinc-500">
+            <p className="mt-2 font-mono text-xs text-soft">
               {signing.enabled
                 ? "Signing will be enabled after initialization."
                 : "Signing will stay disabled after initialization."}
@@ -452,7 +452,7 @@ function SigningStep({
           </div>
 
           <div>
-            <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-400">
+            <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted">
               Key Lifecycle
             </p>
             <div className="flex flex-wrap gap-3">
@@ -487,7 +487,7 @@ function SigningStep({
                 if (file) onFileChange(file);
               }}
             />
-            <p className="mt-2 font-mono text-xs text-zinc-500">{keyNote}</p>
+            <p className="mt-2 font-mono text-xs text-soft">{keyNote}</p>
           </div>
         </div>
       </section>

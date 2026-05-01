@@ -13,12 +13,12 @@ export default function PackageStateSidebar({ pkg }: PackageStateSidebarProps) {
     <aside className="min-w-0 space-y-4 border-4 border-white bg-black p-4 sm:p-6 shadow-[6px_6px_0_rgba(255,255,255,0.18)]">
       <div>
         <h2 className="font-mono text-xl font-bold uppercase text-white">State</h2>
-        <p className="mt-2 text-sm text-zinc-400">
+        <p className="mt-2 text-sm text-muted">
           Current package and build status.
         </p>
       </div>
       <div>
-        <div className="mb-2 text-xs uppercase tracking-[0.18em] text-zinc-500">
+        <div className="mb-2 text-xs uppercase tracking-[0.18em] text-soft">
           Status
         </div>
         <StatusPill status={pkg.package.enabled ? "enabled" : "disabled"} />
@@ -64,18 +64,18 @@ export default function PackageStateSidebar({ pkg }: PackageStateSidebarProps) {
       />
       <DetailStat label="Active Job" value={pkg.state.active_job_id || "None"} />
       <DetailStat label="Spec File" value={pkg.package.spec_file} mono />
-      <div className="border-2 border-zinc-700 bg-black px-4 py-3">
-        <div className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
+      <div className="border-2 border-edge-strong bg-black px-4 py-3">
+        <div className="font-mono text-xs uppercase tracking-[0.18em] text-soft">
           Target State
         </div>
         <div className="mt-3 space-y-3">
           {pkg.state.targets.map((target) => (
             <div
               key={target.mock_chroot}
-              className="flex flex-col gap-2 border-2 border-zinc-700 bg-zinc-950/60 px-3 py-3"
+              className="flex flex-col gap-2 border-2 border-edge-strong bg-surface-alt/60 px-3 py-3"
             >
               <div className="flex items-center justify-between gap-3">
-                <span className="min-w-0 break-all font-mono text-sm text-zinc-100">
+                <span className="min-w-0 break-all font-mono text-sm text-strong">
                   {target.mock_chroot}
                 </span>
                 <StatusPill
@@ -85,11 +85,11 @@ export default function PackageStateSidebar({ pkg }: PackageStateSidebarProps) {
                   }
                 />
               </div>
-              <div className="break-all text-xs text-zinc-500">
+              <div className="break-all text-xs text-soft">
                 {target.last_revision || "No successful revision yet"}
               </div>
               {target.backoff_remaining_seconds && target.backoff_remaining_seconds > 0 && (
-                <div className="border border-[var(--theme-accent-orange)] bg-black px-2 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--theme-accent-orange)]">
+                <div className="border border-accent-orange bg-black px-2 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-accent-orange">
                   Backoff {formatDurationSeconds(target.backoff_remaining_seconds)}
                 </div>
               )}

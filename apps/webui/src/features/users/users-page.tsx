@@ -485,15 +485,15 @@ function Users() {
           onClose={closeModal}
         >
           <div className="space-y-5">
-            <p className="text-sm leading-6 text-zinc-400">
+            <p className="text-sm leading-6 text-muted">
               This removes the account, its permissions, and its tracked repo
               download metrics. This action cannot be undone.
             </p>
-            <div className="border-2 border-zinc-700 bg-zinc-950 p-4">
+            <div className="border-2 border-edge-strong bg-surface-alt p-4">
               <div className="font-mono font-semibold uppercase text-white">
                 {modal.user.user.display_name}
               </div>
-              <div className="mt-1 font-mono text-sm text-zinc-400">
+              <div className="mt-1 font-mono text-sm text-muted">
                 @{modal.user.user.handle}
               </div>
             </div>
@@ -502,7 +502,7 @@ function Users() {
                 type="button"
                 onClick={closeModal}
                 disabled={submitting}
-                className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-200 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
+                className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-strong transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt"
               >
                 Cancel
               </button>
@@ -510,7 +510,7 @@ function Users() {
                 type="button"
                 onClick={() => void handleDelete()}
                 disabled={submitting}
-                className="border-2 border-[var(--theme-error-red)] bg-[var(--theme-error-red)] px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:brightness-110 disabled:opacity-70"
+                className="border-2 border-error bg-error px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:brightness-110 disabled:opacity-70"
               >
                 <FaIcon icon={faTrash} className="mr-2" />
                 {submitting ? "Deleting…" : "Delete user"}

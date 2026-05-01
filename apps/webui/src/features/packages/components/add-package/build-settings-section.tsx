@@ -75,25 +75,25 @@ export default function BuildSettingsSection({
   return (
     <>
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="border-2 border-zinc-700 bg-zinc-950 p-4 lg:col-span-2">
+        <div className="border-2 border-edge-strong bg-surface-alt p-4 lg:col-span-2">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <span className="block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+              <span className="block font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
                 Mock chroots
               </span>
-              <span className="mt-1 block text-xs text-zinc-500">
+              <span className="mt-1 block text-xs text-soft">
                 Each selected chroot becomes a separate build job.
               </span>
             </div>
             <button
               type="button"
               onClick={onChooseChroots}
-              className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950"
+              className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt"
             >
               Choose chroots
             </button>
           </div>
-          <div className="mt-4 border-2 border-zinc-700 bg-zinc-950 px-4 py-3 font-mono text-sm text-zinc-200">
+          <div className="mt-4 border-2 border-edge-strong bg-surface-alt px-4 py-3 font-mono text-sm text-strong">
             {chrootsLoading ? (
               <MockTargetCheckIndicator label="Checking mock targets…" />
             ) : mockChroots.length > 0 ? (
@@ -159,7 +159,7 @@ export default function BuildSettingsSection({
       </div>
 
       <label className="block">
-        <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+        <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
           Build environment
         </span>
         <textarea
@@ -169,21 +169,21 @@ export default function BuildSettingsSection({
           placeholder={
             "KEY=value\nMESON_ARGS=-Dgallium-drivers=swrast\nRUSTFLAGS=-C debuginfo=1"
           }
-          className="w-full border-2 border-zinc-700 bg-zinc-950 px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]"
+          className="w-full border-2 border-edge-strong bg-surface-alt px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-accent-lime"
         />
-        <span className="mt-2 block text-xs text-zinc-500">
+        <span className="mt-2 block text-xs text-soft">
           One `KEY=value` entry per line. Applied to SRPM creation and mock
           rebuild steps.
         </span>
       </label>
 
-      <div className="border-2 border-zinc-700 bg-zinc-950 p-4">
+      <div className="border-2 border-edge-strong bg-surface-alt p-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <div className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+            <div className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
               Spec file
             </div>
-            <div className="mt-1 text-xs text-zinc-500">
+            <div className="mt-1 text-xs text-soft">
               Browse the repository and select the `.spec` file to build.
             </div>
           </div>
@@ -191,7 +191,7 @@ export default function BuildSettingsSection({
             type="button"
             onClick={onChooseSpec}
             disabled={browsing}
-            className="border-2 border-zinc-700 bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-300 transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-zinc-950 disabled:opacity-60"
+            className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt disabled:opacity-60"
           >
             <FaIcon icon={faMagnifyingGlass} className="mr-2" />
             Browse repository
@@ -204,7 +204,7 @@ export default function BuildSettingsSection({
           onChange={(event) => setSpecPath(event.target.value)}
           placeholder="path/to/package.spec"
           required
-          className="mt-4 w-full border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)] focus:ring-2 focus:ring-[var(--theme-accent-lime)]"
+          className="mt-4 w-full border-2 border-edge-strong bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
         />
       </div>
     </>
@@ -224,7 +224,7 @@ function NumberField({
 }) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+      <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
         {label}
       </span>
       <input
@@ -233,7 +233,7 @@ function NumberField({
         step="1"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full border-2 border-zinc-700 bg-zinc-950 px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]"
+        className="w-full border-2 border-edge-strong bg-surface-alt px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime"
         required
       />
     </label>

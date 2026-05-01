@@ -42,7 +42,7 @@ export default function RatioBar({
     return (
       <div
         className={cn(
-          "border-2 border-[var(--theme-border-strong)] bg-[var(--theme-surface-alt)] p-4 font-mono text-xs uppercase tracking-[0.15em] text-[var(--theme-text-soft)]",
+          "border-2 border-edge-strong bg-surface-alt p-4 font-mono text-xs uppercase tracking-[0.15em] text-soft",
           className,
         )}
       >
@@ -54,12 +54,12 @@ export default function RatioBar({
   return (
     <div className={cn("space-y-3", className)}>
       {caption ? (
-        <div className="font-mono text-xs uppercase tracking-[0.15em] text-[var(--theme-text-soft)]">
+        <div className="font-mono text-xs uppercase tracking-[0.15em] text-soft">
           {caption}
         </div>
       ) : null}
       <div
-        className="flex h-6 w-full overflow-hidden border-2 border-[var(--theme-border-strong)]"
+        className="flex h-6 w-full overflow-hidden border-2 border-edge-strong"
         role="img"
         aria-label={segments
           .map((s) => `${s.label} ${s.value} of ${total}`)
@@ -97,13 +97,13 @@ export default function RatioBar({
                   }}
                   aria-hidden="true"
                 />
-                <span className="uppercase tracking-[0.12em] text-[var(--theme-text-muted)]">
+                <span className="uppercase tracking-[0.12em] text-muted">
                   {seg.label}
                 </span>
                 <span className="font-bold text-white tabular-nums">
                   {seg.value}
                 </span>
-                <span className="text-[var(--theme-text-soft)] tabular-nums">
+                <span className="text-soft tabular-nums">
                   ({percent.toFixed(0)}%)
                 </span>
               </div>

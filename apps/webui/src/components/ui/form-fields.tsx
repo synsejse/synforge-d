@@ -2,17 +2,17 @@ import type { ReactNode } from "react";
 
 // Shared input class for consistent styling
 const inputClass =
-  "w-full border-2 border-zinc-700 bg-zinc-950 px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]";
+  "w-full border-2 border-edge-strong bg-surface-alt px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-accent-lime";
 
 const inputErrorClass =
-  "w-full border-2 border-[var(--theme-error-red)] bg-zinc-950 px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none transition duration-100 ease-linear focus:border-[var(--theme-error-red)]";
+  "w-full border-2 border-error bg-surface-alt px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-error";
 
 export function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
     <span
       role="alert"
-      className="mt-2 block font-mono text-xs uppercase tracking-[0.12em] text-[var(--theme-error-red)]"
+      className="mt-2 block font-mono text-xs uppercase tracking-[0.12em] text-error"
     >
       {message}
     </span>
@@ -42,7 +42,7 @@ export function TextField({
 }: TextFieldProps) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+      <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
         {label}
       </span>
       <input
@@ -82,7 +82,7 @@ export function NumberField({
 }: NumberFieldProps) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+      <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
         {label}
       </span>
       <input
@@ -123,7 +123,7 @@ export function TextAreaField({
 }: TextAreaFieldProps) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+      <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
         {label}
       </span>
       <textarea
@@ -137,7 +137,7 @@ export function TextAreaField({
       {error ? (
         <FieldError message={error} />
       ) : hint ? (
-        <span className="mt-2 block text-xs text-zinc-500">{hint}</span>
+        <span className="mt-2 block text-xs text-soft">{hint}</span>
       ) : null}
     </label>
   );
@@ -160,14 +160,14 @@ export function ToggleField({
 }: ToggleFieldProps) {
   return (
     <label
-      className={`flex items-start justify-between gap-3 border-2 border-zinc-700 bg-zinc-950 px-4 py-3 ${className}`}
+      className={`flex items-start justify-between gap-3 border-2 border-edge-strong bg-surface-alt px-4 py-3 ${className}`}
     >
       <span className="min-w-0">
         <span className="block font-mono text-xs font-bold uppercase tracking-[0.1em] text-white">
           {label}
         </span>
         {description && (
-          <span className="mt-1 block text-xs text-zinc-500">{description}</span>
+          <span className="mt-1 block text-xs text-soft">{description}</span>
         )}
       </span>
       <input
@@ -195,14 +195,14 @@ export function FieldGroup({
   className = "",
 }: FieldGroupProps) {
   return (
-    <div className={`border-2 border-zinc-700 bg-zinc-950 p-4 ${className}`}>
+    <div className={`border-2 border-edge-strong bg-surface-alt p-4 ${className}`}>
       <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:justify-between">
         <div className="min-w-0">
-          <span className="block font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+          <span className="block font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
             {label}
           </span>
           {description && (
-            <span className="mt-1 block text-xs text-zinc-500">{description}</span>
+            <span className="mt-1 block text-xs text-soft">{description}</span>
           )}
         </div>
         {action}
@@ -218,7 +218,7 @@ interface DisplayBoxProps {
 
 export function DisplayBox({ children }: DisplayBoxProps) {
   return (
-    <div className="border-2 border-zinc-700 bg-black px-4 py-3 font-mono text-sm text-zinc-200 break-all">
+    <div className="border-2 border-edge-strong bg-black px-4 py-3 font-mono text-sm text-strong break-all">
       {children}
     </div>
   );

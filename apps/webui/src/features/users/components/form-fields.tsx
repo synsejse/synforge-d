@@ -12,7 +12,7 @@ interface PermissionGroupProps {
 export function PermissionGroup({ permissions, onToggle }: PermissionGroupProps) {
   return (
     <div>
-      <div className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
+      <div className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
         Permissions
       </div>
       <div
@@ -30,8 +30,8 @@ export function PermissionGroup({ permissions, onToggle }: PermissionGroupProps)
               aria-pressed={enabled}
               className={`border-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.12em] transition duration-100 ease-linear ${
                 enabled
-                  ? "border-[var(--theme-accent-lime)] bg-zinc-950 text-[var(--theme-accent-lime)]"
-                  : "border-zinc-700 bg-black text-zinc-300 hover:border-white hover:bg-zinc-950"
+                  ? "border-accent-lime bg-surface-alt text-accent-lime"
+                  : "border-edge-strong bg-black text-muted hover:border-white hover:bg-surface-alt"
               }`}
             >
               {permission}

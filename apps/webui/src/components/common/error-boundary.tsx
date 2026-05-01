@@ -27,15 +27,15 @@ export default class ErrorBoundary extends Component<Props, State> {
       <div
         role="alert"
         aria-live="assertive"
-        className="border-2 border-[var(--theme-error-red)] bg-black p-6"
+        className="border-2 border-error bg-black p-6"
       >
-        <div className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-[var(--theme-error-red)]">
+        <div className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-error">
           Page error
         </div>
-        <p className="mt-3 text-sm text-zinc-200">
+        <p className="mt-3 text-sm text-strong">
           Something went wrong rendering this page. Reload to try again.
         </p>
-        <pre className="mt-4 overflow-x-auto border border-zinc-800 bg-zinc-950 p-3 font-mono text-xs text-zinc-400">
+        <pre className="mt-4 overflow-x-auto border border-edge bg-surface-alt p-3 font-mono text-xs text-muted">
           {this.state.error.message}
         </pre>
       </div>

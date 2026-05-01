@@ -17,12 +17,12 @@ export default function Breadcrumbs({ items, className = "", trailing }: Props) 
   return (
     <nav
       aria-label="Breadcrumb"
-      className={`flex flex-wrap items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-[var(--theme-text-soft)] ${className}`}
+      className={`flex flex-wrap items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-soft ${className}`}
     >
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
         const separator = index > 0 ? (
-          <span aria-hidden="true" className="text-[var(--theme-border-strong)]">
+          <span aria-hidden="true" className="text-edge-strong">
             /
           </span>
         ) : null;
@@ -34,8 +34,8 @@ export default function Breadcrumbs({ items, className = "", trailing }: Props) 
               <span
                 className={
                   isLast
-                    ? "text-[var(--theme-text-strong)]"
-                    : "text-[var(--theme-text-muted)]"
+                    ? "text-strong"
+                    : "text-muted"
                 }
                 aria-current={isLast ? "page" : undefined}
               >
@@ -51,7 +51,7 @@ export default function Breadcrumbs({ items, className = "", trailing }: Props) 
             <Link
               to={item.to}
               search={item.search}
-              className="text-[var(--theme-text-muted)] underline-offset-2 transition-colors hover:text-[var(--theme-accent-lime)] hover:underline"
+              className="text-muted underline-offset-2 transition-colors hover:text-accent-lime hover:underline"
             >
               {item.label}
             </Link>
@@ -59,7 +59,7 @@ export default function Breadcrumbs({ items, className = "", trailing }: Props) 
         );
       })}
       {trailing ? (
-        <span className="ml-2 text-[var(--theme-text-muted)]">{trailing}</span>
+        <span className="ml-2 text-muted">{trailing}</span>
       ) : null}
     </nav>
   );

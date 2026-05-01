@@ -15,9 +15,6 @@
   --theme-text-strong: #ffffff;
   --theme-text-muted: #a1a1aa;
   --theme-text-soft: #8b8b95;
-  --theme-primary-bg: #f4f4f5;
-  --theme-primary-text: #09090b;
-  --theme-primary-hover: #ffffff;
   --theme-selection: rgba(255, 255, 255, 0.2);
   --theme-grid-line: rgba(255, 255, 255, 0.035);
   --theme-header-divider: rgba(255, 255, 255, 0.08);
@@ -40,15 +37,22 @@
 
 /* Tailwind v4: expose tokens as semantic utilities (bg-surface, text-muted, shadow-brutal-sm, etc.) */
 @theme {
+  /* Surfaces — bg-surface, bg-surface-alt, bg-surface-hover, bg-body */
   --color-surface: var(--theme-surface);
   --color-surface-alt: var(--theme-surface-alt);
   --color-surface-hover: var(--theme-surface-hover);
   --color-body: var(--theme-body);
-  --color-border-subtle: var(--theme-border);
-  --color-border-strong: var(--theme-border-strong);
-  --color-text-strong: var(--theme-text-strong);
-  --color-text-muted: var(--theme-text-muted);
-  --color-text-soft: var(--theme-text-soft);
+
+  /* Edges — border-edge / border-edge-strong / divide-edge */
+  --color-edge: var(--theme-border);
+  --color-edge-strong: var(--theme-border-strong);
+
+  /* Text — text-strong / text-muted / text-soft */
+  --color-strong: var(--theme-text-strong);
+  --color-muted: var(--theme-text-muted);
+  --color-soft: var(--theme-text-soft);
+
+  /* Accents — bg/text/border-accent-* */
   --color-accent-lime: var(--theme-accent-lime);
   --color-accent-orange: var(--theme-accent-orange);
   --color-accent-cyan: var(--theme-accent-cyan);
@@ -56,6 +60,7 @@
   --color-success: var(--theme-terminal-green);
   --color-error: var(--theme-error-red);
 
+  /* Shadows — shadow-brutal-* (button), shadow-card-* (surface card) */
   --shadow-brutal-sm: var(--shadow-brutal-sm);
   --shadow-brutal-md: var(--shadow-brutal-md);
   --shadow-card-sm: var(--shadow-card-sm);
@@ -245,27 +250,6 @@ input[type="number"]:focus::-webkit-inner-spin-button {
 }
 
 @layer utilities {
-  /* Legacy zinc-* token bridge — kept until feature pages migrate to semantic
-     utilities (bg-surface, text-muted, etc.). When that sweep lands, this
-     block can be removed. */
-  .bg-black { background-color: var(--theme-surface) !important; }
-  .bg-zinc-950 { background-color: var(--theme-surface-alt) !important; }
-  .bg-zinc-100 { background-color: var(--theme-primary-bg) !important; }
-  .bg-white { background-color: var(--theme-primary-hover) !important; }
-  .border-zinc-800 { border-color: var(--theme-border) !important; }
-  .border-zinc-700, .border-zinc-600, .border-zinc-200 { border-color: var(--theme-border-strong) !important; }
-  .text-white, .text-zinc-50, .text-zinc-100, .text-zinc-200 { color: var(--theme-text-strong) !important; }
-  .text-zinc-300, .text-zinc-400 { color: var(--theme-text-muted) !important; }
-  .text-zinc-500 { color: var(--theme-text-soft) !important; }
-  .text-black { color: var(--theme-primary-text) !important; }
-  .hover\:bg-zinc-950:hover { background-color: var(--theme-surface-hover) !important; }
-  .hover\:border-zinc-600:hover, .hover\:border-zinc-800:hover { border-color: var(--theme-border-strong) !important; }
-  .hover\:text-white:hover, .hover\:text-zinc-100:hover, .hover\:text-zinc-300:hover { color: var(--theme-text-strong) !important; }
-  .divide-white\/8 > :not([hidden]) ~ :not([hidden]),
-  .divide-white\/10 > :not([hidden]) ~ :not([hidden]),
-  .divide-white\/5 > :not([hidden]) ~ :not([hidden]) { border-color: color-mix(in srgb, var(--theme-border) 70%, transparent) !important; }
-  .border-white\/8 { border-color: var(--theme-header-divider) !important; }
-
   /* Reusable section patterns — replace ad-hoc inline gradients/shadows. */
   .app-section-band {
     background-image: linear-gradient(to right, var(--theme-surface-hover), var(--theme-surface));

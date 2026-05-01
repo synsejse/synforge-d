@@ -235,7 +235,7 @@ function Signing() {
 
       {error ? <ErrorMessage message={error} /> : null}
       {message ? (
-        <div className="border-2 border-[var(--theme-terminal-green)] bg-black px-4 py-3 text-sm text-zinc-100">
+        <div className="border-2 border-success bg-black px-4 py-3 text-sm text-strong">
           {message}
         </div>
       ) : null}
@@ -245,7 +245,7 @@ function Signing() {
           <h2 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
             Current_Status
           </h2>
-          <dl className="mt-4 grid gap-px bg-zinc-800">
+          <dl className="mt-4 grid gap-px bg-edge">
             <StatusRow label="Enabled" value={status.enabled ? "yes" : "no"} />
             <StatusRow
               label="Configured key id"
@@ -270,13 +270,13 @@ function Signing() {
           <h2 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
             Signing_Actions
           </h2>
-          <p className="mt-3 text-sm text-zinc-400">
+          <p className="mt-3 text-sm text-muted">
             Public key filename is fixed to <code>gpg.key</code>. Key ID is
             always derived from the active private key.
           </p>
           <div className="mt-5 space-y-5">
             <div>
-              <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-400">
+              <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted">
                 Signing State
               </p>
               <div className="flex flex-wrap gap-3">
@@ -296,14 +296,14 @@ function Signing() {
                 </Button>
               </div>
               {!enabled && !status.key_present ? (
-                <p className="mt-2 font-mono text-xs text-zinc-500">
+                <p className="mt-2 font-mono text-xs text-soft">
                   Generate or import a key before enabling signing.
                 </p>
               ) : null}
             </div>
 
             <div>
-              <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-400">
+              <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted">
                 Key Lifecycle
               </p>
               <div className="flex flex-wrap gap-3">
@@ -339,14 +339,14 @@ function Signing() {
                 </Button>
               </div>
               {enabled ? (
-                <p className="mt-2 font-mono text-xs text-zinc-500">
+                <p className="mt-2 font-mono text-xs text-soft">
                   Disable signing before generating, importing, or deleting the key.
                 </p>
               ) : null}
             </div>
 
             <div>
-              <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-400">
+              <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted">
                 Backup
               </p>
               <div className="flex flex-wrap gap-3">
@@ -376,7 +376,7 @@ function Signing() {
                       : "Export Private Key"}
                   </Button>
                 ) : (
-                  <span className="font-mono text-xs text-zinc-500">
+                  <span className="font-mono text-xs text-soft">
                     Export is restricted to bootstrap admin.
                   </span>
                 )}
@@ -408,10 +408,10 @@ function Signing() {
 function StatusRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-1 bg-black px-4 py-3 text-xs sm:grid-cols-[minmax(0,180px)_1fr] sm:gap-4">
-      <dt className="font-mono font-bold uppercase tracking-[0.16em] text-zinc-400">
+      <dt className="font-mono font-bold uppercase tracking-[0.16em] text-muted">
         {label}
       </dt>
-      <dd className="break-all font-mono text-zinc-100 sm:truncate">{value}</dd>
+      <dd className="break-all font-mono text-strong sm:truncate">{value}</dd>
     </div>
   );
 }

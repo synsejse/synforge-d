@@ -22,28 +22,28 @@ export default function ChrootPickerDialog({
       subtitle="Select one or more build targets."
       onClose={onClose}
     >
-      <div className="max-h-[50vh] overflow-y-auto border-2 border-zinc-700 bg-black">
+      <div className="max-h-[50vh] overflow-y-auto border-2 border-edge-strong bg-black">
         {chrootsLoading ? (
           <div className="px-4 py-3">
             <MockTargetCheckIndicator label="Checking mock targets…" />
           </div>
         ) : availableChroots.length === 0 ? (
-          <div className="px-4 py-3 text-sm text-zinc-400">
+          <div className="px-4 py-3 text-sm text-muted">
             No mock chroots available.
           </div>
         ) : (
-          <div className="divide-y divide-white/8">
+          <div className="divide-y divide-edge">
             {availableChroots.map((chroot) => (
               <label
                 key={chroot}
-                className="flex items-center justify-between gap-4 px-4 py-3 text-sm text-zinc-200"
+                className="flex items-center justify-between gap-4 px-4 py-3 text-sm text-strong"
               >
                 <span className="font-mono">{chroot}</span>
                 <input
                   type="checkbox"
                   checked={mockChroots.includes(chroot)}
                   onChange={(event) => onToggleChroot(chroot, event.target.checked)}
-                  className="h-4 w-4 border-zinc-700 bg-zinc-900"
+                  className="h-4 w-4 border-edge-strong bg-surface-hover"
                 />
               </label>
             ))}

@@ -1,6 +1,10 @@
 import { useEffect, useState, type SyntheticEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { faSave, faServer } from "@fortawesome/free-solid-svg-icons";
+import {
+  faRotateLeft,
+  faSave,
+  faServer,
+} from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import { configQueries } from "../../lib/queries";
 import type { ConfigFieldDescriptor, DaemonConfig } from "../../lib/types";
@@ -9,6 +13,7 @@ import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import PageHeader from "../../components/ui/page-header";
+import Tooltip from "../../components/ui/tooltip";
 import { DisclosureGroup, Disclosure } from "../../components/ui/disclosure";
 
 function Settings() {
@@ -178,11 +183,31 @@ function ConfigFieldInput({
   onChange: (next: string) => void;
   disabled?: boolean;
 }) {
+  const defaultStr =
+    field.default_value != null ? String(field.default_value) : "";
+  const isAtDefault = value.trim() === defaultStr.trim();
+  const canReset = !disabled && defaultStr !== "" && !isAtDefault;
+
   return (
     <label className="block">
-      <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
-        {field.label}
-      </span>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
+          {field.label}
+        </span>
+        {canReset ? (
+          <Tooltip content={`Reset to default: ${defaultStr}`} side="top">
+            <button
+              type="button"
+              onClick={() => onChange(defaultStr)}
+              aria-label={`Reset ${field.label} to default`}
+              className="inline-flex items-center gap-1 border-2 border-edge-strong bg-black px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.15em] text-soft transition hover:border-white hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime"
+            >
+              <FaIcon icon={faRotateLeft} className="text-[0.85em]" />
+              Reset
+            </button>
+          </Tooltip>
+        ) : null}
+      </div>
       <input
         type={field.type === "number" ? "number" : "text"}
         min={field.min_value ?? undefined}
@@ -192,7 +217,14 @@ function ConfigFieldInput({
         required={field.required}
         disabled={disabled}
       />
-      <span className="mt-2 block text-xs text-soft">{field.description}</span>
+      <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <span className="text-xs text-soft">{field.description}</span>
+        {defaultStr !== "" ? (
+          <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-soft">
+            Default: <span className="text-muted">{defaultStr}</span>
+          </span>
+        ) : null}
+      </div>
     </label>
   );
 }

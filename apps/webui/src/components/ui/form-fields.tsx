@@ -4,6 +4,21 @@ import type { ReactNode } from "react";
 const inputClass =
   "w-full border-2 border-zinc-700 bg-zinc-950 px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none transition duration-100 ease-linear focus:border-[var(--theme-accent-lime)]";
 
+const inputErrorClass =
+  "w-full border-2 border-[var(--theme-error-red)] bg-zinc-950 px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none transition duration-100 ease-linear focus:border-[var(--theme-error-red)]";
+
+export function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <span
+      role="alert"
+      className="mt-2 block font-mono text-xs uppercase tracking-[0.12em] text-[var(--theme-error-red)]"
+    >
+      {message}
+    </span>
+  );
+}
+
 interface TextFieldProps {
   label: string;
   value: string;
@@ -12,6 +27,7 @@ interface TextFieldProps {
   placeholder?: string;
   required?: boolean;
   className?: string;
+  error?: string;
 }
 
 export function TextField({
@@ -22,6 +38,7 @@ export function TextField({
   placeholder,
   required,
   className = "",
+  error,
 }: TextFieldProps) {
   return (
     <label className={`block ${className}`}>
@@ -34,8 +51,10 @@ export function TextField({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         required={required}
-        className={inputClass}
+        aria-invalid={error ? true : undefined}
+        className={error ? inputErrorClass : inputClass}
       />
+      <FieldError message={error} />
     </label>
   );
 }
@@ -48,6 +67,7 @@ interface NumberFieldProps {
   step?: number;
   required?: boolean;
   className?: string;
+  error?: string;
 }
 
 export function NumberField({
@@ -58,6 +78,7 @@ export function NumberField({
   step = 1,
   required,
   className = "",
+  error,
 }: NumberFieldProps) {
   return (
     <label className={`block ${className}`}>
@@ -71,8 +92,10 @@ export function NumberField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         required={required}
-        className={inputClass}
+        aria-invalid={error ? true : undefined}
+        className={error ? inputErrorClass : inputClass}
       />
+      <FieldError message={error} />
     </label>
   );
 }
@@ -85,6 +108,7 @@ interface TextAreaFieldProps {
   rows?: number;
   hint?: string;
   className?: string;
+  error?: string;
 }
 
 export function TextAreaField({
@@ -95,6 +119,7 @@ export function TextAreaField({
   rows = 6,
   hint,
   className = "",
+  error,
 }: TextAreaFieldProps) {
   return (
     <label className={`block ${className}`}>
@@ -106,11 +131,14 @@ export function TextAreaField({
         onChange={(event) => onChange(event.target.value)}
         rows={rows}
         placeholder={placeholder}
-        className={inputClass}
+        aria-invalid={error ? true : undefined}
+        className={error ? inputErrorClass : inputClass}
       />
-      {hint && (
+      {error ? (
+        <FieldError message={error} />
+      ) : hint ? (
         <span className="mt-2 block text-xs text-zinc-500">{hint}</span>
-      )}
+      ) : null}
     </label>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
 import {
   faKey,
   faPen,
@@ -27,6 +28,50 @@ import {
   togglePermission,
 } from "./components/model";
 
+type CreateFieldErrors = Partial<Record<"handle" | "display_name" | "password", string>>;
+type EditFieldErrors = Partial<Record<"handle" | "display_name", string>>;
+
+const handleSchema = z
+  .string()
+  .trim()
+  .min(1, "Handle is required")
+  .max(64, "Handle must be 64 characters or fewer")
+  .regex(
+    /^[a-z0-9][a-z0-9_-]*$/,
+    "Use lowercase letters, digits, underscore, or hyphen",
+  );
+const displayNameSchema = z
+  .string()
+  .trim()
+  .min(1, "Display name is required")
+  .max(120, "Display name is too long");
+const passwordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters");
+
+const createUserSchema = z.object({
+  handle: handleSchema,
+  display_name: displayNameSchema,
+  password: passwordSchema,
+});
+const editUserSchema = z.object({
+  handle: handleSchema,
+  display_name: displayNameSchema,
+});
+
+function flatErrors<T extends string>(
+  result: { error: { issues: Array<{ path: PropertyKey[]; message: string }> } },
+): Partial<Record<T, string>> {
+  const out: Partial<Record<T, string>> = {};
+  for (const issue of result.error.issues) {
+    const key = issue.path[0];
+    if (typeof key === "string" && !(key in out)) {
+      (out as Record<string, string>)[key] = issue.message;
+    }
+  }
+  return out;
+}
+
 function Users() {
   const queryClient = useQueryClient();
   const { session } = useSession();
@@ -38,8 +83,11 @@ function Users() {
   const [modal, setModal] = useState<ModalState>(null);
   const [createForm, setCreateForm] =
     useState<CreateUserDraft>(emptyCreateForm());
+  const [createErrors, setCreateErrors] = useState<CreateFieldErrors>({});
   const [editForm, setEditForm] = useState<UserDraft | null>(null);
+  const [editErrors, setEditErrors] = useState<EditFieldErrors>({});
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
 
   const invalidateUsers = () =>
@@ -51,6 +99,7 @@ function Users() {
         ? document.activeElement
         : null;
     setCreateForm(emptyCreateForm());
+    setCreateErrors({});
     setModal({ type: "create" });
   }
 
@@ -65,6 +114,7 @@ function Users() {
       permissions: [...user.user.permissions],
       active: user.user.active,
     });
+    setEditErrors({});
     setModal({ type: "edit", user });
   }
 
@@ -74,6 +124,7 @@ function Users() {
         ? document.activeElement
         : null;
     setPassword("");
+    setPasswordError(null);
     setModal({ type: "password", user });
   }
 
@@ -169,6 +220,16 @@ function Users() {
 
   function handleCreate(event: SyntheticEvent) {
     event.preventDefault();
+    const result = createUserSchema.safeParse({
+      handle: createForm.handle,
+      display_name: createForm.display_name,
+      password: createForm.password,
+    });
+    if (!result.success) {
+      setCreateErrors(flatErrors<"handle" | "display_name" | "password">(result));
+      return;
+    }
+    setCreateErrors({});
     createMutation.mutate();
   }
 
@@ -177,6 +238,15 @@ function Users() {
     if (!modal || modal.type !== "edit" || !editForm) {
       return;
     }
+    const result = editUserSchema.safeParse({
+      handle: editForm.handle,
+      display_name: editForm.display_name,
+    });
+    if (!result.success) {
+      setEditErrors(flatErrors<"handle" | "display_name">(result));
+      return;
+    }
+    setEditErrors({});
     editMutation.mutate({ userId: modal.user.user.id, draft: editForm });
   }
 
@@ -185,10 +255,12 @@ function Users() {
     if (!modal || modal.type !== "password") {
       return;
     }
-    if (!password.trim()) {
-      setError("Password must not be empty");
+    const result = passwordSchema.safeParse(password);
+    if (!result.success) {
+      setPasswordError(result.error.issues[0]?.message ?? "Invalid password");
       return;
     }
+    setPasswordError(null);
     passwordMutation.mutate({
       userId: modal.user.user.id,
       newPassword: password,
@@ -250,31 +322,43 @@ function Users() {
 
       {modal?.type === "create" ? (
         <UserModalShell title="Add User" onClose={closeModal}>
-          <form onSubmit={handleCreate} className="space-y-4">
+          <form onSubmit={handleCreate} className="space-y-4" noValidate>
             <TextField
               label="Handle"
               value={createForm.handle}
-              onChange={(value) =>
-                setCreateForm((current) => ({ ...current, handle: value }))
-              }
+              error={createErrors.handle}
+              onChange={(value) => {
+                setCreateForm((current) => ({ ...current, handle: value }));
+                if (createErrors.handle) {
+                  setCreateErrors((prev) => ({ ...prev, handle: undefined }));
+                }
+              }}
             />
             <TextField
               label="Display name"
               value={createForm.display_name}
-              onChange={(value) =>
+              error={createErrors.display_name}
+              onChange={(value) => {
                 setCreateForm((current) => ({
                   ...current,
                   display_name: value,
-                }))
-              }
+                }));
+                if (createErrors.display_name) {
+                  setCreateErrors((prev) => ({ ...prev, display_name: undefined }));
+                }
+              }}
             />
             <TextField
               label="Password"
               type="password"
               value={createForm.password}
-              onChange={(value) =>
-                setCreateForm((current) => ({ ...current, password: value }))
-              }
+              error={createErrors.password}
+              onChange={(value) => {
+                setCreateForm((current) => ({ ...current, password: value }));
+                if (createErrors.password) {
+                  setCreateErrors((prev) => ({ ...prev, password: undefined }));
+                }
+              }}
             />
             <ToggleField
               label="Active"
@@ -307,24 +391,32 @@ function Users() {
           title={`Edit ${modal.user.user.display_name}`}
           onClose={closeModal}
         >
-          <form onSubmit={handleEdit} className="space-y-4">
+          <form onSubmit={handleEdit} className="space-y-4" noValidate>
             <TextField
               label="Handle"
               value={editForm.handle}
-              onChange={(value) =>
+              error={editErrors.handle}
+              onChange={(value) => {
                 setEditForm((current) =>
                   current ? { ...current, handle: value } : current,
-                )
-              }
+                );
+                if (editErrors.handle) {
+                  setEditErrors((prev) => ({ ...prev, handle: undefined }));
+                }
+              }}
             />
             <TextField
               label="Display name"
               value={editForm.display_name}
-              onChange={(value) =>
+              error={editErrors.display_name}
+              onChange={(value) => {
                 setEditForm((current) =>
                   current ? { ...current, display_name: value } : current,
-                )
-              }
+                );
+                if (editErrors.display_name) {
+                  setEditErrors((prev) => ({ ...prev, display_name: undefined }));
+                }
+              }}
             />
             <ToggleField
               label="Active"
@@ -366,12 +458,16 @@ function Users() {
           title={`Change password for ${modal.user.user.display_name}`}
           onClose={closeModal}
         >
-          <form onSubmit={handlePasswordChange} className="space-y-4">
+          <form onSubmit={handlePasswordChange} className="space-y-4" noValidate>
             <TextField
               label="New password"
               type="password"
               value={password}
-              onChange={setPassword}
+              error={passwordError ?? undefined}
+              onChange={(value) => {
+                setPassword(value);
+                if (passwordError) setPasswordError(null);
+              }}
             />
             <UserModalActions
               onClose={closeModal}

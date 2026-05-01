@@ -41,6 +41,11 @@ interface DataTableProps<T> {
   /** Min table width for the desktop <table>. Defaults to 640px. */
   minWidth?: string;
   className?: string;
+  /**
+   * Optional mobile-only footer rendered at the bottom of each card. Use for
+   * action button rows that don't fit the title/badge/field model.
+   */
+  cardFooter?: (row: T) => ReactNode;
 }
 
 const TH_CLASS =
@@ -68,6 +73,7 @@ export default function DataTable<T>({
   rowClassName,
   minWidth = "640px",
   className,
+  cardFooter,
 }: DataTableProps<T>) {
   if (loading) {
     return <SkeletonTable columns={columns.length} rows={loadingRows} />;
@@ -126,6 +132,7 @@ export default function DataTable<T>({
                 ))}
               </dl>
             ) : null}
+            {cardFooter ? <div className="mt-3">{cardFooter(row)}</div> : null}
           </article>
         ))}
       </div>

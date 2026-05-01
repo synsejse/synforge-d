@@ -1,16 +1,18 @@
+import { useMemo } from "react";
 import {
   faStop,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
+import { Link, useNavigate } from "@tanstack/react-router";
 import type {
   BuildJobResponse,
   JobResourceUsageSample,
   ServerHardwareResponse,
 } from "../../../lib/types";
-import { Link, useNavigate } from "@tanstack/react-router";
 import { formatDateTime, formatDurationBetween } from "../../../lib/datetime";
 import Badge from "../../../components/ui/badge";
 import Button from "../../../components/ui/button";
+import DataTable, { type DataTableColumn } from "../../../components/ui/data-table";
 import FaIcon from "../../../components/ui/fa-icon";
 import type { JobViewMode } from "../types";
 import JobUsageBar from "./job-usage-bar";
@@ -34,214 +36,153 @@ export default function JobListTable({
   serverHardware,
   usageByJob,
 }: JobListTableProps) {
-  if (jobs.length === 0) {
-    return (
-      <div className="flex min-h-[300px] items-center justify-center px-6 py-12">
-        <div className="text-center">
-          <div className="font-mono text-sm text-soft">
-            {mode === "active" ? "No active jobs" : "No jobs found"}
+  const columns = useMemo<DataTableColumn<BuildJobResponse>[]>(() => {
+    const cols: DataTableColumn<BuildJobResponse>[] = [
+      {
+        key: "package",
+        header: "Package",
+        mobile: "title",
+        cell: (entry) => (
+          <div className="min-w-[160px]">
+            <Link
+              to="/jobs/view"
+              search={{ id: entry.job.id }}
+              className="font-display font-bold text-white transition hover:text-accent-lime"
+            >
+              {entry.job.package_name}
+            </Link>
+            <div className="mt-1 max-w-[200px] truncate font-mono text-xs text-soft">
+              {entry.job.id}
+            </div>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <div className="space-y-3 p-4 md:hidden">
-        {jobs.map((entry) => (
-          <MobileJobCard
-            key={`mobile:${entry.job.id}`}
-            entry={entry}
-            killingJobId={killingJobId}
-            mode={mode}
-            onDelete={onDelete}
-            onKill={onKill}
-            serverHardware={serverHardware}
-            usage={usageByJob[entry.job.id] ?? null}
-          />
-        ))}
-      </div>
-      <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[640px] lg:min-w-[980px]">
-          <thead className="border-b-2 border-edge-strong bg-surface-alt">
-            <tr>
-              {[
-                "Package",
-                "Target",
-                "Revision",
-                "Status",
-                "Duration",
-                "Created",
-              ].map((label) => (
-                <th
-                  key={label}
-                  scope="col"
-                  className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft"
-                >
-                  {label}
-                </th>
-              ))}
-              {mode === "active" && (
-                <th
-                  scope="col"
-                  className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft"
-                >
-                  Live Usage
-                </th>
-              )}
-              <th
-                scope="col"
-                className="px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft"
-              >
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {jobs.map((entry, idx) => (
-              <DesktopJobRow
-                key={entry.job.id}
-                entry={entry}
-                index={idx}
-                killingJobId={killingJobId}
-                mode={mode}
-                onDelete={onDelete}
-                onKill={onKill}
-                serverHardware={serverHardware}
-                usage={usageByJob[entry.job.id] ?? null}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
-}
-
-interface JobRowProps {
-  entry: BuildJobResponse;
-  killingJobId: string | null;
-  mode: JobViewMode;
-  onDelete: (job: BuildJobResponse) => void;
-  onKill: (job: BuildJobResponse) => void;
-  serverHardware: ServerHardwareResponse | null;
-  usage: JobResourceUsageSample | null;
-}
-
-function MobileJobCard({
-  entry,
-  killingJobId,
-  mode,
-  onDelete,
-  onKill,
-  serverHardware,
-  usage,
-}: JobRowProps) {
-  const isLive = isLiveJob(entry);
-  return (
-    <article className="border-2 border-edge-strong bg-black p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <JobLink entry={entry} />
-          <div className="mt-1 break-all font-mono text-xs text-soft">
-            {entry.job.id}
+        ),
+      },
+      {
+        key: "target",
+        header: "Target",
+        mobile: "field",
+        cell: (entry) => <Badge variant="ghost">{entry.job.mock_chroot}</Badge>,
+      },
+      {
+        key: "revision",
+        header: "Revision",
+        mobile: "field",
+        cell: (entry) => (
+          <div className="max-w-[300px] truncate font-mono text-sm text-muted md:max-w-[300px]">
+            {entry.job.revision}
           </div>
-        </div>
-        <JobStatusBadge entry={entry} />
-      </div>
-      <div className="mt-3 space-y-2 font-mono text-xs text-muted">
-        <JobFact label="Target">
-          <Badge variant="ghost">{entry.job.mock_chroot}</Badge>
-        </JobFact>
-        <JobFact label="Revision">{entry.job.revision}</JobFact>
-        <JobFact label="Duration">
-          {formatDurationBetween(entry.job.created_at, entry.job.finished_at)}
-        </JobFact>
-        <JobFact label="Created">{formatDateTime(entry.job.created_at)}</JobFact>
-        {mode === "active" && isLive && (
-          <div className="space-y-3 border-2 border-edge-strong bg-surface-alt px-3 py-3">
-            <JobUsageBar usage={usage} serverHardware={serverHardware} />
-          </div>
-        )}
-      </div>
-      <JobActions
-        entry={entry}
-        isLive={isLive}
-        killingJobId={killingJobId}
-        mode={mode}
-        onDelete={onDelete}
-        onKill={onKill}
-        mobile
-      />
-    </article>
-  );
-}
+        ),
+      },
+      {
+        key: "status",
+        header: "Status",
+        mobile: "badge",
+        cell: (entry) => (
+          <Badge
+            variant={getStatusVariant(entry.job.status)}
+            pulse={isLiveJob(entry)}
+          >
+            {entry.job.status}
+          </Badge>
+        ),
+      },
+      {
+        key: "duration",
+        header: "Duration",
+        mobile: "field",
+        className: "font-mono text-sm text-muted",
+        cell: (entry) =>
+          formatDurationBetween(entry.job.created_at, entry.job.finished_at),
+      },
+      {
+        key: "created",
+        header: "Created",
+        mobile: "field",
+        className: "font-mono text-sm text-muted",
+        cell: (entry) => formatDateTime(entry.job.created_at),
+      },
+    ];
 
-function DesktopJobRow({
-  entry,
-  index,
-  killingJobId,
-  mode,
-  onDelete,
-  onKill,
-  serverHardware,
-  usage,
-}: JobRowProps & { index: number }) {
-  const isLive = isLiveJob(entry);
-  return (
-    <tr
-      className={`border-b-2 border-edge transition-all hover:bg-surface-alt ${
-        index % 2 === 0 ? "bg-black" : "bg-surface-alt/40"
-      }`}
-    >
-      <td className="px-5 py-4">
-        <div className="min-w-[160px]">
-          <JobLink entry={entry} />
-          <div className="mt-1 max-w-[200px] truncate font-mono text-xs text-soft">
-            {entry.job.id}
-          </div>
-        </div>
-      </td>
-      <td className="px-5 py-4">
-        <Badge variant="ghost">{entry.job.mock_chroot}</Badge>
-      </td>
-      <td className="px-5 py-4">
-        <div className="max-w-[300px] truncate font-mono text-sm text-muted">
-          {entry.job.revision}
-        </div>
-      </td>
-      <td className="px-5 py-4">
-        <JobStatusBadge entry={entry} />
-      </td>
-      <td className="px-5 py-4 font-mono text-sm text-muted">
-        {formatDurationBetween(entry.job.created_at, entry.job.finished_at)}
-      </td>
-      <td className="px-5 py-4 font-mono text-sm text-muted">
-        {formatDateTime(entry.job.created_at)}
-      </td>
-      {mode === "active" && (
-        <td className="px-5 py-4">
-          {isLive && usage ? (
+    if (mode === "active") {
+      cols.push({
+        key: "usage",
+        header: "Live Usage",
+        // Surfaced in the mobile card as a richer block via cardFooter; on
+        // desktop it owns its own column.
+        mobile: "hidden",
+        cell: (entry) => {
+          const usage = usageByJob[entry.job.id] ?? null;
+          if (!isLiveJob(entry) || !usage) {
+            return <span className="font-mono text-xs text-soft">-</span>;
+          }
+          return (
             <div className="min-w-[320px] border-2 border-edge-strong bg-surface-alt p-3">
               <JobUsageBar usage={usage} serverHardware={serverHardware} />
             </div>
-          ) : (
-            <span className="font-mono text-xs text-soft">-</span>
-          )}
-        </td>
-      )}
-      <td className="px-5 py-4">
+          );
+        },
+      });
+    }
+
+    cols.push({
+      key: "actions",
+      header: "Actions",
+      mobile: "hidden",
+      cell: (entry) => (
         <JobActions
           entry={entry}
-          isLive={isLive}
+          isLive={isLiveJob(entry)}
           killingJobId={killingJobId}
           mode={mode}
           onDelete={onDelete}
           onKill={onKill}
         />
-      </td>
-    </tr>
+      ),
+    });
+
+    return cols;
+  }, [killingJobId, mode, onDelete, onKill, serverHardware, usageByJob]);
+
+  const cardFooter = (entry: BuildJobResponse) => {
+    const usage = usageByJob[entry.job.id] ?? null;
+    const live = isLiveJob(entry);
+    return (
+      <>
+        {mode === "active" && live ? (
+          <div className="mt-3 space-y-3 border-2 border-edge-strong bg-surface-alt px-3 py-3">
+            <JobUsageBar usage={usage} serverHardware={serverHardware} />
+          </div>
+        ) : null}
+        <JobActions
+          entry={entry}
+          isLive={live}
+          killingJobId={killingJobId}
+          mode={mode}
+          onDelete={onDelete}
+          onKill={onKill}
+          mobile
+        />
+      </>
+    );
+  };
+
+  return (
+    <div className="p-4">
+      <DataTable
+        columns={columns}
+        rows={jobs}
+        rowKey={(entry) => entry.job.id}
+        empty={{
+          title: mode === "active" ? "No active jobs" : "No jobs found",
+          description:
+            mode === "active"
+              ? "Nothing is currently pending or running."
+              : "Adjust filters or queue new builds to see results here.",
+        }}
+        cardFooter={cardFooter}
+        minWidth="980px"
+      />
+    </div>
   );
 }
 
@@ -265,12 +206,18 @@ function JobActions({
   const navigate = useNavigate();
   const widthClass = mobile ? "w-full sm:w-auto" : "";
   return (
-    <div className={mobile ? "mt-4 grid gap-2 sm:flex sm:flex-wrap" : "flex flex-wrap gap-2"}>
+    <div
+      className={
+        mobile ? "mt-4 grid gap-2 sm:flex sm:flex-wrap" : "flex flex-wrap gap-2"
+      }
+    >
       <Button
         variant="ghost"
         size="sm"
         className={widthClass}
-        onClick={() => navigate({ to: "/jobs/view", search: { id: entry.job.id } })}
+        onClick={() =>
+          navigate({ to: "/jobs/view", search: { id: entry.job.id } })
+        }
       >
         Open
       </Button>
@@ -302,48 +249,14 @@ function JobActions({
   );
 }
 
-function JobFact({
-  children,
-  label,
-}: {
-  children: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <div className="break-all">
-      <span className="text-soft">{label}:</span> {children}
-    </div>
-  );
-}
-
-function JobLink({ entry }: { entry: BuildJobResponse }) {
-  return (
-    <Link
-      to="/jobs/view"
-      search={{ id: entry.job.id }}
-      className="font-display font-bold text-white transition hover:text-accent-lime"
-    >
-      {entry.job.package_name}
-    </Link>
-  );
-}
-
-function JobStatusBadge({ entry }: { entry: BuildJobResponse }) {
-  return (
-    <Badge variant={getStatusVariant(entry.job.status)} pulse={isLiveJob(entry)}>
-      {entry.job.status}
-    </Badge>
-  );
-}
-
 function isLiveJob(entry: BuildJobResponse): boolean {
   return entry.job.status === "pending" || entry.job.status === "running";
 }
 
 function getStatusVariant(status: string) {
-  if (status === "succeeded") return "success";
-  if (status === "failed" || status === "timed_out") return "error";
-  if (status === "running") return "lime";
-  if (status === "pending") return "warning";
-  return "default";
+  if (status === "succeeded") return "success" as const;
+  if (status === "failed" || status === "timed_out") return "error" as const;
+  if (status === "running") return "lime" as const;
+  if (status === "pending") return "warning" as const;
+  return "default" as const;
 }

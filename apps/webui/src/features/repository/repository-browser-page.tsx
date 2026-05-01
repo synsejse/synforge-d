@@ -22,6 +22,7 @@ import PageHeader from "../../components/ui/page-header";
 import Badge from "../../components/ui/badge";
 import PaginationControls from "../../components/common/pagination-controls";
 import FilterBar from "../../components/common/filter-bar";
+import DataTable, { type DataTableColumn } from "../../components/ui/data-table";
 
 const PAGE_SIZE = 50;
 
@@ -229,119 +230,18 @@ function RepositoryBrowser() {
             Published Files
           </h2>
         </div>
-        
-        {inventoryQuery.data.repo_files.length === 0 ? (
-          <div className="px-6 py-12 text-center">
-            <p className="font-mono text-sm text-soft">
-              No files match the current filters.
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="space-y-3 p-4 md:hidden">
-              {inventoryQuery.data.repo_files.map((file) => {
-                const fileName = file.path.split("/").pop() || file.path;
-                const signingState = getSigningState(file);
-                return (
-                  <article
-                    key={`mobile:${file.job_id}:${file.path}`}
-                    className="border-2 border-edge-strong bg-black p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="font-mono text-sm text-white">{file.package_name}</div>
-                        <div className="mt-1 font-mono text-xs text-soft">
-                          {file.mock_chroot || "unknown"}
-                        </div>
-                      </div>
-                      <Badge variant={signingState.variant} title={signingState.title}>
-                        {signingState.label}
-                      </Badge>
-                    </div>
-                    <div className="mt-3">
-                      <a
-                        href={`/repo/${file.path}`}
-                        className="break-all font-mono text-sm text-accent-lime transition duration-100 ease-linear hover:text-white"
-                      >
-                        {fileName}
-                      </a>
-                      <div className="mt-1 break-all font-mono text-xs text-soft">
-                        {file.path}
-                      </div>
-                    </div>
-                    <div className="mt-3 font-mono text-xs text-muted">
-                      <span className="text-soft">Size:</span> {formatBytes(file.size_bytes)}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[640px] lg:min-w-[900px]">
-                <thead>
-                  <tr className="border-b-2 border-edge">
-                    <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft">
-                      Package
-                    </th>
-                    <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft">
-                      Target
-                    </th>
-                    <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft">
-                      File
-                    </th>
-                    <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft">
-                      Repo Path
-                    </th>
-                    <th className="px-6 py-4 text-right font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft">
-                      Size
-                    </th>
-                    <th className="px-6 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft">
-                      Signing
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {inventoryQuery.data.repo_files.map((file) => {
-                    const fileName = file.path.split("/").pop() || file.path;
-                    const signingState = getSigningState(file);
-                    return (
-                      <tr
-                        key={`${file.job_id}:${file.path}`}
-                        className="border-b border-edge transition duration-100 ease-linear hover:bg-surface-alt"
-                      >
-                        <td className="px-6 py-4 font-mono text-sm text-white">
-                          {file.package_name}
-                        </td>
-                        <td className="px-6 py-4 font-mono text-sm text-muted">
-                          {file.mock_chroot || "unknown"}
-                        </td>
-                        <td className="px-6 py-4">
-                          <a
-                            href={`/repo/${file.path}`}
-                            className="break-all font-mono text-sm text-accent-lime transition duration-100 ease-linear hover:text-white"
-                          >
-                            {fileName}
-                          </a>
-                        </td>
-                        <td className="px-6 py-4 font-mono text-sm text-soft">
-                          {file.path}
-                        </td>
-                        <td className="px-6 py-4 text-right font-mono text-sm text-muted">
-                          {formatBytes(file.size_bytes)}
-                        </td>
-                        <td className="px-6 py-4">
-                          <Badge variant={signingState.variant} title={signingState.title}>
-                            {signingState.label}
-                          </Badge>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+
+        <div className="p-4">
+          <DataTable
+            columns={publishedFileColumns}
+            rows={inventoryQuery.data.repo_files}
+            rowKey={(file) => `${file.job_id}:${file.path}`}
+            empty={{
+              title: "No files match",
+              description: "No files match the current filters.",
+            }}
+          />
+        </div>
 
         {/* Pagination */}
         {inventoryQuery.data.repo_files.length > 0 && (
@@ -365,6 +265,73 @@ function RepositoryBrowser() {
     </div>
   );
 }
+
+const publishedFileColumns: DataTableColumn<PublishedRepoFile>[] = [
+  {
+    key: "package",
+    header: "Package",
+    mobile: "title",
+    cell: (file) => (
+      <div>
+        <div className="font-mono text-sm text-white">{file.package_name}</div>
+        <div className="mt-1 font-mono text-xs text-soft md:hidden">
+          {file.mock_chroot || "unknown"}
+        </div>
+      </div>
+    ),
+  },
+  {
+    key: "target",
+    header: "Target",
+    mobile: "hidden",
+    className: "font-mono text-sm text-muted",
+    cell: (file) => file.mock_chroot || "unknown",
+  },
+  {
+    key: "file",
+    header: "File",
+    mobile: "field",
+    cell: (file) => {
+      const fileName = file.path.split("/").pop() || file.path;
+      return (
+        <a
+          href={`/repo/${file.path}`}
+          className="break-all font-mono text-sm text-accent-lime transition duration-100 ease-linear hover:text-white"
+        >
+          {fileName}
+        </a>
+      );
+    },
+  },
+  {
+    key: "path",
+    header: "Repo Path",
+    mobile: "field",
+    className: "font-mono text-sm text-soft break-all",
+    cell: (file) => file.path,
+  },
+  {
+    key: "size",
+    header: "Size",
+    mobile: "field",
+    className: "text-right font-mono text-sm text-muted",
+    headerClassName: "text-right",
+    cell: (file) => formatBytes(file.size_bytes),
+  },
+  {
+    key: "signing",
+    header: "Signing",
+    mobile: "badge",
+    cell: (file) => {
+      const signingState = getSigningState(file);
+      return (
+        <Badge variant={signingState.variant} title={signingState.title}>
+          {signingState.label}
+        </Badge>
+      );
+    },
+  },
+];
 
 export default function RepositoryBrowserPage() {
   return <RepositoryBrowser />;

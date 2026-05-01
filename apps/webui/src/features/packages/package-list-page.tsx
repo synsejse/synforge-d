@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { useDebounce } from "../../lib/hooks/use-debounce";
+import { useSelection } from "../../lib/hooks/use-selection";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import {
+  faHammer,
   faPlus,
   faRotate,
+  faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import { packagesQueries } from "../../lib/queries";
@@ -18,12 +21,14 @@ import ErrorMessage from "../../components/common/error-message";
 import { useDialogs } from "../../components/common/dialogs-provider";
 import { useToast } from "../../components/common/toast-provider";
 import LoadingBlock from "../../components/ui/loading-block";
+import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import Select from "../../components/ui/select";
 import PageHeader from "../../components/ui/page-header";
 import ProgressOverlayDialog from "../../components/ui/progress-overlay-dialog";
 import PaginationControls from "../../components/common/pagination-controls";
 import FilterBar from "../../components/common/filter-bar";
+import SelectionActionBar from "../../components/common/selection-action-bar";
 
 const PAGE_SIZE = 50;
 
@@ -65,13 +70,19 @@ function PackageList() {
   const debouncedSearch = useDebounce(searchInput, 250);
   const [showAddModal, setShowAddModal] = useState(false);
   const [refreshOverlayOpen, setRefreshOverlayOpen] = useState(false);
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const selection = useSelection<string>();
 
   const setOffset = (next: number) =>
     navigate({ search: (prev) => ({ ...prev, offset: next }) });
-  const setSearch = (next: string) =>
+  const setSearch = (next: string) => {
+    selection.clear();
     navigate({ search: (prev) => ({ ...prev, offset: 0, search: next }) });
-  const setEnabledFilter = (next: EnabledFilter) =>
+  };
+  const setEnabledFilter = (next: EnabledFilter) => {
+    selection.clear();
     navigate({ search: (prev) => ({ ...prev, offset: 0, enabled: next }) });
+  };
 
   useEffect(() => {
     if (debouncedSearch !== search) {
@@ -169,6 +180,101 @@ function PackageList() {
     if (!ok) return;
     setRefreshOverlayOpen(true);
     await refreshAllMutation.mutateAsync().catch(() => undefined);
+  }
+
+  async function runBulk(
+    action: "refresh" | "rebuild",
+    names: string[],
+  ): Promise<void> {
+    setBulkRunning(true);
+    try {
+      const results = await Promise.allSettled(
+        names.map((name) =>
+          action === "refresh"
+            ? api.refreshPackage(name)
+            : api.rebuildPackage(name),
+        ),
+      );
+      const ok = results.filter((r) => r.status === "fulfilled").length;
+      const failed = results.length - ok;
+      if (failed === 0) {
+        toast.success(
+          action === "refresh" ? "Bulk refresh queued" : "Bulk rebuild queued",
+          `${ok} package${ok === 1 ? "" : "s"} processed.`,
+        );
+      } else {
+        toast.error(
+          action === "refresh"
+            ? "Bulk refresh partial"
+            : "Bulk rebuild partial",
+          `${ok} succeeded · ${failed} failed.`,
+        );
+      }
+      await invalidatePackages();
+    } finally {
+      setBulkRunning(false);
+    }
+  }
+
+  async function handleBulkRefresh() {
+    const names = Array.from(selection.selected);
+    if (names.length === 0) return;
+    const ok = await confirm({
+      title: `Refresh ${names.length} package${names.length === 1 ? "" : "s"}?`,
+      message: "Queue a manual source refresh for each selected package.",
+      confirmLabel: "Refresh",
+    });
+    if (!ok) return;
+    await runBulk("refresh", names);
+    selection.clear();
+  }
+
+  async function handleBulkRebuild() {
+    const names = Array.from(selection.selected);
+    if (names.length === 0) return;
+    const ok = await confirm({
+      title: `Rebuild ${names.length} package${names.length === 1 ? "" : "s"}?`,
+      message: "Queue a fresh build of every target for each selected package.",
+      confirmLabel: "Rebuild",
+    });
+    if (!ok) return;
+    await runBulk("rebuild", names);
+    selection.clear();
+  }
+
+  async function handleBulkDelete() {
+    const names = Array.from(selection.selected);
+    if (names.length === 0) return;
+    const ok = await confirm({
+      title: `Delete ${names.length} package${names.length === 1 ? "" : "s"}?`,
+      message: "All selected packages will be removed. This cannot be undone.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    setBulkRunning(true);
+    try {
+      const results = await Promise.allSettled(
+        names.map((name) => api.deletePackage(name)),
+      );
+      const ok2 = results.filter((r) => r.status === "fulfilled").length;
+      const failed = results.length - ok2;
+      if (failed === 0) {
+        toast.success(
+          "Packages deleted",
+          `${ok2} package${ok2 === 1 ? "" : "s"} removed.`,
+        );
+      } else {
+        toast.error(
+          "Bulk delete partial",
+          `${ok2} succeeded · ${failed} failed.`,
+        );
+      }
+      await invalidatePackages();
+    } finally {
+      setBulkRunning(false);
+      selection.clear();
+    }
   }
 
   function applyFilters() {
@@ -291,6 +397,40 @@ function PackageList() {
         </div>
       </FilterBar>
 
+      {/* Bulk select-all-on-page toggle */}
+      {listQuery.data.packages.length > 0 ? (
+        <div className="flex items-center justify-between gap-3 border-2 border-edge-strong bg-surface-alt px-4 py-2 font-mono text-xs uppercase tracking-[0.15em]">
+          <label className="flex items-center gap-3 text-muted hover:text-white">
+            <input
+              type="checkbox"
+              checked={selection.allSelected(
+                listQuery.data.packages.map((p) => p.package.name),
+              )}
+              ref={(el) => {
+                if (el) {
+                  el.indeterminate = selection.someSelected(
+                    listQuery.data.packages.map((p) => p.package.name),
+                  );
+                }
+              }}
+              onChange={(event) =>
+                selection.setMany(
+                  listQuery.data.packages.map((p) => p.package.name),
+                  event.target.checked,
+                )
+              }
+              aria-label="Select all packages on this page"
+            />
+            Select all on page ({listQuery.data.packages.length})
+          </label>
+          {selection.count > 0 ? (
+            <span className="text-soft">
+              {selection.count} total selected
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* Package Cards */}
       {listQuery.data.packages.length === 0 ? (
         <div className="border-2 border-edge-strong bg-black p-12 text-center">
@@ -312,6 +452,8 @@ function PackageList() {
               onDelete={(name) => void handleDelete(name)}
               refreshing={refreshingNameForMutation === entry.package.name}
               refreshDisabled={refreshingAll}
+              selected={selection.isSelected(entry.package.name)}
+              onToggleSelected={selection.setOne}
             />
           ))}
         </div>
@@ -350,6 +492,40 @@ function PackageList() {
         onClose={() => setRefreshOverlayOpen(false)}
         closeDisabled={refreshingAll}
       />
+
+      <SelectionActionBar
+        count={selection.count}
+        noun={{ singular: "package", plural: "packages" }}
+        onClear={selection.clear}
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleBulkRefresh}
+          disabled={bulkRunning}
+        >
+          <FaIcon icon={faRotate} />
+          Refresh
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleBulkRebuild}
+          disabled={bulkRunning}
+        >
+          <FaIcon icon={faHammer} />
+          Rebuild
+        </Button>
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={handleBulkDelete}
+          disabled={bulkRunning}
+        >
+          <FaIcon icon={faTrash} />
+          Delete
+        </Button>
+      </SelectionActionBar>
     </div>
   );
 }

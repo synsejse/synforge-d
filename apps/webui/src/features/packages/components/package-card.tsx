@@ -23,6 +23,9 @@ interface PackageCardProps {
   onDelete: (name: string) => void;
   refreshing?: boolean;
   refreshDisabled?: boolean;
+  /** When provided, renders a selection checkbox at the top of the card. */
+  selected?: boolean;
+  onToggleSelected?: (name: string, value: boolean) => void;
 }
 
 export default function PackageCard({
@@ -32,27 +35,49 @@ export default function PackageCard({
   onDelete,
   refreshing = false,
   refreshDisabled = false,
+  selected,
+  onToggleSelected,
 }: PackageCardProps) {
   const status = summarizePackageStatus(entry);
   const backoffTargets = entry.state.targets.filter(isBackoffActive);
   const backoffSummary =
     backoffTargets.length > 0 ? summarizeBackoffTargets(backoffTargets) : null;
+  const selectable = onToggleSelected !== undefined;
 
   return (
-    <article key={entry.package.name} className="border-2 border-edge-strong bg-black">
+    <article
+      key={entry.package.name}
+      className={`border-2 bg-black transition-colors ${selected ? "border-accent-lime" : "border-edge-strong"}`}
+    >
       <div className="flex flex-col gap-5 border-b-2 border-edge-strong px-4 py-4 sm:px-5 sm:py-5 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 flex-1 space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <Link
-                to="/packages/view"
-                search={{ name: entry.package.name }}
-                className="font-mono text-lg font-bold uppercase text-white transition-all duration-100 ease-linear hover:text-accent-lime"
-              >
-                {entry.package.name}
-              </Link>
-              <div className="mt-1 max-w-3xl text-sm text-soft">
-                {entry.package.description || "No description"}
+            <div className="flex min-w-0 items-start gap-3">
+              {selectable ? (
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  onChange={(event) =>
+                    onToggleSelected?.(
+                      entry.package.name,
+                      event.target.checked,
+                    )
+                  }
+                  aria-label={`Select package ${entry.package.name}`}
+                  className="mt-1.5 shrink-0"
+                />
+              ) : null}
+              <div className="min-w-0">
+                <Link
+                  to="/packages/view"
+                  search={{ name: entry.package.name }}
+                  className="font-mono text-lg font-bold uppercase text-white transition-all duration-100 ease-linear hover:text-accent-lime"
+                >
+                  {entry.package.name}
+                </Link>
+                <div className="mt-1 max-w-3xl text-sm text-soft">
+                  {entry.package.description || "No description"}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-3">

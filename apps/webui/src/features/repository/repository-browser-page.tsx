@@ -1,4 +1,5 @@
-import { useState, type SyntheticEvent } from "react";
+import { useEffect, useState, type SyntheticEvent } from "react";
+import { useDebounce } from "../../lib/hooks/use-debounce";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import {
@@ -53,9 +54,22 @@ function RepositoryBrowser() {
   };
   const [packageInput, setPackageInput] = useState(filters.packageFilter);
   const [targetInput, setTargetInput] = useState(filters.targetFilter);
+  const debouncedPackage = useDebounce(packageInput, 250);
+  const debouncedTarget = useDebounce(targetInput, 250);
 
   const setFilters = (update: Partial<typeof search>) =>
     navigate({ search: (prev) => ({ ...prev, ...update }) });
+
+  useEffect(() => {
+    if (debouncedPackage !== filters.packageFilter || debouncedTarget !== filters.targetFilter) {
+      setFilters({
+        offset: 0,
+        packageFilter: debouncedPackage,
+        targetFilter: debouncedTarget,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedPackage, debouncedTarget]);
 
   const summaryQuery = useQuery(repositoryQueries.summary());
 

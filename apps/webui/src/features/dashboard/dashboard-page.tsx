@@ -4,6 +4,7 @@ import { dashboardQueries } from "../../lib/queries";
 import { formatBytes } from "../../lib/bytes";
 import { formatDateTime } from "../../lib/datetime";
 import ErrorMessage from "../../components/common/error-message";
+import { usePageVisible } from "../../components/common/page-visibility-provider";
 import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
 import MetricCard from "../../components/ui/metric-card";
@@ -17,8 +18,14 @@ import {
   faRocket,
 } from "@fortawesome/free-solid-svg-icons";
 
+const DASHBOARD_REFRESH_INTERVAL_MS = 10_000;
+
 function Dashboard() {
-  const { data, isPending, error } = useQuery(dashboardQueries.overview());
+  const visible = usePageVisible();
+  const { data, isPending, error } = useQuery({
+    ...dashboardQueries.overview(),
+    refetchInterval: visible ? DASHBOARD_REFRESH_INTERVAL_MS : false,
+  });
 
   if (isPending) {
     return <LoadingBlock label="Loading overview…" lines={4} />;

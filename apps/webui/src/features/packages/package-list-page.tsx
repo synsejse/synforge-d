@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useDebounce } from "../../lib/hooks/use-debounce";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import {
@@ -61,6 +62,7 @@ function PackageList() {
   const search = rawSearch.search ?? "";
   const enabledFilter = rawSearch.enabled ?? "all";
   const [searchInput, setSearchInput] = useState(search);
+  const debouncedSearch = useDebounce(searchInput, 250);
   const [showAddModal, setShowAddModal] = useState(false);
   const [refreshOverlayOpen, setRefreshOverlayOpen] = useState(false);
 
@@ -70,6 +72,13 @@ function PackageList() {
     navigate({ search: (prev) => ({ ...prev, offset: 0, search: next }) });
   const setEnabledFilter = (next: EnabledFilter) =>
     navigate({ search: (prev) => ({ ...prev, offset: 0, enabled: next }) });
+
+  useEffect(() => {
+    if (debouncedSearch !== search) {
+      setSearch(debouncedSearch);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
 
   const listQuery = useQuery(
     packagesQueries.list({

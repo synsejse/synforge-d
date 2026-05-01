@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import JobDetail from "../../../features/jobs/components/job-detail";
-import PageVisibilityProvider from "../../../components/common/page-visibility-provider";
 
 interface JobViewSearch {
   id?: string;
@@ -24,9 +23,5 @@ function JobView() {
       </div>
     );
   }
-  return (
-    <PageVisibilityProvider>
-      <JobDetail jobId={id} />
-    </PageVisibilityProvider>
-  );
+  return <JobDetail jobId={id} />;
 }

@@ -243,9 +243,15 @@ function JobList() {
         <div className="border-b-4 border-[var(--theme-border-strong)] app-section-band px-6 py-4">
           <div className="flex flex-wrap items-center gap-4">
             {/* Mode Toggle */}
-            <div className="flex border-2 border-[var(--theme-border-strong)]">
+            <div
+              className="flex border-2 border-[var(--theme-border-strong)]"
+              role="group"
+              aria-label="Job view mode"
+            >
               <button
+                type="button"
                 onClick={() => setMode("history")}
+                aria-pressed={filters.mode === "history"}
                 className={`px-5 py-2.5 font-mono text-sm font-bold uppercase tracking-wider transition-all ${
                   filters.mode === "history"
                     ? "bg-[var(--theme-accent-lime)] text-black"
@@ -255,7 +261,9 @@ function JobList() {
                 History
               </button>
               <button
+                type="button"
                 onClick={() => setMode("active")}
+                aria-pressed={filters.mode === "active"}
                 className={`border-l-2 border-[var(--theme-border-strong)] px-5 py-2.5 font-mono text-sm font-bold uppercase tracking-wider transition-all ${
                   filters.mode === "active"
                     ? "bg-[var(--theme-terminal-green)] text-black"

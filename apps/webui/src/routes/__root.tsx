@@ -1,4 +1,8 @@
-import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
+import {
+  createRootRouteWithContext,
+  Outlet,
+  ScrollRestoration,
+} from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
 import ErrorBoundary from "../components/common/error-boundary";
 import DialogsProvider from "../components/common/dialogs-provider";
@@ -21,7 +25,7 @@ function RootLayout() {
           <DialogsProvider>
             <a
               href="#main-content"
-              className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:border focus:border-zinc-200 focus:bg-zinc-100 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-black"
+              className="sr-only font-mono text-xs font-bold uppercase tracking-[0.18em] focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:border-2 focus:border-[var(--theme-accent-lime)] focus:bg-black focus:px-4 focus:py-2 focus:text-[var(--theme-accent-lime)] focus:outline-none"
             >
               Skip to main content
             </a>
@@ -29,6 +33,7 @@ function RootLayout() {
               <div className="app-chrome absolute inset-0" />
               <div className="app-grid absolute inset-0 opacity-60" />
             </div>
+            <ScrollRestoration />
             <Outlet />
           </DialogsProvider>
         </ToastProvider>

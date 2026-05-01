@@ -13,10 +13,14 @@ import {
 import { statisticsQueries } from "../../lib/queries";
 import { formatDateTime } from "../../lib/datetime";
 import ErrorMessage from "../../components/common/error-message";
+import { usePageVisible } from "../../components/common/page-visibility-provider";
 import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
 import MetricCard from "../../components/ui/metric-card";
 import PageHeader from "../../components/ui/page-header";
+import RatioBar from "../../components/ui/ratio-bar";
+
+const STATS_REFRESH_INTERVAL_MS = 15_000;
 
 function formatSeconds(value: number | null | undefined): string {
   if (value == null) {
@@ -34,7 +38,11 @@ function formatSeconds(value: number | null | undefined): string {
 }
 
 function Statistics() {
-  const { data, isPending, error } = useQuery(statisticsQueries.overview());
+  const visible = usePageVisible();
+  const { data, isPending, error } = useQuery({
+    ...statisticsQueries.overview(),
+    refetchInterval: visible ? STATS_REFRESH_INTERVAL_MS : false,
+  });
 
   if (isPending) {
     return <LoadingBlock label="Loading statistics…" lines={4} />;
@@ -48,6 +56,12 @@ function Statistics() {
     );
   }
 
+  const chrootCache = data.cacheStats.mock_chroot_cache;
+  const mirrorCache = data.cacheStats.git_mirror_cache;
+  const healthyMirrors = Math.max(
+    0,
+    mirrorCache.tracked_mirrors - mirrorCache.stale_mirrors,
+  );
 
   return (
     <div className="space-y-8">
@@ -124,6 +138,90 @@ function Statistics() {
         />
       </section>
 
+      {/* Ratio visualizations — point-in-time distributions. Time-series
+          rendering will land once the API exposes historical buckets. */}
+      <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <article className="border-4 border-[var(--theme-border-strong)] bg-black p-6">
+          <h3 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
+            Sync_Outcomes_24h
+          </h3>
+          <p className="mt-1 font-mono text-xs text-[var(--theme-text-soft)]">
+            Distribution of source-sync attempts in the last 24 hours.
+          </p>
+          <div className="mt-4">
+            <RatioBar
+              segments={[
+                {
+                  label: "Succeeded",
+                  value: data.syncMetrics.succeeded_24h,
+                  color: "var(--theme-terminal-green)",
+                },
+                {
+                  label: "Failed",
+                  value: data.syncMetrics.failed_24h,
+                  color: "var(--theme-error-red)",
+                },
+              ]}
+            />
+          </div>
+        </article>
+
+        <article className="border-4 border-[var(--theme-border-strong)] bg-black p-6">
+          <h3 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
+            Mock_Chroot_Cache
+          </h3>
+          <p className="mt-1 font-mono text-xs text-[var(--theme-text-soft)]">
+            Hit / miss / stale-served counts since daemon start.
+          </p>
+          <div className="mt-4">
+            <RatioBar
+              segments={[
+                {
+                  label: "Hit",
+                  value: chrootCache.hit_count,
+                  color: "var(--theme-accent-lime)",
+                },
+                {
+                  label: "Miss",
+                  value: chrootCache.miss_count,
+                  color: "var(--theme-accent-orange)",
+                },
+                {
+                  label: "Stale served",
+                  value: chrootCache.stale_served_count,
+                  color: "var(--theme-accent-cyan)",
+                },
+              ]}
+            />
+          </div>
+        </article>
+
+        <article className="border-4 border-[var(--theme-border-strong)] bg-black p-6">
+          <h3 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
+            Git_Mirror_Health
+          </h3>
+          <p className="mt-1 font-mono text-xs text-[var(--theme-text-soft)]">
+            Healthy vs stale tracked mirrors right now.
+          </p>
+          <div className="mt-4">
+            <RatioBar
+              segments={[
+                {
+                  label: "Healthy",
+                  value: healthyMirrors,
+                  color: "var(--theme-terminal-green)",
+                },
+                {
+                  label: "Stale",
+                  value: mirrorCache.stale_mirrors,
+                  color: "var(--theme-accent-orange)",
+                },
+              ]}
+            />
+          </div>
+        </article>
+      </section>
+
       <section className="grid gap-6 xl:grid-cols-2">
         <article className="border-4 border-[var(--theme-border-strong)] bg-black">
           <header className="border-b-4 border-[var(--theme-border-strong)] bg-zinc-950 px-6 py-4">
@@ -132,17 +230,17 @@ function Statistics() {
             </h2>
           </header>
           <div className="grid gap-px bg-zinc-800">
-            <StatRow label="Worker image" value={data.cacheStats.mock_chroot_cache.worker_image ?? "-"} />
-            <StatRow label="TTL" value={formatSeconds(data.cacheStats.mock_chroot_cache.ttl_seconds)} />
-            <StatRow label="Hit count" value={String(data.cacheStats.mock_chroot_cache.hit_count)} />
-            <StatRow label="Miss count" value={String(data.cacheStats.mock_chroot_cache.miss_count)} />
+            <StatRow label="Worker image" value={chrootCache.worker_image ?? "-"} />
+            <StatRow label="TTL" value={formatSeconds(chrootCache.ttl_seconds)} />
+            <StatRow label="Hit count" value={String(chrootCache.hit_count)} />
+            <StatRow label="Miss count" value={String(chrootCache.miss_count)} />
             <StatRow
               label="Stale served"
-              value={String(data.cacheStats.mock_chroot_cache.stale_served_count)}
+              value={String(chrootCache.stale_served_count)}
             />
             <StatRow
               label="Last refresh"
-              value={formatDateTime(data.cacheStats.mock_chroot_cache.last_refresh_at, "-")}
+              value={formatDateTime(chrootCache.last_refresh_at, "-")}
             />
           </div>
         </article>
@@ -154,30 +252,30 @@ function Statistics() {
             </h2>
           </header>
           <div className="grid gap-px bg-zinc-800">
-            <StatRow label="Mirror root" value={data.cacheStats.git_mirror_cache.mirror_root} />
+            <StatRow label="Mirror root" value={mirrorCache.mirror_root} />
             <StatRow
               label="Refresh TTL"
-              value={formatSeconds(data.cacheStats.git_mirror_cache.refresh_ttl_seconds)}
+              value={formatSeconds(mirrorCache.refresh_ttl_seconds)}
             />
             <StatRow
               label="Max unused"
-              value={formatSeconds(data.cacheStats.git_mirror_cache.max_unused_seconds)}
+              value={formatSeconds(mirrorCache.max_unused_seconds)}
             />
             <StatRow
               label="Tracked mirrors"
-              value={String(data.cacheStats.git_mirror_cache.tracked_mirrors)}
+              value={String(mirrorCache.tracked_mirrors)}
             />
             <StatRow
               label="Stale mirrors"
-              value={String(data.cacheStats.git_mirror_cache.stale_mirrors)}
+              value={String(mirrorCache.stale_mirrors)}
             />
             <StatRow
               label="Latest fetched"
-              value={formatDateTime(data.cacheStats.git_mirror_cache.latest_fetched_at, "-")}
+              value={formatDateTime(mirrorCache.latest_fetched_at, "-")}
             />
             <StatRow
               label="Latest used"
-              value={formatDateTime(data.cacheStats.git_mirror_cache.latest_used_at, "-")}
+              value={formatDateTime(mirrorCache.latest_used_at, "-")}
             />
           </div>
         </article>

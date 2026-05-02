@@ -13,14 +13,14 @@ import { useToast } from "../../../components/common/toast-provider";
 import { useServerHardware } from "../../../components/common/server-hardware-provider";
 import LoadingBlock from "../../../components/ui/loading-block";
 import Breadcrumbs from "../../../components/ui/breadcrumbs";
-import { DisclosureGroup, Disclosure } from "../../../components/ui/disclosure";
+import Tabs from "../../../components/ui/tabs";
 import PackageBuildHistorySection from "./package-build-history-section";
 import PackageEditFormSection, {
   type PackageEditFormState,
 } from "./package-edit-form-section";
 import PackageDetailHeader from "./package-detail-header";
 import PackageRepoFilesSection from "./package-repo-files-section";
-import PackageStateSidebar from "./package-state-sidebar";
+import PackageStatusStrip from "./package-status-strip";
 import SyncHistoryTable from "./sync-history-table";
 import type {
   BuildEnvVar,
@@ -152,6 +152,9 @@ export default function PackageDetail({ packageName }: Props) {
 
   const [buildsOffset, setBuildsOffset] = useState(0);
   const [repoFilesOffset, setRepoFilesOffset] = useState(0);
+  const [activeTab, setActiveTab] = useState<"builds" | "repo" | "sync">(
+    "builds",
+  );
 
   const buildsQuery = useQuery(
     packagesQueries.builds(packageName, {
@@ -379,8 +382,11 @@ export default function PackageDetail({ packageName }: Props) {
   const refreshing =
     triggerMutation.isPending && triggerMutation.variables?.action === "refresh";
 
+  const buildsTotal = buildsQuery.data?.page.total ?? null;
+  const repoFilesTotal = repoFilesQuery.data?.page.total ?? null;
+
   return (
-    <div className="min-w-0 space-y-8">
+    <div className="min-w-0 space-y-6">
       <Breadcrumbs
         items={[
           { label: "Packages", to: "/packages" },
@@ -390,7 +396,7 @@ export default function PackageDetail({ packageName }: Props) {
       {error ? <ErrorMessage message={error} /> : null}
       <PackageDetailHeader
         packageName={packageQuery.data.package.name}
-        description={packageQuery.data.package.description || "No description"}
+        description={packageQuery.data.package.description || ""}
         deleting={deleteMutation.isPending}
         refreshing={refreshing}
         onRefresh={() => trigger("refresh")}
@@ -398,87 +404,94 @@ export default function PackageDetail({ packageName }: Props) {
         onDelete={() => void handleDelete()}
       />
 
-      <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-        <div className="min-w-0">
-          <PackageEditFormSection
-            form={form}
-            maxCpuCores={maxCpuCores}
-            maxMemoryMb={maxMemoryMb}
-            saving={saveMutation.isPending}
-            availableChroots={chrootsQuery.data?.chroots ?? []}
-            showSpecPicker={showSpecPicker}
-            showChrootPicker={showChrootPicker}
-            browsing={browseMutation.isPending}
-            browseError={browseError}
-            selectableFiles={selectableFiles}
-            onSubmit={handleSave}
-            onFormChange={(next) =>
-              setForm((current) => ({
-                ...current,
-                ...next,
-              }))
+      <PackageStatusStrip pkg={packageQuery.data} />
+
+      <PackageEditFormSection
+        form={form}
+        maxCpuCores={maxCpuCores}
+        maxMemoryMb={maxMemoryMb}
+        saving={saveMutation.isPending}
+        availableChroots={chrootsQuery.data?.chroots ?? []}
+        showSpecPicker={showSpecPicker}
+        showChrootPicker={showChrootPicker}
+        browsing={browseMutation.isPending}
+        browseError={browseError}
+        selectableFiles={selectableFiles}
+        onSubmit={handleSave}
+        onFormChange={(next) =>
+          setForm((current) => ({
+            ...current,
+            ...next,
+          }))
+        }
+        onToggleChroot={toggleChroot}
+        onOpenSpecPicker={() => setShowSpecPicker(true)}
+        onCloseSpecPicker={() => setShowSpecPicker(false)}
+        onOpenChrootPicker={() => setShowChrootPicker(true)}
+        onCloseChrootPicker={() => setShowChrootPicker(false)}
+        onBrowseRepository={handleBrowse}
+      />
+
+      <Tabs
+        ariaLabel="Package detail sections"
+        value={activeTab}
+        onChange={setActiveTab}
+        items={[
+          { value: "builds", label: "Build History", count: buildsTotal },
+          { value: "repo", label: "Repository Files", count: repoFilesTotal },
+          { value: "sync", label: "Sync History" },
+        ]}
+      >
+        {activeTab === "builds" ? (
+          <PackageBuildHistorySection
+            buildsLoaded={!buildsQuery.isPending}
+            buildsTotal={buildsTotal}
+            buildsLoading={buildsQuery.isFetching}
+            builds={buildsQuery.data?.builds ?? []}
+            buildsOffset={buildsOffset}
+            buildsHasMore={buildsQuery.data?.page.has_more ?? false}
+            onLoadPrevious={() =>
+              setBuildsOffset(Math.max(0, buildsOffset - BUILD_HISTORY_PAGE_SIZE))
             }
-            onToggleChroot={toggleChroot}
-            onOpenSpecPicker={() => setShowSpecPicker(true)}
-            onCloseSpecPicker={() => setShowSpecPicker(false)}
-            onOpenChrootPicker={() => setShowChrootPicker(true)}
-            onCloseChrootPicker={() => setShowChrootPicker(false)}
-            onBrowseRepository={handleBrowse}
+            onLoadNext={() =>
+              setBuildsOffset(buildsOffset + BUILD_HISTORY_PAGE_SIZE)
+            }
+            onRefreshTarget={(mockChroot) =>
+              triggerTargetMutation.mutate({ mockChroot, action: "refresh" })
+            }
+            onRebuildTarget={(mockChroot) =>
+              triggerTargetMutation.mutate({ mockChroot, action: "rebuild" })
+            }
+            onDeleteJob={(jobId) => void handleDeleteJob(jobId)}
+            deletingJobId={
+              deleteJobMutation.isPending && deleteJobMutation.variables
+                ? deleteJobMutation.variables
+                : null
+            }
           />
-        </div>
-
-        <div className="min-w-0">
-          <PackageStateSidebar pkg={packageQuery.data} />
-        </div>
-      </section>
-
-      <PackageBuildHistorySection
-        buildsLoaded={!buildsQuery.isPending}
-        buildsTotal={buildsQuery.data?.page.total ?? null}
-        buildsLoading={buildsQuery.isFetching}
-        builds={buildsQuery.data?.builds ?? []}
-        buildsOffset={buildsOffset}
-        buildsHasMore={buildsQuery.data?.page.has_more ?? false}
-        onLoadPrevious={() =>
-          setBuildsOffset(Math.max(0, buildsOffset - BUILD_HISTORY_PAGE_SIZE))
-        }
-        onLoadNext={() => setBuildsOffset(buildsOffset + BUILD_HISTORY_PAGE_SIZE)}
-        onRefreshTarget={(mockChroot) =>
-          triggerTargetMutation.mutate({ mockChroot, action: "refresh" })
-        }
-        onRebuildTarget={(mockChroot) =>
-          triggerTargetMutation.mutate({ mockChroot, action: "rebuild" })
-        }
-        onDeleteJob={(jobId) => void handleDeleteJob(jobId)}
-        deletingJobId={
-          deleteJobMutation.isPending && deleteJobMutation.variables
-            ? deleteJobMutation.variables
-            : null
-        }
-      />
-
-      <DisclosureGroup>
-        <Disclosure
-          value="sync"
-          title="Sync History"
-          description="Source sync outcomes across poll and manual triggers."
-        >
+        ) : null}
+        {activeTab === "repo" ? (
+          <PackageRepoFilesSection
+            repoFilesLoaded={!repoFilesQuery.isPending}
+            repoFilesTotal={repoFilesTotal}
+            repoFilesLoading={repoFilesQuery.isFetching}
+            repoFiles={repoFilesQuery.data?.repo_files ?? []}
+            repoFilesOffset={repoFilesOffset}
+            repoFilesHasMore={repoFilesQuery.data?.page.has_more ?? false}
+            onLoadPrevious={() =>
+              setRepoFilesOffset(
+                Math.max(0, repoFilesOffset - REPO_FILES_PAGE_SIZE),
+              )
+            }
+            onLoadNext={() =>
+              setRepoFilesOffset(repoFilesOffset + REPO_FILES_PAGE_SIZE)
+            }
+          />
+        ) : null}
+        {activeTab === "sync" ? (
           <SyncHistoryTable packageName={packageName} />
-        </Disclosure>
-      </DisclosureGroup>
-
-      <PackageRepoFilesSection
-        repoFilesLoaded={!repoFilesQuery.isPending}
-        repoFilesTotal={repoFilesQuery.data?.page.total ?? null}
-        repoFilesLoading={repoFilesQuery.isFetching}
-        repoFiles={repoFilesQuery.data?.repo_files ?? []}
-        repoFilesOffset={repoFilesOffset}
-        repoFilesHasMore={repoFilesQuery.data?.page.has_more ?? false}
-        onLoadPrevious={() =>
-          setRepoFilesOffset(Math.max(0, repoFilesOffset - REPO_FILES_PAGE_SIZE))
-        }
-        onLoadNext={() => setRepoFilesOffset(repoFilesOffset + REPO_FILES_PAGE_SIZE)}
-      />
+        ) : null}
+      </Tabs>
     </div>
   );
 }

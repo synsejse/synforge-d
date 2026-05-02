@@ -45,22 +45,7 @@ export default function PackageRepoFilesSection({
   };
 
   return (
-    <section className="border-4 border-white bg-black p-6 shadow-card-md">
-      <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h2 className="font-mono text-xl font-bold uppercase text-white">Repository Files</h2>
-          <p className="mt-2 text-sm text-muted">
-            Build-owned files currently present in the repo namespace for this
-            package.
-          </p>
-        </div>
-        {repoFilesLoaded ? (
-          <div className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs uppercase tracking-[0.2em] text-muted">
-            {repoFilesTotal ?? repoFiles.length} tracked files
-          </div>
-        ) : null}
-      </div>
-
+    <>
       {repoFilesLoading && !repoFilesLoaded ? (
         <LoadingBlock label="Loading repository files…" lines={4} />
       ) : repoFiles.length === 0 ? (
@@ -181,6 +166,6 @@ export default function PackageRepoFilesSection({
           </div>
         </div>
       )}
-    </section>
+    </>
   );
 }

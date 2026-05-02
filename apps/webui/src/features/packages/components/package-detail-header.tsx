@@ -1,5 +1,4 @@
-import { faArrowLeft, faHammer, faRotate, faTrash } from "@fortawesome/free-solid-svg-icons";
-import { Link } from "@tanstack/react-router";
+import { faHammer, faRotate, faTrash } from "@fortawesome/free-solid-svg-icons";
 import Button from "../../../components/ui/button";
 import FaIcon from "../../../components/ui/fa-icon";
 
@@ -23,33 +22,21 @@ export default function PackageDetailHeader({
   onDelete,
 }: PackageDetailHeaderProps) {
   return (
-    <section className="min-w-0 border-4 border-accent-lime bg-black p-4 sm:p-6">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div className="min-w-0 flex-1 space-y-3">
-          <Link
-            to="/packages"
-            className="inline-flex items-center font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition-all duration-100 ease-linear hover:text-strong"
-          >
-            <FaIcon icon={faArrowLeft} className="mr-2" />
-            Back to packages
-          </Link>
-          <div>
-            <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-accent-lime">
-              PACKAGE_CONTROL
-            </p>
-            <h1 className="mt-2 break-all font-mono text-2xl font-bold uppercase text-white sm:text-3xl">
-              {packageName}
-            </h1>
-          </div>
-          <p className="max-w-3xl text-sm text-muted">
-            {description}
-          </p>
+    <header className="min-w-0 border-b-2 border-edge-strong pb-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0 flex-1">
+          <h1 className="break-all font-mono text-2xl font-bold uppercase text-white sm:text-3xl">
+            {packageName}
+          </h1>
+          {description ? (
+            <p className="mt-2 max-w-3xl text-sm text-muted">{description}</p>
+          ) : null}
         </div>
-        <div className="grid gap-3 sm:flex sm:flex-wrap">
+        <div className="flex flex-wrap gap-2 lg:flex-nowrap">
           <Button
             type="button"
-            variant="secondary"
-            size="md"
+            variant="ghost"
+            size="sm"
             fullWidth="responsive"
             onClick={onRefresh}
             disabled={deleting || refreshing}
@@ -61,7 +48,7 @@ export default function PackageDetailHeader({
           <Button
             type="button"
             variant="primary"
-            size="md"
+            size="sm"
             fullWidth="responsive"
             onClick={onRebuild}
             disabled={deleting}
@@ -72,16 +59,16 @@ export default function PackageDetailHeader({
           <Button
             type="button"
             variant="danger"
-            size="md"
+            size="sm"
             fullWidth="responsive"
             onClick={onDelete}
             loading={deleting}
           >
             {deleting ? null : <FaIcon icon={faTrash} />}
-            {deleting ? "Deleting…" : "Delete Package"}
+            {deleting ? "Deleting…" : "Delete"}
           </Button>
         </div>
       </div>
-    </section>
+    </header>
   );
 }

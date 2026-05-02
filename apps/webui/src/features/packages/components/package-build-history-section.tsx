@@ -64,22 +64,7 @@ export default function PackageBuildHistorySection({
   };
 
   return (
-    <section className="border-4 border-white bg-black p-6 shadow-card-md">
-      <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h2 className="font-mono text-xl font-bold uppercase text-white">Build History</h2>
-          <p className="mt-2 text-sm text-muted">
-            Build activity for this package, including revisions, outcomes, and
-            managed repo ownership.
-          </p>
-        </div>
-        {buildsLoaded ? (
-          <div className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs uppercase tracking-[0.2em] text-muted">
-            {buildsTotal ?? builds.length} total builds
-          </div>
-        ) : null}
-      </div>
-
+    <>
       {buildsLoading && !buildsLoaded ? (
         <LoadingBlock label="Loading build history…" lines={4} />
       ) : builds.length === 0 ? (
@@ -291,6 +276,6 @@ export default function PackageBuildHistorySection({
           </div>
         </div>
       )}
-    </section>
+    </>
   );
 }

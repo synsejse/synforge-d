@@ -2,6 +2,7 @@ import { faMagnifyingGlass, faSave } from "@fortawesome/free-solid-svg-icons";
 import type { SyntheticEvent } from "react";
 import { formatMockChroots } from "../../../lib/utils";
 import Button from "../../../components/ui/button";
+import { Disclosure, DisclosureGroup } from "../../../components/ui/disclosure";
 import FaIcon from "../../../components/ui/fa-icon";
 import SelectionDialog from "../../../components/common/selection-dialog";
 import {
@@ -107,16 +108,10 @@ export default function PackageEditFormSection({
 
   return (
     <>
-      <form onSubmit={onSubmit} className="min-w-0 border-2 border-edge-strong bg-black p-4 sm:p-6">
-        <div className="mb-6">
-          <h2 className="text-xl font-bold text-white">Edit package</h2>
-          <p className="mt-2 text-sm text-muted">
-            Update the tracked repository, selected spec path, polling behavior,
-            and package state from one place.
-          </p>
-        </div>
-
-        <div className="space-y-5">
+      <form onSubmit={onSubmit} className="min-w-0 space-y-4">
+        {/* Always-visible essentials — Git URL, spec, chroots, enabled.
+            Most package edits touch these and these only. */}
+        <section className="space-y-5 border-2 border-edge-strong bg-black p-4 sm:p-6">
           <TextField
             label="Git repository URL"
             value={form.repoUrl}
@@ -129,14 +124,15 @@ export default function PackageEditFormSection({
             label="Repository spec path"
             description="Choose the .spec file from the tracked repository."
             action={
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={onOpenSpecPicker}
-                className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt"
               >
-                <FaIcon icon={faMagnifyingGlass} className="mr-2" />
+                <FaIcon icon={faMagnifyingGlass} />
                 Browse repository
-              </button>
+              </Button>
             }
           >
             <input
@@ -149,218 +145,193 @@ export default function PackageEditFormSection({
             />
           </FieldGroup>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <NumberField
-              label="Poll interval (seconds)"
-              value={form.pollIntervalSeconds}
-              onChange={(value) => onFormChange({ pollIntervalSeconds: value })}
-              required
-            />
-
-            <NumberField
-              label="Build timeout (seconds)"
-              value={form.buildTimeoutSeconds}
-              onChange={(value) => onFormChange({ buildTimeoutSeconds: value })}
-              required
-            />
-
-            <NumberField
-              label="History count"
-              value={form.packageHistoryCount}
-              onChange={(value) => onFormChange({ packageHistoryCount: value })}
-              required
-              className="md:col-span-2"
-            />
-
-            <NumberField
-              label="Shared ccache size (MB)"
-              value={form.ccacheMaxSizeMb}
-              onChange={(value) => onFormChange({ ccacheMaxSizeMb: value })}
-              min={1}
-              className="md:col-span-2"
-            />
-            <p className="md:col-span-2 -mt-2 text-xs text-soft">
-              Leave blank to use Mock&apos;s default cache size. Applies per package and mock chroot.
-            </p>
-
-            <div className="border-2 border-edge-strong bg-surface-alt p-4 md:col-span-2">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
-                  CPU limit (cores)
-                </span>
-                <label className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-muted">
-                  <input
-                    type="checkbox"
-                    checked={form.cpuLimitEnabled}
-                    onChange={(event) =>
-                      onFormChange({
-                        cpuLimitEnabled: event.target.checked,
-                        cpuLimitCores: event.target.checked
-                          ? form.cpuLimitCores || String(CPU_DEFAULT_CORES)
-                          : form.cpuLimitCores,
-                      })
-                    }
-                  />
-                  Limit CPU
-                </label>
-              </div>
-              <div
-                className={`mt-4 border-2 border-edge px-3 py-4 transition ${
-                  form.cpuLimitEnabled ? "bg-black" : "bg-surface-hover/60 opacity-70"
-                }`}
+          <FieldGroup
+            label="Mock chroots"
+            description="Each selected chroot becomes a separate build job."
+            action={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onOpenChrootPicker}
               >
-                <input
-                  type="range"
-                  min={CPU_MIN_CORES}
-                  max={cpuSliderMax}
-                  step={CPU_STEP_CORES}
-                  value={cpuSliderValue}
-                  onChange={(event) =>
-                    onFormChange({ cpuLimitCores: event.target.value })
-                  }
-                  disabled={!form.cpuLimitEnabled}
-                  aria-label="CPU limit in cores"
-                  className="h-3 w-full cursor-pointer appearance-none bg-surface-hover accent-accent-lime disabled:cursor-not-allowed [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-black [&::-moz-range-thumb]:bg-accent-lime [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-black [&::-webkit-slider-thumb]:bg-accent-lime"
-                />
-              </div>
-              <div className="mt-3 flex items-center justify-between gap-3 font-mono text-xs font-bold uppercase tracking-[0.12em]">
-                <span className="text-accent-lime">
-                  {form.cpuLimitEnabled ? `${cpuSliderValue} cores` : "Unlimited"}
-                </span>
-                <span className="text-soft">
-                  {CPU_MIN_CORES} - {cpuSliderMax} cores
-                </span>
-              </div>
-            </div>
+                Choose chroots
+              </Button>
+            }
+          >
+            <DisplayBox>
+              {form.mockChroots.length > 0
+                ? formatMockChroots(form.mockChroots, "No chroots selected")
+                : "No chroots selected"}
+            </DisplayBox>
+          </FieldGroup>
 
-            <div className="border-2 border-edge-strong bg-surface-alt p-4 md:col-span-2">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
-                  Memory limit (MB)
-                </span>
-                <label className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-muted">
-                  <input
-                    type="checkbox"
-                    checked={form.memoryLimitEnabled}
-                    onChange={(event) =>
-                      onFormChange({
-                        memoryLimitEnabled: event.target.checked,
-                        memoryLimitMb: event.target.checked
-                          ? form.memoryLimitMb || String(MEMORY_DEFAULT_MB)
-                          : form.memoryLimitMb,
-                      })
-                    }
-                  />
-                  Limit RAM
-                </label>
-              </div>
-              <div
-                className={`mt-4 border-2 border-edge px-3 py-4 transition ${
-                  form.memoryLimitEnabled ? "bg-black" : "bg-surface-hover/60 opacity-70"
-                }`}
-              >
-                <input
-                  type="range"
-                  min={MEMORY_MIN_MB}
-                  max={memorySliderMax}
-                  step={MEMORY_STEP_MB}
-                  value={memorySliderValue}
-                  onChange={(event) =>
-                    onFormChange({ memoryLimitMb: event.target.value })
-                  }
-                  disabled={!form.memoryLimitEnabled}
-                  aria-label="Memory limit in megabytes"
-                  className="h-3 w-full cursor-pointer appearance-none bg-surface-hover accent-accent-lime disabled:cursor-not-allowed [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-black [&::-moz-range-thumb]:bg-accent-lime [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-black [&::-webkit-slider-thumb]:bg-accent-lime"
-                />
-              </div>
-              <div className="mt-3 flex items-center justify-between gap-3 font-mono text-xs font-bold uppercase tracking-[0.12em]">
-                <span className="text-accent-lime">
-                  {form.memoryLimitEnabled ? `${memorySliderValue} MB` : "Unlimited"}
-                </span>
-                <span className="text-soft">
-                  {MEMORY_MIN_MB} - {memorySliderMax} MB
-                </span>
-              </div>
-            </div>
-
-            <FieldGroup
-              label="Mock chroots"
-              description="Each selected chroot becomes a separate build job."
-              className="md:col-span-2"
-              action={
-                <button
-                  type="button"
-                  onClick={onOpenChrootPicker}
-                  className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt"
-                >
-                  Choose chroots
-                </button>
-              }
-            >
-              <DisplayBox>
-                {form.mockChroots.length > 0
-                  ? formatMockChroots(form.mockChroots, "No chroots selected")
-                  : "No chroots selected"}
-              </DisplayBox>
-            </FieldGroup>
-
-            <ToggleField
-              label="Shared ccache"
-              description="Reuse compiler cache across builds for this package and mock chroot."
-              checked={form.ccache_enabled}
-              onChange={(checked) => onFormChange({ ccache_enabled: checked })}
-            />
-
-            <ToggleField
-              label="Enabled"
-              description="Allow new builds for this package."
-              checked={form.enabled}
-              onChange={(checked) => onFormChange({ enabled: checked })}
-            />
-
-            <ToggleField
-              label="Source Polling"
-              description="Watch the tracked git repository for new commits."
-              checked={form.poll}
-              onChange={(checked) => onFormChange({ poll: checked })}
-            />
-
-            <ToggleField
-              label="Publish SRPM"
-              description="Keep source RPM publication enabled for this package."
-              checked={form.publish_srpm}
-              onChange={(checked) => onFormChange({ publish_srpm: checked })}
-            />
-
-            <ToggleField
-              label="Publish debug packages"
-              description="Include debuginfo and debugsource RPMs in repository."
-              checked={form.publish_debuginfo}
-              onChange={(checked) => onFormChange({ publish_debuginfo: checked })}
-            />
-
-            <ToggleField
-              label="Network access"
-              description="Allow mock builds for this package to access the network."
-              checked={form.network_access}
-              onChange={(checked) => onFormChange({ network_access: checked })}
-              className="md:col-span-2"
-            />
-          </div>
-
-          <TextAreaField
-            label="Build environment"
-            value={form.buildEnv}
-            onChange={(value) => onFormChange({ buildEnv: value })}
-            placeholder="KEY=value&#10;MESON_ARGS=-Dgallium-drivers=swrast&#10;RUSTFLAGS=-C debuginfo=1"
-            hint="One `KEY=value` entry per line. Applied to SRPM creation and mock rebuild steps."
+          <ToggleField
+            label="Enabled"
+            description="Allow new builds for this package."
+            checked={form.enabled}
+            onChange={(checked) => onFormChange({ enabled: checked })}
           />
+        </section>
 
-        </div>
+        {/* Advanced — three groups, all collapsed by default. */}
+        <DisclosureGroup>
+          <Disclosure
+            value="behavior"
+            title="Build behavior"
+            description="Polling, publishing, network access, and environment variables."
+          >
+            <div className="space-y-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <ToggleField
+                  label="Source polling"
+                  description="Watch the tracked git repository for new commits."
+                  checked={form.poll}
+                  onChange={(checked) => onFormChange({ poll: checked })}
+                />
+                <ToggleField
+                  label="Network access"
+                  description="Allow mock builds to access the network."
+                  checked={form.network_access}
+                  onChange={(checked) => onFormChange({ network_access: checked })}
+                />
+                <ToggleField
+                  label="Publish SRPM"
+                  description="Keep source RPM publication enabled."
+                  checked={form.publish_srpm}
+                  onChange={(checked) => onFormChange({ publish_srpm: checked })}
+                />
+                <ToggleField
+                  label="Publish debug packages"
+                  description="Include debuginfo and debugsource RPMs."
+                  checked={form.publish_debuginfo}
+                  onChange={(checked) =>
+                    onFormChange({ publish_debuginfo: checked })
+                  }
+                />
+              </div>
+
+              <TextAreaField
+                label="Build environment"
+                value={form.buildEnv}
+                onChange={(value) => onFormChange({ buildEnv: value })}
+                placeholder="KEY=value&#10;MESON_ARGS=-Dgallium-drivers=swrast&#10;RUSTFLAGS=-C debuginfo=1"
+                hint="One `KEY=value` entry per line. Applied to SRPM creation and mock rebuild steps."
+              />
+            </div>
+          </Disclosure>
+
+          <Disclosure
+            value="limits"
+            title="Resource limits"
+            description="CPU, memory, and shared ccache for builds of this package."
+          >
+            <div className="space-y-4">
+              <ResourceLimitCard
+                label="CPU limit"
+                unit="cores"
+                checkboxLabel="Limit CPU"
+                enabled={form.cpuLimitEnabled}
+                value={cpuSliderValue}
+                min={CPU_MIN_CORES}
+                max={cpuSliderMax}
+                step={CPU_STEP_CORES}
+                onToggle={(next) =>
+                  onFormChange({
+                    cpuLimitEnabled: next,
+                    cpuLimitCores: next
+                      ? form.cpuLimitCores || String(CPU_DEFAULT_CORES)
+                      : form.cpuLimitCores,
+                  })
+                }
+                onSliderChange={(next) =>
+                  onFormChange({ cpuLimitCores: String(next) })
+                }
+              />
+
+              <ResourceLimitCard
+                label="Memory limit"
+                unit="MB"
+                checkboxLabel="Limit RAM"
+                enabled={form.memoryLimitEnabled}
+                value={memorySliderValue}
+                min={MEMORY_MIN_MB}
+                max={memorySliderMax}
+                step={MEMORY_STEP_MB}
+                onToggle={(next) =>
+                  onFormChange({
+                    memoryLimitEnabled: next,
+                    memoryLimitMb: next
+                      ? form.memoryLimitMb || String(MEMORY_DEFAULT_MB)
+                      : form.memoryLimitMb,
+                  })
+                }
+                onSliderChange={(next) =>
+                  onFormChange({ memoryLimitMb: String(next) })
+                }
+              />
+
+              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,220px)] md:items-start">
+                <ToggleField
+                  label="Shared ccache"
+                  description="Reuse compiler cache across builds for this package and mock chroot."
+                  checked={form.ccache_enabled}
+                  onChange={(checked) =>
+                    onFormChange({ ccache_enabled: checked })
+                  }
+                />
+                <NumberField
+                  label="ccache size (MB)"
+                  value={form.ccacheMaxSizeMb}
+                  onChange={(value) =>
+                    onFormChange({ ccacheMaxSizeMb: value })
+                  }
+                  min={1}
+                />
+              </div>
+              <p className="font-mono text-xs text-soft">
+                Leave size blank to use Mock&apos;s default cache size. Applies
+                per package and mock chroot.
+              </p>
+            </div>
+          </Disclosure>
+
+          <Disclosure
+            value="schedule"
+            title="Schedule & retention"
+            description="Polling cadence, build timeout, and how many old builds to keep."
+          >
+            <div className="grid gap-4 md:grid-cols-3">
+              <NumberField
+                label="Poll interval (seconds)"
+                value={form.pollIntervalSeconds}
+                onChange={(value) =>
+                  onFormChange({ pollIntervalSeconds: value })
+                }
+                required
+              />
+              <NumberField
+                label="Build timeout (seconds)"
+                value={form.buildTimeoutSeconds}
+                onChange={(value) =>
+                  onFormChange({ buildTimeoutSeconds: value })
+                }
+                required
+              />
+              <NumberField
+                label="History count"
+                value={form.packageHistoryCount}
+                onChange={(value) =>
+                  onFormChange({ packageHistoryCount: value })
+                }
+                required
+              />
+            </div>
+          </Disclosure>
+        </DisclosureGroup>
       </form>
 
-      {/* Sticky save bar — shown only while the form is dirty so users
-          don't have to scroll to the bottom every time. */}
+      {/* Sticky save bar — shown only while the form is dirty. */}
       {isDirty ? (
         <div
           role="region"
@@ -411,15 +382,17 @@ export default function PackageEditFormSection({
           onClose={onCloseSpecPicker}
         >
           <div className="space-y-4">
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={onBrowseRepository}
+              loading={browsing}
               disabled={browsing}
-              className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt disabled:opacity-60"
             >
-              <FaIcon icon={faMagnifyingGlass} className="mr-2" />
+              {browsing ? null : <FaIcon icon={faMagnifyingGlass} />}
               {browsing ? "Browsing…" : "Load repository files"}
-            </button>
+            </Button>
             {browseError ? (
               <div className="border-2 border-edge-strong bg-black px-4 py-3 text-sm text-strong">
                 {browseError}
@@ -482,5 +455,74 @@ export default function PackageEditFormSection({
         </SelectionDialog>
       )}
     </>
+  );
+}
+
+interface ResourceLimitCardProps {
+  label: string;
+  unit: string;
+  checkboxLabel: string;
+  enabled: boolean;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onToggle: (next: boolean) => void;
+  onSliderChange: (value: number) => void;
+}
+
+function ResourceLimitCard({
+  label,
+  unit,
+  checkboxLabel,
+  enabled,
+  value,
+  min,
+  max,
+  step,
+  onToggle,
+  onSliderChange,
+}: ResourceLimitCardProps) {
+  return (
+    <div className="border-2 border-edge bg-surface-alt/40 p-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
+          {label}
+        </span>
+        <label className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-muted">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(event) => onToggle(event.target.checked)}
+          />
+          {checkboxLabel}
+        </label>
+      </div>
+      <div
+        className={`mt-3 transition ${
+          enabled ? "" : "opacity-40 pointer-events-none"
+        }`}
+      >
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(event) => onSliderChange(Number(event.target.value))}
+          disabled={!enabled}
+          aria-label={label}
+          className="h-2 w-full cursor-pointer appearance-none bg-edge-strong accent-accent-lime disabled:cursor-not-allowed [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-black [&::-moz-range-thumb]:bg-accent-lime [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-black [&::-webkit-slider-thumb]:bg-accent-lime"
+        />
+        <div className="mt-2 flex items-center justify-between gap-3 font-mono text-xs font-bold uppercase tracking-[0.12em]">
+          <span className="text-accent-lime">
+            {enabled ? `${value} ${unit}` : "Unlimited"}
+          </span>
+          <span className="text-soft">
+            {min} – {max} {unit}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }

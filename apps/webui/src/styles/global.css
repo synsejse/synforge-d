@@ -235,6 +235,23 @@ h1, h2, h3,
   animation: synforge-glitch 600ms steps(8, end) 1;
 }
 
+/* Marquee — used by the top-of-app system notice bar. The duplicated
+   text inside the container loops left at the speed set inline. Pauses
+   on hover so users can read. */
+@keyframes synforge-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.synforge-marquee {
+  display: inline-block;
+  animation: synforge-marquee linear infinite;
+  will-change: transform;
+}
+.synforge-marquee:hover,
+.group:hover .synforge-marquee {
+  animation-play-state: paused;
+}
+
 /* Live row pulse — newly-live rows in the job list get a soft lime
    underglow that fades out after 2s. Pairs with a left lime border
    applied via class. */

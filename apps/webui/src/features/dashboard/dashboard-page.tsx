@@ -94,8 +94,8 @@ function Dashboard() {
       {/* Recent Jobs Table */}
       <section className="border-2 border-edge-strong bg-black shadow-card-sm">
         <div className="flex items-end justify-between gap-4 border-b-2 border-edge-strong app-section-band px-5 py-4">
-          <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white">
-            Latest Build Runs
+          <h2 className="text-xl font-bold text-white">
+            Latest build runs
           </h2>
           <Link
             to="/jobs"
@@ -164,8 +164,8 @@ function Dashboard() {
               <span className="absolute inline-flex h-full w-full animate-ping bg-success opacity-75" />
               <span className="relative inline-flex h-2 w-2 bg-success" />
             </span>
-            <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white">
-              Builds in Flight
+            <h2 className="text-xl font-bold text-white">
+              Builds in flight
             </h2>
           </div>
           <span className="font-mono text-xs uppercase tracking-[0.18em] text-soft">

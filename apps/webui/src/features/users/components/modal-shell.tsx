@@ -36,14 +36,9 @@ export function UserModalShell({ title, children, onClose }: UserModalShellProps
         className="w-full max-w-xl border-4 border-white bg-black p-6 shadow-[6px_6px_0_rgba(255,255,255,0.25)]"
       >
         <div className="mb-5 flex items-start justify-between gap-4 border-b-2 border-edge pb-4">
-          <div>
-            <div className="font-mono text-xs font-bold uppercase tracking-[0.28em] text-accent-lime">
-              Users
-            </div>
-            <h2 id={titleId} className="mt-2 font-mono text-2xl font-bold uppercase text-white">
-              {title}
-            </h2>
-          </div>
+          <h2 id={titleId} className="text-2xl font-bold text-white">
+            {title}
+          </h2>
           <button
             type="button"
             onClick={onClose}

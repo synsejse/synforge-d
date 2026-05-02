@@ -361,7 +361,7 @@ function ConfigStep({
             key={section.label}
             className="xl:col-span-2 border-2 border-edge-strong bg-black p-5"
           >
-            <h2 className="font-mono text-lg font-bold uppercase text-white">
+            <h2 className="text-lg font-bold text-white">
               {section.label}
             </h2>
             <div className="mt-4 grid gap-4 xl:grid-cols-2">
@@ -415,7 +415,7 @@ function SigningStep({
   return (
     <div className="space-y-4">
       <section className="border-2 border-edge-strong bg-black p-5">
-        <h2 className="font-mono text-lg font-bold uppercase text-white">Signing</h2>
+        <h2 className="text-lg font-bold text-white">Signing</h2>
         <p className="mt-3 text-sm leading-6 text-muted">
           Configure repository signing before initialization. You can keep signing
           disabled, generate a managed key, or import an existing key file.

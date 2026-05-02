@@ -148,10 +148,8 @@ function Statistics() {
       <section className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
-              Activity_Over_Time
-            </h2>
-            <p className="mt-1 font-mono text-xs text-soft">
+            <h2 className="text-lg font-bold text-white">Activity over time</h2>
+            <p className="mt-1 text-xs text-soft">
               Stacked succeeded vs failed counts. Switch the window to zoom out.
             </p>
           </div>
@@ -188,7 +186,7 @@ function Statistics() {
       {/* Ratio visualizations — point-in-time distributions */}
       <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         <article className="border-2 border-edge-strong bg-black p-5">
-          <h3 className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-white">
+          <h3 className="text-sm font-semibold text-white">
             Sync outcomes (24h)
           </h3>
           <div className="mt-3">
@@ -210,7 +208,7 @@ function Statistics() {
         </article>
 
         <article className="border-2 border-edge-strong bg-black p-5">
-          <h3 className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-white">
+          <h3 className="text-sm font-semibold text-white">
             Mock chroot cache
           </h3>
           <div className="mt-3">
@@ -237,7 +235,7 @@ function Statistics() {
         </article>
 
         <article className="border-2 border-edge-strong bg-black p-5">
-          <h3 className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-white">
+          <h3 className="text-sm font-semibold text-white">
             Git mirror health
           </h3>
           <div className="mt-3">

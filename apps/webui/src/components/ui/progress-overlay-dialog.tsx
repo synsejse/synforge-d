@@ -32,12 +32,8 @@ export default function ProgressOverlayDialog({
         aria-modal="true"
         className="w-full max-w-xl border-2 border-white bg-black p-6 shadow-[8px_8px_0_rgba(255,255,255,0.25)]"
       >
-        <h3 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
-          {title}
-        </h3>
-        <p className="mt-3 font-mono text-xs uppercase tracking-[0.16em] text-muted">
-          {detail}
-        </p>
+        <h3 className="text-base font-semibold text-white">{title}</h3>
+        <p className="mt-3 font-mono text-xs text-muted">{detail}</p>
         <div className="mt-4 h-3 w-full overflow-hidden border border-edge-strong bg-surface-hover">
           <div
             className="h-full bg-success transition-[width] duration-300"

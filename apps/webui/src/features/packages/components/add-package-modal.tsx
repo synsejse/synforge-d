@@ -211,10 +211,7 @@ export default function AddPackageModal({
         className="flex max-h-[calc(100dvh-3rem)] w-full max-w-3xl flex-col border-4 border-white bg-black shadow-[6px_6px_0_rgba(255,255,255,0.25)]"
       >
         <div className="border-b-2 border-edge px-6 py-5">
-          <p className="font-mono text-xs font-bold uppercase tracking-[0.28em] text-accent-lime">
-            Package
-          </p>
-          <h2 id={titleId} className="mt-2 font-mono text-2xl font-bold uppercase text-white">
+          <h2 id={titleId} className="text-2xl font-bold text-white">
             Add package
           </h2>
         </div>

@@ -226,9 +226,7 @@ function RepositoryBrowser() {
       {/* Files Table */}
       <div className="border-2 border-white bg-black">
         <div className="border-b-2 border-edge bg-black px-6 py-4">
-          <h2 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
-            Published Files
-          </h2>
+          <h2 className="text-base font-semibold text-white">Published files</h2>
         </div>
 
         <div className="p-4">

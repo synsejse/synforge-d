@@ -98,9 +98,9 @@ export default function PackageEditFormSection({
 
   return (
     <>
-      <form onSubmit={onSubmit} className="min-w-0 border-4 border-white bg-black p-4 sm:p-6">
+      <form onSubmit={onSubmit} className="min-w-0 border-2 border-edge-strong bg-black p-4 sm:p-6">
         <div className="mb-6">
-          <h2 className="font-mono text-xl font-bold uppercase text-white">Edit Package</h2>
+          <h2 className="text-xl font-bold text-white">Edit package</h2>
           <p className="mt-2 text-sm text-muted">
             Update the tracked repository, selected spec path, polling behavior,
             and package state from one place.

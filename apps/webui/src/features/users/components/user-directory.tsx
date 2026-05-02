@@ -33,9 +33,7 @@ export default function UserDirectory({
             <FaIcon icon={faUsers} />
           </div>
           <div>
-            <h2 className="font-mono text-lg font-bold uppercase tracking-[0.15em] text-white">
-              User Directory
-            </h2>
+            <h2 className="text-lg font-bold text-white">User directory</h2>
             <p className="mt-1 text-sm text-soft">
               Handles, permissions, and repository traffic at a glance.
             </p>
@@ -51,7 +49,7 @@ export default function UserDirectory({
               <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:items-start">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="font-mono text-xl font-semibold uppercase text-white">
+                    <h3 className="text-lg font-semibold text-white">
                       {entry.user.display_name}
                     </h3>
                     <span className="border-2 border-edge-strong bg-surface-alt px-2.5 py-1 text-xs uppercase tracking-[0.18em] text-muted">

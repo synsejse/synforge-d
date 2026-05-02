@@ -19,7 +19,7 @@ export default function SelectionDialog({
       <div className="mx-auto w-full max-w-3xl border-4 border-white bg-black shadow-[6px_6px_0_rgba(255,255,255,0.25)]">
         <div className="flex items-start justify-between gap-4 border-b-2 border-edge px-6 py-5">
           <div>
-            <h3 className="font-mono text-xl font-bold uppercase text-white">{title}</h3>
+            <h3 className="text-xl font-bold text-white">{title}</h3>
             <p className="mt-2 text-sm text-muted">{subtitle}</p>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>

@@ -11,38 +11,23 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { repositoryQueries } from "../../lib/queries";
 import { formatBytes } from "../../lib/bytes";
-import type { PublishedRepoFile } from "../../lib/types";
 import ErrorMessage from "../../components/common/error-message";
+import EmptyState from "../../components/ui/empty-state";
 import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import SegmentedControl from "../../components/ui/segmented-control";
 import MetricCard from "../../components/ui/metric-card";
 import PageHeader from "../../components/ui/page-header";
-import Badge from "../../components/ui/badge";
 import PaginationControls from "../../components/common/pagination-controls";
 import FilterBar from "../../components/common/filter-bar";
-import DataTable, { type DataTableColumn } from "../../components/ui/data-table";
+import RepoFileCard from "./components/repo-file-card";
 
 const PAGE_SIZE = 50;
 
 const route = getRouteApi("/_authed/repository/");
 
 type KindFilter = "all" | "rpm" | "srpm" | "log";
-
-function getSigningState(file: PublishedRepoFile) {
-  if (file.signing_status === "signed") {
-    return { label: "SIGNED", variant: "success" as const, title: undefined };
-  }
-  if (file.signing_status === "failed") {
-    return {
-      label: "SIGN FAILED",
-      variant: "error" as const,
-      title: file.signing_error_message || "Artifact signing failed",
-    };
-  }
-  return { label: "NOT SIGNED", variant: "warning" as const, title: undefined };
-}
 
 function RepositoryBrowser() {
   const navigate = route.useNavigate();
@@ -223,27 +208,36 @@ function RepositoryBrowser() {
         </FilterBar>
       </form>
 
-      {/* Files Table */}
-      <div className="border-2 border-white bg-black">
-        <div className="border-b-2 border-edge bg-black px-6 py-4">
+      {/* Files list — RepoFileCard rows */}
+      <section className="space-y-3">
+        <div className="flex items-end justify-between gap-4 border-b-2 border-edge-strong pb-2">
           <h2 className="text-base font-semibold text-white">Published files</h2>
+          {inventoryQuery.data.repo_files.length > 0 ? (
+            <span className="font-mono text-xs uppercase tracking-[0.18em] text-soft">
+              {inventoryQuery.data.repo_files.length} shown
+            </span>
+          ) : null}
         </div>
 
-        <div className="p-4">
-          <DataTable
-            columns={publishedFileColumns}
-            rows={inventoryQuery.data.repo_files}
-            rowKey={(file) => `${file.job_id}:${file.path}`}
-            empty={{
-              title: "No files match",
-              description: "No files match the current filters.",
-            }}
+        {inventoryQuery.data.repo_files.length === 0 ? (
+          <EmptyState
+            title="No files match"
+            description="No files match the current filters."
           />
-        </div>
+        ) : (
+          <div className="space-y-3">
+            {inventoryQuery.data.repo_files.map((file) => (
+              <RepoFileCard
+                key={`${file.job_id}:${file.path}`}
+                file={file}
+                showPackageContext
+              />
+            ))}
+          </div>
+        )}
 
-        {/* Pagination */}
         {inventoryQuery.data.repo_files.length > 0 && (
-          <div className="border-t-2 border-edge bg-black px-6 py-4">
+          <div className="border-2 border-edge-strong bg-black px-4 py-3">
             <PaginationControls
               onPrevious={() =>
                 setFilters({ offset: Math.max(0, filters.offset - PAGE_SIZE) })
@@ -259,77 +253,10 @@ function RepositoryBrowser() {
             />
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }
-
-const publishedFileColumns: DataTableColumn<PublishedRepoFile>[] = [
-  {
-    key: "package",
-    header: "Package",
-    mobile: "title",
-    cell: (file) => (
-      <div>
-        <div className="font-mono text-sm text-white">{file.package_name}</div>
-        <div className="mt-1 font-mono text-xs text-soft md:hidden">
-          {file.mock_chroot || "unknown"}
-        </div>
-      </div>
-    ),
-  },
-  {
-    key: "target",
-    header: "Target",
-    mobile: "hidden",
-    className: "font-mono text-sm text-muted",
-    cell: (file) => file.mock_chroot || "unknown",
-  },
-  {
-    key: "file",
-    header: "File",
-    mobile: "field",
-    cell: (file) => {
-      const fileName = file.path.split("/").pop() || file.path;
-      return (
-        <a
-          href={`/repo/${file.path}`}
-          className="break-all font-mono text-sm text-accent-lime transition duration-100 ease-linear hover:text-white"
-        >
-          {fileName}
-        </a>
-      );
-    },
-  },
-  {
-    key: "path",
-    header: "Repo Path",
-    mobile: "field",
-    className: "font-mono text-sm text-soft break-all",
-    cell: (file) => file.path,
-  },
-  {
-    key: "size",
-    header: "Size",
-    mobile: "field",
-    className: "text-right font-mono text-sm text-muted",
-    headerClassName: "text-right",
-    cell: (file) => formatBytes(file.size_bytes),
-  },
-  {
-    key: "signing",
-    header: "Signing",
-    mobile: "badge",
-    cell: (file) => {
-      const signingState = getSigningState(file);
-      return (
-        <Badge variant={signingState.variant} title={signingState.title}>
-          {signingState.label}
-        </Badge>
-      );
-    },
-  },
-];
 
 export default function RepositoryBrowserPage() {
   return <RepositoryBrowser />;

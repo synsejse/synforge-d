@@ -214,7 +214,7 @@ export default function JobDetail({ jobId }: Props) {
             <Button
               variant="ghost"
               size="sm"
-              fullWidth="responsive"
+              fullWidth="responsive-lg"
               onClick={() => navigate({ to: "/jobs" })}
             >
               <FaIcon icon={faArrowLeft} />
@@ -224,7 +224,7 @@ export default function JobDetail({ jobId }: Props) {
               <Button
                 variant="primary"
                 size="sm"
-                fullWidth="responsive"
+                fullWidth="responsive-lg"
                 onClick={handleRetry}
                 loading={retryMutation.isPending}
               >
@@ -236,7 +236,7 @@ export default function JobDetail({ jobId }: Props) {
               <Button
                 variant="warning"
                 size="sm"
-                fullWidth="responsive"
+                fullWidth="responsive-lg"
                 onClick={handleKill}
                 loading={killMutation.isPending}
               >
@@ -247,7 +247,7 @@ export default function JobDetail({ jobId }: Props) {
             <Button
               variant="danger"
               size="sm"
-              fullWidth="responsive"
+              fullWidth="responsive-lg"
               onClick={handleDelete}
               loading={deleteMutation.isPending}
               disabled={killMutation.isPending || isLive}

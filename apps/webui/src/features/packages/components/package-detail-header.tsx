@@ -44,7 +44,7 @@ export default function PackageDetailHeader({
             type="button"
             variant="ghost"
             size="sm"
-            fullWidth="responsive"
+            fullWidth="responsive-lg"
             onClick={onRefresh}
             disabled={deleting || refreshing}
             loading={refreshing}
@@ -56,7 +56,7 @@ export default function PackageDetailHeader({
             type="button"
             variant="primary"
             size="sm"
-            fullWidth="responsive"
+            fullWidth="responsive-lg"
             onClick={onRebuild}
             disabled={deleting}
           >
@@ -67,7 +67,7 @@ export default function PackageDetailHeader({
             type="button"
             variant="danger"
             size="sm"
-            fullWidth="responsive"
+            fullWidth="responsive-lg"
             onClick={onDelete}
             loading={deleting}
           >

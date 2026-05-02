@@ -1,6 +1,7 @@
 import { faMagnifyingGlass, faSave } from "@fortawesome/free-solid-svg-icons";
 import type { SyntheticEvent } from "react";
 import { formatMockChroots } from "../../../lib/utils";
+import Button from "../../../components/ui/button";
 import FaIcon from "../../../components/ui/fa-icon";
 import SelectionDialog from "../../../components/common/selection-dialog";
 import {
@@ -376,26 +377,28 @@ export default function PackageEditFormSection({
                 Unsaved changes
               </span>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <button
-                type="button"
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                fullWidth="responsive"
                 onClick={onDiscard}
                 disabled={saving}
-                className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-soft transition-colors hover:border-white hover:text-white disabled:opacity-50"
               >
                 Discard
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                fullWidth="responsive"
                 onClick={(event) =>
                   onSubmit(event as unknown as SyntheticEvent<HTMLFormElement>)
                 }
-                disabled={saving}
-                className="border-2 border-accent-lime bg-accent-lime px-5 py-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black shadow-brutal-sm transition-all hover:-translate-x-px hover:-translate-y-px hover:shadow-brutal-md disabled:opacity-70"
+                loading={saving}
               >
-                <FaIcon icon={faSave} className="mr-2" />
+                {saving ? null : <FaIcon icon={faSave} />}
                 {saving ? "Saving…" : "Save changes"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

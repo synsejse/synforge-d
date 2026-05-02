@@ -67,7 +67,14 @@ export const buttonVariants = cva(
       },
       fullWidth: {
         true: "w-full",
+        // Full on mobile, auto from sm+ — for tight clusters of 1–2
+        // buttons (modal footers, the sticky save bar) where the row
+        // is short enough to fit at sm.
         responsive: "w-full sm:w-auto",
+        // For detail-header toolbars (3–4 buttons) where wrapping at
+        // sm/md would create unbalanced rows. Stays full-width until
+        // lg so each stacked row is uniform; goes inline at lg+.
+        "responsive-lg": "w-full lg:w-auto",
         false: "",
       },
     },

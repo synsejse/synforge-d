@@ -162,6 +162,40 @@ h1, h2, h3,
   outline-offset: 2px;
 }
 
+/* Brutalist progress glyph — 4 cells fading in/out in sequence. */
+@keyframes synforge-progress-cell {
+  0%, 70% { opacity: 0.2; }
+  20%, 50% { opacity: 1; }
+}
+.synforge-progress-glyph {
+  display: inline-flex;
+  gap: 0.18em;
+  font-family: "Fira Code", "JetBrains Mono", monospace;
+  letter-spacing: 0;
+  color: var(--theme-accent-lime);
+}
+.synforge-progress-glyph > span {
+  animation: synforge-progress-cell 1.2s linear infinite;
+}
+.synforge-progress-glyph > span:nth-child(1) { animation-delay: 0s; }
+.synforge-progress-glyph > span:nth-child(2) { animation-delay: 0.15s; }
+.synforge-progress-glyph > span:nth-child(3) { animation-delay: 0.3s; }
+.synforge-progress-glyph > span:nth-child(4) { animation-delay: 0.45s; }
+
+/* Glitch — used by [ERR] tag on first paint. Two displaced text-shadow
+   strokes nudge briefly then settle. Plays once. */
+@keyframes synforge-glitch {
+  0%, 100% { text-shadow: none; transform: translateX(0); }
+  10%      { text-shadow: 2px 0 var(--theme-accent-cyan), -2px 0 var(--theme-error-red); transform: translateX(-1px); }
+  20%      { text-shadow: -1px 0 var(--theme-accent-cyan), 1px 0 var(--theme-error-red); transform: translateX(1px); }
+  30%      { text-shadow: 1px 0 var(--theme-accent-cyan), -1px 0 var(--theme-error-red); transform: translateX(0); }
+  40%      { text-shadow: none; transform: translateX(0); }
+}
+
+.synforge-glitch-once {
+  animation: synforge-glitch 600ms steps(8, end) 1;
+}
+
 /* Reduced motion: cut animations / transitions for users who opted out.
    Keeps the brutalist aesthetic readable without the hover-translate
    shimmy or fade-in flicker. */

@@ -185,7 +185,6 @@ export default function JobListTable({
               : "Adjust filters or queue new builds to see results here.",
         }}
         cardFooter={cardFooter}
-        minWidth="980px"
       />
     </div>
   );

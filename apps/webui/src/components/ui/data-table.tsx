@@ -38,8 +38,6 @@ interface DataTableProps<T> {
   loading?: boolean;
   loadingRows?: number;
   rowClassName?: (row: T) => string;
-  /** Min table width for the desktop <table>. Defaults to 640px. */
-  minWidth?: string;
   className?: string;
   /**
    * Optional mobile-only footer rendered at the bottom of each card. Use for
@@ -71,7 +69,6 @@ export default function DataTable<T>({
   loading = false,
   loadingRows = 5,
   rowClassName,
-  minWidth = "640px",
   className,
   cardFooter,
 }: DataTableProps<T>) {
@@ -137,9 +134,10 @@ export default function DataTable<T>({
         ))}
       </div>
 
-      {/* Desktop sticky-header table */}
-      <div className="hidden overflow-auto border-2 border-edge-strong md:block">
-        <table className="w-full" style={{ minWidth }}>
+      {/* Desktop table — no horizontal scroll. Cells wrap via break-all on
+          long content; columns size to their natural max. */}
+      <div className="hidden border-2 border-edge-strong md:block">
+        <table className="w-full table-auto">
           <thead>
             <tr>
               {columns.map((col) => (

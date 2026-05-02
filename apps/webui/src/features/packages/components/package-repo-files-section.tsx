@@ -100,8 +100,8 @@ export default function PackageRepoFilesSection({
               );
             })}
           </div>
-          <div className="hidden overflow-x-auto border-2 border-edge-strong md:block">
-            <table className="w-full min-w-[640px] lg:min-w-[980px]">
+          <div className="hidden border-2 border-edge-strong md:block">
+            <table className="w-full table-auto">
               <thead className="border-b-2 border-edge-strong bg-surface-alt text-left font-mono text-xs uppercase tracking-[0.2em] text-soft">
                 <tr>
                   <th className="px-4 py-3">Repo Path</th>

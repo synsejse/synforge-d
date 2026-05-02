@@ -11,6 +11,7 @@ import type {
 } from "../../../lib/types";
 import Button from "../../../components/ui/button";
 import FaIcon from "../../../components/ui/fa-icon";
+import MetaPair from "../../../components/ui/meta-pair";
 import StatusPill from "../../../components/ui/status-pill";
 import Tooltip from "../../../components/ui/tooltip";
 import {
@@ -98,7 +99,7 @@ export default function PackageCard({
             ) : null}
           </div>
 
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1 font-mono text-xs">
+          <div className="mt-2 flex flex-wrap items-start gap-x-6 gap-y-2 font-mono text-xs">
             <MetaPair label="Version">
               <span className="text-strong">{version}</span>
             </MetaPair>
@@ -172,23 +173,6 @@ export default function PackageCard({
         </ul>
       ) : null}
     </article>
-  );
-}
-
-function MetaPair({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex min-w-0 items-center gap-2">
-      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
-        {label}
-      </span>
-      <span className="min-w-0">{children}</span>
-    </div>
   );
 }
 

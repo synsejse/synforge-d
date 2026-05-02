@@ -19,6 +19,7 @@ import FaIcon from "../../../components/ui/fa-icon";
 import Badge from "../../../components/ui/badge";
 import Button from "../../../components/ui/button";
 import Breadcrumbs from "../../../components/ui/breadcrumbs";
+import MetaPair from "../../../components/ui/meta-pair";
 import Tabs from "../../../components/ui/tabs";
 import {
   faArrowLeft,
@@ -182,7 +183,7 @@ export default function JobDetail({ jobId }: Props) {
                 {job.package_name}
               </h1>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 font-mono text-xs">
+            <div className="mt-3 flex flex-wrap items-start gap-x-6 gap-y-2 font-mono text-xs">
               <MetaPair label="Target">
                 <span className="text-strong">{job.mock_chroot}</span>
               </MetaPair>
@@ -330,23 +331,6 @@ export default function JobDetail({ jobId }: Props) {
           </div>
         ) : null}
       </Tabs>
-    </div>
-  );
-}
-
-function MetaPair({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex min-w-0 items-center gap-2">
-      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
-        {label}
-      </span>
-      <span className="min-w-0">{children}</span>
     </div>
   );
 }

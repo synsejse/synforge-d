@@ -1,5 +1,6 @@
 import type { PackageResponse } from "../../../lib/types";
 import { formatDurationSeconds } from "../../../lib/datetime";
+import MetaPair from "../../../components/ui/meta-pair";
 import StatusPill from "../../../components/ui/status-pill";
 
 interface Props {
@@ -26,14 +27,16 @@ export default function PackageStatusStrip({ pkg }: Props) {
       aria-label="Package status"
       className="border-2 border-edge-strong bg-black"
     >
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-b-2 border-edge px-4 py-3 sm:px-5">
-        <StatusPill status={enabled ? "enabled" : "disabled"} />
-        <DataPair label="Last revision">
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-3 border-b-2 border-edge px-4 py-3 sm:px-5">
+        <div className="self-center">
+          <StatusPill status={enabled ? "enabled" : "disabled"} />
+        </div>
+        <MetaPair label="Last revision">
           <span className="break-all font-mono text-xs text-strong">
             {lastRevision ? shortRevision(lastRevision) : <em className="not-italic text-soft">none yet</em>}
           </span>
-        </DataPair>
-        <DataPair label="Active job">
+        </MetaPair>
+        <MetaPair label="Active job">
           {activeJobId ? (
             <span className="break-all font-mono text-xs text-accent-lime">
               {activeJobId}
@@ -41,10 +44,10 @@ export default function PackageStatusStrip({ pkg }: Props) {
           ) : (
             <span className="font-mono text-xs text-soft">idle</span>
           )}
-        </DataPair>
-        <DataPair label="Targets">
+        </MetaPair>
+        <MetaPair label="Targets">
           <span className="font-mono text-xs text-strong">{targets.length}</span>
-        </DataPair>
+        </MetaPair>
       </div>
 
       {targets.length > 0 ? (
@@ -87,23 +90,6 @@ export default function PackageStatusStrip({ pkg }: Props) {
         </ul>
       ) : null}
     </section>
-  );
-}
-
-function DataPair({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex min-w-0 items-center gap-2">
-      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
-        {label}
-      </span>
-      <span className="min-w-0">{children}</span>
-    </div>
   );
 }
 

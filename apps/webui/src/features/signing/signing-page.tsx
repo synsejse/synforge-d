@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   faArrowUpFromBracket,
@@ -16,6 +16,7 @@ import ErrorMessage from "../../components/common/error-message";
 import Button from "../../components/ui/button";
 import FaIcon from "../../components/ui/fa-icon";
 import LoadingBlock from "../../components/ui/loading-block";
+import MetaPair from "../../components/ui/meta-pair";
 import PageHeader from "../../components/ui/page-header";
 import ProgressOverlayDialog from "../../components/ui/progress-overlay-dialog";
 import StatusPill from "../../components/ui/status-pill";
@@ -248,35 +249,37 @@ function Signing() {
       {/* Status strip — flat horizontal row of key facts */}
       <section
         aria-label="Signing status"
-        className="flex flex-wrap items-center gap-x-6 gap-y-3 border-2 border-edge-strong bg-black px-4 py-3 sm:px-5"
+        className="flex flex-wrap items-start gap-x-6 gap-y-3 border-2 border-edge-strong bg-black px-4 py-3 sm:px-5"
       >
-        <StatusPill status={enabled ? "enabled" : "disabled"} />
-        <StatusFact label="Key">
+        <div className="self-center">
+          <StatusPill status={enabled ? "enabled" : "disabled"} />
+        </div>
+        <MetaPair label="Key">
           {status.key_present ? (
-            <span className="text-strong">present</span>
+            <span className="text-xs text-strong">present</span>
           ) : (
-            <span className="text-soft">none</span>
+            <span className="text-xs text-soft">none</span>
           )}
-        </StatusFact>
-        <StatusFact label="Key id">
-          <span className="break-all font-mono text-strong">
+        </MetaPair>
+        <MetaPair label="Key id">
+          <span className="break-all font-mono text-xs text-strong">
             {status.configured_key_id || (
               <em className="not-italic text-soft">unset</em>
             )}
           </span>
-        </StatusFact>
-        <StatusFact label="Fingerprint">
-          <span className="break-all font-mono text-strong">
+        </MetaPair>
+        <MetaPair label="Fingerprint">
+          <span className="break-all font-mono text-xs text-strong">
             {status.active_fingerprint || (
               <em className="not-italic text-soft">none</em>
             )}
           </span>
-        </StatusFact>
-        <StatusFact label="Public key path">
-          <span className="break-all font-mono text-soft">
+        </MetaPair>
+        <MetaPair label="Public key path">
+          <span className="break-all font-mono text-xs text-soft">
             {status.repo_public_key_path || "—"}
           </span>
-        </StatusFact>
+        </MetaPair>
       </section>
 
       {/* Action toolbar — one flat row, no nested headings */}
@@ -397,23 +400,6 @@ function Signing() {
         onClose={() => setOverlayOpen(false)}
         closeDisabled={toggleMutation.isPending}
       />
-    </div>
-  );
-}
-
-function StatusFact({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex min-w-0 items-center gap-2 text-xs">
-      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
-        {label}
-      </span>
-      <span className="min-w-0">{children}</span>
     </div>
   );
 }

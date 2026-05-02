@@ -196,6 +196,29 @@ h1, h2, h3,
   animation: synforge-glitch 600ms steps(8, end) 1;
 }
 
+/* Stagger-in: list rows reveal from a 4px lift + 0 opacity. Children of a
+   .synforge-stagger element pick up an animation-delay based on a
+   --i (index) custom property. Falls back to a no-op when
+   prefers-reduced-motion is set (handled below). */
+@keyframes synforge-stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.synforge-stagger > * {
+  animation: synforge-stagger-in 280ms ease-out both;
+  animation-delay: calc(var(--i, 0) * 30ms);
+}
+/* Cap the cascade so a 200-row list doesn't take 6 seconds. */
+.synforge-stagger > *:nth-child(n + 16) {
+  animation-delay: 450ms;
+}
+
 /* Reduced motion: cut animations / transitions for users who opted out.
    Keeps the brutalist aesthetic readable without the hover-translate
    shimmy or fade-in flicker. */

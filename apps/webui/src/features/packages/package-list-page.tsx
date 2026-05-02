@@ -441,19 +441,23 @@ function PackageList() {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {listQuery.data.packages.map((entry) => (
-            <PackageCard
+        <div className="synforge-stagger space-y-4">
+          {listQuery.data.packages.map((entry, idx) => (
+            <div
               key={entry.package.name}
-              entry={entry}
-              onRefresh={(name) => trigger(name, "refresh")}
-              onRebuild={(name) => trigger(name, "rebuild")}
-              onDelete={(name) => void handleDelete(name)}
-              refreshing={refreshingNameForMutation === entry.package.name}
-              refreshDisabled={refreshingAll}
-              selected={selection.isSelected(entry.package.name)}
-              onToggleSelected={selection.setOne}
-            />
+              style={{ "--i": idx } as React.CSSProperties}
+            >
+              <PackageCard
+                entry={entry}
+                onRefresh={(name) => trigger(name, "refresh")}
+                onRebuild={(name) => trigger(name, "rebuild")}
+                onDelete={(name) => void handleDelete(name)}
+                refreshing={refreshingNameForMutation === entry.package.name}
+                refreshDisabled={refreshingAll}
+                selected={selection.isSelected(entry.package.name)}
+                onToggleSelected={selection.setOne}
+              />
+            </div>
           ))}
         </div>
       )}

@@ -51,7 +51,6 @@ function Dashboard() {
     <div className="space-y-8">
       {/* Hero Header */}
       <PageHeader
-        eyebrow="SYSTEM_OVERVIEW"
         title="Dashboard"
         description="High-signal snapshot of package state, active builds, and execution history."
         color="cyan"
@@ -93,25 +92,20 @@ function Dashboard() {
       </section>
 
       {/* Recent Jobs Table */}
-      <section className="border-4 border-edge-strong bg-black shadow-card-sm">
-        <div className="flex items-end justify-between gap-4 border-b-4 border-edge-strong app-section-band px-6 py-5">
-          <div>
-            <div className="font-mono text-xs font-bold uppercase tracking-[0.25em] text-soft">
-              Recent_Jobs
-            </div>
-            <h2 className="font-display mt-2 text-2xl font-bold uppercase tracking-tight text-white">
-              Latest_Build_Runs
-            </h2>
-          </div>
+      <section className="border-2 border-edge-strong bg-black shadow-card-sm">
+        <div className="flex items-end justify-between gap-4 border-b-2 border-edge-strong app-section-band px-5 py-4">
+          <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white">
+            Latest Build Runs
+          </h2>
           <Link
             to="/jobs"
             className="font-mono text-sm font-semibold text-accent-lime transition-all duration-100 ease-linear hover:underline"
           >
-            View_All →
+            View All →
           </Link>
         </div>
 
-        <div className="p-6">
+        <div className="p-5">
           {data.jobs.length === 0 ? (
             <div className="flex min-h-[200px] items-center justify-center border-2 border-dashed border-edge bg-surface-alt/30 px-6 py-8">
               <div className="text-center">
@@ -162,119 +156,65 @@ function Dashboard() {
         </div>
       </section>
 
-      {/* Two Column Layout */}
-      <section className="grid gap-6 xl:grid-cols-2">
-        {/* Live Queue */}
-        <article className="flex h-full flex-col border-4 border-success bg-black shadow-[4px_4px_0_rgba(0,255,65,0.2)]">
-          <div className="border-b-4 border-success bg-black px-6 py-5">
-            <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.25em] text-success">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping bg-success opacity-75"></span>
-                <span className="relative inline-flex h-2 w-2 bg-success"></span>
-              </span>
-              Live_Queue
-            </div>
-            <h2 className="font-display mt-2 text-xl font-bold uppercase tracking-tight text-white">
-              Builds_In_Flight
+      {/* Live Queue — full width */}
+      <section className="border-2 border-success bg-black shadow-card-sm">
+        <div className="flex items-end justify-between gap-4 border-b-2 border-success bg-black px-5 py-4">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping bg-success opacity-75" />
+              <span className="relative inline-flex h-2 w-2 bg-success" />
+            </span>
+            <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white">
+              Builds in Flight
             </h2>
           </div>
-
-          <div className="flex-1 p-6">
-            {data.liveJobs.length === 0 ? (
-              <div className="flex min-h-[240px] items-center justify-center border-2 border-dashed border-edge bg-surface-alt/30 px-6 py-8">
-                <div className="font-mono text-sm text-soft">
-                  Nothing is building right now.
-                </div>
+          <span className="font-mono text-xs uppercase tracking-[0.18em] text-soft">
+            {data.liveJobs.length} active
+          </span>
+        </div>
+        <div className="p-5">
+          {data.liveJobs.length === 0 ? (
+            <div className="flex min-h-[140px] items-center justify-center border-2 border-dashed border-edge bg-surface-alt/30 px-6 py-8">
+              <div className="font-mono text-sm text-soft">
+                Nothing is building right now.
               </div>
-            ) : (
-              <div className="grid gap-3">
-                {data.liveJobs.map((entry) => (
-                  <Link
-                    key={entry.job.id}
-                    to="/jobs/view"
-                    search={{ id: entry.job.id }}
-                    className="group relative block overflow-hidden border-2 border-edge bg-surface-alt/40 px-5 py-4 transition-all duration-100 ease-linear hover:border-success hover:bg-surface-alt"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="absolute inset-y-0 left-0 w-1 bg-success opacity-0 transition-opacity duration-100 group-hover:opacity-100"
-                    />
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <div className="font-display font-bold text-white">
-                            {entry.job.package_name}
-                          </div>
-                          <Badge variant="ghost">
-                            {entry.job.mock_chroot}
-                          </Badge>
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {data.liveJobs.map((entry) => (
+                <Link
+                  key={entry.job.id}
+                  to="/jobs/view"
+                  search={{ id: entry.job.id }}
+                  className="group relative block overflow-hidden border-2 border-edge bg-surface-alt/40 px-4 py-3 transition-all duration-100 ease-linear hover:border-success hover:bg-surface-alt"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-y-0 left-0 w-1 bg-success opacity-0 transition-opacity duration-100 group-hover:opacity-100"
+                  />
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="font-display font-bold text-white">
+                          {entry.job.package_name}
                         </div>
-                        <div className="mt-1 truncate font-mono text-xs text-soft">
-                          {entry.job.revision}
-                        </div>
+                        <Badge variant="ghost">{entry.job.mock_chroot}</Badge>
                       </div>
-                      <div className="flex md:justify-end">
-                        <Badge variant={getStatusVariant(entry.job.status)} pulse>
-                          {entry.job.status}
-                        </Badge>
+                      <div className="mt-1 truncate font-mono text-xs text-soft">
+                        {entry.job.revision}
                       </div>
                     </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </article>
-
-        {/* Repository Snapshot */}
-        <article className="border-4 border-edge-strong bg-black shadow-card-sm">
-          <div className="border-b-4 border-edge-strong app-section-band px-6 py-5">
-            <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.25em] text-soft">
-              <FaIcon icon={faFolderTree} />
-              Published_Repository
+                    <div className="flex md:justify-end">
+                      <Badge variant={getStatusVariant(entry.job.status)} pulse>
+                        {entry.job.status}
+                      </Badge>
+                    </div>
+                  </div>
+                </Link>
+              ))}
             </div>
-            <h2 className="font-display mt-2 text-xl font-bold uppercase tracking-tight text-white">
-              Repository_Snapshot
-            </h2>
-          </div>
-
-          <div className="p-6">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="border-l-4 border-accent-lime bg-surface-alt/30 pl-4 pr-3 py-4">
-                <div className="font-mono text-xs font-bold uppercase tracking-wider text-soft">
-                  Packages
-                </div>
-                <div className="font-display mt-2 text-3xl font-black text-white">
-                  {data.repoSummary.package_count}
-                </div>
-              </div>
-              <div className="border-l-4 border-accent-lime bg-surface-alt/30 pl-4 pr-3 py-4">
-                <div className="font-mono text-xs font-bold uppercase tracking-wider text-soft">
-                  Targets
-                </div>
-                <div className="font-display mt-2 text-3xl font-black text-white">
-                  {data.repoSummary.target_count}
-                </div>
-              </div>
-              <div className="border-l-4 border-edge-strong bg-surface-alt/30 pl-4 pr-3 py-4">
-                <div className="font-mono text-xs font-bold uppercase tracking-wider text-soft">
-                  Builds
-                </div>
-                <div className="font-display mt-2 text-3xl font-black text-white">
-                  {data.repoSummary.build_count}
-                </div>
-              </div>
-              <div className="border-l-4 border-edge-strong bg-surface-alt/30 pl-4 pr-3 py-4">
-                <div className="font-mono text-xs font-bold uppercase tracking-wider text-soft">
-                  Files
-                </div>
-                <div className="font-display mt-2 text-3xl font-black text-white">
-                  {data.repoSummary.published_file_count}
-                </div>
-              </div>
-            </div>
-          </div>
-        </article>
+          )}
+        </div>
       </section>
     </div>
   );

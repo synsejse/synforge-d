@@ -293,7 +293,6 @@ function Users() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="ACCESS_CONTROL"
         title="Users"
         description="Manage operator accounts, credentials, repository access, and download usage from one screen."
         color="white"

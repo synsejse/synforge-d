@@ -77,7 +77,6 @@ function Settings() {
     <div className="space-y-8">
       {/* Header */}
       <PageHeader
-        eyebrow="DAEMON_SETTINGS"
         title="Configuration"
         description="Runtime settings and effective daemon values."
         color="purple"

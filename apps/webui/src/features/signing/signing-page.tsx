@@ -1,6 +1,11 @@
-import { useRef, useState, type ChangeEvent } from "react";
+import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { faCheckCircle, faKey, faTrash } from "@fortawesome/free-solid-svg-icons";
+import {
+  faArrowUpFromBracket,
+  faCheckCircle,
+  faKey,
+  faTrash,
+} from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import { signingQueries } from "../../lib/queries";
 import type {
@@ -13,6 +18,7 @@ import FaIcon from "../../components/ui/fa-icon";
 import LoadingBlock from "../../components/ui/loading-block";
 import PageHeader from "../../components/ui/page-header";
 import ProgressOverlayDialog from "../../components/ui/progress-overlay-dialog";
+import StatusPill from "../../components/ui/status-pill";
 
 function downloadBlob(filename: string, contents: string, type: string) {
   const blob = new Blob([contents], { type });
@@ -224,7 +230,6 @@ function Signing() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="REPOSITORY_SIGNING"
         title="GPG Signing"
         description="Generate or import a private key, then toggle repository signing."
         color="orange"
@@ -240,157 +245,148 @@ function Signing() {
         </div>
       ) : null}
 
-      <section className="grid gap-6 xl:grid-cols-2">
-        <article className="border-2 border-white bg-black p-6">
-          <h2 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
-            Current_Status
-          </h2>
-          <dl className="mt-4 grid gap-px bg-edge">
-            <StatusRow label="Enabled" value={status.enabled ? "yes" : "no"} />
-            <StatusRow
-              label="Configured key id"
-              value={status.configured_key_id || "-"}
-            />
-            <StatusRow
-              label="Key present"
-              value={status.key_present ? "yes" : "no"}
-            />
-            <StatusRow
-              label="Fingerprint"
-              value={status.active_fingerprint || "-"}
-            />
-            <StatusRow
-              label="Public key path"
-              value={status.repo_public_key_path || "-"}
-            />
-          </dl>
-        </article>
+      {/* Status strip — flat horizontal row of key facts */}
+      <section
+        aria-label="Signing status"
+        className="flex flex-wrap items-center gap-x-6 gap-y-3 border-2 border-edge-strong bg-black px-4 py-3 sm:px-5"
+      >
+        <StatusPill status={enabled ? "enabled" : "disabled"} />
+        <StatusFact label="Key">
+          {status.key_present ? (
+            <span className="text-strong">present</span>
+          ) : (
+            <span className="text-soft">none</span>
+          )}
+        </StatusFact>
+        <StatusFact label="Key id">
+          <span className="break-all font-mono text-strong">
+            {status.configured_key_id || (
+              <em className="not-italic text-soft">unset</em>
+            )}
+          </span>
+        </StatusFact>
+        <StatusFact label="Fingerprint">
+          <span className="break-all font-mono text-strong">
+            {status.active_fingerprint || (
+              <em className="not-italic text-soft">none</em>
+            )}
+          </span>
+        </StatusFact>
+        <StatusFact label="Public key path">
+          <span className="break-all font-mono text-soft">
+            {status.repo_public_key_path || "—"}
+          </span>
+        </StatusFact>
+      </section>
 
-        <article className="border-2 border-white bg-black p-6">
-          <h2 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
-            Signing_Actions
-          </h2>
-          <p className="mt-3 text-sm text-muted">
-            Public key filename is fixed to <code>gpg.key</code>. Key ID is
-            always derived from the active private key.
+      {/* Action toolbar — one flat row, no nested headings */}
+      <section className="border-2 border-edge-strong bg-black">
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-5">
+          <Button
+            type="button"
+            variant={enabled ? "secondary" : "primary"}
+            size="sm"
+            onClick={handleToggleSigning}
+            loading={toggleMutation.isPending}
+            disabled={!enabled && !status.key_present}
+          >
+            {toggleMutation.isPending ? null : <FaIcon icon={faCheckCircle} />}
+            {enabled ? "Disable Signing" : "Enable Signing"}
+          </Button>
+
+          <span className="mx-1 hidden h-6 w-px bg-edge sm:inline-block" />
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleGenerateKey}
+            loading={generateMutation.isPending}
+            disabled={keyActionsLocked}
+          >
+            {generateMutation.isPending ? null : <FaIcon icon={faKey} />}
+            Generate
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => importFileRef.current?.click()}
+            loading={importMutation.isPending}
+            disabled={keyActionsLocked}
+          >
+            {importMutation.isPending ? null : <FaIcon icon={faKey} />}
+            Import
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => exportPublicMutation.mutate()}
+            loading={exportPublicMutation.isPending}
+            disabled={!status.key_present}
+          >
+            {exportPublicMutation.isPending ? null : (
+              <FaIcon icon={faArrowUpFromBracket} />
+            )}
+            Export Public
+          </Button>
+          {status.can_export_private_key ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => exportPrivateMutation.mutate()}
+              loading={exportPrivateMutation.isPending}
+              disabled={!status.key_present}
+            >
+              {exportPrivateMutation.isPending ? null : (
+                <FaIcon icon={faArrowUpFromBracket} />
+              )}
+              Export Private
+            </Button>
+          ) : null}
+
+          <span className="mx-1 hidden h-6 w-px bg-edge sm:inline-block" />
+
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            onClick={() => deleteMutation.mutate()}
+            loading={deleteMutation.isPending}
+            disabled={enabled || !status.key_present}
+          >
+            {deleteMutation.isPending ? null : <FaIcon icon={faTrash} />}
+            Delete Key
+          </Button>
+        </div>
+
+        {/* Context hints — only when an action is locked */}
+        {!enabled && !status.key_present ? (
+          <p className="border-t-2 border-edge px-4 py-2 font-mono text-[11px] text-soft sm:px-5">
+            Generate or import a key before enabling signing.
           </p>
-          <div className="mt-5 space-y-5">
-            <div>
-              <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted">
-                Signing State
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  type="button"
-                  variant={enabled ? "secondary" : "primary"}
-                  size="md"
-                  onClick={handleToggleSigning}
-                  disabled={toggleMutation.isPending || (!enabled && !status.key_present)}
-                >
-                  <FaIcon icon={faCheckCircle} className="mr-2" />
-                  {toggleMutation.isPending
-                    ? "Updating…"
-                    : enabled
-                      ? "Disable Signing"
-                      : "Enable Signing"}
-                </Button>
-              </div>
-              {!enabled && !status.key_present ? (
-                <p className="mt-2 font-mono text-xs text-soft">
-                  Generate or import a key before enabling signing.
-                </p>
-              ) : null}
-            </div>
+        ) : null}
+        {enabled ? (
+          <p className="border-t-2 border-edge px-4 py-2 font-mono text-[11px] text-soft sm:px-5">
+            Disable signing before generating, importing, or deleting the key.
+          </p>
+        ) : null}
+        {!status.can_export_private_key ? (
+          <p className="border-t-2 border-edge px-4 py-2 font-mono text-[11px] text-soft sm:px-5">
+            Private key export is restricted to the bootstrap admin. Public
+            key filename is fixed to <code>gpg.key</code>.
+          </p>
+        ) : null}
 
-            <div>
-              <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted">
-                Key Lifecycle
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="md"
-                  onClick={handleGenerateKey}
-                  disabled={generateMutation.isPending || keyActionsLocked}
-                >
-                  <FaIcon icon={faKey} className="mr-2" />
-                  {generateMutation.isPending ? "Generating…" : "Generate Key"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="md"
-                  onClick={() => importFileRef.current?.click()}
-                  disabled={importMutation.isPending || keyActionsLocked}
-                >
-                  <FaIcon icon={faKey} className="mr-2" />
-                  {importMutation.isPending ? "Importing…" : "Import Key File"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="danger"
-                  size="md"
-                  onClick={() => deleteMutation.mutate()}
-                  disabled={deleteMutation.isPending || enabled || !status.key_present}
-                >
-                  <FaIcon icon={faTrash} className="mr-2" />
-                  {deleteMutation.isPending ? "Deleting…" : "Delete Key"}
-                </Button>
-              </div>
-              {enabled ? (
-                <p className="mt-2 font-mono text-xs text-soft">
-                  Disable signing before generating, importing, or deleting the key.
-                </p>
-              ) : null}
-            </div>
-
-            <div>
-              <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted">
-                Backup
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="md"
-                  onClick={() => exportPublicMutation.mutate()}
-                  disabled={exportPublicMutation.isPending || !status.key_present}
-                >
-                  <FaIcon icon={faKey} className="mr-2" />
-                  {exportPublicMutation.isPending
-                    ? "Exporting…"
-                    : "Export Public Key"}
-                </Button>
-                {status.can_export_private_key ? (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="md"
-                    onClick={() => exportPrivateMutation.mutate()}
-                    disabled={exportPrivateMutation.isPending || !status.key_present}
-                  >
-                    <FaIcon icon={faKey} className="mr-2" />
-                    {exportPrivateMutation.isPending
-                      ? "Exporting…"
-                      : "Export Private Key"}
-                  </Button>
-                ) : (
-                  <span className="font-mono text-xs text-soft">
-                    Export is restricted to bootstrap admin.
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-          <input
-            ref={importFileRef}
-            type="file"
-            accept=".asc,.key,.pgp,.gpg,text/plain"
-            className="hidden"
-            onChange={handleImportFile}
-          />
-        </article>
+        <input
+          ref={importFileRef}
+          type="file"
+          accept=".asc,.key,.pgp,.gpg,text/plain"
+          className="hidden"
+          onChange={handleImportFile}
+        />
       </section>
 
       <ProgressOverlayDialog
@@ -405,13 +401,19 @@ function Signing() {
   );
 }
 
-function StatusRow({ label, value }: { label: string; value: string }) {
+function StatusFact({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="grid gap-1 bg-black px-4 py-3 text-xs sm:grid-cols-[minmax(0,180px)_1fr] sm:gap-4">
-      <dt className="font-mono font-bold uppercase tracking-[0.16em] text-muted">
+    <div className="flex min-w-0 items-center gap-2 text-xs">
+      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
         {label}
-      </dt>
-      <dd className="break-all font-mono text-strong sm:truncate">{value}</dd>
+      </span>
+      <span className="min-w-0">{children}</span>
     </div>
   );
 }

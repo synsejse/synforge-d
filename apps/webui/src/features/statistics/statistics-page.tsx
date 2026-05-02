@@ -1,10 +1,9 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import {
   faBoxesStacked,
   faChartLine,
-  faCircleCheck,
-  faClockRotateLeft,
   faDatabase,
   faHardDrive,
   faLayerGroup,
@@ -22,6 +21,7 @@ import FaIcon from "../../components/ui/fa-icon";
 import MetricCard from "../../components/ui/metric-card";
 import PageHeader from "../../components/ui/page-header";
 import RatioBar from "../../components/ui/ratio-bar";
+import Tabs from "../../components/ui/tabs";
 import TimeRangeSelector from "../../components/ui/time-range-selector";
 import TimeSeriesChart from "../../components/ui/time-series-chart";
 
@@ -52,6 +52,7 @@ function Statistics() {
   const range: TimeRange = search.range ?? "24h";
   const setRange = (next: TimeRange) =>
     navigate({ search: (prev) => ({ ...prev, range: next }) });
+  const [cacheTab, setCacheTab] = useState<"mock" | "git">("mock");
 
   const { data, isPending, error } = useQuery({
     ...statisticsQueries.overview(),
@@ -85,7 +86,6 @@ function Statistics() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="SYSTEM_TELEMETRY"
         title="Statistics"
         description="Dedicated operational metrics for system throughput, sync health, and cache behavior."
         color="cyan"
@@ -95,7 +95,7 @@ function Statistics() {
         ]}
       />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <MetricCard
           label="Packages"
           value={data.packageCount}
@@ -103,44 +103,37 @@ function Statistics() {
           icon={<FaIcon icon={faBoxesStacked} />}
         />
         <MetricCard
-          label="Active_Jobs"
+          label="Active jobs"
           value={data.activeJobCount}
           detail="Pending + running"
           variant="terminal"
           icon={<FaIcon icon={faRocket} />}
         />
         <MetricCard
-          label="Sync_Succeeded_24h"
-          value={data.syncMetrics.succeeded_24h}
-          detail="Successful source syncs"
-          variant="success"
-          icon={<FaIcon icon={faCircleCheck} />}
-        />
-        <MetricCard
-          label="Sync_Failures_24h"
-          value={data.syncMetrics.failed_24h}
+          label="Sync 24h"
+          value={`${data.syncMetrics.succeeded_24h} ✓ / ${data.syncMetrics.failed_24h} ✗`}
           detail={
-            data.syncMetrics.last_failure_at
-              ? `Last ${formatDateTime(data.syncMetrics.last_failure_at)}`
+            data.syncMetrics.failed_24h > 0 && data.syncMetrics.last_failure_at
+              ? `Last fail ${formatDateTime(data.syncMetrics.last_failure_at)}`
               : "No recent failures"
           }
           variant={data.syncMetrics.failed_24h > 0 ? "error" : "success"}
           icon={<FaIcon icon={faTriangleExclamation} />}
         />
         <MetricCard
-          label="Stored_Bytes"
+          label="Stored bytes"
           value={data.repoSummary.stored_bytes}
           detail={`${data.repoSummary.published_file_count} published files`}
           icon={<FaIcon icon={faHardDrive} />}
         />
         <MetricCard
-          label="Git_Mirrors"
+          label="Git mirrors"
           value={data.cacheStats.git_mirror_cache.tracked_mirrors}
-          detail={`${data.cacheStats.git_mirror_cache.mirror_directories} directories on disk`}
+          detail={`${data.cacheStats.git_mirror_cache.mirror_directories} dirs on disk`}
           icon={<FaIcon icon={faDatabase} />}
         />
         <MetricCard
-          label="Cached_Chroots"
+          label="Cached chroots"
           value={data.cacheStats.mock_chroot_cache.cached_chroot_count}
           detail={
             data.cacheStats.mock_chroot_cache.age_seconds != null
@@ -148,12 +141,6 @@ function Statistics() {
               : "No cached entry"
           }
           icon={<FaIcon icon={faRotate} />}
-        />
-        <MetricCard
-          label="Collected_At"
-          value={formatDateTime(data.cacheStats.collected_at, "n/a")}
-          detail="API snapshot timestamp"
-          icon={<FaIcon icon={faClockRotateLeft} />}
         />
       </section>
 
@@ -172,10 +159,10 @@ function Statistics() {
         </div>
 
         <div className="grid gap-6 xl:grid-cols-2">
-          <article className="border-4 border-edge-strong bg-black p-5">
-            <div className="mb-3 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.2em] text-accent-cyan">
+          <article className="border-2 border-edge-strong bg-black p-5">
+            <div className="mb-3 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent-cyan">
               <FaIcon icon={faRotate} />
-              Sync_Operations
+              Sync operations
             </div>
             <TimeSeriesChart
               data={timeseriesQuery.data?.sync}
@@ -184,10 +171,10 @@ function Statistics() {
             />
           </article>
 
-          <article className="border-4 border-edge-strong bg-black p-5">
-            <div className="mb-3 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.2em] text-accent-lime">
+          <article className="border-2 border-edge-strong bg-black p-5">
+            <div className="mb-3 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent-lime">
               <FaIcon icon={faChartLine} />
-              Build_Jobs
+              Build jobs
             </div>
             <TimeSeriesChart
               data={timeseriesQuery.data?.jobs}
@@ -198,17 +185,13 @@ function Statistics() {
         </div>
       </section>
 
-      {/* Ratio visualizations — point-in-time distributions to complement
-          the time-series above. */}
+      {/* Ratio visualizations — point-in-time distributions */}
       <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        <article className="border-4 border-edge-strong bg-black p-6">
-          <h3 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
-            Sync_Outcomes_24h
+        <article className="border-2 border-edge-strong bg-black p-5">
+          <h3 className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-white">
+            Sync outcomes (24h)
           </h3>
-          <p className="mt-1 font-mono text-xs text-soft">
-            Distribution of source-sync attempts in the last 24 hours.
-          </p>
-          <div className="mt-4">
+          <div className="mt-3">
             <RatioBar
               segments={[
                 {
@@ -226,14 +209,11 @@ function Statistics() {
           </div>
         </article>
 
-        <article className="border-4 border-edge-strong bg-black p-6">
-          <h3 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
-            Mock_Chroot_Cache
+        <article className="border-2 border-edge-strong bg-black p-5">
+          <h3 className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-white">
+            Mock chroot cache
           </h3>
-          <p className="mt-1 font-mono text-xs text-soft">
-            Hit / miss / stale-served counts since daemon start.
-          </p>
-          <div className="mt-4">
+          <div className="mt-3">
             <RatioBar
               segments={[
                 {
@@ -256,14 +236,11 @@ function Statistics() {
           </div>
         </article>
 
-        <article className="border-4 border-edge-strong bg-black p-6">
-          <h3 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
-            Git_Mirror_Health
+        <article className="border-2 border-edge-strong bg-black p-5">
+          <h3 className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-white">
+            Git mirror health
           </h3>
-          <p className="mt-1 font-mono text-xs text-soft">
-            Healthy vs stale tracked mirrors right now.
-          </p>
-          <div className="mt-4">
+          <div className="mt-3">
             <RatioBar
               segments={[
                 {
@@ -282,13 +259,17 @@ function Statistics() {
         </article>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-2">
-        <article className="border-4 border-edge-strong bg-black">
-          <header className="border-b-4 border-edge-strong bg-surface-alt px-6 py-4">
-            <h2 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
-              Mock_Chroot_Cache
-            </h2>
-          </header>
+      {/* Cache detail — one panel at a time */}
+      <Tabs
+        ariaLabel="Cache details"
+        value={cacheTab}
+        onChange={setCacheTab}
+        items={[
+          { value: "mock", label: "Mock chroot cache" },
+          { value: "git", label: "Git mirror cache" },
+        ]}
+      >
+        {cacheTab === "mock" ? (
           <div className="grid gap-px bg-edge">
             <StatRow label="Worker image" value={chrootCache.worker_image ?? "-"} />
             <StatRow label="TTL" value={formatSeconds(chrootCache.ttl_seconds)} />
@@ -303,14 +284,8 @@ function Statistics() {
               value={formatDateTime(chrootCache.last_refresh_at, "-")}
             />
           </div>
-        </article>
-
-        <article className="border-4 border-edge-strong bg-black">
-          <header className="border-b-4 border-edge-strong bg-surface-alt px-6 py-4">
-            <h2 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">
-              Git_Mirror_Cache
-            </h2>
-          </header>
+        ) : null}
+        {cacheTab === "git" ? (
           <div className="grid gap-px bg-edge">
             <StatRow label="Mirror root" value={mirrorCache.mirror_root} />
             <StatRow
@@ -338,8 +313,13 @@ function Statistics() {
               value={formatDateTime(mirrorCache.latest_used_at, "-")}
             />
           </div>
-        </article>
-      </section>
+        ) : null}
+      </Tabs>
+
+      <p className="font-mono text-[11px] text-soft">
+        Snapshot collected at{" "}
+        {formatDateTime(data.cacheStats.collected_at, "n/a")}.
+      </p>
     </div>
   );
 }

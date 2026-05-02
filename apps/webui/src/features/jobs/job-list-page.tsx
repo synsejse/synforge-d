@@ -228,7 +228,6 @@ function JobList() {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        eyebrow="JOB_ACTIVITY"
         title={filters.mode === "active" ? "Active Builds" : "Build Timeline"}
         description={
           filters.mode === "active"

@@ -46,7 +46,8 @@ const colorMap: Record<HeaderColor, { border: string; text: string }> = {
 };
 
 interface Props {
-  eyebrow: string;
+  /** Optional small uppercase tag above the title. Most pages omit this. */
+  eyebrow?: string;
   title: string;
   description: string;
   color?: HeaderColor;
@@ -63,22 +64,32 @@ export default function PageHeader({
   sticky = false,
 }: Props) {
   const colors = colorMap[color];
-  const stickyClasses = sticky ? "sticky top-0 z-10" : "";
+  const stickyClasses = sticky ? "sticky top-0 z-10 bg-black" : "";
 
   return (
-    <section className={`border-4 ${colors.border} bg-black p-6 ${stickyClasses}`}>
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+    <section
+      className={`border-b-2 ${colors.border} pb-4 ${stickyClasses}`}
+    >
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0 flex-1">
-          <p className={`font-mono text-xs font-bold uppercase tracking-[0.3em] ${colors.text}`}>
-            {eyebrow}
-          </p>
-          <h1 className="mt-2 font-mono text-3xl font-bold uppercase text-white">
+          {eyebrow ? (
+            <p
+              className={`font-mono text-[10px] font-bold uppercase tracking-[0.3em] ${colors.text}`}
+            >
+              {eyebrow}
+            </p>
+          ) : null}
+          <h1
+            className={`font-mono text-2xl font-bold uppercase text-white sm:text-3xl ${eyebrow ? "mt-2" : ""}`}
+          >
             {title}
           </h1>
-          <p className="mt-2 text-sm text-muted">{description}</p>
+          {description ? (
+            <p className="mt-2 max-w-3xl text-sm text-muted">{description}</p>
+          ) : null}
         </div>
         {actions.length > 0 ? (
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2 lg:flex-nowrap">
             {actions.map((action) => {
               if ("to" in action) {
                 return (
@@ -87,7 +98,6 @@ export default function PageHeader({
                     to={action.to}
                     icon={action.icon}
                     variant={action.variant}
-                    className="px-4 py-2 text-sm"
                   >
                     {action.label}
                   </ActionButton>
@@ -100,7 +110,6 @@ export default function PageHeader({
                   onClick={action.onClick}
                   icon={action.icon}
                   variant={action.variant}
-                  className="px-4 py-2 text-sm"
                 >
                   {action.label}
                 </ActionButton>

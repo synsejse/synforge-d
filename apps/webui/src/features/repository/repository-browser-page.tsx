@@ -16,7 +16,7 @@ import ErrorMessage from "../../components/common/error-message";
 import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
-import Select from "../../components/ui/select";
+import SegmentedControl from "../../components/ui/segmented-control";
 import MetricCard from "../../components/ui/metric-card";
 import PageHeader from "../../components/ui/page-header";
 import Badge from "../../components/ui/badge";
@@ -114,7 +114,6 @@ function RepositoryBrowser() {
     <div className="space-y-8">
       {/* Header */}
       <PageHeader
-        eyebrow="MANAGED_REPOSITORY"
         title="Repository Control"
         description="Published packages, builds, and files."
         color="green"
@@ -206,12 +205,13 @@ function RepositoryBrowser() {
               <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
                 Kind
               </span>
-              <Select
+              <SegmentedControl<KindFilter>
                 value={filters.kindFilter}
-                onValueChange={(val) =>
-                  setFilters({ kindFilter: val as KindFilter, offset: 0 })
-                }
-                options={[
+                onChange={(val) => setFilters({ kindFilter: val, offset: 0 })}
+                ariaLabel="Filter by file kind"
+                size="md"
+                fullWidth
+                items={[
                   { value: "all", label: "All" },
                   { value: "rpm", label: "RPM" },
                   { value: "srpm", label: "SRPM" },

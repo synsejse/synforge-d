@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { faCopy, faFolderTree } from "@fortawesome/free-solid-svg-icons";
 import { repositoryQueries } from "../../lib/queries";
 import ErrorMessage from "../../components/common/error-message";
@@ -8,6 +7,7 @@ import { useSession } from "../../components/common/session-provider";
 import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
+import PageHeader from "../../components/ui/page-header";
 
 const REPO_PUBLIC_KEY_NAME = "gpg.key";
 const INSTALL_COMMAND = "sudo dnf install <package-name>";
@@ -71,129 +71,106 @@ function RepositorySetup() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="border-4 border-accent-orange bg-black p-6">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div className="min-w-0 flex-1">
-            <div className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-accent-orange">
-              REPOSITORY_ACCESS
-            </div>
-            <h1 className="mt-2 font-mono text-3xl font-bold uppercase text-white">
-              Add Repo To Fedora
-            </h1>
-            <p className="mt-2 text-sm text-muted">
-              Fedora repo file and basic DNF usage.
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <Link to="/repository">
-              <Button variant="secondary" size="md">
-                <FaIcon icon={faFolderTree} className="mr-2" />
-                Browse Repository
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Add Repo to Fedora"
+        description="Fedora repo file and basic DNF usage."
+        color="orange"
+        actions={[
+          { to: "/repository", label: "Browse Repository", icon: faFolderTree },
+        ]}
+      />
 
-      {/* Repo File */}
-      <div className="border-2 border-white bg-black">
-        <div className="border-b-2 border-edge bg-black px-6 py-5">
-          <h2 className="font-mono text-lg font-bold uppercase text-white">
-            Repo File
-          </h2>
-          <p className="mt-2 text-sm text-muted">
-            Copy this into{" "}
-            <span className="font-mono text-accent-lime">
-              /etc/yum.repos.d/synforge.repo
-            </span>
-            . The current account handle is already filled into{" "}
-            <span className="font-mono text-accent-lime">username</span>; replace{" "}
-            <span className="font-mono text-accent-lime">&lt;password&gt;</span>{" "}
-            with that account's password or another user that has the{" "}
-            <span className="font-mono text-accent-lime">repo</span> permission.
-            Repository signing settings are reflected automatically in the snippet below.
-          </p>
-        </div>
-
-        <div className="border-2 border-accent-lime bg-black m-6">
-          <div className="flex items-center justify-between border-b-2 border-edge bg-surface-alt px-4 py-3">
-            <div className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-accent-lime">
-              synforge.repo
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => copy("repo-file", repoFileContents)}
-            >
-              <FaIcon icon={faCopy} className="mr-2" />
-              {copiedLabel === "repo-file" ? "Copied!" : "Copy"}
-            </Button>
+      {/* Repo File — accented frame only, no double wrapper */}
+      <section className="border-2 border-accent-lime bg-black">
+        <div className="flex items-center justify-between border-b-2 border-edge bg-surface-alt px-4 py-3">
+          <div className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-accent-lime">
+            /etc/yum.repos.d/synforge.repo
           </div>
-          <div className="overflow-x-auto">
-            <pre className="p-6 font-mono text-sm leading-7 text-strong">
-              {repoFileContents.split('\n').map((line, i) => {
-                if (line.startsWith('[')) {
-                  return <div key={i} className="text-accent-orange">{line}</div>;
-                }
-                if (line.includes('=')) {
-                  const [key, ...rest] = line.split('=');
-                  const value = rest.join('=');
-                  return (
-                    <div key={i}>
-                      <span className="text-accent-cyan">{key}</span>
-                      <span className="text-soft">=</span>
-                      <span className="text-accent-lime">{value}</span>
-                    </div>
-                  );
-                }
-                return <div key={i}>{line}</div>;
-              })}
-            </pre>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => copy("repo-file", repoFileContents)}
+          >
+            <FaIcon icon={faCopy} />
+            {copiedLabel === "repo-file" ? "Copied!" : "Copy"}
+          </Button>
         </div>
-      </div>
-
-      {/* Usage Commands */}
-      <div className="border-2 border-white bg-black">
-        <div className="border-b-2 border-edge bg-black px-6 py-5">
-          <h2 className="font-mono text-lg font-bold uppercase text-white">
-            Use Repo
-          </h2>
-          <p className="mt-2 text-sm text-muted">
-            Commands to refresh DNF cache and install packages from this repository.
-          </p>
-        </div>
-
-        <div className="border-2 border-success bg-black m-6">
-          <div className="flex items-center justify-between border-b-2 border-edge bg-surface-alt px-4 py-3">
-            <div className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-success">
-              usage.sh
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                copy(
-                  "usage-command",
-                  `sudo dnf clean all\nsudo dnf makecache\n${INSTALL_COMMAND}`,
-                )
+        <div className="overflow-x-auto">
+          <pre className="p-5 font-mono text-sm leading-7 text-strong">
+            {repoFileContents.split("\n").map((line, i) => {
+              if (line.startsWith("[")) {
+                return (
+                  <div key={i} className="text-accent-orange">
+                    {line}
+                  </div>
+                );
               }
-            >
-              <FaIcon icon={faCopy} className="mr-2" />
-              {copiedLabel === "usage-command" ? "Copied!" : "Copy"}
-            </Button>
-          </div>
-          <div className="overflow-x-auto">
-            <pre className="p-6 font-mono text-sm leading-7">
-              <div><span className="text-accent-orange">$</span> <span className="text-accent-cyan">sudo</span> <span className="text-strong">dnf clean all</span></div>
-              <div><span className="text-accent-orange">$</span> <span className="text-accent-cyan">sudo</span> <span className="text-strong">dnf makecache</span></div>
-              <div><span className="text-accent-orange">$</span> <span className="text-accent-cyan">sudo</span> <span className="text-strong">dnf install</span> <span className="text-success">&lt;package-name&gt;</span></div>
-            </pre>
-          </div>
+              if (line.includes("=")) {
+                const [key, ...rest] = line.split("=");
+                const value = rest.join("=");
+                return (
+                  <div key={i}>
+                    <span className="text-accent-cyan">{key}</span>
+                    <span className="text-soft">=</span>
+                    <span className="text-accent-lime">{value}</span>
+                  </div>
+                );
+              }
+              return <div key={i}>{line}</div>;
+            })}
+          </pre>
         </div>
-      </div>
+        <p className="border-t-2 border-edge bg-black px-4 py-3 text-xs text-soft">
+          Replace{" "}
+          <span className="font-mono text-accent-lime">&lt;password&gt;</span>{" "}
+          with the account password (or any user with the{" "}
+          <span className="font-mono text-accent-lime">repo</span>{" "}
+          permission). Signing settings are reflected automatically.
+        </p>
+      </section>
+
+      {/* Usage commands */}
+      <section className="border-2 border-success bg-black">
+        <div className="flex items-center justify-between border-b-2 border-edge bg-surface-alt px-4 py-3">
+          <div className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-success">
+            usage
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              copy(
+                "usage-command",
+                `sudo dnf clean all\nsudo dnf makecache\n${INSTALL_COMMAND}`,
+              )
+            }
+          >
+            <FaIcon icon={faCopy} />
+            {copiedLabel === "usage-command" ? "Copied!" : "Copy"}
+          </Button>
+        </div>
+        <div className="overflow-x-auto">
+          <pre className="p-5 font-mono text-sm leading-7">
+            <div>
+              <span className="text-accent-orange">$</span>{" "}
+              <span className="text-accent-cyan">sudo</span>{" "}
+              <span className="text-strong">dnf clean all</span>
+            </div>
+            <div>
+              <span className="text-accent-orange">$</span>{" "}
+              <span className="text-accent-cyan">sudo</span>{" "}
+              <span className="text-strong">dnf makecache</span>
+            </div>
+            <div>
+              <span className="text-accent-orange">$</span>{" "}
+              <span className="text-accent-cyan">sudo</span>{" "}
+              <span className="text-strong">dnf install</span>{" "}
+              <span className="text-success">&lt;package-name&gt;</span>
+            </div>
+          </pre>
+        </div>
+      </section>
     </div>
   );
 }

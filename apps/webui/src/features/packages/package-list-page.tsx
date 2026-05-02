@@ -326,7 +326,6 @@ function PackageList() {
     <div className="space-y-8">
       {/* Header */}
       <PageHeader
-        eyebrow="PACKAGE_REGISTRY"
         title="Packages"
         description="Sources, targets, and builds."
         color="lime"

@@ -196,9 +196,23 @@ h1, h2, h3,
   }
 }
 
+/* Brutalist crosshair focus ring — outer lime stroke + offset gap +
+   inner surface sliver (the box-shadow's inset stroke). Reads like a
+   target reticle on small controls without being heavy on big ones.
+   Inputs / textareas / selects fall back to the simpler border-color
+   shift (their Tailwind classes already handle this) since the
+   box-shadow ring clips inside fixed-width form rows. */
 :focus-visible {
-  outline: 2px solid var(--theme-accent-lime);
-  outline-offset: 2px;
+  outline: 3px solid var(--theme-accent-lime);
+  outline-offset: 3px;
+  box-shadow:
+    0 0 0 1px var(--theme-surface) inset,
+    0 0 0 4px var(--theme-accent-lime);
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  box-shadow: none;
 }
 
 /* Brutalist progress glyph — 4 cells fading in/out in sequence. */

@@ -2,14 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { dashboardQueries, statisticsQueries } from "../../lib/queries";
 import { formatBytes } from "../../lib/bytes";
-import { formatDateTime } from "../../lib/datetime";
 import ErrorMessage from "../../components/common/error-message";
 import { usePageVisible } from "../../components/common/page-visibility-provider";
 import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
 import MetricCard from "../../components/ui/metric-card";
-import Badge from "../../components/ui/badge";
 import PageHeader from "../../components/ui/page-header";
+import MiniJobRow from "./mini-job-row";
 import {
   faBoxesStacked,
   faChartLine,
@@ -48,14 +47,6 @@ function Dashboard() {
       />
     );
   }
-
-  const getStatusVariant = (status: string) => {
-    if (status === "succeeded") return "success";
-    if (status === "failed" || status === "timed_out") return "error";
-    if (status === "running") return "lime";
-    if (status === "pending") return "warning";
-    return "default";
-  };
 
   return (
     <div className="space-y-8">
@@ -127,41 +118,9 @@ function Dashboard() {
               </div>
             </div>
           ) : (
-            <div className="grid gap-2">
+            <div className="space-y-2">
               {data.jobs.map((entry) => (
-                <Link
-                  key={entry.job.id}
-                  to="/jobs/view"
-                  search={{ id: entry.job.id }}
-                  className="grid gap-4 border-2 border-edge bg-surface-alt/40 p-5 transition-all duration-100 hover:translate-x-[-1px] hover:translate-y-[-1px] hover:border-edge-strong hover:bg-surface-alt hover:shadow-[3px_3px_0_rgba(255,255,255,0.08)] md:grid-cols-[minmax(0,220px)_minmax(0,130px)_minmax(0,1fr)_auto]"
-                >
-                  <div className="min-w-0">
-                    <div className="font-display text-base font-bold text-white">
-                      {entry.job.package_name}
-                    </div>
-                    <div className="mt-1 truncate font-mono text-xs text-soft">
-                      {entry.job.id}
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <Badge variant="ghost">
-                      {entry.job.mock_chroot}
-                    </Badge>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate font-mono text-sm text-muted">
-                      {entry.job.revision}
-                    </div>
-                    <div className="mt-1 font-mono text-xs text-soft">
-                      {formatDateTime(entry.job.created_at)}
-                    </div>
-                  </div>
-                  <div className="flex items-start justify-start md:justify-end">
-                    <Badge variant={getStatusVariant(entry.job.status)} pulse={entry.job.status === "running"}>
-                      {entry.job.status}
-                    </Badge>
-                  </div>
-                </Link>
+                <MiniJobRow key={entry.job.id} entry={entry} />
               ))}
             </div>
           )}
@@ -199,37 +158,9 @@ function Dashboard() {
               </div>
             </div>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-2">
               {data.liveJobs.map((entry) => (
-                <Link
-                  key={entry.job.id}
-                  to="/jobs/view"
-                  search={{ id: entry.job.id }}
-                  className="group relative block overflow-hidden border-2 border-edge bg-surface-alt/40 px-4 py-3 transition-all duration-100 ease-linear hover:border-success hover:bg-surface-alt"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="absolute inset-y-0 left-0 w-1 bg-success opacity-0 transition-opacity duration-100 group-hover:opacity-100"
-                  />
-                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <div className="font-display font-bold text-white">
-                          {entry.job.package_name}
-                        </div>
-                        <Badge variant="ghost">{entry.job.mock_chroot}</Badge>
-                      </div>
-                      <div className="mt-1 truncate font-mono text-xs text-soft">
-                        {entry.job.revision}
-                      </div>
-                    </div>
-                    <div className="flex md:justify-end">
-                      <Badge variant={getStatusVariant(entry.job.status)} pulse>
-                        {entry.job.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </Link>
+                <MiniJobRow key={entry.job.id} entry={entry} />
               ))}
             </div>
           )}

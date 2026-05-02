@@ -7,8 +7,9 @@ import {
 import { formatBytes } from "../../../lib/bytes";
 import { formatDateTime } from "../../../lib/datetime";
 import type { UserResponse } from "../../../lib/types";
-import ActionButton from "../../../components/ui/action-button";
+import Button from "../../../components/ui/button";
 import FaIcon from "../../../components/ui/fa-icon";
+import Tooltip from "../../../components/ui/tooltip";
 
 interface UserDirectoryProps {
   users: UserResponse[];
@@ -46,7 +47,7 @@ export default function UserDirectory({
           const isCurrentUser = currentUserId === entry.user.id;
           return (
             <article key={entry.user.id} className="flex flex-col gap-5 bg-black px-6 py-5">
-              <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:items-start">
+              <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-3">
                     <h3 className="text-lg font-semibold text-white">
@@ -66,30 +67,39 @@ export default function UserDirectory({
                   </div>
                 </div>
 
-                <div className="flex flex-wrap justify-end gap-2">
-                  <ActionButton
-                    onClick={() => onEdit(entry)}
-                    icon={faPen}
-                    className="py-2 text-sm"
-                  >
-                    Edit
-                  </ActionButton>
-                  <ActionButton
-                    onClick={() => onPassword(entry)}
-                    icon={faKey}
-                    className="py-2 text-sm"
-                  >
-                    Password
-                  </ActionButton>
-                  <ActionButton
-                    onClick={() => onDelete(entry)}
-                    disabled={isCurrentUser}
-                    icon={faTrash}
-                    className="py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                    aria-label={`Delete user ${entry.user.handle}`}
-                  >
-                    Delete
-                  </ActionButton>
+                <div className="flex shrink-0 justify-end gap-1">
+                  <Tooltip content="Edit user" side="top">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => onEdit(entry)}
+                      aria-label={`Edit user ${entry.user.handle}`}
+                    >
+                      <FaIcon icon={faPen} />
+                    </Button>
+                  </Tooltip>
+                  <Tooltip content="Set password" side="top">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => onPassword(entry)}
+                      aria-label={`Set password for ${entry.user.handle}`}
+                    >
+                      <FaIcon icon={faKey} />
+                    </Button>
+                  </Tooltip>
+                  <Tooltip content="Delete user" side="top">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => onDelete(entry)}
+                      disabled={isCurrentUser}
+                      aria-label={`Delete user ${entry.user.handle}`}
+                      className="hover:border-error hover:text-error"
+                    >
+                      <FaIcon icon={faTrash} />
+                    </Button>
+                  </Tooltip>
                 </div>
               </div>
 

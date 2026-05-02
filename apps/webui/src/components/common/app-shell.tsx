@@ -212,14 +212,14 @@ function SidebarHeader({
 
         <div
           className={cn(
-            "min-w-0 flex-1 leading-none",
+            "min-w-0 flex-1 pr-1 leading-none",
             isRail ? "lg:hidden" : "",
           )}
         >
-          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.32em] text-accent-lime">
+          <div className="truncate font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-accent-lime">
             Synforge
           </div>
-          <h1 className="font-display mt-1.5 text-lg font-extrabold uppercase tracking-tighter text-white sm:text-xl">
+          <h1 className="font-display mt-1.5 truncate text-base font-extrabold uppercase tracking-tighter text-white xl:text-lg">
             Build_Control
           </h1>
         </div>

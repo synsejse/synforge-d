@@ -1,5 +1,5 @@
-/* Brutalist Typography - Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter+Tight:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap');
+/* Brutalist Typography — fonts are self-hosted via @fontsource and loaded
+   from main.tsx (Inter Tight, JetBrains Mono, Fira Code). */
 
 @import "tailwindcss";
 

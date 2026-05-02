@@ -1,6 +1,10 @@
 import Ansi from "ansi-to-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { faDownload } from "@fortawesome/free-solid-svg-icons";
+import {
+  faDownload,
+  faMagnifyingGlass,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 import type { CSSProperties, UIEvent } from "react";
 
 import api from "../../../lib/api";
@@ -10,6 +14,7 @@ import EmptyState from "../../../components/ui/empty-state";
 import FaIcon from "../../../components/ui/fa-icon";
 import LoadingBlock from "../../../components/ui/loading-block";
 import { usePageVisible } from "../../../components/common/page-visibility-provider";
+import { useDebounce } from "../../../lib/hooks/use-debounce";
 
 interface Props {
   jobId: string;
@@ -47,6 +52,9 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
       ? MOBILE_LOG_VIEWPORT_HEIGHT
       : DESKTOP_LOG_VIEWPORT_HEIGHT;
   });
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 150);
+  const searchActive = debouncedSearch.trim().length > 0;
   const pollingRef = useRef(false);
   const rawViewportRef = useRef<HTMLDivElement | null>(null);
   const logStatesRef = useRef<Record<string, LogState>>({});
@@ -81,6 +89,12 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
     }
     return lines;
   }, [currentLog?.text]);
+
+  const displayLines = useMemo(() => {
+    if (!searchActive) return logLines;
+    const needle = debouncedSearch.trim().toLowerCase();
+    return logLines.filter((line) => line.toLowerCase().includes(needle));
+  }, [logLines, debouncedSearch, searchActive]);
 
   async function loadManifest() {
     const response = await api.getJobLogManifest(jobId);
@@ -255,6 +269,36 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+            <div className="relative flex w-full items-center sm:w-56">
+              <FaIcon
+                icon={faMagnifyingGlass}
+                className="pointer-events-none absolute left-2 text-soft"
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Filter lines…"
+                aria-label="Filter log lines"
+                className="w-full border-2 border-edge-strong bg-black py-1.5 pl-8 pr-8 font-mono text-xs text-white placeholder:text-soft outline-none focus:border-accent-lime"
+              />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  aria-label="Clear filter"
+                  className="absolute right-2 text-soft transition hover:text-white"
+                >
+                  <FaIcon icon={faXmark} />
+                </button>
+              ) : null}
+            </div>
+            {searchActive ? (
+              <span className="font-mono text-[11px] uppercase tracking-[0.15em] text-soft">
+                {displayLines.length} / {logLines.length} match
+                {displayLines.length === 1 ? "" : "es"}
+              </span>
+            ) : null}
             <label className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.15em] text-muted">
               <input
                 type="checkbox"
@@ -281,18 +325,28 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
           <div className="px-5 py-8">
             <EmptyState>No log content available yet.</EmptyState>
           </div>
+        ) : searchActive && displayLines.length === 0 ? (
+          <div className="px-5 py-8">
+            <EmptyState>
+              No log lines match{" "}
+              <span className="font-mono text-white">
+                "{debouncedSearch.trim()}"
+              </span>
+              .
+            </EmptyState>
+          </div>
         ) : (
           <VirtualizedAnsiLines
-            sourcePath={activeSourcePath ?? "unknown"}
-            lines={logLines.length > 0 ? logLines : ["Waiting for output…"]}
+            sourcePath={`${activeSourcePath ?? "unknown"}${searchActive ? ":filtered" : ""}`}
+            lines={displayLines.length > 0 ? displayLines : ["Waiting for output…"]}
             viewportRef={rawViewportRef}
             initialScrollTop={
-              activeSourcePath
+              activeSourcePath && !searchActive
                 ? (scrollOffsetsRef.current[activeSourcePath] ?? 0)
                 : 0
             }
             onScrollTopChange={(nextScrollTop) => {
-              if (activeSourcePath) {
+              if (activeSourcePath && !searchActive) {
                 scrollOffsetsRef.current[activeSourcePath] = nextScrollTop;
               }
             }}

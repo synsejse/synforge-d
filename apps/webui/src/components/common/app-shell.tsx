@@ -161,7 +161,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
               displayName={session?.user?.display_name ?? null}
               handle={session?.user?.handle ?? null}
               onLogout={handleLogout}
-              onRailToggle={toggleRail}
             />
           </div>
         </aside>
@@ -263,7 +262,6 @@ interface SidebarFooterProps {
   displayName: string | null;
   handle: string | null;
   onLogout: () => void;
-  onRailToggle: () => void;
 }
 
 function SidebarFooter({
@@ -272,7 +270,6 @@ function SidebarFooter({
   displayName,
   handle,
   onLogout,
-  onRailToggle,
 }: SidebarFooterProps) {
   if (isRail) {
     return (
@@ -351,18 +348,6 @@ function SidebarFooter({
             </Button>
           </Tooltip>
         </div>
-      </div>
-      <div className="hidden lg:block border-t-2 border-edge bg-black">
-        <Button
-          variant="subtle"
-          size="sm"
-          fullWidth
-          onClick={onRailToggle}
-          aria-label="Collapse sidebar"
-        >
-          <FaIcon icon={faAnglesLeft} />
-          Collapse
-        </Button>
       </div>
     </div>
   );

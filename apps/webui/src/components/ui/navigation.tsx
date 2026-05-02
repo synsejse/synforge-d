@@ -1,45 +1,97 @@
 import { Link } from "@tanstack/react-router";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 import FaIcon from "./fa-icon";
 import Tooltip from "./tooltip";
+import { cn } from "../../lib/utils";
 
-interface NavItem {
+export interface NavItem {
   href: string;
   label: string;
   icon: IconDefinition;
   description: string;
+  /** When true, render as a regular anchor that opens in a new tab. */
+  external?: boolean;
+}
+
+export interface NavGroup {
+  /** Section label shown in expanded mode; hidden visually in rail mode. */
+  label: string;
+  items: NavItem[];
 }
 
 interface NavigationProps {
-  items: NavItem[];
+  groups: NavGroup[];
+  /** External / reference items pinned at the bottom of the nav. */
+  external?: NavItem[];
   onNavigate?: () => void;
   /** When true, render icon-only on desktop (lg+). Mobile is unaffected. */
   rail?: boolean;
 }
 
 export default function Navigation({
-  items,
+  groups,
+  external,
   onNavigate,
   rail = false,
 }: NavigationProps) {
+  const sections: NavGroup[] = external && external.length > 0
+    ? [...groups, { label: "Reference", items: external }]
+    : groups;
+
   return (
     <nav
-      className="border-y-4 border-edge-strong lg:mt-4 lg:flex-1 lg:border-y-0 lg:overflow-auto"
+      className="border-y-4 border-edge-strong lg:flex-1 lg:border-y-0 lg:overflow-auto"
       aria-label="Primary navigation"
     >
       <div
-        className={`max-h-[52dvh] space-y-2 overflow-y-auto px-3 py-3 lg:max-h-none lg:block lg:space-y-0 lg:overflow-visible lg:py-0 ${rail ? "lg:px-2" : "lg:px-0"}`}
+        className={cn(
+          "max-h-[52dvh] overflow-y-auto py-2 lg:max-h-none lg:block lg:overflow-visible lg:py-3",
+          rail ? "px-2 lg:px-1.5" : "px-2 lg:px-2",
+        )}
       >
-        {items.map((item) => (
-          <NavLink
-            key={item.href}
-            item={item}
-            onNavigate={onNavigate}
+        {sections.map((group, idx) => (
+          <NavSection
+            key={group.label}
+            group={group}
             rail={rail}
+            onNavigate={onNavigate}
+            withDivider={idx > 0}
           />
         ))}
       </div>
     </nav>
+  );
+}
+
+interface NavSectionProps {
+  group: NavGroup;
+  rail: boolean;
+  onNavigate?: () => void;
+  withDivider: boolean;
+}
+
+function NavSection({ group, rail, onNavigate, withDivider }: NavSectionProps) {
+  return (
+    <div
+      className={cn(
+        withDivider && "mt-2 pt-2 lg:mt-3 lg:pt-3",
+        withDivider && "border-t-2 border-edge",
+      )}
+    >
+      {!rail ? (
+        <div className="px-3 pb-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-soft">
+          {group.label}
+        </div>
+      ) : null}
+      <ul className="space-y-1 lg:space-y-0.5">
+        {group.items.map((item) => (
+          <li key={item.href}>
+            <NavLink item={item} onNavigate={onNavigate} rail={rail} />
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -50,58 +102,123 @@ interface NavLinkProps {
 }
 
 function NavLink({ item, onNavigate, rail }: NavLinkProps) {
-  const baseClass =
-    "group flex w-full items-center gap-3 border-2 border-edge bg-black px-3 py-2 transition-all duration-100 hover:border-edge-strong hover:bg-surface-hover";
-  const expandedDesktop =
-    "lg:border-0 lg:border-l-4 lg:border-transparent lg:px-5 lg:py-4";
-  const railDesktop = "lg:border-0 lg:border-l-4 lg:border-transparent lg:px-2 lg:py-3 lg:justify-center";
+  if (item.external) {
+    return (
+      <ExternalNavLink item={item} onNavigate={onNavigate} rail={rail} />
+    );
+  }
+  return <InternalNavLink item={item} onNavigate={onNavigate} rail={rail} />;
+}
 
+const linkBase =
+  "group relative flex w-full items-center gap-3 border-l-[3px] border-transparent bg-transparent text-strong transition-colors hover:bg-surface-hover hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime";
+const linkExpanded = "px-3 py-2";
+const linkRail = "lg:px-0 lg:py-2.5 lg:justify-center";
+const linkActive = "border-accent-lime bg-surface-hover text-white";
+
+function InternalNavLink({ item, onNavigate, rail }: NavLinkProps) {
   const link = (
     <Link
       to={item.href}
       onClick={onNavigate}
       activeOptions={{ exact: item.href === "/" }}
-      className={`${baseClass} ${rail ? railDesktop : expandedDesktop}`}
+      className={cn(linkBase, linkExpanded, rail && linkRail)}
       activeProps={{
         "aria-current": "page",
-        className: `group flex w-full items-center gap-3 border-2 border-accent-lime bg-surface-alt px-3 py-2 transition-all duration-100 lg:border-0 lg:border-l-4 lg:border-accent-lime lg:shadow-[inset_4px_0_0_var(--theme-accent-lime)] ${rail ? "lg:px-2 lg:py-3 lg:justify-center" : "lg:px-5 lg:py-4"}`,
+        className: cn(linkBase, linkExpanded, rail && linkRail, linkActive),
       }}
     >
-      {({ isActive }) => (
-        <>
-          <div
-            className={`flex h-9 w-9 items-center justify-center border-2 text-sm transition-all lg:h-11 lg:w-11 lg:text-lg ${
-              isActive
-                ? "border-accent-lime bg-black text-accent-lime"
-                : "border-edge-strong bg-black text-white group-hover:border-white"
-            }`}
-          >
-            <FaIcon icon={item.icon} />
-          </div>
-          <div className={`leading-tight ${rail ? "lg:hidden" : ""}`}>
-            <div
-              className={`font-display text-xs font-bold uppercase tracking-wide lg:text-sm ${
-                isActive ? "text-white" : "text-strong"
-              }`}
-            >
-              {item.label}
-            </div>
-            <div className="font-mono text-xs text-soft">
-              {item.description}
-            </div>
-          </div>
-        </>
-      )}
+      {({ isActive }) => <NavLinkBody item={item} rail={rail} isActive={isActive} />}
     </Link>
   );
 
-  if (!rail) {
-    return link;
-  }
+  if (!rail) return link;
 
   return (
-    <Tooltip content={item.label} side="right">
+    <Tooltip content={<RailTooltipContent item={item} />} side="right">
       {link}
     </Tooltip>
+  );
+}
+
+function ExternalNavLink({ item, onNavigate, rail }: NavLinkProps) {
+  const anchor = (
+    <a
+      href={item.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={onNavigate}
+      className={cn(linkBase, linkExpanded, rail && linkRail)}
+    >
+      <NavLinkBody item={item} rail={rail} isActive={false} external />
+    </a>
+  );
+
+  if (!rail) return anchor;
+
+  return (
+    <Tooltip content={<RailTooltipContent item={item} />} side="right">
+      {anchor}
+    </Tooltip>
+  );
+}
+
+function NavLinkBody({
+  item,
+  rail,
+  isActive,
+  external = false,
+}: {
+  item: NavItem;
+  rail: boolean;
+  isActive: boolean;
+  external?: boolean;
+}) {
+  return (
+    <>
+      <span
+        className={cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center text-base transition-colors",
+          isActive
+            ? "text-accent-lime"
+            : "text-white group-hover:text-accent-lime",
+        )}
+        aria-hidden="true"
+      >
+        <FaIcon icon={item.icon} />
+      </span>
+      <span className={cn("min-w-0 flex-1 leading-tight", rail && "lg:hidden")}>
+        <span
+          className={cn(
+            "flex items-center gap-1.5 font-display text-sm font-bold uppercase tracking-wide",
+            isActive ? "text-white" : "text-strong",
+          )}
+        >
+          <span className="truncate">{item.label}</span>
+          {external ? (
+            <FaIcon
+              icon={faArrowUpRightFromSquare}
+              className="text-[0.7em] text-soft"
+            />
+          ) : null}
+        </span>
+        <span className="block truncate font-mono text-[11px] text-soft">
+          {item.description}
+        </span>
+      </span>
+    </>
+  );
+}
+
+function RailTooltipContent({ item }: { item: NavItem }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="font-display text-xs font-bold uppercase tracking-[0.12em] text-white">
+        {item.label}
+      </span>
+      <span className="font-mono text-[10px] normal-case tracking-normal text-soft">
+        {item.description}
+      </span>
+    </div>
   );
 }

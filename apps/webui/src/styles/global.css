@@ -196,6 +196,17 @@ h1, h2, h3,
   animation: synforge-glitch 600ms steps(8, end) 1;
 }
 
+/* Live row pulse — newly-live rows in the job list get a soft lime
+   underglow that fades out after 2s. Pairs with a left lime border
+   applied via class. */
+@keyframes synforge-row-live-pulse {
+  0%, 100% { box-shadow: inset 4px 0 0 var(--theme-accent-lime); }
+  50%      { box-shadow: inset 4px 0 0 var(--theme-accent-lime), inset 0 0 0 9999px rgba(191, 255, 0, 0.04); }
+}
+.synforge-row-live {
+  animation: synforge-row-live-pulse 2.4s ease-in-out infinite;
+}
+
 /* Stagger-in: list rows reveal from a 4px lift + 0 opacity. Children of a
    .synforge-stagger element pick up an animation-delay based on a
    --i (index) custom property. Falls back to a no-op when

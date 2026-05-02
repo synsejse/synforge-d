@@ -172,6 +172,11 @@ export default function JobListTable({
         columns={columns}
         rows={jobs}
         rowKey={(entry) => entry.job.id}
+        rowClassName={(entry) =>
+          isLiveJob(entry)
+            ? "synforge-row-live border-l-4 !border-l-accent-lime bg-surface-alt/40"
+            : ""
+        }
         empty={{
           title: mode === "active" ? "No active jobs" : "No jobs found",
           description:

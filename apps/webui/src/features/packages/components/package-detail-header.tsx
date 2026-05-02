@@ -22,7 +22,7 @@ export default function PackageDetailHeader({
   onDelete,
 }: PackageDetailHeaderProps) {
   return (
-    <header className="min-w-0 border-b-2 border-edge-strong pb-4">
+    <header className="sticky top-0 z-20 -mx-3 min-w-0 border-b-2 border-edge-strong bg-black/95 px-3 pb-4 pt-3 backdrop-blur-sm sm:-mx-5 sm:px-5 lg:-mx-8 lg:px-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0 flex-1">
           <h1 className="break-all font-mono text-2xl font-bold uppercase text-white sm:text-3xl">

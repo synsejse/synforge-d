@@ -26,6 +26,7 @@ import api from "../../lib/api";
 import { dashboardQueries } from "../../lib/queries";
 import { useSession } from "./session-provider";
 import { usePageVisible } from "./page-visibility-provider";
+import { KeyboardShortcutsProvider } from "./keyboard-shortcuts";
 
 function buildNavGroups(activeJobCount: number): NavGroup[] {
   return [
@@ -155,6 +156,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     : "lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]";
 
   return (
+    <KeyboardShortcutsProvider>
     <div className="box-border min-h-full w-full max-w-full px-2 py-2 sm:px-3 sm:py-3 lg:h-screen lg:overflow-hidden lg:px-5 lg:py-5">
       <div className={`grid min-h-full min-w-0 gap-3 lg:h-full ${gridCols}`}>
         <aside className="flex min-w-0 flex-col border-4 border-white app-section-band-vertical p-0 shadow-card-md lg:min-h-0">
@@ -206,6 +208,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </main>
       </div>
     </div>
+    </KeyboardShortcutsProvider>
   );
 }
 

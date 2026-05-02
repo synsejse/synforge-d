@@ -27,6 +27,8 @@ import { dashboardQueries } from "../../lib/queries";
 import { useSession } from "./session-provider";
 import { usePageVisible } from "./page-visibility-provider";
 import { KeyboardShortcutsProvider } from "./keyboard-shortcuts";
+import { useTheme } from "./theme-provider";
+import { faMoon, faSun } from "@fortawesome/free-solid-svg-icons";
 
 function buildNavGroups(activeJobCount: number): NavGroup[] {
   return [
@@ -402,6 +404,10 @@ function SidebarFooter({
   handle,
   onLogout,
 }: SidebarFooterProps) {
+  const { theme, toggle: toggleTheme } = useTheme();
+  const themeIcon = theme === "dark" ? faSun : faMoon;
+  const themeLabel = theme === "dark" ? "Switch to print theme" : "Switch to dark theme";
+
   if (isRail) {
     return (
       <div className="border-t-4 border-edge-strong bg-black lg:mt-auto">
@@ -427,6 +433,17 @@ function SidebarFooter({
             >
               {userInitial}
             </div>
+          </Tooltip>
+          <Tooltip content={themeLabel} side="right">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              aria-label={themeLabel}
+              className="text-soft hover:border-accent-lime hover:text-accent-lime"
+            >
+              <FaIcon icon={themeIcon} />
+            </Button>
           </Tooltip>
           <Tooltip content="Sign out" side="right">
             <Button
@@ -467,6 +484,17 @@ function SidebarFooter({
               </div>
             ) : null}
           </div>
+          <Tooltip content={themeLabel} side="top">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              aria-label={themeLabel}
+              className="shrink-0 text-soft hover:border-accent-lime hover:text-accent-lime"
+            >
+              <FaIcon icon={themeIcon} />
+            </Button>
+          </Tooltip>
           <Tooltip content="Sign out" side="top">
             <Button
               variant="ghost"

@@ -2,11 +2,9 @@ import { Suspense, lazy, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import api from "../../../lib/api";
-import { API_BASE } from "../../../lib/api/client";
 import { jobsQueries } from "../../../lib/queries";
 import { formatDateTime } from "../../../lib/datetime";
 import type {
-  BuildArtifact,
   JobResourceUsageSample,
   ServerHardwareResponse,
 } from "../../../lib/types";
@@ -21,9 +19,9 @@ import Button from "../../../components/ui/button";
 import Breadcrumbs from "../../../components/ui/breadcrumbs";
 import MetaPair from "../../../components/ui/meta-pair";
 import Tabs from "../../../components/ui/tabs";
+import ArtifactCard from "./artifact-card";
 import {
   faArrowLeft,
-  faDownload,
   faRotate,
   faStop,
   faTrash,
@@ -288,46 +286,14 @@ export default function JobDetail({ jobId }: Props) {
           </Suspense>
         ) : null}
         {activeTab === "artifacts" ? (
-          <div className="grid gap-2">
-            {jobQuery.data.artifacts.map((artifact) => {
-              const signingBadge = getArtifactSigningBadge(artifact);
-              return (
-                <div
-                  key={`${artifact.id}:${artifact.file}`}
-                  className="flex flex-col gap-4 border-2 border-edge bg-surface-alt/40 px-4 py-4 transition-all hover:border-edge-strong hover:bg-surface-alt sm:flex-row sm:items-center sm:justify-between sm:px-5"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="break-all font-mono text-sm text-white">
-                      {artifact.file}
-                    </div>
-                    <div className="mt-1 font-mono text-xs text-soft">
-                      {artifact.size_bytes.toLocaleString()} bytes
-                    </div>
-                  </div>
-                  <div className="grid gap-2 sm:flex sm:items-center sm:gap-3">
-                    <Badge variant={signingBadge.variant} title={signingBadge.title}>
-                      {signingBadge.label}
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full sm:w-auto"
-                      onClick={() => {
-                        const encodedFile = artifact.file
-                          .split("/")
-                          .map((segment) => encodeURIComponent(segment))
-                          .join("/");
-                        const url = `${API_BASE}/api/v1/jobs/${encodeURIComponent(jobId)}/artifacts/${encodedFile}/content`;
-                        window.open(url, "_blank");
-                      }}
-                    >
-                      <FaIcon icon={faDownload} />
-                      Download
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="space-y-3">
+            {jobQuery.data.artifacts.map((artifact) => (
+              <ArtifactCard
+                key={`${artifact.id}:${artifact.file}`}
+                jobId={jobId}
+                artifact={artifact}
+              />
+            ))}
           </div>
         ) : null}
       </Tabs>
@@ -375,20 +341,6 @@ function getStatusVariant(status: string) {
   if (status === "running") return "lime" as const;
   if (status === "pending") return "warning" as const;
   return "default" as const;
-}
-
-function getArtifactSigningBadge(artifact: BuildArtifact) {
-  if (artifact.signing_status === "signed") {
-    return { label: "SIGNED", variant: "success" as const, title: undefined };
-  }
-  if (artifact.signing_status === "failed") {
-    return {
-      label: "SIGN FAILED",
-      variant: "error" as const,
-      title: artifact.signing_error_message || "Artifact signing failed",
-    };
-  }
-  return { label: "NOT SIGNED", variant: "warning" as const, title: undefined };
 }
 
 function formatMemory(bytes: number): string {

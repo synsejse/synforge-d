@@ -18,6 +18,7 @@ import {
   summarizePackageStatus,
   targetStatus,
 } from "./package-state";
+import { packageAccent } from "./package-accent";
 
 interface PackageCardProps {
   entry: PackageResponse;
@@ -49,12 +50,20 @@ export default function PackageCard({
   const targets = entry.state.targets ?? [];
   const version = `${entry.package.version}-${entry.package.release}`;
 
+  const accent = packageAccent(entry.package.name);
+
   return (
     <article
-      className={`bg-black transition-colors ${selected ? "border-2 border-accent-lime" : "border-2 border-edge-strong"}`}
+      className={`relative bg-black transition-colors ${selected ? "border-2 border-accent-lime" : "border-2 border-edge-strong"}`}
     >
+      {/* Per-package accent rail — deterministic hue from the name. */}
+      <span
+        aria-hidden="true"
+        className="absolute inset-y-0 left-0 w-1"
+        style={{ background: accent }}
+      />
       {/* Top: identity, status, meta, actions */}
-      <div className="flex flex-col gap-3 px-4 py-3 sm:px-5 sm:py-4 lg:flex-row lg:items-start lg:gap-4">
+      <div className="flex flex-col gap-3 pl-4 pr-4 py-3 sm:pl-6 sm:pr-5 sm:py-4 lg:flex-row lg:items-start lg:gap-4">
         {selectable ? (
           <input
             type="checkbox"

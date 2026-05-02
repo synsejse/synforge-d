@@ -1,6 +1,7 @@
 import { faHammer, faRotate, faTrash } from "@fortawesome/free-solid-svg-icons";
 import Button from "../../../components/ui/button";
 import FaIcon from "../../../components/ui/fa-icon";
+import { packageAccent } from "./package-accent";
 
 interface PackageDetailHeaderProps {
   packageName: string;
@@ -23,7 +24,13 @@ export default function PackageDetailHeader({
 }: PackageDetailHeaderProps) {
   return (
     <header className="sticky top-0 z-20 -mx-3 min-w-0 border-b-2 border-edge-strong bg-black/95 px-3 pb-4 pt-3 backdrop-blur-sm sm:-mx-5 sm:px-5 lg:-mx-8 lg:px-8">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex items-stretch gap-4">
+        <span
+          aria-hidden="true"
+          className="shrink-0 w-1"
+          style={{ background: packageAccent(packageName) }}
+        />
+        <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0 flex-1">
           <h1 className="break-all font-mono text-2xl font-bold uppercase text-white sm:text-3xl">
             {packageName}
@@ -68,6 +75,7 @@ export default function PackageDetailHeader({
             {deleting ? "Deleting…" : "Delete"}
           </Button>
         </div>
+      </div>
       </div>
     </header>
   );

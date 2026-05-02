@@ -291,14 +291,6 @@ html .app-chrome {
       rgba(255, 255, 255, 0.015) 2px,
       rgba(255, 255, 255, 0.015) 4px
     ),
-    /* Diagonal stripes - top left accent */
-    repeating-linear-gradient(
-      135deg,
-      transparent 0px,
-      transparent 40px,
-      rgba(191, 255, 0, 0.02) 40px,
-      rgba(191, 255, 0, 0.02) 80px
-    ),
     /* Vertical accent bars */
     linear-gradient(
       90deg,

@@ -12,6 +12,10 @@ export interface NavItem {
   description: string;
   /** When true, render as a regular anchor that opens in a new tab. */
   external?: boolean;
+  /** Optional badge — small bracketed count or short text on the right. */
+  badge?: number | string | null;
+  /** Visual treatment of the badge. Defaults to neutral. */
+  badgeTone?: "lime" | "orange" | "neutral";
 }
 
 export interface NavGroup {
@@ -201,12 +205,54 @@ function NavLinkBody({
               className="text-[0.7em] text-soft"
             />
           ) : null}
+          {item.badge != null && item.badge !== 0 && item.badge !== "" ? (
+            <NavBadge value={item.badge} tone={item.badgeTone ?? "neutral"} />
+          ) : null}
         </span>
         <span className="block truncate font-mono text-[11px] text-soft">
           {item.description}
         </span>
       </span>
+      {/* Rail mode: badge as a tiny dot in the corner of the icon. */}
+      {rail && item.badge != null && item.badge !== 0 && item.badge !== "" ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "lg:absolute lg:top-1.5 lg:right-1.5 hidden lg:block h-2 w-2",
+            item.badgeTone === "orange"
+              ? "bg-accent-orange"
+              : item.badgeTone === "lime"
+                ? "bg-accent-lime"
+                : "bg-muted",
+          )}
+        />
+      ) : null}
     </>
+  );
+}
+
+function NavBadge({
+  value,
+  tone,
+}: {
+  value: number | string;
+  tone: "lime" | "orange" | "neutral";
+}) {
+  const toneClass =
+    tone === "orange"
+      ? "border-accent-orange text-accent-orange"
+      : tone === "lime"
+        ? "border-accent-lime text-accent-lime"
+        : "border-edge-strong text-soft";
+  return (
+    <span
+      className={cn(
+        "ml-auto shrink-0 border bg-black px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-[0.16em]",
+        toneClass,
+      )}
+    >
+      {value}
+    </span>
   );
 }
 

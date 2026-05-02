@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   faAnglesLeft,
   faAnglesRight,
@@ -22,33 +23,44 @@ import FaIcon from "../ui/fa-icon";
 import Tooltip from "../ui/tooltip";
 import { cn } from "../../lib/utils";
 import api from "../../lib/api";
+import { dashboardQueries } from "../../lib/queries";
 import { useSession } from "./session-provider";
+import { usePageVisible } from "./page-visibility-provider";
 
-const navGroups: NavGroup[] = [
-  {
-    label: "Operations",
-    items: [
-      { href: "/", label: "Overview", icon: faGaugeHigh, description: "System summary" },
-      { href: "/jobs", label: "Jobs", icon: faChartLine, description: "Runs and live traces" },
-      { href: "/statistics", label: "Statistics", icon: faChartSimple, description: "Telemetry and cache" },
-    ],
-  },
-  {
-    label: "Build",
-    items: [
-      { href: "/packages", label: "Packages", icon: faBoxesStacked, description: "Sources and history" },
-      { href: "/repository", label: "Repository", icon: faFolderTree, description: "Published files" },
-      { href: "/signing", label: "Signing", icon: faKey, description: "GPG metadata signing" },
-    ],
-  },
-  {
-    label: "Admin",
-    items: [
-      { href: "/users", label: "Users", icon: faUsers, description: "Accounts and permissions" },
-      { href: "/settings", label: "Settings", icon: faSliders, description: "Daemon config" },
-    ],
-  },
-];
+function buildNavGroups(activeJobCount: number): NavGroup[] {
+  return [
+    {
+      label: "Operations",
+      items: [
+        { href: "/", label: "Overview", icon: faGaugeHigh, description: "System summary" },
+        {
+          href: "/jobs",
+          label: "Jobs",
+          icon: faChartLine,
+          description: "Runs and live traces",
+          badge: activeJobCount > 0 ? activeJobCount : null,
+          badgeTone: "lime",
+        },
+        { href: "/statistics", label: "Statistics", icon: faChartSimple, description: "Telemetry and cache" },
+      ],
+    },
+    {
+      label: "Build",
+      items: [
+        { href: "/packages", label: "Packages", icon: faBoxesStacked, description: "Sources and history" },
+        { href: "/repository", label: "Repository", icon: faFolderTree, description: "Published files" },
+        { href: "/signing", label: "Signing", icon: faKey, description: "GPG metadata signing" },
+      ],
+    },
+    {
+      label: "Admin",
+      items: [
+        { href: "/users", label: "Users", icon: faUsers, description: "Accounts and permissions" },
+        { href: "/settings", label: "Settings", icon: faSliders, description: "Daemon config" },
+      ],
+    },
+  ];
+}
 
 const externalNav: NavItem[] = [
   {
@@ -124,6 +136,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return trimmed ? trimmed.charAt(0).toUpperCase() : "?";
   }, [session]);
 
+  // Live system pulse — shared with the sidebar tick + nav badges. Reuses
+  // the dashboard overview query so this fetch dedups with the dashboard
+  // page's own poll when the user is there.
+  const pageVisible = usePageVisible();
+  const overviewQuery = useQuery({
+    ...dashboardQueries.overview(),
+    refetchInterval: pageVisible ? 15_000 : false,
+  });
+  const activeJobCount = overviewQuery.data?.activeJobCount ?? 0;
+  const navGroups = useMemo(
+    () => buildNavGroups(activeJobCount),
+    [activeJobCount],
+  );
+
   const gridCols = isRail
     ? "lg:grid-cols-[64px_minmax(0,1fr)]"
     : "lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]";
@@ -153,6 +179,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
               onNavigate={() => {
                 if (!isDesktop) setMobileNavOpen(false);
               }}
+            />
+
+            <SidebarSystemTick
+              isRail={isRail}
+              activeJobCount={activeJobCount}
+              live={pageVisible}
             />
 
             <SidebarFooter
@@ -262,6 +294,102 @@ interface SidebarFooterProps {
   displayName: string | null;
   handle: string | null;
   onLogout: () => void;
+}
+
+interface SidebarSystemTickProps {
+  isRail: boolean;
+  activeJobCount: number;
+  /** Whether the page is visible — pauses the clock animation when hidden. */
+  live: boolean;
+}
+
+function SidebarSystemTick({
+  isRail,
+  activeJobCount,
+  live,
+}: SidebarSystemTickProps) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    if (!live) return;
+    const id = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(id);
+  }, [live]);
+
+  const clock = formatClock(now);
+  const isBuilding = activeJobCount > 0;
+
+  if (isRail) {
+    return (
+      <div className="hidden lg:block border-t-2 border-edge bg-black">
+        <Tooltip
+          content={
+            <div className="flex flex-col gap-0.5">
+              <span className="font-display text-xs font-bold uppercase tracking-[0.12em] text-white">
+                {isBuilding ? `Building · ${activeJobCount} active` : "Idle"}
+              </span>
+              <span className="font-mono text-[10px] tracking-normal text-soft">
+                Local time {clock}
+              </span>
+            </div>
+          }
+          side="right"
+        >
+          <div
+            className="flex flex-col items-center gap-1 px-2 py-2"
+            aria-label={isBuilding ? `${activeJobCount} active builds` : "Idle"}
+          >
+            <span
+              className={cn(
+                "h-2 w-2",
+                isBuilding ? "bg-accent-lime animate-pulse" : "bg-soft",
+              )}
+            />
+            <span className="font-mono text-[9px] tabular-nums tracking-wide text-soft">
+              {clock.slice(0, 5)}
+            </span>
+          </div>
+        </Tooltip>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-t-2 border-edge bg-black px-3 py-2">
+      <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.18em]">
+        <div className="flex items-center gap-2">
+          <span
+            aria-hidden="true"
+            className={cn(
+              "h-2 w-2 shrink-0",
+              isBuilding ? "bg-accent-lime animate-pulse" : "bg-soft",
+            )}
+          />
+          <span
+            className={cn(
+              "font-bold",
+              isBuilding ? "text-accent-lime" : "text-soft",
+            )}
+          >
+            {isBuilding ? `Building · ${activeJobCount}` : "Idle"}
+          </span>
+        </div>
+        <span className="tabular-nums text-soft">{clock}</span>
+        {live ? (
+          <span
+            aria-hidden="true"
+            className="inline-block h-3 w-[2px] animate-pulse bg-accent-lime"
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function formatClock(date: Date): string {
+  const h = date.getHours().toString().padStart(2, "0");
+  const m = date.getMinutes().toString().padStart(2, "0");
+  const s = date.getSeconds().toString().padStart(2, "0");
+  return `${h}:${m}:${s}`;
 }
 
 function SidebarFooter({

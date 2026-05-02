@@ -26,8 +26,10 @@ export interface SegmentedControlProps<TValue extends string> {
 
 const sizeClasses: Record<NonNullable<SegmentedControlProps<string>["size"]>, string> = {
   sm: "px-3 py-1.5 text-xs tracking-[0.16em]",
-  md: "px-4 py-2 text-xs tracking-[0.18em]",
-  lg: "px-5 py-2.5 text-sm tracking-[0.18em]",
+  // md matches form-input height (~44px) so a kind/status segmented sits
+  // level with sibling textboxes in a filter row.
+  md: "px-4 py-3 text-xs tracking-[0.18em]",
+  lg: "px-5 py-3 text-sm tracking-[0.18em]",
 };
 
 const toneActiveClasses: Record<SegmentedTone, string> = {

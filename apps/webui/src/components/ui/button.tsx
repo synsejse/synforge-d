@@ -59,7 +59,9 @@ export const buttonVariants = cva(
       size: {
         xs: "px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] gap-1",
         sm: "px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em]",
-        md: "px-4 py-2 text-sm font-semibold",
+        // md matches form-input height (px-4 py-2.5 text-sm = ~44px) so a
+        // submit button in a filter row aligns with its sibling textboxes.
+        md: "px-4 py-2.5 text-sm font-semibold",
         lg: "px-5 py-3 text-base font-bold",
         "icon-sm": "h-8 w-8 p-0",
         icon: "h-9 w-9 p-0",

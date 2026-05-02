@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { dashboardQueries } from "../../lib/queries";
+import { dashboardQueries, statisticsQueries } from "../../lib/queries";
 import { formatBytes } from "../../lib/bytes";
 import { formatDateTime } from "../../lib/datetime";
 import ErrorMessage from "../../components/common/error-message";
@@ -26,6 +26,16 @@ function Dashboard() {
     ...dashboardQueries.overview(),
     refetchInterval: visible ? DASHBOARD_REFRESH_INTERVAL_MS : false,
   });
+  const timeseriesQuery = useQuery({
+    ...statisticsQueries.timeseries("24h"),
+    refetchInterval: visible ? 60_000 : false,
+  });
+  const jobsSparkline = (timeseriesQuery.data?.jobs.points ?? []).map(
+    (p) => p.succeeded + p.failed,
+  );
+  const syncSparkline = (timeseriesQuery.data?.sync.points ?? []).map(
+    (p) => p.succeeded + p.failed,
+  );
 
   if (isPending) {
     return <LoadingBlock label="Loading overview…" lines={4} />;
@@ -68,6 +78,7 @@ function Dashboard() {
           value={data.packageCount}
           detail="Registered sources"
           icon={<FaIcon icon={faBoxesStacked} />}
+          sparkline={syncSparkline.length > 0 ? syncSparkline : null}
         />
         <MetricCard
           label="Enabled"
@@ -77,11 +88,12 @@ function Dashboard() {
           icon={<FaIcon icon={faCircleCheck} />}
         />
         <MetricCard
-          label="Active_Jobs"
+          label="Active jobs"
           value={data.activeJobCount}
           detail="Pending or running"
           variant="terminal"
           icon={<FaIcon icon={faRocket} />}
+          sparkline={jobsSparkline.length > 0 ? jobsSparkline : null}
         />
         <MetricCard
           label="Stored"

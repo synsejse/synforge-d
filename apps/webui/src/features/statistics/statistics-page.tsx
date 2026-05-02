@@ -83,6 +83,13 @@ function Statistics() {
     mirrorCache.tracked_mirrors - mirrorCache.stale_mirrors,
   );
 
+  const jobsSparkline = (timeseriesQuery.data?.jobs.points ?? []).map(
+    (p) => p.succeeded + p.failed,
+  );
+  const syncSparkline = (timeseriesQuery.data?.sync.points ?? []).map(
+    (p) => p.succeeded + p.failed,
+  );
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -108,6 +115,7 @@ function Statistics() {
           detail="Pending + running"
           variant="terminal"
           icon={<FaIcon icon={faRocket} />}
+          sparkline={jobsSparkline.length > 0 ? jobsSparkline : null}
         />
         <MetricCard
           label="Sync 24h"
@@ -119,6 +127,7 @@ function Statistics() {
           }
           variant={data.syncMetrics.failed_24h > 0 ? "error" : "success"}
           icon={<FaIcon icon={faTriangleExclamation} />}
+          sparkline={syncSparkline.length > 0 ? syncSparkline : null}
         />
         <MetricCard
           label="Stored bytes"

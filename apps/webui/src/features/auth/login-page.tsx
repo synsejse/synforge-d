@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearch } from "@tanstack/react-router";
 import api, { ApiClientError } from "../../lib/api";
 import { sessionQueries } from "../../lib/queries/session";
+import Button from "../../components/ui/button";
 
 function safeNext(next: string | undefined): string {
   if (next && next.startsWith("/") && !next.startsWith("//")) {
@@ -112,13 +113,15 @@ export default function LoginPage() {
               {error}
             </p>
           ) : null}
-          <button
+          <Button
             type="submit"
-            disabled={loginMutation.isPending}
-            className="w-full border-2 border-accent-lime bg-accent-lime px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72] disabled:opacity-60"
+            variant="primary"
+            size="lg"
+            fullWidth
+            loading={loginMutation.isPending}
           >
             {loginMutation.isPending ? "Signing in…" : "Enter Console"}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

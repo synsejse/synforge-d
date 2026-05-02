@@ -13,8 +13,8 @@ import { usersQueries } from "../../lib/queries";
 import type { UserResponse } from "../../lib/types";
 import ErrorMessage from "../../components/common/error-message";
 import { useSession } from "../../components/common/session-provider";
+import Button from "../../components/ui/button";
 import EmptyState from "../../components/ui/empty-state";
-import FaIcon from "../../components/ui/fa-icon";
 import LoadingBlock from "../../components/ui/loading-block";
 import PageHeader from "../../components/ui/page-header";
 import { PermissionGroup, TextField, ToggleField } from "./components/form-fields";
@@ -498,23 +498,23 @@ function Users() {
               </div>
             </div>
             <div className="flex justify-end gap-3">
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={closeModal}
                 disabled={submitting}
-                className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-strong transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt"
               >
                 Cancel
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                iconLeft={faTrash}
                 onClick={() => void handleDelete()}
-                disabled={submitting}
-                className="border-2 border-error bg-error px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:brightness-110 disabled:opacity-70"
+                loading={submitting}
               >
-                <FaIcon icon={faTrash} className="mr-2" />
                 {submitting ? "Deleting…" : "Delete user"}
-              </button>
+              </Button>
             </div>
           </div>
         </UserModalShell>

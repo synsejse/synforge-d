@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Button from "../ui/button";
 
 interface SelectionDialogProps {
   title: string;
@@ -21,13 +22,9 @@ export default function SelectionDialog({
             <h3 className="font-mono text-xl font-bold uppercase text-white">{title}</h3>
             <p className="mt-2 text-sm text-muted">{subtitle}</p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="border-2 border-edge-strong bg-black px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt"
-          >
+          <Button variant="ghost" size="sm" onClick={onClose}>
             Close
-          </button>
+          </Button>
         </div>
         <div className="px-6 py-6">{children}</div>
       </div>

@@ -8,6 +8,7 @@ import type {
   ConfigFieldDescriptor,
   SetupInitializeRequest,
 } from "../../lib/types";
+import Button from "../../components/ui/button";
 
 type Step = "config" | "signing" | "admin";
 type SigningMode = "generate" | "import";
@@ -29,12 +30,6 @@ const inputClass =
 
 const labelTitleClass =
   "mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted";
-
-const primaryButtonClass =
-  "border-2 border-accent-lime bg-accent-lime px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72]";
-
-const secondaryButtonClass =
-  "border-2 border-edge-strong bg-black px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-strong transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt";
 
 interface AdminForm {
   handle: string;
@@ -320,25 +315,26 @@ export default function SetupPage() {
 
           <div className="mt-4 flex items-center justify-between gap-3">
             {step !== "config" ? (
-              <button type="button" onClick={goBack} className={secondaryButtonClass}>
+              <Button type="button" variant="ghost" size="md" onClick={goBack}>
                 Back
-              </button>
+              </Button>
             ) : null}
             <div className="ml-auto flex items-center gap-3">
               {step !== "admin" ? (
-                <button type="button" onClick={goNext} className={primaryButtonClass}>
+                <Button type="button" variant="primary" size="md" onClick={goNext}>
                   Continue
-                </button>
+                </Button>
               ) : (
-                <button
+                <Button
                   type="submit"
-                  disabled={initializeMutation.isPending}
-                  className={`${primaryButtonClass} disabled:opacity-60`}
+                  variant="primary"
+                  size="md"
+                  loading={initializeMutation.isPending}
                 >
                   {initializeMutation.isPending
                     ? "Initializing…"
                     : "Initialize Synforge"}
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -408,13 +404,6 @@ function SigningStep({
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onFileChange: (file: File) => void;
 }) {
-  const buttonBase =
-    "border-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px]";
-  const activeClass =
-    "border-accent-lime bg-accent-lime text-black hover:bg-[#d8ff72]";
-  const idleClass =
-    "border-edge-strong bg-black text-strong hover:border-white hover:bg-surface-alt";
-
   const keyNote = !signing.enabled
     ? "Key actions are disabled while signing is disabled."
     : signing.mode === "import"
@@ -437,13 +426,14 @@ function SigningStep({
             <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted">
               Signing State
             </p>
-            <button
+            <Button
               type="button"
+              variant={signing.enabled ? "primary" : "ghost"}
+              size="md"
               onClick={onToggle}
-              className={`${buttonBase} ${signing.enabled ? activeClass : idleClass}`}
             >
               {signing.enabled ? "Disable Signing" : "Enable Signing"}
-            </button>
+            </Button>
             <p className="mt-2 font-mono text-xs text-soft">
               {signing.enabled
                 ? "Signing will be enabled after initialization."
@@ -456,26 +446,32 @@ function SigningStep({
               Key Lifecycle
             </p>
             <div className="flex flex-wrap gap-3">
-              <button
+              <Button
                 type="button"
+                variant={
+                  signing.enabled && signing.mode === "generate"
+                    ? "primary"
+                    : "ghost"
+                }
+                size="md"
                 disabled={!signing.enabled}
                 onClick={onSelectGenerate}
-                className={`${buttonBase} ${
-                  signing.enabled && signing.mode === "generate" ? activeClass : idleClass
-                }`}
               >
                 Generate Key
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant={
+                  signing.enabled && signing.mode === "import"
+                    ? "primary"
+                    : "ghost"
+                }
+                size="md"
                 disabled={!signing.enabled}
                 onClick={onSelectImport}
-                className={`${buttonBase} ${
-                  signing.enabled && signing.mode === "import" ? activeClass : idleClass
-                }`}
               >
                 Import Key File
-              </button>
+              </Button>
             </div>
             <input
               ref={fileInputRef}

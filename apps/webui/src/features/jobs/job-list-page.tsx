@@ -26,6 +26,7 @@ import { useServerHardware } from "../../components/common/server-hardware-provi
 import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
+import SegmentedControl from "../../components/ui/segmented-control";
 import Select from "../../components/ui/select";
 import PageHeader from "../../components/ui/page-header";
 import PaginationControls from "../../components/common/pagination-controls";
@@ -243,36 +244,17 @@ function JobList() {
         <div className="border-b-4 border-edge-strong app-section-band px-6 py-4">
           <div className="flex flex-wrap items-center gap-4">
             {/* Mode Toggle */}
-            <div
-              className="flex border-2 border-edge-strong"
-              role="group"
-              aria-label="Job view mode"
-            >
-              <button
-                type="button"
-                onClick={() => setMode("history")}
-                aria-pressed={filters.mode === "history"}
-                className={`px-5 py-2.5 font-mono text-sm font-bold uppercase tracking-wider transition-all ${
-                  filters.mode === "history"
-                    ? "bg-accent-lime text-black"
-                    : "bg-black text-muted hover:text-white"
-                }`}
-              >
-                History
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("active")}
-                aria-pressed={filters.mode === "active"}
-                className={`border-l-2 border-edge-strong px-5 py-2.5 font-mono text-sm font-bold uppercase tracking-wider transition-all ${
-                  filters.mode === "active"
-                    ? "bg-success text-black"
-                    : "bg-black text-muted hover:text-white"
-                }`}
-              >
-                Active
-              </button>
-            </div>
+            <SegmentedControl<JobViewMode>
+              value={filters.mode}
+              onChange={setMode}
+              ariaLabel="Job view mode"
+              size="lg"
+              items={[
+                { value: "history", label: "History", tone: "lime" },
+                { value: "active", label: "Active", tone: "success" },
+              ]}
+            />
+
 
             {/* Status Filter (history only) */}
             {filters.mode === "history" && (

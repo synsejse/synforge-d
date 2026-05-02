@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { faAngleLeft, faAngleRight } from "@fortawesome/free-solid-svg-icons";
+import Button from "../ui/button";
 
 interface PaginationControlsProps {
   onPrevious: () => void;
@@ -19,24 +21,30 @@ export default function PaginationControls({
     <div
       className={`flex items-center gap-3 ${summary ? "justify-between" : "justify-end"}`}
     >
-      {summary ? <div className="font-mono text-xs uppercase tracking-[0.12em] text-muted">{summary}</div> : null}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
+      {summary ? (
+        <div className="font-mono text-xs uppercase tracking-[0.12em] text-muted">
+          {summary}
+        </div>
+      ) : null}
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          iconLeft={faAngleLeft}
           onClick={onPrevious}
           disabled={previousDisabled}
-          className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt disabled:cursor-not-allowed disabled:opacity-50"
         >
           Previous
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          iconRight={faAngleRight}
           onClick={onNext}
           disabled={nextDisabled}
-          className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.12em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt disabled:cursor-not-allowed disabled:opacity-50"
         >
           Next
-        </button>
+        </Button>
       </div>
     </div>
   );

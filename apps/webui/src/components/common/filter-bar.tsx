@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { faFilter, faXmark } from "@fortawesome/free-solid-svg-icons";
+import Button from "../ui/button";
 import FaIcon from "../ui/fa-icon";
 
 interface FilterBarProps {
@@ -54,14 +55,14 @@ export default function FilterBar({
           ) : null}
         </button>
         {showClear ? (
-          <button
-            type="button"
+          <Button
+            variant="subtle"
+            size="xs"
+            iconLeft={faXmark}
             onClick={onClear}
-            className="flex items-center gap-1 font-mono text-xs uppercase tracking-[0.15em] text-muted transition hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime"
           >
-            <FaIcon icon={faXmark} />
             Clear
-          </button>
+          </Button>
         ) : null}
       </div>
 
@@ -75,14 +76,15 @@ export default function FilterBar({
         {(showClear || trailing) ? (
           <div className="mt-4 flex flex-wrap items-center justify-end gap-3 border-t-2 border-edge pt-4">
             {showClear ? (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
+                iconLeft={faXmark}
                 onClick={onClear}
-                className="hidden md:flex items-center gap-2 border-2 border-edge-strong bg-black px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition hover:border-white hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime"
+                className="hidden md:inline-flex"
               >
-                <FaIcon icon={faXmark} />
                 Clear filters
-              </button>
+              </Button>
             ) : null}
             {trailing}
           </div>

@@ -1,12 +1,13 @@
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import { Link, type LinkProps } from "@tanstack/react-router";
+import type { LinkProps } from "@tanstack/react-router";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import FaIcon from "./fa-icon";
+import Button from "./button";
+import ButtonLink from "./button-link";
 
 interface CommonProps {
   icon?: IconDefinition;
   children: ReactNode;
-  variant?: "default" | "primary";
+  variant?: "default" | "primary" | "danger";
   className?: string;
 }
 
@@ -21,40 +22,62 @@ type ButtonActionProps = CommonProps &
     to?: never;
   };
 
-const baseClasses =
-  "inline-flex min-w-[96px] items-center justify-center gap-2 border-2 px-3 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] transition-all duration-100 ease-linear sm:min-w-[108px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime focus-visible:ring-offset-2 focus-visible:ring-offset-black";
+const variantMap = {
+  default: "ghost",
+  primary: "primary",
+  danger: "danger",
+} as const;
 
-function variantClasses(variant: CommonProps["variant"] = "default") {
-  return variant === "primary"
-    ? "border-accent-lime bg-accent-lime text-black shadow-brutal-sm hover:translate-x-[-1px] hover:translate-y-[-1px]"
-    : "border-edge-strong bg-black text-strong hover:border-white hover:bg-surface-alt";
-}
-
-export default function ActionButton(props: LinkActionProps | ButtonActionProps) {
-  const classes = [baseClasses, variantClasses(props.variant), props.className]
-    .filter(Boolean)
-    .join(" ");
-
-  const content = (
-    <>
-      {props.icon ? <FaIcon icon={props.icon} className="mr-2 text-[0.95em]" /> : null}
-      {props.children}
-    </>
-  );
+/**
+ * Thin compatibility shim: existing callers keep using `<ActionButton>`,
+ * but rendering now delegates to the unified `<Button>` / `<ButtonLink>`
+ * primitives so visual updates flow through one place.
+ *
+ * Prefer `<Button>` or `<ButtonLink>` directly in new code.
+ */
+export default function ActionButton(
+  props: LinkActionProps | ButtonActionProps,
+) {
+  const variant = variantMap[props.variant ?? "default"];
 
   if ("to" in props && props.to !== undefined) {
-    const { icon: _icon, variant: _variant, className: _className, children: _children, ...linkProps } = props;
+    const {
+      icon,
+      variant: _variant,
+      className,
+      children,
+      ...linkProps
+    } = props;
     return (
-      <Link {...linkProps} className={classes}>
-        {content}
-      </Link>
+      <ButtonLink
+        {...linkProps}
+        variant={variant}
+        size="sm"
+        iconLeft={icon}
+        className={className}
+      >
+        {children}
+      </ButtonLink>
     );
   }
 
-  const { icon: _icon, variant: _variant, className: _className, children: _children, ...buttonProps } = props;
+  const {
+    icon,
+    variant: _variant,
+    className,
+    children,
+    to: _to,
+    ...buttonProps
+  } = props;
   return (
-    <button {...buttonProps} className={classes}>
-      {content}
-    </button>
+    <Button
+      {...buttonProps}
+      variant={variant}
+      size="sm"
+      iconLeft={icon}
+      className={className}
+    >
+      {children}
+    </Button>
   );
 }

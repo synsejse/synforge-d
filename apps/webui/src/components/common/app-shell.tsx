@@ -17,7 +17,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Navigation, { type NavGroup, type NavItem } from "../ui/navigation";
-import FaIcon from "../ui/fa-icon";
+import Button from "../ui/button";
 import Tooltip from "../ui/tooltip";
 import { cn } from "../../lib/utils";
 import api from "../../lib/api";
@@ -228,27 +228,27 @@ function SidebarHeader({
           content={isRail ? "Expand sidebar" : "Collapse sidebar"}
           side={isRail ? "right" : "bottom"}
         >
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
+            iconLeft={isRail ? faAnglesRight : faAnglesLeft}
             onClick={onRailToggle}
             aria-label={isRail ? "Expand sidebar" : "Collapse sidebar"}
             aria-pressed={isRail}
-            className="hidden lg:inline-flex h-9 w-9 shrink-0 items-center justify-center border-2 border-edge-strong bg-black text-soft transition-colors hover:border-white hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime"
-          >
-            <FaIcon icon={isRail ? faAnglesRight : faAnglesLeft} />
-          </button>
+            className="hidden lg:inline-flex shrink-0"
+          />
         </Tooltip>
 
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
+          iconLeft={mobileNavOpen ? faXmark : faBars}
           aria-controls="mobile-nav-panel"
           aria-expanded={mobileNavOpen}
           aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
           onClick={onMobileToggle}
-          className="lg:hidden inline-flex h-10 w-10 shrink-0 items-center justify-center border-2 border-edge-strong bg-black text-strong transition-colors hover:border-white hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime"
-        >
-          <FaIcon icon={mobileNavOpen ? faXmark : faBars} />
-        </button>
+          className="lg:hidden h-10 w-10 shrink-0"
+        />
       </div>
     </div>
   );
@@ -298,14 +298,14 @@ function SidebarFooter({
             </div>
           </Tooltip>
           <Tooltip content="Sign out" side="right">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon"
+              iconLeft={faRightFromBracket}
               onClick={onLogout}
               aria-label="Sign out"
-              className="flex h-9 w-9 items-center justify-center border-2 border-edge-strong bg-black text-soft transition-colors hover:border-accent-lime hover:text-accent-lime focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime"
-            >
-              <FaIcon icon={faRightFromBracket} />
-            </button>
+              className="text-soft hover:border-accent-lime hover:text-accent-lime"
+            />
           </Tooltip>
         </div>
       </div>
@@ -336,28 +336,28 @@ function SidebarFooter({
             ) : null}
           </div>
           <Tooltip content="Sign out" side="top">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon"
+              iconLeft={faRightFromBracket}
               onClick={onLogout}
               aria-label="Sign out"
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center border-2 border-edge-strong bg-black text-soft transition-colors hover:border-accent-lime hover:text-accent-lime focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime"
-            >
-              <FaIcon icon={faRightFromBracket} />
-            </button>
+              className="shrink-0 text-soft hover:border-accent-lime hover:text-accent-lime"
+            />
           </Tooltip>
         </div>
       </div>
       <div className="hidden lg:block border-t-2 border-edge bg-black">
-        <button
-          type="button"
+        <Button
+          variant="subtle"
+          size="sm"
+          fullWidth
+          iconLeft={faAnglesLeft}
           onClick={onRailToggle}
           aria-label="Collapse sidebar"
-          aria-pressed={false}
-          className="flex w-full items-center justify-center gap-2 px-3 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-soft transition-colors hover:bg-surface-hover hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime"
         >
-          <FaIcon icon={faAnglesLeft} />
-          <span>Collapse</span>
-        </button>
+          Collapse
+        </Button>
       </div>
     </div>
   );

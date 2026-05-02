@@ -50,29 +50,36 @@ export default function PackageDetailHeader({
             type="button"
             variant="secondary"
             size="md"
-            className="w-full sm:w-auto"
+            fullWidth="responsive"
+            iconLeft={faRotate}
             onClick={onRefresh}
             disabled={deleting || refreshing}
-            aria-busy={refreshing || undefined}
+            loading={refreshing}
           >
-            <FaIcon icon={faRotate} className={refreshing ? "mr-2 animate-spin" : "mr-2"} />
             {refreshing ? "Refreshing…" : "Refresh"}
           </Button>
-          <button
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            fullWidth="responsive"
+            iconLeft={faHammer}
             onClick={onRebuild}
-            className="w-full border-2 border-accent-lime bg-accent-lime px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72] sm:w-auto"
-          >
-            <FaIcon icon={faHammer} className="mr-2" />
-            Rebuild
-          </button>
-          <button
-            onClick={onDelete}
             disabled={deleting}
-            className="w-full border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt disabled:opacity-60 sm:w-auto"
           >
-            <FaIcon icon={faTrash} className="mr-2" />
+            Rebuild
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            size="md"
+            fullWidth="responsive"
+            iconLeft={faTrash}
+            onClick={onDelete}
+            loading={deleting}
+          >
             {deleting ? "Deleting…" : "Delete Package"}
-          </button>
+          </Button>
         </div>
       </div>
     </section>

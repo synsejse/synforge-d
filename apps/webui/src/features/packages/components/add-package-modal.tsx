@@ -9,7 +9,7 @@ import {
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import api from "../../../lib/api";
 import type { CreatePackageRequest, SpecSource } from "../../../lib/types";
-import FaIcon from "../../../components/ui/fa-icon";
+import Button from "../../../components/ui/button";
 import { useServerHardware } from "../../../components/common/server-hardware-provider";
 import BuildSettingsSection from "./add-package/build-settings-section";
 import ChrootPickerDialog from "./add-package/chroot-picker-dialog";
@@ -282,21 +282,18 @@ export default function AddPackageModal({
           )}
 
           <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-               className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt"
-            >
+            <Button variant="ghost" size="sm" onClick={onClose}>
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              disabled={submitting}
-               className="border-2 border-accent-lime bg-accent-lime px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72] disabled:opacity-70"
+              variant="primary"
+              size="sm"
+              iconLeft={faPlus}
+              loading={submitting}
             >
-              <FaIcon icon={faPlus} className="mr-2" />
               {submitting ? "Adding…" : "Add Package"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

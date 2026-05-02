@@ -2,14 +2,10 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import {
-  faBoxesStacked,
   faChartLine,
-  faDatabase,
-  faHardDrive,
   faLayerGroup,
   faRotate,
   faRocket,
-  faTriangleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
 import { statisticsQueries } from "../../lib/queries";
 import { formatDateTime } from "../../lib/datetime";
@@ -18,7 +14,6 @@ import ErrorMessage from "../../components/common/error-message";
 import { usePageVisible } from "../../components/common/page-visibility-provider";
 import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
-import MetricCard from "../../components/ui/metric-card";
 import PageHeader from "../../components/ui/page-header";
 import RatioBar from "../../components/ui/ratio-bar";
 import Tabs from "../../components/ui/tabs";
@@ -83,13 +78,6 @@ function Statistics() {
     mirrorCache.tracked_mirrors - mirrorCache.stale_mirrors,
   );
 
-  const jobsSparkline = (timeseriesQuery.data?.jobs.points ?? []).map(
-    (p) => p.succeeded + p.failed,
-  );
-  const syncSparkline = (timeseriesQuery.data?.sync.points ?? []).map(
-    (p) => p.succeeded + p.failed,
-  );
-
   return (
     <div className="space-y-8">
       <PageHeader
@@ -101,57 +89,6 @@ function Statistics() {
           { to: "/jobs", label: "Jobs", icon: faRocket },
         ]}
       />
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <MetricCard
-          label="Packages"
-          value={data.packageCount}
-          detail={`${data.enabledPackageCount} enabled`}
-          icon={<FaIcon icon={faBoxesStacked} />}
-        />
-        <MetricCard
-          label="Active jobs"
-          value={data.activeJobCount}
-          detail="Pending + running"
-          variant="terminal"
-          icon={<FaIcon icon={faRocket} />}
-          sparkline={jobsSparkline.length > 0 ? jobsSparkline : null}
-        />
-        <MetricCard
-          label="Sync 24h"
-          value={`${data.syncMetrics.succeeded_24h} ✓ / ${data.syncMetrics.failed_24h} ✗`}
-          detail={
-            data.syncMetrics.failed_24h > 0 && data.syncMetrics.last_failure_at
-              ? `Last fail ${formatDateTime(data.syncMetrics.last_failure_at)}`
-              : "No recent failures"
-          }
-          variant={data.syncMetrics.failed_24h > 0 ? "error" : "success"}
-          icon={<FaIcon icon={faTriangleExclamation} />}
-          sparkline={syncSparkline.length > 0 ? syncSparkline : null}
-        />
-        <MetricCard
-          label="Stored bytes"
-          value={data.repoSummary.stored_bytes}
-          detail={`${data.repoSummary.published_file_count} published files`}
-          icon={<FaIcon icon={faHardDrive} />}
-        />
-        <MetricCard
-          label="Git mirrors"
-          value={data.cacheStats.git_mirror_cache.tracked_mirrors}
-          detail={`${data.cacheStats.git_mirror_cache.mirror_directories} dirs on disk`}
-          icon={<FaIcon icon={faDatabase} />}
-        />
-        <MetricCard
-          label="Cached chroots"
-          value={data.cacheStats.mock_chroot_cache.cached_chroot_count}
-          detail={
-            data.cacheStats.mock_chroot_cache.age_seconds != null
-              ? `Age ${formatSeconds(data.cacheStats.mock_chroot_cache.age_seconds)}`
-              : "No cached entry"
-          }
-          icon={<FaIcon icon={faRotate} />}
-        />
-      </section>
 
       {/* Time-series — sync and build activity over a selectable window. */}
       <section className="space-y-4">

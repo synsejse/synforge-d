@@ -172,6 +172,7 @@ export default function PackageDetail({ packageName }: Props) {
 
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<PackageEditFormState>(EMPTY_FORM);
+  const [pristine, setPristine] = useState<PackageEditFormState | null>(null);
   const [formInitialized, setFormInitialized] = useState(false);
   const [showSpecPicker, setShowSpecPicker] = useState(false);
   const [showChrootPicker, setShowChrootPicker] = useState(false);
@@ -180,7 +181,9 @@ export default function PackageDetail({ packageName }: Props) {
 
   useEffect(() => {
     if (!formInitialized && packageQuery.data) {
-      setForm(buildFormFromPackage(packageQuery.data));
+      const next = buildFormFromPackage(packageQuery.data);
+      setForm(next);
+      setPristine(next);
       setFormInitialized(true);
     }
   }, [formInitialized, packageQuery.data]);
@@ -190,7 +193,16 @@ export default function PackageDetail({ packageName }: Props) {
     setRepoFilesOffset(0);
     setFormInitialized(false);
     setForm(EMPTY_FORM);
+    setPristine(null);
   }, [packageName]);
+
+  // After a successful save the API result becomes the new pristine.
+  useEffect(() => {
+    if (formInitialized && packageQuery.data) {
+      setPristine(buildFormFromPackage(packageQuery.data));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [packageQuery.dataUpdatedAt]);
 
   const selectableFiles = useMemo(
     () => browseFiles.filter((file) => file.endsWith(".spec")),
@@ -408,6 +420,7 @@ export default function PackageDetail({ packageName }: Props) {
 
       <PackageEditFormSection
         form={form}
+        pristine={pristine}
         maxCpuCores={maxCpuCores}
         maxMemoryMb={maxMemoryMb}
         saving={saveMutation.isPending}
@@ -430,6 +443,7 @@ export default function PackageDetail({ packageName }: Props) {
         onOpenChrootPicker={() => setShowChrootPicker(true)}
         onCloseChrootPicker={() => setShowChrootPicker(false)}
         onBrowseRepository={handleBrowse}
+        onDiscard={() => pristine && setForm(pristine)}
       />
 
       <Tabs

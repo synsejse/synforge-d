@@ -35,6 +35,8 @@ export interface PackageEditFormState {
 
 interface PackageEditFormSectionProps {
   form: PackageEditFormState;
+  /** Pristine form state (what the package currently looks like in the API). */
+  pristine: PackageEditFormState | null;
   maxCpuCores: number | null;
   maxMemoryMb: number | null;
   saving: boolean;
@@ -52,10 +54,13 @@ interface PackageEditFormSectionProps {
   onOpenChrootPicker: () => void;
   onCloseChrootPicker: () => void;
   onBrowseRepository: () => void;
+  /** Reset form back to pristine. Wired by the sticky footer's Discard button. */
+  onDiscard: () => void;
 }
 
 export default function PackageEditFormSection({
   form,
+  pristine,
   maxCpuCores,
   maxMemoryMb,
   saving,
@@ -73,7 +78,10 @@ export default function PackageEditFormSection({
   onOpenChrootPicker,
   onCloseChrootPicker,
   onBrowseRepository,
+  onDiscard,
 }: PackageEditFormSectionProps) {
+  const isDirty =
+    pristine != null && JSON.stringify(form) !== JSON.stringify(pristine);
   const CPU_MIN_CORES = 1;
   const CPU_STEP_CORES = 1;
   const cpuSliderMax = Math.max(CPU_MIN_CORES, maxCpuCores ?? 64);
@@ -347,18 +355,51 @@ export default function PackageEditFormSection({
             hint="One `KEY=value` entry per line. Applied to SRPM creation and mock rebuild steps."
           />
 
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={saving}
-              className="border-2 border-accent-lime bg-accent-lime px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:bg-[#d8ff72] disabled:opacity-70"
-            >
-              <FaIcon icon={faSave} className="mr-2" />
-              {saving ? "Saving…" : "Save Changes"}
-            </button>
-          </div>
         </div>
       </form>
+
+      {/* Sticky save bar — shown only while the form is dirty so users
+          don't have to scroll to the bottom every time. */}
+      {isDirty ? (
+        <div
+          role="region"
+          aria-label="Unsaved changes"
+          className="sticky bottom-0 z-30 -mx-3 mt-4 border-t-4 border-accent-lime bg-black/95 px-4 py-3 backdrop-blur-sm sm:-mx-5 lg:-mx-8"
+        >
+          <div className="mx-auto flex max-w-[96rem] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <span
+                aria-hidden="true"
+                className="inline-block h-2 w-2 animate-pulse bg-accent-lime"
+              />
+              <span className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent-lime">
+                Unsaved changes
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={onDiscard}
+                disabled={saving}
+                className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-soft transition-colors hover:border-white hover:text-white disabled:opacity-50"
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={(event) =>
+                  onSubmit(event as unknown as SyntheticEvent<HTMLFormElement>)
+                }
+                disabled={saving}
+                className="border-2 border-accent-lime bg-accent-lime px-5 py-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black shadow-brutal-sm transition-all hover:-translate-x-px hover:-translate-y-px hover:shadow-brutal-md disabled:opacity-70"
+              >
+                <FaIcon icon={faSave} className="mr-2" />
+                {saving ? "Saving…" : "Save changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showSpecPicker && (
         <SelectionDialog

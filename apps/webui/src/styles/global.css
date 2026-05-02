@@ -33,45 +33,6 @@
   --shadow-card-sm: 4px 4px 0 rgba(255, 255, 255, 0.1);
   --shadow-card-md: 6px 6px 0 rgba(255, 255, 255, 0.2);
   --shadow-card-lg: 8px 8px 0 rgba(255, 255, 255, 0.3);
-
-  /* Scrollbar palette — overridden in print theme below. */
-  --sb-track-color: #0a0a0a;
-  --sb-thumb-color: var(--theme-accent-lime);
-}
-
-/* Light "print" theme — high-contrast cream background, deep-black
-   borders, and slightly desaturated accents that read on white.
-   Applied via <html data-theme="print">. */
-[data-theme="print"] {
-  --theme-body: #efefe7;
-  --theme-text: #18181b;
-  --theme-surface: #ffffff;
-  --theme-surface-alt: #fafaf6;
-  --theme-surface-hover: #e8e8e0;
-  --theme-border: #c4c4be;
-  --theme-border-strong: #1a1a1a;
-  --theme-text-strong: #000000;
-  --theme-text-muted: #525258;
-  --theme-text-soft: #74747a;
-  --theme-selection: rgba(0, 0, 0, 0.15);
-  --theme-grid-line: rgba(0, 0, 0, 0.05);
-  --theme-header-divider: rgba(0, 0, 0, 0.1);
-
-  --theme-accent-lime: #6e8a00;
-  --theme-accent-orange: #d94f00;
-  --theme-accent-cyan: #0e7490;
-  --theme-accent-violet: #7c3aed;
-  --theme-terminal-green: #15803d;
-  --theme-error-red: #b91c1c;
-
-  --shadow-brutal-sm: 2px 2px 0 rgba(0, 0, 0, 0.7);
-  --shadow-brutal-md: 4px 4px 0 rgba(0, 0, 0, 0.8);
-  --shadow-card-sm: 4px 4px 0 rgba(0, 0, 0, 0.1);
-  --shadow-card-md: 6px 6px 0 rgba(0, 0, 0, 0.15);
-  --shadow-card-lg: 8px 8px 0 rgba(0, 0, 0, 0.2);
-
-  --sb-track-color: #efefe7;
-  --sb-thumb-color: #1a1a1a;
 }
 
 /* Tailwind v4: expose tokens as semantic utilities (bg-surface, text-muted, shadow-brutal-sm, etc.) */
@@ -156,10 +117,10 @@ h1, h2, h3,
   color: var(--theme-text-strong);
 }
 
-/* Brutalist Scrollbar — track + thumb colors come from --sb-track-color
-   / --sb-thumb-color which are theme-driven (defined in :root and
-   [data-theme="print"]). Size stays the same. */
+/* Brutalist Scrollbar */
 :root {
+  --sb-track-color: #0a0a0a;
+  --sb-thumb-color: #BFFF00;
   --sb-size: 14px;
 }
 
@@ -448,26 +409,6 @@ html .app-chrome {
       #0d0d0d 0%,
       #0a0a0a 50%,
       #080808 100%
-    );
-}
-
-/* Print theme: invert the chrome to a paper-like off-white with a faint
-   grid + dot-matrix scanline for the same brutalist feel. */
-[data-theme="print"] .app-chrome {
-  background: var(--theme-body);
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 0, 0, 0.025) 2px,
-      rgba(0, 0, 0, 0.025) 4px
-    ),
-    linear-gradient(
-      180deg,
-      #f4f4ec 0%,
-      #efefe7 50%,
-      #ebebe2 100%
     );
 }
 

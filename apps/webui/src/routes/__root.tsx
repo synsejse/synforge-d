@@ -8,7 +8,6 @@ import ErrorBoundary from "../components/common/error-boundary";
 import DialogsProvider from "../components/common/dialogs-provider";
 import ToastProvider from "../components/common/toast-provider";
 import PageVisibilityProvider from "../components/common/page-visibility-provider";
-import { ThemeProvider } from "../components/common/theme-provider";
 
 export interface RouterContext {
   queryClient: QueryClient;
@@ -21,7 +20,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 function RootLayout() {
   return (
     <ErrorBoundary>
-      <ThemeProvider>
       <PageVisibilityProvider>
         <ToastProvider>
           <DialogsProvider>
@@ -40,7 +38,6 @@ function RootLayout() {
           </DialogsProvider>
         </ToastProvider>
       </PageVisibilityProvider>
-      </ThemeProvider>
     </ErrorBoundary>
   );
 }

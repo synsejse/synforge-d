@@ -101,11 +101,10 @@ export default function DataTable<T>({
   return (
     <div className={cn("space-y-3", className)}>
       {/* Mobile card stack */}
-      <div className="synforge-stagger space-y-3 md:hidden">
-        {rows.map((row, idx) => (
+      <div className="space-y-3 md:hidden">
+        {rows.map((row) => (
           <article
             key={`m-${rowKey(row)}`}
-            style={{ "--i": idx } as React.CSSProperties}
             className={cn(
               "border-2 border-edge-strong bg-black p-4",
               rowClassName?.(row),
@@ -154,11 +153,10 @@ export default function DataTable<T>({
               ))}
             </tr>
           </thead>
-          <tbody className="synforge-stagger divide-y divide-edge bg-black">
-            {rows.map((row, idx) => (
+          <tbody className="divide-y divide-edge bg-black">
+            {rows.map((row) => (
               <tr
                 key={rowKey(row)}
-                style={{ "--i": idx } as React.CSSProperties}
                 className={cn(
                   "transition-colors hover:bg-surface-alt",
                   rowClassName?.(row),

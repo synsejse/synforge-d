@@ -3,6 +3,7 @@ import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
 import Button from "./button";
+import FaIcon from "./fa-icon";
 
 interface DialogProps {
   open?: boolean;
@@ -53,10 +54,11 @@ export default function Dialog({
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  iconLeft={faXmark}
                   aria-label="Close"
                   className="absolute right-4 top-5"
-                />
+                >
+                  <FaIcon icon={faXmark} />
+                </Button>
               </DialogPrimitive.Close>
             )}
           </div>

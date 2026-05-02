@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { faAngleLeft, faAngleRight } from "@fortawesome/free-solid-svg-icons";
 import Button from "../ui/button";
+import FaIcon from "../ui/fa-icon";
 
 interface PaginationControlsProps {
   onPrevious: () => void;
@@ -30,20 +31,20 @@ export default function PaginationControls({
         <Button
           variant="ghost"
           size="sm"
-          iconLeft={faAngleLeft}
           onClick={onPrevious}
           disabled={previousDisabled}
         >
+          <FaIcon icon={faAngleLeft} />
           Previous
         </Button>
         <Button
           variant="ghost"
           size="sm"
-          iconRight={faAngleRight}
           onClick={onNext}
           disabled={nextDisabled}
         >
           Next
+          <FaIcon icon={faAngleRight} />
         </Button>
       </div>
     </div>

@@ -15,6 +15,7 @@ import ErrorMessage from "../../components/common/error-message";
 import { useSession } from "../../components/common/session-provider";
 import Button from "../../components/ui/button";
 import EmptyState from "../../components/ui/empty-state";
+import FaIcon from "../../components/ui/fa-icon";
 import LoadingBlock from "../../components/ui/loading-block";
 import PageHeader from "../../components/ui/page-header";
 import { PermissionGroup, TextField, ToggleField } from "./components/form-fields";
@@ -509,10 +510,10 @@ function Users() {
               <Button
                 variant="danger"
                 size="sm"
-                iconLeft={faTrash}
                 onClick={() => void handleDelete()}
                 loading={submitting}
               >
+                {submitting ? null : <FaIcon icon={faTrash} />}
                 {submitting ? "Deleting…" : "Delete user"}
               </Button>
             </div>

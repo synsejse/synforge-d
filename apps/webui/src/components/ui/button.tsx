@@ -1,6 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { cn } from "../../lib/utils";
 import FaIcon from "./fa-icon";
@@ -16,6 +15,9 @@ import FaIcon from "./fa-icon";
  *   icon-sm  — square 32px (paired with size sm)
  *   icon     — square 36px (default icon-only — sidebar, dialog close)
  *   icon-lg  — square 44px (paired with size md/lg)
+ *
+ * Pass icons as children — wrap a `<FaIcon>` next to the label text. The
+ * built-in `gap-2` (or per-size override) takes care of spacing.
  */
 export const buttonVariants = cva(
   [
@@ -86,8 +88,7 @@ export type ButtonVariantProps = VariantProps<typeof buttonVariants>;
 export interface ButtonProps
   extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children">,
     ButtonVariantProps {
-  iconLeft?: IconDefinition;
-  iconRight?: IconDefinition;
+  /** Renders a leading spinner and disables the button while truthy. */
   loading?: boolean;
   children?: ReactNode;
 }
@@ -97,17 +98,12 @@ export default function Button({
   variant,
   size,
   fullWidth,
-  iconLeft,
-  iconRight,
   loading = false,
   disabled,
   children,
   type = "button",
   ...props
 }: ButtonProps) {
-  const isIconOnly =
-    size === "icon" || size === "icon-sm" || size === "icon-lg";
-
   return (
     <button
       type={type}
@@ -117,18 +113,9 @@ export default function Button({
       {...props}
     >
       {loading ? (
-        <FaIcon
-          icon={faSpinner}
-          className="animate-spin"
-          aria-hidden="true"
-        />
-      ) : iconLeft ? (
-        <FaIcon icon={iconLeft} aria-hidden="true" />
+        <FaIcon icon={faSpinner} className="animate-spin" aria-hidden="true" />
       ) : null}
-      {!isIconOnly ? children : iconLeft || loading ? null : children}
-      {!loading && iconRight ? (
-        <FaIcon icon={iconRight} aria-hidden="true" />
-      ) : null}
+      {children}
     </button>
   );
 }

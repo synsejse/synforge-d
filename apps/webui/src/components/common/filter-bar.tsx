@@ -55,12 +55,8 @@ export default function FilterBar({
           ) : null}
         </button>
         {showClear ? (
-          <Button
-            variant="subtle"
-            size="xs"
-            iconLeft={faXmark}
-            onClick={onClear}
-          >
+          <Button variant="subtle" size="xs" onClick={onClear}>
+            <FaIcon icon={faXmark} />
             Clear
           </Button>
         ) : null}
@@ -79,10 +75,10 @@ export default function FilterBar({
               <Button
                 variant="ghost"
                 size="sm"
-                iconLeft={faXmark}
                 onClick={onClear}
                 className="hidden md:inline-flex"
               >
+                <FaIcon icon={faXmark} />
                 Clear filters
               </Button>
             ) : null}

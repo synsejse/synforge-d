@@ -1,13 +1,9 @@
 import { Link, type LinkProps } from "@tanstack/react-router";
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { AnchorHTMLAttributes, ReactNode } from "react";
-import FaIcon from "./fa-icon";
 import { buttonVariants, type ButtonVariantProps } from "./button";
 import { cn } from "../../lib/utils";
 
 interface ButtonLinkOwnProps extends ButtonVariantProps {
-  iconLeft?: IconDefinition;
-  iconRight?: IconDefinition;
   className?: string;
   children?: ReactNode;
 }
@@ -27,7 +23,8 @@ export type ButtonLinkProps = RouterLinkProps | ExternalLinkProps;
  * Renders a styled link that visually matches `<Button>`.
  *
  * Use this for navigation actions ("Open detail", "Back to list"); use
- * `<Button>` for in-place actions (submit, delete, toggle).
+ * `<Button>` for in-place actions (submit, delete, toggle). Pass icons as
+ * children — wrap them with `<FaIcon>`.
  */
 export default function ButtonLink(props: ButtonLinkProps) {
   if ("external" in props && props.external) {
@@ -36,8 +33,6 @@ export default function ButtonLink(props: ButtonLinkProps) {
       variant,
       size,
       fullWidth,
-      iconLeft,
-      iconRight,
       className,
       children,
       ...rest
@@ -47,13 +42,7 @@ export default function ButtonLink(props: ButtonLinkProps) {
         {...rest}
         className={cn(buttonVariants({ variant, size, fullWidth }), className)}
       >
-        <ButtonLinkBody
-          iconLeft={iconLeft}
-          iconRight={iconRight}
-          isIconOnly={isIconSize(size)}
-        >
-          {children}
-        </ButtonLinkBody>
+        {children}
       </a>
     );
   }
@@ -62,8 +51,6 @@ export default function ButtonLink(props: ButtonLinkProps) {
     variant,
     size,
     fullWidth,
-    iconLeft,
-    iconRight,
     className,
     children,
     ...linkProps
@@ -74,37 +61,7 @@ export default function ButtonLink(props: ButtonLinkProps) {
       {...linkProps}
       className={cn(buttonVariants({ variant, size, fullWidth }), className)}
     >
-      <ButtonLinkBody
-        iconLeft={iconLeft}
-        iconRight={iconRight}
-        isIconOnly={isIconSize(size)}
-      >
-        {children}
-      </ButtonLinkBody>
+      {children}
     </Link>
-  );
-}
-
-function isIconSize(size: ButtonVariantProps["size"]): boolean {
-  return size === "icon" || size === "icon-sm" || size === "icon-lg";
-}
-
-function ButtonLinkBody({
-  iconLeft,
-  iconRight,
-  isIconOnly,
-  children,
-}: {
-  iconLeft?: IconDefinition;
-  iconRight?: IconDefinition;
-  isIconOnly: boolean;
-  children?: ReactNode;
-}) {
-  return (
-    <>
-      {iconLeft ? <FaIcon icon={iconLeft} aria-hidden="true" /> : null}
-      {!isIconOnly ? children : iconLeft ? null : children}
-      {iconRight ? <FaIcon icon={iconRight} aria-hidden="true" /> : null}
-    </>
   );
 }

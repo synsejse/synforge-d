@@ -18,6 +18,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Navigation, { type NavGroup, type NavItem } from "../ui/navigation";
 import Button from "../ui/button";
+import FaIcon from "../ui/fa-icon";
 import Tooltip from "../ui/tooltip";
 import { cn } from "../../lib/utils";
 import api from "../../lib/api";
@@ -231,24 +232,26 @@ function SidebarHeader({
           <Button
             variant="ghost"
             size="icon"
-            iconLeft={isRail ? faAnglesRight : faAnglesLeft}
             onClick={onRailToggle}
             aria-label={isRail ? "Expand sidebar" : "Collapse sidebar"}
             aria-pressed={isRail}
             className="hidden lg:inline-flex shrink-0"
-          />
+          >
+            <FaIcon icon={isRail ? faAnglesRight : faAnglesLeft} />
+          </Button>
         </Tooltip>
 
         <Button
           variant="ghost"
           size="icon"
-          iconLeft={mobileNavOpen ? faXmark : faBars}
           aria-controls="mobile-nav-panel"
           aria-expanded={mobileNavOpen}
           aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
           onClick={onMobileToggle}
           className="lg:hidden h-10 w-10 shrink-0"
-        />
+        >
+          <FaIcon icon={mobileNavOpen ? faXmark : faBars} />
+        </Button>
       </div>
     </div>
   );
@@ -301,11 +304,12 @@ function SidebarFooter({
             <Button
               variant="ghost"
               size="icon"
-              iconLeft={faRightFromBracket}
               onClick={onLogout}
               aria-label="Sign out"
               className="text-soft hover:border-accent-lime hover:text-accent-lime"
-            />
+            >
+              <FaIcon icon={faRightFromBracket} />
+            </Button>
           </Tooltip>
         </div>
       </div>
@@ -339,11 +343,12 @@ function SidebarFooter({
             <Button
               variant="ghost"
               size="icon"
-              iconLeft={faRightFromBracket}
               onClick={onLogout}
               aria-label="Sign out"
               className="shrink-0 text-soft hover:border-accent-lime hover:text-accent-lime"
-            />
+            >
+              <FaIcon icon={faRightFromBracket} />
+            </Button>
           </Tooltip>
         </div>
       </div>
@@ -352,10 +357,10 @@ function SidebarFooter({
           variant="subtle"
           size="sm"
           fullWidth
-          iconLeft={faAnglesLeft}
           onClick={onRailToggle}
           aria-label="Collapse sidebar"
         >
+          <FaIcon icon={faAnglesLeft} />
           Collapse
         </Button>
       </div>

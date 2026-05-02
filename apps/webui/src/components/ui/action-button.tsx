@@ -3,6 +3,7 @@ import type { LinkProps } from "@tanstack/react-router";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import Button from "./button";
 import ButtonLink from "./button-link";
+import FaIcon from "./fa-icon";
 
 interface CommonProps {
   icon?: IconDefinition;
@@ -53,9 +54,9 @@ export default function ActionButton(
         {...linkProps}
         variant={variant}
         size="sm"
-        iconLeft={icon}
         className={className}
       >
+        {icon ? <FaIcon icon={icon} aria-hidden="true" /> : null}
         {children}
       </ButtonLink>
     );
@@ -74,9 +75,9 @@ export default function ActionButton(
       {...buttonProps}
       variant={variant}
       size="sm"
-      iconLeft={icon}
       className={className}
     >
+      {icon ? <FaIcon icon={icon} aria-hidden="true" /> : null}
       {children}
     </Button>
   );

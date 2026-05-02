@@ -1,6 +1,7 @@
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import type { ReactNode } from "react";
 import Button from "../ui/button";
+import FaIcon from "../ui/fa-icon";
 
 interface Props {
   count: number;
@@ -44,10 +45,10 @@ export default function SelectionActionBar({
           <Button
             variant="subtle"
             size="xs"
-            iconLeft={faXmark}
             onClick={onClear}
             aria-label="Clear selection"
           >
+            <FaIcon icon={faXmark} />
             Clear
           </Button>
         </div>

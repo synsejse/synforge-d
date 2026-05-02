@@ -51,11 +51,11 @@ export default function PackageDetailHeader({
             variant="secondary"
             size="md"
             fullWidth="responsive"
-            iconLeft={faRotate}
             onClick={onRefresh}
             disabled={deleting || refreshing}
             loading={refreshing}
           >
+            {refreshing ? null : <FaIcon icon={faRotate} />}
             {refreshing ? "Refreshing…" : "Refresh"}
           </Button>
           <Button
@@ -63,10 +63,10 @@ export default function PackageDetailHeader({
             variant="primary"
             size="md"
             fullWidth="responsive"
-            iconLeft={faHammer}
             onClick={onRebuild}
             disabled={deleting}
           >
+            <FaIcon icon={faHammer} />
             Rebuild
           </Button>
           <Button
@@ -74,10 +74,10 @@ export default function PackageDetailHeader({
             variant="danger"
             size="md"
             fullWidth="responsive"
-            iconLeft={faTrash}
             onClick={onDelete}
             loading={deleting}
           >
+            {deleting ? null : <FaIcon icon={faTrash} />}
             {deleting ? "Deleting…" : "Delete Package"}
           </Button>
         </div>

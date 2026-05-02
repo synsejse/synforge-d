@@ -10,6 +10,7 @@ import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import api from "../../../lib/api";
 import type { CreatePackageRequest, SpecSource } from "../../../lib/types";
 import Button from "../../../components/ui/button";
+import FaIcon from "../../../components/ui/fa-icon";
 import { useServerHardware } from "../../../components/common/server-hardware-provider";
 import BuildSettingsSection from "./add-package/build-settings-section";
 import ChrootPickerDialog from "./add-package/chroot-picker-dialog";
@@ -289,9 +290,9 @@ export default function AddPackageModal({
               type="submit"
               variant="primary"
               size="sm"
-              iconLeft={faPlus}
               loading={submitting}
             >
+              {submitting ? null : <FaIcon icon={faPlus} />}
               {submitting ? "Adding…" : "Add Package"}
             </Button>
           </div>

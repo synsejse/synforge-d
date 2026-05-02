@@ -168,6 +168,13 @@ function Dashboard() {
         </div>
       </section>
 
+      {/* ASCII pipeline — at-a-glance flow of where the queue sits. */}
+      <PipelineStrip
+        queued={data.liveJobs.filter((j) => j.job.status === "pending").length}
+        building={data.liveJobs.filter((j) => j.job.status === "running").length}
+        recentDone={data.jobs.length}
+      />
+
       {/* Live Queue — full width */}
       <section className="border-2 border-success bg-black shadow-card-sm">
         <div className="flex items-end justify-between gap-4 border-b-2 border-success bg-black px-5 py-4">
@@ -234,4 +241,108 @@ function Dashboard() {
 
 export default function DashboardPage() {
   return <Dashboard />;
+}
+
+interface PipelineStripProps {
+  queued: number;
+  building: number;
+  recentDone: number;
+}
+
+/**
+ * ASCII-style flow:  [QUEUED] N ──→ [BUILDING] N ──→ [DONE] view all →
+ * The arrows are mono Unicode glyphs, the stages are boxed with sharp
+ * borders. On md:+ this lives on a single line; below md it stacks to
+ * three rows with vertical connectors.
+ */
+function PipelineStrip({ queued, building, recentDone }: PipelineStripProps) {
+  return (
+    <section
+      aria-label="Build pipeline"
+      className="border-2 border-edge-strong bg-black px-4 py-3 sm:px-5"
+    >
+      <div className="flex flex-col items-stretch gap-3 md:flex-row md:items-center md:gap-4">
+        <PipelineStage
+          label="Queued"
+          count={queued}
+          tone={queued > 0 ? "orange" : "muted"}
+        />
+        <PipelineConnector />
+        <PipelineStage
+          label="Building"
+          count={building}
+          tone={building > 0 ? "lime" : "muted"}
+          live={building > 0}
+        />
+        <PipelineConnector />
+        <Link
+          to="/jobs"
+          className="group flex flex-1 items-center justify-between border-2 border-edge bg-surface-alt/40 px-4 py-3 transition-colors hover:border-success hover:bg-surface-alt"
+        >
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
+              Recent done
+            </span>
+            <span className="font-display text-2xl font-black tabular-nums text-white">
+              {recentDone}
+            </span>
+          </div>
+          <span className="font-mono text-xs uppercase tracking-[0.18em] text-soft transition-colors group-hover:text-success">
+            view all →
+          </span>
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function PipelineStage({
+  label,
+  count,
+  tone,
+  live = false,
+}: {
+  label: string;
+  count: number;
+  tone: "orange" | "lime" | "muted";
+  live?: boolean;
+}) {
+  const toneClasses =
+    tone === "orange"
+      ? "border-accent-orange text-accent-orange"
+      : tone === "lime"
+        ? "border-accent-lime text-accent-lime"
+        : "border-edge-strong text-soft";
+  return (
+    <div
+      className={`flex flex-1 items-center justify-between border-2 bg-black px-4 py-3 ${toneClasses}`}
+    >
+      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em]">
+        [ {label} ]
+      </span>
+      <span className="flex items-center gap-2">
+        {live ? (
+          <span
+            aria-hidden="true"
+            className="inline-block h-2 w-2 animate-pulse bg-accent-lime"
+          />
+        ) : null}
+        <span className="font-display text-2xl font-black tabular-nums">
+          {count}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+function PipelineConnector() {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex shrink-0 items-center justify-center font-mono text-soft md:text-base"
+    >
+      <span className="hidden md:inline">──→</span>
+      <span className="md:hidden">↓</span>
+    </span>
+  );
 }

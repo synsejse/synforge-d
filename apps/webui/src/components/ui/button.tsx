@@ -21,10 +21,16 @@ import FaIcon from "./fa-icon";
  */
 export const buttonVariants = cva(
   [
-    "inline-flex items-center justify-center gap-2 border-2 font-medium",
+    "relative inline-flex items-center justify-center gap-2 border-2 font-medium",
     "transition-[color,background-color,border-color,box-shadow,transform] duration-100 ease-linear",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime focus-visible:ring-offset-2 focus-visible:ring-offset-black",
     "disabled:pointer-events-none disabled:opacity-40",
+    // Stable-hover hit area: an invisible ::before extends 6px past
+    // the button on every side, covering both the translated
+    // position and the shadow offset. Prevents the hover/un-hover
+    // flicker when the cursor sits at the seam where the button
+    // moves away from the pointer on lift.
+    "before:absolute before:-inset-1.5 before:content-['']",
   ].join(" "),
   {
     variants: {
@@ -98,6 +104,14 @@ export const buttonVariants = cva(
     compoundVariants: [
       // Bigger gap for larger sizes when icon + text are combined.
       { size: "lg", className: "gap-3" },
+      // Icon-only buttons sit in tight per-row toolbars where the
+      // offset shadow + lift becomes noise. Drop the brutal shadow
+      // and the hover-translate; keep colour/border hover only.
+      {
+        size: ["icon-sm", "icon", "icon-lg"],
+        className:
+          "shadow-none hover:shadow-none hover:translate-x-0 hover:translate-y-0 active:shadow-none",
+      },
     ],
     defaultVariants: {
       variant: "ghost",

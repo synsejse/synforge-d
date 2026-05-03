@@ -63,7 +63,6 @@ export default function PackageCard({
         className="absolute inset-y-0 left-0 w-1"
         style={{ background: accent }}
       />
-      {/* Top: identity, status, meta, actions */}
       <div className="flex flex-col gap-3 pl-4 pr-4 py-3 sm:pl-6 sm:pr-5 sm:py-4 lg:flex-row lg:items-start lg:gap-4">
         {selectable ? (
           <input

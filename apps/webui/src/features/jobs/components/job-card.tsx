@@ -63,14 +63,12 @@ export default function JobCard({
           : "border-2 border-edge-strong"
       } ${isDeleted ? "opacity-60" : ""}`}
     >
-      {/* Status accent rail */}
       <span
         aria-hidden="true"
         className="absolute inset-y-0 left-0 w-1"
         style={{ background: accent }}
       />
 
-      {/* Top: identity, status, meta, actions */}
       <div className="flex flex-col gap-3 pl-4 pr-4 py-3 sm:pl-6 sm:pr-5 sm:py-4 lg:flex-row lg:items-start lg:gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">

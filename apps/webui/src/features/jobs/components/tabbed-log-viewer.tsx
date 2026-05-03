@@ -239,7 +239,6 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
 
   return (
     <div className="space-y-0">
-      {/* Tabs with Controls */}
       <div className="border-2 border-edge-strong border-b-0 bg-surface-alt">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div className="min-w-0 overflow-x-auto border-b-2 border-edge-strong md:border-b-0">
@@ -319,7 +318,6 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
         </div>
       </div>
 
-      {/* Log Content */}
       <div className="border-2 border-edge-strong bg-black">
         {logLines.length === 0 && !currentLog?.loading ? (
           <div className="px-5 py-8">

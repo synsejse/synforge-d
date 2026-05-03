@@ -37,7 +37,6 @@ export default function FilterBar({
     <div
       className={`border-2 border-white bg-black ${className}`.trim()}
     >
-      {/* Mobile toggle row */}
       <div className="flex items-center justify-between gap-3 border-b-2 border-edge-strong bg-surface-alt px-4 py-3 md:hidden">
         <button
           type="button"

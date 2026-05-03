@@ -72,16 +72,14 @@ impl SynforgeService {
         let limit = limit.unwrap_or(20).clamp(1, 100);
         let now = OffsetDateTime::now_utc();
 
-        // 1. List every enabled+polling package — page through with a
-        //    large limit since we filter again client-side. Realistically
-        //    the package count fits in a single page.
+        // Page size = total count so the filter-side join below runs over a
+        // single fetch. Realistic enabled-package counts fit in one page.
         let total_packages = self.store.count_packages(None, Some(true)).await?;
         let packages = self
             .store
             .list_packages(total_packages as usize, 0, None, Some(true))
             .await?;
 
-        // 2. Last-sync-per-package as a lookup table.
         let last_sync: HashMap<String, OffsetDateTime> = self
             .store
             .last_sync_at_per_package()
@@ -89,7 +87,6 @@ impl SynforgeService {
             .into_iter()
             .collect();
 
-        // 3. Backoff per (package, chroot).
         let backoffs: HashMap<(String, String), (u32, OffsetDateTime)> = self
             .store
             .list_target_build_backoffs()

@@ -75,7 +75,6 @@ function Settings() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <PageHeader
         title="Configuration"
         description="Runtime settings and effective daemon values."
@@ -93,7 +92,6 @@ function Settings() {
         />
       ) : null}
 
-      {/* Settings Form */}
       <form onSubmit={handleSave} className="space-y-6">
         <DisclosureGroup
           defaultValue={groupedFields
@@ -159,7 +157,6 @@ function Settings() {
           })}
         </DisclosureGroup>
 
-        {/* Save Button */}
         <div className="flex justify-end">
           <Button type="submit" variant="primary" size="md" disabled={saveMutation.isPending}>
             <FaIcon icon={faSave} className="mr-2" />

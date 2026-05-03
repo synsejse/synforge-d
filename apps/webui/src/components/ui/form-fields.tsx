@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-// Shared input class for consistent styling
 const inputClass =
   "w-full border-2 border-edge-strong bg-surface-alt px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-accent-lime";
 

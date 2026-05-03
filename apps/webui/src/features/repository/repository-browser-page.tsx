@@ -97,7 +97,6 @@ function RepositoryBrowser() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <PageHeader
         title="Repository Control"
         description="Published packages, builds, and files."
@@ -108,7 +107,6 @@ function RepositoryBrowser() {
         ]}
       />
 
-      {/* Metrics */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Packages"
@@ -137,7 +135,6 @@ function RepositoryBrowser() {
         />
       </div>
 
-      {/* Filters */}
       <form onSubmit={handleApply}>
         <FilterBar
           activeCount={
@@ -208,7 +205,6 @@ function RepositoryBrowser() {
         </FilterBar>
       </form>
 
-      {/* Files list — RepoFileCard rows */}
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-4 border-b-2 border-edge-strong pb-2">
           <h2 className="text-base font-semibold text-white">Published files</h2>

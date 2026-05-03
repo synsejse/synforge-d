@@ -51,7 +51,6 @@ function Dashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Hero Header */}
       <PageHeader
         title="Dashboard"
         description="High-signal snapshot of package state, active builds, and execution history."
@@ -63,7 +62,6 @@ function Dashboard() {
         ]}
       />
 
-      {/* Metrics Grid */}
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Packages"
@@ -95,7 +93,6 @@ function Dashboard() {
         />
       </section>
 
-      {/* Recent Jobs Table */}
       <section className="border-2 border-edge-strong bg-black shadow-card-sm">
         <div className="flex items-baseline justify-between gap-4 border-b-2 border-edge-strong app-section-band px-5 py-4">
           <h2 className="text-xl font-bold text-white">
@@ -128,17 +125,14 @@ function Dashboard() {
         </div>
       </section>
 
-      {/* ASCII pipeline — at-a-glance flow of where the queue sits. */}
       <PipelineStrip
         queued={data.liveJobs.filter((j) => j.job.status === "pending").length}
         building={data.liveJobs.filter((j) => j.job.status === "running").length}
         recentDone={data.jobs.length}
       />
 
-      {/* Up next — sync schedule countdown */}
       <SyncScheduleStrip />
 
-      {/* Live Queue — full width */}
       <section className="border-2 border-success bg-black shadow-card-sm">
         <div className="flex items-baseline justify-between gap-4 border-b-2 border-success bg-black px-5 py-4">
           <div className="flex items-center gap-2">

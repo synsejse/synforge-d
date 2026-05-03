@@ -56,7 +56,6 @@ export default function MetricCard({
         className
       )}
     >
-      {/* Grid pattern overlay */}
       <div className="pointer-events-none absolute inset-0 opacity-5 app-grid"></div>
 
       <div className="relative">
@@ -86,7 +85,6 @@ export default function MetricCard({
         <div aria-hidden="true" className="mt-auto h-7 pt-3" />
       )}
 
-      {/* Accent corner */}
       {variant !== "default" && (
         <div
           className={cn(

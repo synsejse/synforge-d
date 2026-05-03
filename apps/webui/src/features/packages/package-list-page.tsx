@@ -384,7 +384,6 @@ function PackageList() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <PageHeader
         title="Packages"
         description="Sources, targets, and builds."
@@ -404,7 +403,6 @@ function PackageList() {
         ]}
       />
 
-      {/* Filters */}
       <FilterBar
         activeCount={
           (search ? 1 : 0) + (enabledFilter !== "all" ? 1 : 0)
@@ -456,7 +454,6 @@ function PackageList() {
         </div>
       </FilterBar>
 
-      {/* Bulk select-all-on-page toggle */}
       {listQuery.data.packages.length > 0 ? (
         <div className="flex items-center justify-between gap-3 border-2 border-edge-strong bg-surface-alt px-4 py-2 font-mono text-xs uppercase tracking-[0.15em]">
           <label className="flex items-center gap-3 text-muted hover:text-white">
@@ -490,7 +487,6 @@ function PackageList() {
         </div>
       ) : null}
 
-      {/* Package Cards */}
       {listQuery.data.packages.length === 0 ? (
         <div className="border-2 border-edge-strong bg-black p-12 text-center">
           <p className="font-mono text-sm font-bold uppercase tracking-[0.3em] text-soft">
@@ -518,7 +514,6 @@ function PackageList() {
         </div>
       )}
 
-      {/* Pagination */}
       {listQuery.data.packages.length > 0 && (
         <div className="border-2 border-white bg-black p-4">
           <PaginationControls

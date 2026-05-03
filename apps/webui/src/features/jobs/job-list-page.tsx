@@ -232,7 +232,6 @@ function JobList() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <PageHeader
         title={filters.mode === "active" ? "Active Builds" : "Build Timeline"}
         description={
@@ -244,11 +243,9 @@ function JobList() {
         actions={[{ to: "/", label: "Overview", icon: faChartLine }]}
       />
 
-      {/* Mode Toggle + Filters */}
       <div className="border-4 border-edge-strong bg-black shadow-card-sm">
         <div className="border-b-4 border-edge-strong app-section-band px-6 py-4">
           <div className="flex flex-wrap items-center gap-4">
-            {/* Mode Toggle */}
             <SegmentedControl<JobViewMode>
               value={filters.mode}
               onChange={setMode}
@@ -261,7 +258,6 @@ function JobList() {
             />
 
 
-            {/* Status Filter (history only) */}
             {filters.mode === "history" && (
               <div className="w-full sm:flex-1 sm:min-w-[200px] sm:max-w-xs">
                 <Select
@@ -300,7 +296,6 @@ function JobList() {
               </label>
             )}
 
-            {/* Prune Button */}
             {filters.mode === "history" && (
               <Button
                 variant="danger"
@@ -315,7 +310,6 @@ function JobList() {
           </div>
         </div>
 
-        {/* Search Filters */}
         <div className="border-b-4 border-edge-strong bg-black px-6 py-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div>
@@ -374,7 +368,6 @@ function JobList() {
           usageByJob={usageByJob}
         />
 
-        {/* Pagination */}
         {(filters.offset > 0 || jobsQuery.data.page.has_more) && (
           <div className="border-t-4 border-edge-strong bg-surface-alt px-6 py-4">
             <PaginationControls

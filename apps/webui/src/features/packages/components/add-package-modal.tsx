@@ -224,6 +224,7 @@ export default function AddPackageModal({
             ccacheEnabled={ccacheEnabled}
             ccacheMaxSizeMb={ccacheMaxSizeMb}
             enabled={enabled}
+            mockChroots={mockChroots}
             name={name}
             networkAccess={networkAccess}
             poll={poll}

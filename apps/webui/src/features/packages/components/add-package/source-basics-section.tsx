@@ -1,7 +1,13 @@
+import {
+  CCACHE_SUPPORTED_ARCHES,
+  incompatibleCcacheChroots,
+} from "../../../../lib/utils";
+
 interface SourceBasicsSectionProps {
   ccacheEnabled: boolean;
   ccacheMaxSizeMb: string;
   enabled: boolean;
+  mockChroots: string[];
   name: string;
   networkAccess: boolean;
   poll: boolean;
@@ -23,6 +29,7 @@ export default function SourceBasicsSection({
   ccacheEnabled,
   ccacheMaxSizeMb,
   enabled,
+  mockChroots,
   name,
   networkAccess,
   poll,
@@ -94,6 +101,12 @@ export default function SourceBasicsSection({
           </span>
         </label>
 
+        {ccacheEnabled ? (
+          <div className="md:col-span-2">
+            <CcacheCompatibilityNotice chroots={mockChroots} />
+          </div>
+        ) : null}
+
         <ToggleCard
           checked={enabled}
           description="Allow new builds for this package."
@@ -159,5 +172,34 @@ function ToggleCard({
         onChange={(event) => onChange(event.target.checked)}
       />
     </label>
+  );
+}
+
+function CcacheCompatibilityNotice({ chroots }: { chroots: string[] }) {
+  const incompatible = incompatibleCcacheChroots(chroots);
+  const supportedList = CCACHE_SUPPORTED_ARCHES.join(", ");
+
+  if (incompatible.length === 0) {
+    return (
+      <p className="border-l-2 border-edge-strong px-3 py-2 font-mono text-xs text-soft">
+        ccache only works with{" "}
+        <span className="text-strong">{supportedList}</span>. Builds for any
+        other arch will fail or silently bypass the cache.
+      </p>
+    );
+  }
+
+  return (
+    <div className="border-2 border-accent-orange bg-black px-3 py-2">
+      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-accent-orange">
+        ccache incompatible with selected targets
+      </p>
+      <p className="mt-1 font-mono text-xs text-strong">
+        These chroots will fail or skip ccache:{" "}
+        <span className="text-accent-orange">{incompatible.join(", ")}</span>.
+        Mock&apos;s ccache plugin only supports{" "}
+        <span className="text-strong">{supportedList}</span>.
+      </p>
+    </div>
   );
 }

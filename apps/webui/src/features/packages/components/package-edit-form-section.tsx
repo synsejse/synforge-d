@@ -1,6 +1,10 @@
 import { faMagnifyingGlass, faSave } from "@fortawesome/free-solid-svg-icons";
 import type { SyntheticEvent } from "react";
-import { formatMockChroots } from "../../../lib/utils";
+import {
+  CCACHE_SUPPORTED_ARCHES,
+  formatMockChroots,
+  incompatibleCcacheChroots,
+} from "../../../lib/utils";
 import Button from "../../../components/ui/button";
 import { Disclosure, DisclosureGroup } from "../../../components/ui/disclosure";
 import FaIcon from "../../../components/ui/fa-icon";
@@ -303,6 +307,9 @@ export default function PackageEditFormSection({
                 Leave size blank to use Mock&apos;s default cache size. Applies
                 per package and mock chroot.
               </p>
+              {form.ccache_enabled ? (
+                <CcacheCompatibilityNotice chroots={form.mockChroots} />
+              ) : null}
             </div>
           </Disclosure>
 
@@ -533,6 +540,35 @@ function ResourceLimitCard({
           </span>
         </div>
       </div>
+    </div>
+  );
+}
+
+function CcacheCompatibilityNotice({ chroots }: { chroots: string[] }) {
+  const incompatible = incompatibleCcacheChroots(chroots);
+  const supportedList = CCACHE_SUPPORTED_ARCHES.join(", ");
+
+  if (incompatible.length === 0) {
+    return (
+      <p className="border-l-2 border-edge-strong px-3 py-2 font-mono text-xs text-soft">
+        ccache only works with{" "}
+        <span className="text-strong">{supportedList}</span>. Builds for any
+        other arch will fail or silently bypass the cache.
+      </p>
+    );
+  }
+
+  return (
+    <div className="border-2 border-accent-orange bg-black px-3 py-2">
+      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-accent-orange">
+        ccache incompatible with selected targets
+      </p>
+      <p className="mt-1 font-mono text-xs text-strong">
+        These chroots will fail or skip ccache:{" "}
+        <span className="text-accent-orange">{incompatible.join(", ")}</span>.
+        Mock&apos;s ccache plugin only supports{" "}
+        <span className="text-strong">{supportedList}</span>.
+      </p>
     </div>
   );
 }

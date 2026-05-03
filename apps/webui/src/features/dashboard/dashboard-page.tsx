@@ -9,6 +9,7 @@ import FaIcon from "../../components/ui/fa-icon";
 import MetricCard from "../../components/ui/metric-card";
 import PageHeader from "../../components/ui/page-header";
 import MiniJobRow from "./mini-job-row";
+import SyncScheduleStrip from "./sync-schedule-strip";
 import {
   faBoxesStacked,
   faChartLine,
@@ -133,6 +134,9 @@ function Dashboard() {
         building={data.liveJobs.filter((j) => j.job.status === "running").length}
         recentDone={data.jobs.length}
       />
+
+      {/* Up next — sync schedule countdown */}
+      <SyncScheduleStrip />
 
       {/* Live Queue — full width */}
       <section className="border-2 border-success bg-black shadow-card-sm">

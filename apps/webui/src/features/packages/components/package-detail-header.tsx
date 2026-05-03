@@ -23,7 +23,7 @@ export default function PackageDetailHeader({
   onDelete,
 }: PackageDetailHeaderProps) {
   return (
-    <header className="sticky top-0 z-20 -mx-3 min-w-0 border-b-2 border-edge-strong bg-black/95 px-3 pb-4 pt-3 backdrop-blur-sm sm:-mx-5 sm:px-5 lg:-mx-8 lg:px-8">
+    <header className="sticky -top-3 z-20 -mx-3 min-w-0 border-b-2 border-edge-strong bg-black/95 px-3 pb-4 pt-3 backdrop-blur-sm sm:-top-5 sm:-mx-5 sm:px-5 lg:-top-8 lg:-mx-8 lg:px-8">
       <div className="flex items-stretch gap-4">
         <span
           aria-hidden="true"

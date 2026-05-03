@@ -72,16 +72,11 @@ export default function ProgressOverlayDialog({
             </div>
           ) : null}
 
-          <div className="flex items-center gap-3">
-            <div className="h-3 flex-1 border-2 border-edge-strong bg-black">
-              <div
-                className={`h-full transition-[width] duration-300 ${BAR_TONE[tone]}`}
-                style={{ width: `${normalizedProgress}%` }}
-              />
-            </div>
-            <span className="min-w-[3.5rem] text-right font-mono text-xs font-bold tracking-wider text-soft">
-              {Math.round(normalizedProgress)}%
-            </span>
+          <div className="h-3 w-full border-2 border-edge-strong bg-black">
+            <div
+              className={`h-full transition-[width] duration-300 ${BAR_TONE[tone]}`}
+              style={{ width: `${normalizedProgress}%` }}
+            />
           </div>
 
           {children !== undefined ? (

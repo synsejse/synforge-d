@@ -29,32 +29,43 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // Hover lift mirrors the surface-card animation: -2px translate
+        // + 6px hard shadow. The shadow colour stays per-variant so each
+        // button keeps its tonal "outline" identity.
         primary: [
           "bg-accent-lime text-black border-accent-lime shadow-brutal-sm",
-          "hover:shadow-brutal-md hover:-translate-x-px hover:-translate-y-px",
+          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
           "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
         ].join(" "),
         secondary: [
           "bg-white text-black border-white shadow-[2px_2px_0_rgba(255,255,255,0.2)]",
-          "hover:bg-strong hover:-translate-x-px hover:-translate-y-px",
-          "active:translate-x-0 active:translate-y-0",
+          "hover:bg-strong hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_rgba(255,255,255,0.25)]",
+          "active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_rgba(255,255,255,0.2)]",
         ].join(" "),
-        ghost:
-          "bg-transparent text-strong border-edge-strong hover:border-muted hover:bg-surface-hover hover:text-white",
+        ghost: [
+          "bg-transparent text-strong border-edge-strong",
+          "hover:border-muted hover:bg-surface-hover hover:text-white",
+          "hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_rgba(255,255,255,0.12)]",
+          "active:translate-x-0 active:translate-y-0 active:shadow-none",
+        ].join(" "),
         subtle:
           "bg-transparent text-soft border-transparent hover:bg-surface-hover hover:text-white",
         danger: [
           "bg-error text-white border-error shadow-brutal-sm",
-          "hover:shadow-brutal-md hover:-translate-x-px hover:-translate-y-px",
+          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
           "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
         ].join(" "),
         warning: [
           "bg-accent-orange text-black border-accent-orange shadow-brutal-sm",
-          "hover:shadow-brutal-md hover:-translate-x-px hover:-translate-y-px",
+          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
           "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
         ].join(" "),
-        terminal:
-          "bg-black text-success border-success font-mono hover:bg-success hover:text-black",
+        terminal: [
+          "bg-black text-success border-success font-mono",
+          "hover:bg-success hover:text-black",
+          "hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_rgba(0,255,128,0.25)]",
+          "active:translate-x-0 active:translate-y-0 active:shadow-none",
+        ].join(" "),
       },
       size: {
         xs: "px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] gap-1",

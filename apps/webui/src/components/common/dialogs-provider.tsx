@@ -65,7 +65,6 @@ export default function DialogsProvider({ children }: { children: ReactNode }) {
           }}
           title={confirmState.options.title}
           description={confirmState.options.message}
-          showClose={false}
         >
           <div className="flex justify-end gap-3">
             <Button

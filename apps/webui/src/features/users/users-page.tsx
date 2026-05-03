@@ -140,7 +140,7 @@ function Users() {
   const createMutation = useMutation({
     mutationFn: () => api.createUser(createForm),
     onSuccess: async () => {
-      closeModal();
+      forceCloseModal();
       await invalidateUsers();
     },
     onError: (err) =>
@@ -156,7 +156,7 @@ function Users() {
       draft: UserDraft;
     }) => api.updateUser(userId, draft),
     onSuccess: async () => {
-      closeModal();
+      forceCloseModal();
       await invalidateUsers();
     },
     onError: (err) =>
@@ -172,7 +172,7 @@ function Users() {
       newPassword: string;
     }) => api.changeUserPassword(userId, { password: newPassword }),
     onSuccess: () => {
-      closeModal();
+      forceCloseModal();
       setError(null);
     },
     onError: (err) =>
@@ -182,7 +182,10 @@ function Users() {
   const deleteMutation = useMutation({
     mutationFn: (userId: string) => api.deleteUser(userId),
     onSuccess: async () => {
-      closeModal();
+      // Bypass closeModal's submitting-guard: the closure captures
+      // submitting=true from the click that started the mutation, so
+      // closeModal would early-return and the dialog stayed open.
+      forceCloseModal();
       await invalidateUsers();
     },
     onError: (err) =>
@@ -199,6 +202,10 @@ function Users() {
     if (submitting) {
       return;
     }
+    forceCloseModal();
+  }
+
+  function forceCloseModal() {
     setModal(null);
     setEditForm(null);
     setPassword("");

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useRouter } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   faAnglesLeft,
   faAnglesRight,
@@ -95,7 +95,8 @@ function writeRailPreference(value: boolean): void {
 }
 
 export default function AppShell({ children }: { children: ReactNode }) {
-  const router = useRouter();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { session } = useSession();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() =>
@@ -124,12 +125,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const handleLogout = async () => {
     try {
       await api.logout();
-    } finally {
-      router.navigate({
-        to: "/login",
-        search: { message: "Enter account credentials to continue." },
-      });
+    } catch {
+      // Bail out of the authed UI either way — server may already
+      // consider us logged out, network may be flaky.
     }
+    // Drop the cached session before navigating. Without this, the
+    // useSession hook keeps returning the stale logged-in record and
+    // anything reading it (sidebar, _authed guard on remount) thinks
+    // we're still signed in, which prevented the navigate from
+    // landing on /login.
+    queryClient.removeQueries({ queryKey: ["session"] });
+    navigate({
+      to: "/login",
+      search: { message: "Enter account credentials to continue." },
+    });
   };
 
   const userInitial = useMemo(() => {

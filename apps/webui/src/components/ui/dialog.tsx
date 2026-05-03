@@ -1,9 +1,6 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
-import Button from "./button";
-import FaIcon from "./fa-icon";
 
 interface DialogProps {
   open?: boolean;
@@ -12,7 +9,6 @@ interface DialogProps {
   title: string;
   description?: string;
   children: ReactNode;
-  showClose?: boolean;
 }
 
 export default function Dialog({
@@ -22,7 +18,6 @@ export default function Dialog({
   title,
   description,
   children,
-  showClose = true,
 }: DialogProps) {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -48,18 +43,6 @@ export default function Dialog({
               <DialogPrimitive.Description className="mt-2 font-mono text-sm text-muted">
                 {description}
               </DialogPrimitive.Description>
-            )}
-            {showClose && (
-              <DialogPrimitive.Close asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Close"
-                  className="absolute right-4 top-5"
-                >
-                  <FaIcon icon={faXmark} />
-                </Button>
-              </DialogPrimitive.Close>
             )}
           </div>
           <div className="px-6 py-6">{children}</div>

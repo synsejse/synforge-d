@@ -35,17 +35,10 @@ export function UserModalShell({ title, children, onClose }: UserModalShellProps
         aria-labelledby={titleId}
         className="w-full max-w-xl border-4 border-white bg-black p-6 shadow-[6px_6px_0_rgba(255,255,255,0.25)]"
       >
-        <div className="mb-5 flex items-start justify-between gap-4 border-b-2 border-edge pb-4">
+        <div className="mb-5 border-b-2 border-edge pb-4">
           <h2 id={titleId} className="text-2xl font-bold text-white">
             {title}
           </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="border-2 border-edge-strong bg-black px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt"
-          >
-            Close
-          </button>
         </div>
         {children}
       </div>

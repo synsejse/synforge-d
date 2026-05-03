@@ -182,7 +182,15 @@ pub struct BuildJob {
     pub worker_container_id: Option<String>,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
+    /// When the worker actually started executing the build. NULL while
+    /// the job is still pending. Lets the UI separate queue latency from
+    /// pure build time.
+    pub started_at: Option<OffsetDateTime>,
     pub finished_at: Option<OffsetDateTime>,
+    /// When the daemon finished signing the job's artifacts. NULL when
+    /// signing was disabled, skipped, or the job hasn't reached the
+    /// signing phase yet.
+    pub signed_at: Option<OffsetDateTime>,
     pub error_message: Option<String>,
 }
 

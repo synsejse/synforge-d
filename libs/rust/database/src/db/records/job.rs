@@ -13,7 +13,9 @@ pub(crate) struct JobRecord {
     pub(crate) worker_container_id: Option<String>,
     pub(crate) created_at: OffsetDateTime,
     pub(crate) updated_at: OffsetDateTime,
+    pub(crate) started_at: Option<OffsetDateTime>,
     pub(crate) finished_at: Option<OffsetDateTime>,
+    pub(crate) signed_at: Option<OffsetDateTime>,
     pub(crate) error_message: Option<String>,
 }
 
@@ -30,7 +32,9 @@ pub(crate) struct NewJobRecord<'a> {
     pub(crate) worker_container_id: Option<&'a str>,
     pub(crate) created_at: OffsetDateTime,
     pub(crate) updated_at: OffsetDateTime,
+    pub(crate) started_at: Option<OffsetDateTime>,
     pub(crate) finished_at: Option<OffsetDateTime>,
+    pub(crate) signed_at: Option<OffsetDateTime>,
     pub(crate) error_message: Option<&'a str>,
 }
 
@@ -139,7 +143,9 @@ pub(crate) fn job_from_row(row: JobRecord) -> anyhow::Result<BuildJob> {
         worker_container_id: row.worker_container_id,
         created_at: row.created_at,
         updated_at: row.updated_at,
+        started_at: row.started_at,
         finished_at: row.finished_at,
+        signed_at: row.signed_at,
         error_message: row.error_message,
     })
 }

@@ -17,7 +17,9 @@ pub(in crate::db) async fn insert_job(store: &DieselStore, job: &BuildJob) -> an
         worker_container_id: job.worker_container_id.as_deref(),
         created_at: job.created_at,
         updated_at: job.updated_at,
+        started_at: job.started_at,
         finished_at: job.finished_at,
+        signed_at: job.signed_at,
         error_message: job.error_message.as_deref(),
     };
     diesel::insert_into(build_jobs::table)
@@ -35,12 +37,28 @@ pub(in crate::db) async fn set_job_running(
     let now = now_utc();
     let worker_container_id = worker_container_id.map(ToOwned::to_owned);
     let mut conn = store.get_connection().await?;
+    // Stamp started_at on the row's first transition to Running. If the
+    // job is later requeued (reset_job_for_retry) started_at is cleared
+    // back to NULL, so checking for NULL here is the right gate.
+    diesel::update(build_jobs::table.find(job_id))
+        .set((
+            build_jobs::status.eq(BuildStatus::Running),
+            build_jobs::updated_at.eq(now),
+            build_jobs::worker_container_id.eq(worker_container_id.as_deref()),
+            build_jobs::started_at.eq(now),
+        ))
+        .filter(build_jobs::started_at.is_null())
+        .execute(&mut conn)
+        .await?;
+    // If started_at was already set (e.g. retried mid-run), still update
+    // status / worker / updated_at so we don't silently no-op.
     diesel::update(build_jobs::table.find(job_id))
         .set((
             build_jobs::status.eq(BuildStatus::Running),
             build_jobs::updated_at.eq(now),
             build_jobs::worker_container_id.eq(worker_container_id.as_deref()),
         ))
+        .filter(build_jobs::started_at.is_not_null())
         .execute(&mut conn)
         .await?;
     Ok(())
@@ -86,7 +104,9 @@ pub(in crate::db) async fn reset_job_for_retry(
                     build_jobs::status.eq(BuildStatus::Pending),
                     build_jobs::worker_container_id.eq::<Option<&str>>(None),
                     build_jobs::updated_at.eq(now),
+                    build_jobs::started_at.eq::<Option<OffsetDateTime>>(None),
                     build_jobs::finished_at.eq::<Option<OffsetDateTime>>(None),
+                    build_jobs::signed_at.eq::<Option<OffsetDateTime>>(None),
                     build_jobs::error_message.eq::<Option<&str>>(None),
                 ))
                 .execute(conn)
@@ -122,11 +142,25 @@ pub(in crate::db) async fn finish_job(
                 .first(conn)
                 .await?;
 
+            // Stamp signed_at if the job actually went through signing —
+            // i.e. at least one artifact_signature is recorded with a
+            // non-Skipped status. NULL otherwise (signing disabled or
+            // no signable artifacts).
+            let signed_at = if artifact_signatures
+                .iter()
+                .any(|sig| sig.status != ArtifactSigningStatus::Skipped)
+            {
+                Some(now)
+            } else {
+                None
+            };
+
             diesel::update(build_jobs::table.find(job_id))
                 .set((
                     build_jobs::status.eq(status),
                     build_jobs::updated_at.eq(now),
                     build_jobs::finished_at.eq(Some(now)),
+                    build_jobs::signed_at.eq(signed_at),
                     build_jobs::error_message.eq(error_message.as_deref()),
                 ))
                 .execute(conn)

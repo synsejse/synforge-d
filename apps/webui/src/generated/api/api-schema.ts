@@ -901,7 +901,17 @@ export interface components {
             mock_chroot: string;
             package_name: string;
             revision: string;
+            /**
+             * Format: date-time
+             * @description When the daemon finished signing the job's artifacts. NULL when signing was disabled, skipped, or the job hasn't reached the signing phase yet.
+             */
+            signed_at?: string | null;
             spec_file: string;
+            /**
+             * Format: date-time
+             * @description When the worker actually started executing the build. NULL while the job is still pending.
+             */
+            started_at?: string | null;
             status: components["schemas"]["BuildStatus"];
             trigger: components["schemas"]["BuildTrigger"];
             /** Format: date-time */

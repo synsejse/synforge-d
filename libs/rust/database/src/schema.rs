@@ -43,7 +43,9 @@ diesel::table! {
         worker_container_id -> Nullable<Text>,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        started_at -> Nullable<Timestamptz>,
         finished_at -> Nullable<Timestamptz>,
+        signed_at -> Nullable<Timestamptz>,
         error_message -> Nullable<Text>,
     }
 }

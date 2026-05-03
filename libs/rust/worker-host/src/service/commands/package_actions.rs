@@ -238,7 +238,9 @@ where
             worker_container_id: None,
             created_at: now,
             updated_at: now,
+            started_at: None,
             finished_at: None,
+            signed_at: None,
             error_message: None,
         };
         queued_builds.push(QueuedBuildRequest {

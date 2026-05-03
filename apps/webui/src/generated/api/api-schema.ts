@@ -484,6 +484,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/repo/setup-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_repo_setup_info"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/repo/summary": {
         parameters: {
             query?: never;
@@ -772,6 +788,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sync/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_sync_schedule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sync/timeseries": {
         parameters: {
             query?: never;
@@ -903,13 +935,17 @@ export interface components {
             revision: string;
             /**
              * Format: date-time
-             * @description When the daemon finished signing the job's artifacts. NULL when signing was disabled, skipped, or the job hasn't reached the signing phase yet.
+             * @description When the daemon finished signing the job's artifacts. NULL when
+             *     signing was disabled, skipped, or the job hasn't reached the
+             *     signing phase yet.
              */
             signed_at?: string | null;
             spec_file: string;
             /**
              * Format: date-time
-             * @description When the worker actually started executing the build. NULL while the job is still pending.
+             * @description When the worker actually started executing the build. NULL while
+             *     the job is still pending. Lets the UI separate queue latency from
+             *     pure build time.
              */
             started_at?: string | null;
             status: components["schemas"]["BuildStatus"];
@@ -1314,6 +1350,18 @@ export interface components {
             page: components["schemas"]["PageInfo"];
             repo_files: components["schemas"]["PublishedRepoFile"][];
         };
+        /**
+         * @description Minimal info needed to render the "Add repo" page: the daemon's
+         *     public-facing base URL plus whether signing is currently enabled.
+         *     Available to any authenticated session (Read permission), so users
+         *     with `repo` permission can read setup instructions for the repos
+         *     they download from.
+         */
+        RepoSetupInfoResponse: {
+            public_base_url: string;
+            public_key_name: string;
+            signing_enabled: boolean;
+        };
         /** @enum {string} */
         RepoSigningReconcileMode: "sign" | "unsign";
         RepoSigningReconcileProgressResponse: {
@@ -1334,11 +1382,6 @@ export interface components {
         };
         /** @enum {string} */
         RepoSigningReconcileState: "running" | "completed" | "failed";
-        RepoSetupInfoResponse: {
-            public_base_url: string;
-            public_key_name: string;
-            signing_enabled: boolean;
-        };
         RepoSigningStatusResponse: {
             status: components["schemas"]["RepoSigningStatusView"];
         };
@@ -1432,21 +1475,39 @@ export interface components {
             operations: components["schemas"]["SyncOperation"][];
             page: components["schemas"]["PageInfo"];
         };
+        /**
+         * @description One scheduled-poll entry returned by `/api/v1/sync/schedule`. Granularity
+         *     is `(package_name, mock_chroot)` — a target may be eligible while another
+         *     target on the same package is sitting in failure backoff.
+         */
         SyncScheduleEntry: {
+            /** @description True if a non-zero `build_failure_backoff` row is gating this target. */
             blocked_by_backoff: boolean;
+            /**
+             * Format: int32
+             * @description Carried through from `build_failure_backoff` so the UI can show
+             *     "after 3 failed builds" context. Zero when no backoff is active.
+             */
             consecutive_failures: number;
             mock_chroot: string;
-            /** Format: date-time */
+            /** @description When this target becomes (or became) eligible to poll. ISO-8601 string. */
             next_eligible_at: string;
             package_name: string;
-            /** @description Seconds from now until eligibility. Negative when overdue. */
+            /**
+             * Format: int64
+             * @description Seconds from now until eligibility. Negative when overdue.
+             */
             seconds_until: number;
         };
         SyncScheduleQuery: {
+            /** @description Maximum number of entries to return. Defaults to 20, capped at 100. */
             limit?: number | null;
         };
         SyncScheduleResponse: {
-            /** Format: date-time */
+            /**
+             * @description Server clock when the schedule was computed; lets the UI tick
+             *     down the countdown without drifting against the server.
+             */
             computed_at: string;
             items: components["schemas"]["SyncScheduleEntry"][];
         };
@@ -2961,6 +3022,34 @@ export interface operations {
             };
         };
     };
+    get_repo_setup_info: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Get info needed to set up a client to download from this repository */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepoSetupInfoResponse"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     get_repo_summary: {
         parameters: {
             query?: never;
@@ -3516,6 +3605,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncOperationListResponse"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    get_sync_schedule: {
+        parameters: {
+            query?: {
+                /** @description Maximum number of entries to return. Defaults to 20, capped at 100. */
+                limit?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Upcoming poll schedule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncScheduleResponse"];
                 };
             };
             401: {

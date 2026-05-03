@@ -78,9 +78,13 @@ export default function MetricCard({
         )}
       </div>
 
+      {/* Sparkline gutter — always reserve the slot so cards in a grid
+          stay the same height regardless of which ones have a series. */}
       {sparkline && sparkline.length > 0 ? (
         <Sparkline values={sparkline} barClass={barColor} />
-      ) : null}
+      ) : (
+        <div aria-hidden="true" className="mt-auto h-7 pt-3" />
+      )}
 
       {/* Accent corner */}
       {variant !== "default" && (

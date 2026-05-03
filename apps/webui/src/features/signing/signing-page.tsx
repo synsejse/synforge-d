@@ -4,6 +4,7 @@ import {
   faArrowUpFromBracket,
   faCheckCircle,
   faKey,
+  faLock,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
@@ -307,7 +308,9 @@ function Signing() {
             loading={generateMutation.isPending}
             disabled={keyActionsLocked}
           >
-            {generateMutation.isPending ? null : <FaIcon icon={faKey} />}
+            {generateMutation.isPending ? null : (
+              <FaIcon icon={keyActionsLocked ? faLock : faKey} />
+            )}
             Generate
           </Button>
           <Button
@@ -318,7 +321,9 @@ function Signing() {
             loading={importMutation.isPending}
             disabled={keyActionsLocked}
           >
-            {importMutation.isPending ? null : <FaIcon icon={faKey} />}
+            {importMutation.isPending ? null : (
+              <FaIcon icon={keyActionsLocked ? faLock : faKey} />
+            )}
             Import
           </Button>
           <Button
@@ -360,7 +365,9 @@ function Signing() {
             loading={deleteMutation.isPending}
             disabled={enabled || !status.key_present}
           >
-            {deleteMutation.isPending ? null : <FaIcon icon={faTrash} />}
+            {deleteMutation.isPending ? null : (
+              <FaIcon icon={enabled ? faLock : faTrash} />
+            )}
             Delete Key
           </Button>
         </div>

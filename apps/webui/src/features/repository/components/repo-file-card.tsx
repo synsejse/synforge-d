@@ -54,9 +54,9 @@ export default function RepoFileCard({
         style={{ background: accent }}
       />
 
-      <div className="flex flex-col gap-3 pl-4 pr-4 py-3 sm:pl-6 sm:pr-5 sm:py-4 lg:flex-row lg:items-start lg:gap-4">
+      <div className="flex flex-col gap-2 pl-4 pr-4 py-2.5 sm:gap-3 sm:pl-6 sm:pr-5 sm:py-4 lg:flex-row lg:items-start lg:gap-4">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 sm:gap-x-3">
             <a
               href={`/repo/${file.path}`}
               className="break-all font-mono text-sm font-bold text-white transition-colors hover:text-accent-lime sm:text-base"
@@ -83,21 +83,14 @@ export default function RepoFileCard({
             ) : null}
           </div>
 
-          <div className="mt-1 break-all font-mono text-[11px] text-soft">
+          {/* Full path — only on md+ where the extra line earns its keep.
+              On mobile the filename link is enough; the path is reachable
+              via the download link anyway. */}
+          <div className="mt-1 hidden break-all font-mono text-[11px] text-soft md:block">
             {file.path}
           </div>
 
-          <div className="mt-2 flex flex-wrap items-start gap-x-6 gap-y-2 font-mono text-xs">
-            <MetaPair label="Build">
-              <Link
-                to="/jobs/view"
-                search={{ id: file.job_id }}
-                className="break-all text-strong transition-colors hover:text-accent-lime"
-              >
-                <FaIcon icon={faBoxesStacked} className="mr-1.5 text-soft" />
-                {file.job_id}
-              </Link>
-            </MetaPair>
+          <div className="mt-1.5 flex flex-wrap items-start gap-x-6 gap-y-1.5 font-mono text-xs sm:mt-2 sm:gap-y-2">
             <MetaPair label="Size">
               <span className="text-strong">{formatBytes(file.size_bytes)}</span>
             </MetaPair>
@@ -105,6 +98,18 @@ export default function RepoFileCard({
               <span className="text-strong">
                 {formatDateTime(file.published_at)}
               </span>
+            </MetaPair>
+            <MetaPair label="Build">
+              <Link
+                to="/jobs/view"
+                search={{ id: file.job_id }}
+                className="break-all text-strong transition-colors hover:text-accent-lime"
+              >
+                <FaIcon icon={faBoxesStacked} className="mr-1.5 text-soft" />
+                {/* Short id on mobile, full uuid on md+ */}
+                <span className="md:hidden">{file.job_id.slice(0, 8)}</span>
+                <span className="hidden md:inline">{file.job_id}</span>
+              </Link>
             </MetaPair>
           </div>
         </div>

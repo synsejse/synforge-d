@@ -78,11 +78,11 @@ export default function SyncScheduleStrip() {
   );
 }
 
-const SLOT_HEIGHT = 168;
 const CARD_HEIGHT = 64;
 const CONNECTOR_HEIGHT = 14;
-const TICK_SIZE = 12;
-const SLOT_HALF_PAD = (SLOT_HEIGHT - CARD_HEIGHT - CONNECTOR_HEIGHT - TICK_SIZE) / 2;
+const TICK_SIZE = 10;
+const HALF_SLOT = CARD_HEIGHT + CONNECTOR_HEIGHT;
+const SLOT_HEIGHT = HALF_SLOT * 2 + TICK_SIZE;
 
 function ScheduleTimeline({
   items,
@@ -130,9 +130,7 @@ function ScheduleSlot({
 }) {
   const overdue = remainingSec <= 0;
   const blocked = item.blocked_by_backoff;
-  const card = (
-    <ScheduleCard item={item} remainingSec={remainingSec} />
-  );
+  const card = <ScheduleCard item={item} remainingSec={remainingSec} />;
   const connector = (
     <div
       aria-hidden="true"
@@ -140,28 +138,24 @@ function ScheduleSlot({
       style={{ height: CONNECTOR_HEIGHT }}
     />
   );
-  const spacer = (
-    <div style={{ height: CARD_HEIGHT + CONNECTOR_HEIGHT + SLOT_HALF_PAD }} />
-  );
+  const halfSpacer = <div style={{ height: HALF_SLOT }} />;
   const tick = <Tick blocked={blocked} overdue={overdue} />;
 
   return (
     <li className="flex w-32 flex-shrink-0 flex-col items-center sm:w-36">
       {above ? (
         <>
-          <div style={{ height: SLOT_HALF_PAD }} />
           {card}
           {connector}
           {tick}
-          {spacer}
+          {halfSpacer}
         </>
       ) : (
         <>
-          {spacer}
+          {halfSpacer}
           {tick}
           {connector}
           {card}
-          <div style={{ height: SLOT_HALF_PAD }} />
         </>
       )}
     </li>
@@ -174,10 +168,12 @@ function Tick({ blocked, overdue }: { blocked: boolean; overdue: boolean }) {
     : overdue
       ? "bg-accent-lime"
       : "bg-success";
+  // Round dot, with a 2px black halo so the connector line visibly
+  // terminates AT the dot rather than embedding into it.
   return (
     <div
       aria-hidden="true"
-      className={`relative z-10 border-2 border-black ${fillClass}`}
+      className={`relative z-10 rounded-full ring-2 ring-black ${fillClass}`}
       style={{ width: TICK_SIZE, height: TICK_SIZE }}
     />
   );

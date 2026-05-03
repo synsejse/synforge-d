@@ -97,7 +97,7 @@ function Dashboard() {
 
       {/* Recent Jobs Table */}
       <section className="border-2 border-edge-strong bg-black shadow-card-sm">
-        <div className="flex items-end justify-between gap-4 border-b-2 border-edge-strong app-section-band px-5 py-4">
+        <div className="flex items-baseline justify-between gap-4 border-b-2 border-edge-strong app-section-band px-5 py-4">
           <h2 className="text-xl font-bold text-white">
             Latest build runs
           </h2>
@@ -140,7 +140,7 @@ function Dashboard() {
 
       {/* Live Queue — full width */}
       <section className="border-2 border-success bg-black shadow-card-sm">
-        <div className="flex items-end justify-between gap-4 border-b-2 border-success bg-black px-5 py-4">
+        <div className="flex items-baseline justify-between gap-4 border-b-2 border-success bg-black px-5 py-4">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping bg-success opacity-75" />

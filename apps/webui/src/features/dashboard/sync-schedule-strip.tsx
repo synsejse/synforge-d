@@ -34,7 +34,7 @@ export default function SyncScheduleStrip() {
 
   return (
     <section className="border-2 border-edge-strong bg-black shadow-card-sm">
-      <div className="flex items-end justify-between gap-4 border-b-2 border-edge-strong app-section-band px-5 py-4">
+      <div className="flex items-baseline justify-between gap-4 border-b-2 border-edge-strong app-section-band px-5 py-4">
         <div className="flex items-center gap-2">
           <FaIcon icon={faClock} className="text-soft" />
           <h2 className="text-xl font-bold text-white">Up next</h2>

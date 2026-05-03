@@ -210,7 +210,7 @@ function RepositoryBrowser() {
 
       {/* Files list — RepoFileCard rows */}
       <section className="space-y-3">
-        <div className="flex items-end justify-between gap-4 border-b-2 border-edge-strong pb-2">
+        <div className="flex items-baseline justify-between gap-4 border-b-2 border-edge-strong pb-2">
           <h2 className="text-base font-semibold text-white">Published files</h2>
           {inventoryQuery.data.repo_files.length > 0 ? (
             <span className="font-mono text-xs uppercase tracking-[0.18em] text-soft">

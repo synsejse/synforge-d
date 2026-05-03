@@ -11,6 +11,7 @@ import type {
   RefreshAllPackagesProgressResponse,
   RefreshAllPackagesResponse,
   RepoInventoryResponse,
+  RepoSetupInfoResponse,
   RepoSummaryResponse,
   ServerHardwareResponse,
   UpdatePackageRequest,
@@ -110,6 +111,10 @@ export function getRepoInventory(
 
 export function getRepoSummary(): Promise<RepoSummaryResponse> {
   return request("GET", "/api/v1/repo/summary");
+}
+
+export function getRepoSetupInfo(): Promise<RepoSetupInfoResponse> {
+  return request("GET", "/api/v1/repo/setup-info");
 }
 
 export function getServerHardware(): Promise<ServerHardwareResponse> {

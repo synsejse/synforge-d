@@ -10,9 +10,11 @@ use synforge_core::{
     api::{
         ExportRepoSigningKeyResponse, ExportRepoSigningPublicKeyResponse,
         GenerateRepoSigningKeyResponse, ImportRepoSigningKeyRequest, ImportRepoSigningKeyResponse,
-        RepoInventoryResponse, RepoSigningReconcileProgressResponse, RepoSigningStatusResponse,
-        RepoSummaryResponse, TestRepoSigningResponse, UpdateRepoSigningConfigRequest,
+        RepoInventoryResponse, RepoSetupInfoResponse, RepoSigningReconcileProgressResponse,
+        RepoSigningStatusResponse, RepoSummaryResponse, TestRepoSigningResponse,
+        UpdateRepoSigningConfigRequest,
     },
+    constants::DEFAULT_SIGNING_PUBLIC_KEY_NAME,
     model::{ArtifactKind, UserAccount},
 };
 use uuid::Uuid;
@@ -40,6 +42,21 @@ impl SynforgeService {
 
     pub async fn get_repo_summary(&self) -> anyhow::Result<RepoSummaryResponse> {
         self.repo_service.get_repo_summary(&self.repo_store()).await
+    }
+
+    /// Returns just the bits needed to render the "Add repo" page —
+    /// public_base_url + signing_enabled + the public key filename.
+    /// Read-permission users (which includes anyone with `repo`-only
+    /// access who has also been granted Read for UI use) can hit this
+    /// without needing the full effective-config endpoint that's
+    /// gated to admins.
+    pub async fn get_repo_setup_info(&self) -> anyhow::Result<RepoSetupInfoResponse> {
+        let config = self.load_effective_daemon_config().await?;
+        Ok(RepoSetupInfoResponse {
+            public_base_url: config.public_base_url,
+            signing_enabled: config.signing_enabled,
+            public_key_name: DEFAULT_SIGNING_PUBLIC_KEY_NAME.to_string(),
+        })
     }
 
     pub async fn resolve_repo_file_path(

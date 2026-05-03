@@ -33,10 +33,10 @@ pub use self::packages::{
 pub use self::repo::{
     ExportRepoSigningKeyResponse, ExportRepoSigningPublicKeyResponse,
     GenerateRepoSigningKeyResponse, ImportRepoSigningKeyRequest, ImportRepoSigningKeyResponse,
-    RepoInventoryQuery, RepoInventoryResponse, RepoSigningReconcileMode,
-    RepoSigningReconcileProgressResponse, RepoSigningReconcileProgressView,
-    RepoSigningReconcileState, RepoSigningStatusResponse, RepoSigningStatusView,
-    RepoSummaryResponse, RepoTargetSummary, TestRepoSigningResponse,
+    RepoInventoryQuery, RepoInventoryResponse, RepoSetupInfoResponse,
+    RepoSigningReconcileMode, RepoSigningReconcileProgressResponse,
+    RepoSigningReconcileProgressView, RepoSigningReconcileState, RepoSigningStatusResponse,
+    RepoSigningStatusView, RepoSummaryResponse, RepoTargetSummary, TestRepoSigningResponse,
     UpdateRepoSigningConfigRequest,
 };
 pub use self::system::{

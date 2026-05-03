@@ -34,13 +34,11 @@ export const repositoryQueries = {
     queryOptions({
       queryKey: ["repository", "setup"] as const,
       queryFn: async () => {
-        const [config, signing] = await Promise.all([
-          api.getConfig(),
-          api.getRepoSigningStatus(),
-        ]);
+        const info = await api.getRepoSetupInfo();
         return {
-          publicBaseUrl: normalizeBaseUrl(config.config.public_base_url),
-          signingEnabled: signing.status.enabled,
+          publicBaseUrl: normalizeBaseUrl(info.public_base_url),
+          signingEnabled: info.signing_enabled,
+          publicKeyName: info.public_key_name,
         };
       },
     }),

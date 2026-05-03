@@ -9,7 +9,6 @@ import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import PageHeader from "../../components/ui/page-header";
 
-const REPO_PUBLIC_KEY_NAME = "gpg.key";
 const INSTALL_COMMAND = "sudo dnf install <package-name>";
 
 function RepositorySetup() {
@@ -37,9 +36,15 @@ function RepositorySetup() {
         repoBaseUrl,
         repoHandle,
         setupQuery.data?.signingEnabled ?? false,
-        REPO_PUBLIC_KEY_NAME,
+        setupQuery.data?.publicKeyName ?? "gpg.key",
       ),
-    [repoRootUrl, repoBaseUrl, repoHandle, setupQuery.data?.signingEnabled],
+    [
+      repoRootUrl,
+      repoBaseUrl,
+      repoHandle,
+      setupQuery.data?.signingEnabled,
+      setupQuery.data?.publicKeyName,
+    ],
   );
 
   async function copy(label: string, value: string) {

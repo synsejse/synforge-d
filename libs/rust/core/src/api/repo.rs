@@ -42,6 +42,18 @@ pub struct RepoSummaryResponse {
     pub recent_files: Vec<PublishedRepoFile>,
 }
 
+/// Minimal info needed to render the "Add repo" page: the daemon's
+/// public-facing base URL plus whether signing is currently enabled.
+/// Available to any authenticated session (Read permission), so users
+/// with `repo` permission can read setup instructions for the repos
+/// they download from.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct RepoSetupInfoResponse {
+    pub public_base_url: String,
+    pub signing_enabled: bool,
+    pub public_key_name: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct RepoSigningStatusView {
     pub enabled: bool,

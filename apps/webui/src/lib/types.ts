@@ -57,6 +57,7 @@ export type PackageBuildHistoryResponse =
 export type RepoInventoryResponse = ApiSchema["RepoInventoryResponse"];
 export type RepoTargetSummary = ApiSchema["RepoTargetSummary"];
 export type RepoSummaryResponse = ApiSchema["RepoSummaryResponse"];
+export type RepoSetupInfoResponse = ApiSchema["RepoSetupInfoResponse"];
 
 export type LogChunkResponse = ApiSchema["LogChunkResponse"];
 export type LogMetaResponse = ApiSchema["LogMetaResponse"];

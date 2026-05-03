@@ -1334,6 +1334,11 @@ export interface components {
         };
         /** @enum {string} */
         RepoSigningReconcileState: "running" | "completed" | "failed";
+        RepoSetupInfoResponse: {
+            public_base_url: string;
+            public_key_name: string;
+            signing_enabled: boolean;
+        };
         RepoSigningStatusResponse: {
             status: components["schemas"]["RepoSigningStatusView"];
         };

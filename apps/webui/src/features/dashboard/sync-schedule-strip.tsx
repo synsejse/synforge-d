@@ -94,7 +94,7 @@ function ScheduleTimeline({
   now: number;
 }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto pb-3 pt-1">
       <div className="relative min-w-max">
         <div
           aria-hidden="true"

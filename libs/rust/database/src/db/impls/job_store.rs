@@ -64,6 +64,12 @@ impl JobStore for DieselStore {
         job::get_target_build_backoff(self, package_name, mock_chroot).await
     }
 
+    async fn list_target_build_backoffs(
+        &self,
+    ) -> anyhow::Result<Vec<(String, String, BuildFailureBackoffState)>> {
+        job::list_target_build_backoffs(self).await
+    }
+
     async fn finish_job(
         &self,
         job_id: Uuid,

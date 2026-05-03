@@ -89,3 +89,26 @@ pub(in crate::db) async fn get_target_build_backoff(
         })
         .transpose()
 }
+
+pub(in crate::db) async fn list_target_build_backoffs(
+    store: &DieselStore,
+) -> anyhow::Result<Vec<(String, String, BuildFailureBackoffState)>> {
+    let mut conn = store.get_connection().await?;
+    let rows = build_failure_backoff::table
+        .select(BuildFailureBackoffRecord::as_select())
+        .load::<BuildFailureBackoffRecord>(&mut conn)
+        .await?;
+    Ok(rows
+        .into_iter()
+        .map(|record| {
+            (
+                record.package_name,
+                record.mock_chroot,
+                BuildFailureBackoffState {
+                    consecutive_failures: record.consecutive_failures as u32,
+                    next_eligible_at: record.next_eligible_at,
+                },
+            )
+        })
+        .collect())
+}

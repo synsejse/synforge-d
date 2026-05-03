@@ -3,6 +3,7 @@ import type {
   SyncMetricsResponse,
   SyncOperationListQuery,
   SyncOperationListResponse,
+  SyncScheduleResponse,
   TimeRange,
   TimeSeriesResponse,
 } from "../types";
@@ -50,6 +51,12 @@ export function getSyncTimeseries(
   range: TimeRange = "24h",
 ): Promise<TimeSeriesResponse> {
   return request("GET", `/api/v1/sync/timeseries?range=${range}`);
+}
+
+export function getSyncSchedule(
+  limit: number = 20,
+): Promise<SyncScheduleResponse> {
+  return request("GET", `/api/v1/sync/schedule?limit=${limit}`);
 }
 
 export function getCacheStats(): Promise<CacheStatsResponse> {

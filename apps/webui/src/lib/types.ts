@@ -123,6 +123,8 @@ export type PackageSyncOperationListQuery =
   ApiSchema["PackageSyncOperationListQuery"];
 export type SyncOperationListResponse = ApiSchema["SyncOperationListResponse"];
 export type SyncMetricsResponse = ApiSchema["SyncMetricsResponse"];
+export type SyncScheduleEntry = ApiSchema["SyncScheduleEntry"];
+export type SyncScheduleResponse = ApiSchema["SyncScheduleResponse"];
 export type MockChrootCacheStats = ApiSchema["MockChrootCacheStats"];
 export type GitMirrorCacheStats = ApiSchema["GitMirrorCacheStats"];
 export type CacheStatsResponse = ApiSchema["CacheStatsResponse"];

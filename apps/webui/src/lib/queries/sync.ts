@@ -20,4 +20,9 @@ export const syncQueries = {
         }),
       placeholderData: (previous) => previous,
     }),
+  schedule: (limit: number = 10) =>
+    queryOptions({
+      queryKey: ["sync", "schedule", limit] as const,
+      queryFn: () => api.getSyncSchedule(limit),
+    }),
 };

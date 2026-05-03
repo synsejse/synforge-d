@@ -150,6 +150,25 @@ pub(super) async fn list_recent_sync_status_events(
     Ok(rows)
 }
 
+pub(super) async fn last_sync_at_per_package(
+    store: &DieselStore,
+) -> anyhow::Result<Vec<(String, OffsetDateTime)>> {
+    use diesel::dsl::max;
+    let mut conn = store.get_connection().await?;
+    let rows: Vec<(String, Option<OffsetDateTime>)> = sync_operations::table
+        .group_by(sync_operations::package_name)
+        .select((
+            sync_operations::package_name,
+            max(sync_operations::created_at),
+        ))
+        .load(&mut conn)
+        .await?;
+    Ok(rows
+        .into_iter()
+        .filter_map(|(name, ts)| ts.map(|t| (name, t)))
+        .collect())
+}
+
 pub(super) async fn get_sync_metrics(
     store: &DieselStore,
 ) -> anyhow::Result<(usize, usize, Option<String>)> {

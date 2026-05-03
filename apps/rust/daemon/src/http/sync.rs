@@ -5,7 +5,8 @@ use axum::extract::{Path, Query, State};
 use axum::routing::get;
 use synforge_core::api::{
     PackageSyncOperationListQuery, SyncMetricsResponse, SyncOperationListQuery,
-    SyncOperationListResponse, TimeSeriesQuery, TimeSeriesResponse,
+    SyncOperationListResponse, SyncScheduleQuery, SyncScheduleResponse, TimeSeriesQuery,
+    TimeSeriesResponse,
 };
 
 pub fn router() -> Router<AppState> {
@@ -13,6 +14,7 @@ pub fn router() -> Router<AppState> {
         .route("/sync/operations", get(list_sync_operations))
         .route("/sync/metrics", get(get_sync_metrics))
         .route("/sync/timeseries", get(get_sync_timeseries))
+        .route("/sync/schedule", get(get_sync_schedule))
         .route(
             "/packages/{name}/sync/operations",
             get(list_package_sync_operations),
@@ -86,6 +88,24 @@ pub(super) async fn list_package_sync_operations(
             .list_package_sync_operations(&name, query.limit, query.offset, query.status)
             .await?,
     ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/sync/schedule",
+    tag = "Sync",
+    params(SyncScheduleQuery),
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "Upcoming poll schedule", body = SyncScheduleResponse),
+        (status = 401, body = synforge_core::api::ApiError)
+    )
+)]
+pub(super) async fn get_sync_schedule(
+    State(state): State<AppState>,
+    Query(query): Query<SyncScheduleQuery>,
+) -> Result<Json<SyncScheduleResponse>, AppError> {
+    Ok(Json(state.service.get_sync_schedule(query.limit).await?))
 }
 
 #[utoipa::path(

@@ -49,4 +49,10 @@ impl SyncStore for DieselStore {
     ) -> anyhow::Result<Vec<(time::OffsetDateTime, String)>> {
         sync::list_recent_sync_status_events(self, cutoff).await
     }
+
+    async fn last_sync_at_per_package(
+        &self,
+    ) -> anyhow::Result<Vec<(String, time::OffsetDateTime)>> {
+        sync::last_sync_at_per_package(self).await
+    }
 }

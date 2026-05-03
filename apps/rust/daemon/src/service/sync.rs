@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use synforge_core::{
     api::{
-        SyncMetricsResponse, SyncOperationListResponse, TimeSeriesPoint, TimeSeriesResponse,
-        build_page_info, resolve_time_range,
+        SyncMetricsResponse, SyncOperationListResponse, SyncScheduleEntry, SyncScheduleResponse,
+        TimeSeriesPoint, TimeSeriesResponse, build_page_info, resolve_time_range,
     },
     model::format_timestamp,
     sync::SyncStatus,
@@ -9,7 +11,7 @@ use synforge_core::{
 use time::OffsetDateTime;
 
 use super::SynforgeService;
-use synforge_database::SyncStore;
+use synforge_database::{JobStore, PackageStore, SyncStore};
 
 impl SynforgeService {
     pub async fn list_sync_operations(
@@ -54,6 +56,92 @@ impl SynforgeService {
             succeeded_24h,
             failed_24h,
             last_failure_at,
+        })
+    }
+
+    /// Compute the next-up poll schedule across all enabled+polling
+    /// packages. Each (package, mock_chroot) pair gets a row with
+    /// `next_eligible_at` derived from the most recent sync attempt
+    /// + the package's poll_interval, capped against any active build
+    /// failure backoff. Items are sorted soonest-first; pass `limit` to
+    /// cap the response (default 20, max 100).
+    pub async fn get_sync_schedule(
+        &self,
+        limit: Option<usize>,
+    ) -> anyhow::Result<SyncScheduleResponse> {
+        let limit = limit.unwrap_or(20).clamp(1, 100);
+        let now = OffsetDateTime::now_utc();
+
+        // 1. List every enabled+polling package — page through with a
+        //    large limit since we filter again client-side. Realistically
+        //    the package count fits in a single page.
+        let total_packages = self.store.count_packages(None, Some(true)).await?;
+        let packages = self
+            .store
+            .list_packages(total_packages as usize, 0, None, Some(true))
+            .await?;
+
+        // 2. Last-sync-per-package as a lookup table.
+        let last_sync: HashMap<String, OffsetDateTime> = self
+            .store
+            .last_sync_at_per_package()
+            .await?
+            .into_iter()
+            .collect();
+
+        // 3. Backoff per (package, chroot).
+        let backoffs: HashMap<(String, String), (u32, OffsetDateTime)> = self
+            .store
+            .list_target_build_backoffs()
+            .await?
+            .into_iter()
+            .map(|(pkg, chroot, state)| {
+                ((pkg, chroot), (state.consecutive_failures, state.next_eligible_at))
+            })
+            .collect();
+
+        let mut entries: Vec<SyncScheduleEntry> = Vec::new();
+        for response in packages {
+            let pkg = &response.package;
+            if !pkg.enabled || !pkg.source.poll {
+                continue;
+            }
+            let interval =
+                time::Duration::seconds(pkg.poll_interval_seconds.max(1) as i64);
+            // Without a recorded sync we treat the package as eligible
+            // immediately (next_at = now).
+            let interval_eligible_at = last_sync
+                .get(&pkg.name)
+                .map(|last| *last + interval)
+                .unwrap_or(now);
+
+            for chroot in &pkg.mock_chroots {
+                let backoff = backoffs.get(&(pkg.name.clone(), chroot.clone())).copied();
+                let (next_at, blocked_by_backoff, consecutive_failures) = match backoff {
+                    Some((failures, backoff_until)) if backoff_until > interval_eligible_at => {
+                        (backoff_until, backoff_until > now, failures)
+                    }
+                    Some((failures, _)) => (interval_eligible_at, false, failures),
+                    None => (interval_eligible_at, false, 0),
+                };
+
+                entries.push(SyncScheduleEntry {
+                    package_name: pkg.name.clone(),
+                    mock_chroot: chroot.clone(),
+                    next_eligible_at: format_timestamp(next_at),
+                    seconds_until: (next_at - now).whole_seconds(),
+                    blocked_by_backoff,
+                    consecutive_failures,
+                });
+            }
+        }
+
+        entries.sort_by_key(|entry| entry.seconds_until);
+        entries.truncate(limit);
+
+        Ok(SyncScheduleResponse {
+            items: entries,
+            computed_at: format_timestamp(now),
         })
     }
 

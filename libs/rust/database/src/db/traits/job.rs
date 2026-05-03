@@ -59,6 +59,12 @@ pub trait JobStore: Send + Sync {
         mock_chroot: &str,
     ) -> anyhow::Result<Option<BuildFailureBackoffState>>;
 
+    /// Returns every active backoff row keyed by `(package, chroot)`.
+    /// Powers the sync-schedule endpoint without N round-trips.
+    async fn list_target_build_backoffs(
+        &self,
+    ) -> anyhow::Result<Vec<(String, String, BuildFailureBackoffState)>>;
+
     async fn finish_job(
         &self,
         job_id: Uuid,

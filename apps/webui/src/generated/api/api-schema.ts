@@ -1427,6 +1427,24 @@ export interface components {
             operations: components["schemas"]["SyncOperation"][];
             page: components["schemas"]["PageInfo"];
         };
+        SyncScheduleEntry: {
+            blocked_by_backoff: boolean;
+            consecutive_failures: number;
+            mock_chroot: string;
+            /** Format: date-time */
+            next_eligible_at: string;
+            package_name: string;
+            /** @description Seconds from now until eligibility. Negative when overdue. */
+            seconds_until: number;
+        };
+        SyncScheduleQuery: {
+            limit?: number | null;
+        };
+        SyncScheduleResponse: {
+            /** Format: date-time */
+            computed_at: string;
+            items: components["schemas"]["SyncScheduleEntry"][];
+        };
         /** @enum {string} */
         SyncStatus: "succeeded" | "failed";
         /** @enum {string} */

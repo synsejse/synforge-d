@@ -192,6 +192,10 @@ pub struct BuildJob {
     /// signing phase yet.
     pub signed_at: Option<OffsetDateTime>,
     pub error_message: Option<String>,
+    /// Soft-delete marker. NULL for active jobs. When set, the job's
+    /// artifacts, logs, signatures and on-disk dir have been pruned, but
+    /// the row is retained so historical statistics still see the build.
+    pub deleted_at: Option<OffsetDateTime>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

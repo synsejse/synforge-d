@@ -67,10 +67,17 @@ impl SynforgeService {
         package_name: &str,
         limit: Option<usize>,
         offset: Option<usize>,
+        include_deleted: bool,
     ) -> anyhow::Result<PackageBuildHistoryResponse> {
         let (limit, offset) = normalize_pagination(limit, offset);
         GitSyncService
-            .get_package_build_history(&self.package_deps(), package_name, limit, offset)
+            .get_package_build_history(
+                &self.package_deps(),
+                package_name,
+                limit,
+                offset,
+                include_deleted,
+            )
             .await
     }
 

@@ -242,6 +242,7 @@ where
             finished_at: None,
             signed_at: None,
             error_message: None,
+            deleted_at: None,
         };
         queued_builds.push(QueuedBuildRequest {
             package: updated_package.clone(),

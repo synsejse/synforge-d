@@ -224,6 +224,28 @@ impl JobLifecycle {
             .await
     }
 
+    /// Best-effort removal of `state/jobs/{job_id}/` (artifacts + logs).
+    /// Called when a job is soft-deleted or pruned. NotFound is fine
+    /// (already gone). Other I/O errors are logged but not propagated:
+    /// the DB soft-delete already succeeded, so leaking an orphan
+    /// directory is preferable to wedging UI state with a half-applied
+    /// delete.
+    pub async fn remove_job_dir(&self, job_id: Uuid) {
+        let dir = self.config.runtime_paths().job_root(job_id);
+        match tokio::fs::remove_dir_all(&dir).await {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => {
+                warn!(
+                    job_id = %job_id,
+                    path = %dir.display(),
+                    error = %error,
+                    "failed to remove on-disk job directory after soft-delete"
+                );
+            }
+        }
+    }
+
     #[tracing::instrument(skip_all, fields(reason = %message))]
     pub async fn abort_unfinished_jobs(&self, message: &str) -> anyhow::Result<()> {
         warn!("aborting unfinished jobs");
@@ -255,6 +277,7 @@ impl JobLifecycle {
             let published_files = self.store.list_published_repo_files_for_job(job_id).await?;
             self.remove_published_files(&published_files).await?;
             self.store.delete_job(job_id).await?;
+            self.remove_job_dir(job_id).await;
         }
 
         Ok(())

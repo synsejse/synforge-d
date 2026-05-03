@@ -47,6 +47,7 @@ diesel::table! {
         finished_at -> Nullable<Timestamptz>,
         signed_at -> Nullable<Timestamptz>,
         error_message -> Nullable<Text>,
+        deleted_at -> Nullable<Timestamptz>,
     }
 }
 

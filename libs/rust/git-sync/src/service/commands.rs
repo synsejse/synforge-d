@@ -64,9 +64,14 @@ pub trait PackageDefinitionMaterializer {
 
 #[async_trait]
 pub trait PackageDeletionJobReader {
+    /// Returns the package's jobs (active + finished). When
+    /// `include_deleted` is false, soft-deleted rows are excluded — the
+    /// caller already pruned their artifacts and there's nothing more to
+    /// clean up on them.
     async fn list_jobs_for_package(
         &self,
         package_name: &str,
+        include_deleted: bool,
     ) -> anyhow::Result<Vec<BuildJobResponse>>;
 }
 
@@ -221,7 +226,7 @@ pub async fn delete_package<D>(deps: &D, package_name: &str) -> anyhow::Result<(
 where
     D: PackageDeletionJobReader + PackageDeletionRunner + PackageDeleter + Send + Sync,
 {
-    let jobs = deps.list_jobs_for_package(package_name).await?;
+    let jobs = deps.list_jobs_for_package(package_name, false).await?;
     if jobs.iter().any(|entry| {
         matches!(
             entry.job.status,

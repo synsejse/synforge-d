@@ -73,11 +73,15 @@ export function getPackageBuilds(
   name: string,
   limit = 12,
   offset = 0,
+  options: { includeDeleted?: boolean } = {},
 ): Promise<PackageBuildHistoryResponse> {
   const params = new URLSearchParams({
     limit: String(limit),
     offset: String(offset),
   });
+  if (options.includeDeleted) {
+    params.set("include_deleted", "true");
+  }
   return request(
     "GET",
     `/api/v1/packages/${encodeURIComponent(name)}/builds?${params.toString()}`,

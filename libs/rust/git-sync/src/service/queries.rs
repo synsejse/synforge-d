@@ -25,13 +25,18 @@ pub trait PackageDetailsReader {
 
 #[async_trait]
 pub trait PackageBuildHistoryReader {
-    async fn count_package_builds(&self, package_name: &str) -> anyhow::Result<u64>;
+    async fn count_package_builds(
+        &self,
+        package_name: &str,
+        include_deleted: bool,
+    ) -> anyhow::Result<u64>;
 
     async fn list_package_builds(
         &self,
         package_name: &str,
         limit: usize,
         offset: usize,
+        include_deleted: bool,
     ) -> anyhow::Result<Vec<BuildJobResponse>>;
 
     async fn list_published_repo_files_for_package(
@@ -56,15 +61,18 @@ pub async fn get_package_build_history<D>(
     package_name: &str,
     limit: usize,
     offset: usize,
+    include_deleted: bool,
 ) -> anyhow::Result<PackageBuildHistoryResponse>
 where
     D: PackageBuildHistoryReader + PackageDetailsReader + Send + Sync,
 {
     deps.get_package(package_name).await?;
 
-    let total = deps.count_package_builds(package_name).await?;
+    let total = deps
+        .count_package_builds(package_name, include_deleted)
+        .await?;
     let jobs = deps
-        .list_package_builds(package_name, limit, offset)
+        .list_package_builds(package_name, limit, offset, include_deleted)
         .await?;
     let returned = jobs.len();
     let published_files = deps

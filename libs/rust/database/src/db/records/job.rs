@@ -17,6 +17,7 @@ pub(crate) struct JobRecord {
     pub(crate) finished_at: Option<OffsetDateTime>,
     pub(crate) signed_at: Option<OffsetDateTime>,
     pub(crate) error_message: Option<String>,
+    pub(crate) deleted_at: Option<OffsetDateTime>,
 }
 
 #[derive(Insertable)]
@@ -147,5 +148,6 @@ pub(crate) fn job_from_row(row: JobRecord) -> anyhow::Result<BuildJob> {
         finished_at: row.finished_at,
         signed_at: row.signed_at,
         error_message: row.error_message,
+        deleted_at: row.deleted_at,
     })
 }

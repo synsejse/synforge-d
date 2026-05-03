@@ -61,10 +61,11 @@ pub(crate) async fn get_package_builds(
     Path(name): Path<String>,
     Query(query): Query<PaginationQuery>,
 ) -> Result<Json<PackageBuildHistoryResponse>, AppError> {
+    let include_deleted = query.include_deleted.unwrap_or(false);
     Ok(Json(
         state
             .service
-            .get_package_build_history(&name, query.limit, query.offset)
+            .get_package_build_history(&name, query.limit, query.offset, include_deleted)
             .await?,
     ))
 }

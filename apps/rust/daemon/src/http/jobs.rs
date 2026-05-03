@@ -56,6 +56,7 @@ pub(super) async fn list_jobs(
     Query(query): Query<JobListQuery>,
 ) -> Result<Json<BuildJobListResponse>, AppError> {
     let scope = query.scope.unwrap_or(JobListScope::All);
+    let include_deleted = query.include_deleted.unwrap_or(false);
     let response = match scope {
         JobListScope::All => {
             state
@@ -66,6 +67,7 @@ pub(super) async fn list_jobs(
                     query.status,
                     query.package_name,
                     query.mock_chroot,
+                    include_deleted,
                 )
                 .await?
         }
@@ -89,6 +91,7 @@ pub(super) async fn list_jobs(
                     query.status,
                     query.package_name,
                     query.mock_chroot,
+                    include_deleted,
                 )
                 .await?
         }

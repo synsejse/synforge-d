@@ -25,6 +25,7 @@ impl PostgresJobStore {
         package_name: Option<String>,
         mock_chroot: Option<String>,
         completed_only: bool,
+        include_deleted: bool,
     ) -> anyhow::Result<Vec<BuildJobResponse>> {
         self.store
             .list_jobs(
@@ -34,6 +35,7 @@ impl PostgresJobStore {
                 package_name,
                 mock_chroot,
                 completed_only,
+                include_deleted,
             )
             .await
     }
@@ -44,9 +46,16 @@ impl PostgresJobStore {
         package_name: Option<String>,
         mock_chroot: Option<String>,
         completed_only: bool,
+        include_deleted: bool,
     ) -> anyhow::Result<u64> {
         self.store
-            .count_jobs(status, package_name, mock_chroot, completed_only)
+            .count_jobs(
+                status,
+                package_name,
+                mock_chroot,
+                completed_only,
+                include_deleted,
+            )
             .await
     }
 

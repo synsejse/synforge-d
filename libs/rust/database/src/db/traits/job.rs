@@ -91,6 +91,7 @@ pub trait JobStore: Send + Sync {
         package_name: Option<String>,
         mock_chroot: Option<String>,
         completed_only: bool,
+        include_deleted: bool,
     ) -> anyhow::Result<Vec<BuildJobResponse>>;
 
     async fn count_jobs(
@@ -99,6 +100,7 @@ pub trait JobStore: Send + Sync {
         package_name: Option<String>,
         mock_chroot: Option<String>,
         completed_only: bool,
+        include_deleted: bool,
     ) -> anyhow::Result<u64>;
 
     async fn list_active_jobs(
@@ -118,9 +120,14 @@ pub trait JobStore: Send + Sync {
     async fn list_jobs_for_package(
         &self,
         package_name: &str,
+        include_deleted: bool,
     ) -> anyhow::Result<Vec<BuildJobResponse>>;
 
     async fn get_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>>;
+    /// Soft-delete a finished job: drops artifacts, logs, signatures and
+    /// published-file rows, sets `deleted_at = now()` on the build_jobs
+    /// row. Returns the prior artifact list so the caller can clean up
+    /// on-disk files. Errors if the job is still pending or running.
     async fn delete_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>>;
     async fn abort_unfinished_jobs(&self, message: &str) -> anyhow::Result<()>;
 

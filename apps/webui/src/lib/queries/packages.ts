@@ -24,10 +24,16 @@ export const packagesQueries = {
       queryKey: ["packages", "detail", name] as const,
       queryFn: () => api.getPackage(name),
     }),
-  builds: (name: string, params: { limit: number; offset: number }) =>
+  builds: (
+    name: string,
+    params: { limit: number; offset: number; includeDeleted?: boolean },
+  ) =>
     queryOptions({
       queryKey: ["packages", "builds", name, params] as const,
-      queryFn: () => api.getPackageBuilds(name, params.limit, params.offset),
+      queryFn: () =>
+        api.getPackageBuilds(name, params.limit, params.offset, {
+          includeDeleted: params.includeDeleted,
+        }),
       placeholderData: (previous) => previous,
     }),
   repoFiles: (name: string, params: { limit: number; offset: number }) =>

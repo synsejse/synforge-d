@@ -6,7 +6,19 @@ use time::Duration;
 
 use super::super::*;
 
-pub(in crate::db) async fn delete_job(
+/// Soft-delete a finished job: drop artifacts, logs, signatures, and
+/// published-file rows, then mark the job row with `deleted_at = now()`.
+/// The row stays so historical statistics (timeseries, dashboards) keep
+/// counting the build. The on-disk `state/jobs/{job_id}/` directory is
+/// removed by the service layer caller, not here.
+///
+/// Idempotent: a second call on an already-soft-deleted row is a no-op
+/// at the DB layer (the conditional UPDATE doesn't match) but still
+/// returns a successful response.
+///
+/// Returns the (active or already-soft-deleted) job's prior artifact
+/// list so the caller can clean up published files on disk.
+pub(in crate::db) async fn soft_delete_job(
     store: &DieselStore,
     job_id: Uuid,
 ) -> anyhow::Result<Option<BuildJobResponse>> {
@@ -33,14 +45,6 @@ pub(in crate::db) async fn delete_job(
     conn.transaction::<(), anyhow::Error, _>(|conn| {
         async move {
             diesel::delete(
-                build_artifacts::table.filter(build_artifacts::job_id.eq(job_id)),
-            )
-            .execute(conn)
-            .await?;
-            diesel::delete(build_logs::table.filter(build_logs::job_id.eq(job_id)))
-                .execute(conn)
-                .await?;
-            diesel::delete(
                 published_repo_files::table.filter(
                     published_repo_files::artifact_id.eq_any(
                         build_artifacts::table
@@ -51,9 +55,26 @@ pub(in crate::db) async fn delete_job(
             )
             .execute(conn)
             .await?;
-            diesel::delete(build_jobs::table.find(job_id))
+            diesel::delete(
+                build_artifacts::table.filter(build_artifacts::job_id.eq(job_id)),
+            )
+            .execute(conn)
+            .await?;
+            diesel::delete(build_logs::table.filter(build_logs::job_id.eq(job_id)))
                 .execute(conn)
                 .await?;
+            let now = now_utc();
+            diesel::update(
+                build_jobs::table
+                    .find(job_id)
+                    .filter(build_jobs::deleted_at.is_null()),
+            )
+            .set((
+                build_jobs::deleted_at.eq(Some(now)),
+                build_jobs::updated_at.eq(now),
+            ))
+            .execute(conn)
+            .await?;
             Ok(())
         }
         .scope_boxed()

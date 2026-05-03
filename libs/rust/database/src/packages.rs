@@ -70,9 +70,19 @@ impl PostgresPackageStore {
         Ok(package_names)
     }
 
-    pub async fn count_package_builds(&self, package_name: &str) -> anyhow::Result<u64> {
+    pub async fn count_package_builds(
+        &self,
+        package_name: &str,
+        include_deleted: bool,
+    ) -> anyhow::Result<u64> {
         self.store
-            .count_jobs(None, Some(package_name.to_string()), None, false)
+            .count_jobs(
+                None,
+                Some(package_name.to_string()),
+                None,
+                false,
+                include_deleted,
+            )
             .await
     }
 
@@ -81,6 +91,7 @@ impl PostgresPackageStore {
         package_name: &str,
         limit: usize,
         offset: usize,
+        include_deleted: bool,
     ) -> anyhow::Result<Vec<BuildJobResponse>> {
         self.store
             .list_jobs(
@@ -90,6 +101,7 @@ impl PostgresPackageStore {
                 Some(package_name.to_string()),
                 None,
                 false,
+                include_deleted,
             )
             .await
     }
@@ -165,7 +177,10 @@ impl PostgresPackageStore {
     pub async fn list_jobs_for_package(
         &self,
         package_name: &str,
+        include_deleted: bool,
     ) -> anyhow::Result<Vec<BuildJobResponse>> {
-        self.store.list_jobs_for_package(package_name).await
+        self.store
+            .list_jobs_for_package(package_name, include_deleted)
+            .await
     }
 }

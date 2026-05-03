@@ -38,10 +38,10 @@ impl DaemonPackageDeps {
             async fn remove_job_record(&self, job_id: Uuid) -> anyhow::Result<Option<synforge_core::api::BuildJobResponse>>;
 
             #[call(count_package_builds)]
-            async fn load_package_build_count(&self, package_name: &str) -> anyhow::Result<u64>;
+            async fn load_package_build_count(&self, package_name: &str, include_deleted: bool) -> anyhow::Result<u64>;
 
             #[call(list_package_builds)]
-            async fn load_package_builds(&self, package_name: &str, limit: usize, offset: usize) -> anyhow::Result<Vec<synforge_core::api::BuildJobResponse>>;
+            async fn load_package_builds(&self, package_name: &str, limit: usize, offset: usize, include_deleted: bool) -> anyhow::Result<Vec<synforge_core::api::BuildJobResponse>>;
 
             #[call(list_published_repo_files_for_package)]
             async fn load_published_repo_files_for_package(&self, package_name: &str) -> anyhow::Result<Vec<synforge_core::model::PublishedRepoFile>>;
@@ -65,7 +65,7 @@ impl DaemonPackageDeps {
             async fn save_build_job(&self, job: &synforge_core::model::BuildJob) -> anyhow::Result<()>;
 
             #[call(list_jobs_for_package)]
-            async fn load_jobs_for_package(&self, package_name: &str) -> anyhow::Result<Vec<synforge_core::api::BuildJobResponse>>;
+            async fn load_jobs_for_package(&self, package_name: &str, include_deleted: bool) -> anyhow::Result<Vec<synforge_core::api::BuildJobResponse>>;
         }
     }
 

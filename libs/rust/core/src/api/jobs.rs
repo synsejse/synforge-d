@@ -79,6 +79,11 @@ pub struct JobListQuery {
     pub mock_chroot: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scope: Option<JobListScope>,
+    /// When true, soft-deleted jobs are included in the result. Defaults
+    /// to false — soft-deleted jobs are hidden from listings; the
+    /// timeseries endpoint always counts them regardless.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub include_deleted: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

@@ -12,6 +12,8 @@ export interface JobsListSearch {
   offset?: number;
   packageFilter?: string;
   targetFilter?: string;
+  /** Show soft-deleted jobs in the history list. */
+  includeDeleted?: boolean;
 }
 
 function readMode(value: unknown): JobViewMode {
@@ -33,6 +35,8 @@ export const Route = createFileRoute("/_authed/jobs/")({
       typeof search.packageFilter === "string" ? search.packageFilter : "",
     targetFilter:
       typeof search.targetFilter === "string" ? search.targetFilter : "",
+    includeDeleted:
+      search.includeDeleted === true || search.includeDeleted === "true",
   }),
   component: JobListPage,
 });

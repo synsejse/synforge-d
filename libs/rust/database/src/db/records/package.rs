@@ -96,6 +96,7 @@ pub(crate) async fn package_responses_from_records(
     let target_success_rows: Vec<(String, String, Uuid, String)> = build_jobs::table
         .filter(build_jobs::package_name.eq_any(&names))
         .filter(build_jobs::status.eq(BuildStatus::Succeeded))
+        .filter(build_jobs::deleted_at.is_null())
         .order((
             build_jobs::package_name.asc(),
             build_jobs::mock_chroot.asc(),
@@ -158,6 +159,7 @@ pub(crate) async fn package_responses_from_records(
     let pkg_success_rows: Vec<(String, Uuid, String)> = build_jobs::table
         .filter(build_jobs::package_name.eq_any(&names))
         .filter(build_jobs::status.eq(BuildStatus::Succeeded))
+        .filter(build_jobs::deleted_at.is_null())
         .order((
             build_jobs::package_name.asc(),
             build_jobs::finished_at.desc(),

@@ -47,6 +47,7 @@ function JobList() {
     offset: search.offset ?? 0,
     packageFilter: search.packageFilter ?? "",
     targetFilter: search.targetFilter ?? "",
+    includeDeleted: search.includeDeleted ?? false,
   };
   const [packageInput, setPackageInput] = useState(filters.packageFilter);
   const [targetInput, setTargetInput] = useState(filters.targetFilter);
@@ -75,6 +76,7 @@ function JobList() {
       status: filters.mode === "active" ? undefined : filters.filter,
       packageName: filters.packageFilter,
       mockChroot: filters.targetFilter,
+      includeDeleted: filters.mode === "history" && filters.includeDeleted,
     }),
     // Active mode: refresh the row data every 2s so durations tick and
     // status badges flip live without manual refresh.
@@ -276,6 +278,26 @@ function JobList() {
                   placeholder="Filter status..."
                 />
               </div>
+            )}
+
+            {/* Show-deleted toggle (history only). Off by default —
+                soft-deleted jobs are pruned of artifacts/logs but kept
+                so statistics still see them; surface them on demand. */}
+            {filters.mode === "history" && (
+              <label className="inline-flex cursor-pointer items-center gap-2 border-2 border-edge-strong bg-black px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-soft transition-colors hover:border-accent-lime hover:text-strong">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 cursor-pointer accent-accent-lime"
+                  checked={filters.includeDeleted}
+                  onChange={(e) =>
+                    setFilters({
+                      includeDeleted: e.target.checked || undefined,
+                      offset: 0,
+                    })
+                  }
+                />
+                Show deleted
+              </label>
             )}
 
             {/* Prune Button */}

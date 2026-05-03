@@ -35,6 +35,17 @@ fn apply_search_filters<'a>(
     query
 }
 
+fn apply_deleted_filter<'a>(
+    query: build_jobs::BoxedQuery<'a, Pg>,
+    include_deleted: bool,
+) -> build_jobs::BoxedQuery<'a, Pg> {
+    if include_deleted {
+        query
+    } else {
+        query.filter(build_jobs::deleted_at.is_null())
+    }
+}
+
 fn apply_active_job_filter<'a>(
     query: build_jobs::BoxedQuery<'a, Pg>,
 ) -> build_jobs::BoxedQuery<'a, Pg> {
@@ -53,12 +64,16 @@ pub(in crate::db) async fn list_jobs(
     package_name: Option<String>,
     mock_chroot: Option<String>,
     completed_only: bool,
+    include_deleted: bool,
 ) -> anyhow::Result<Vec<BuildJobResponse>> {
     let mut conn = store.get_connection().await?;
-    let query = apply_search_filters(
-        apply_status_filters(build_jobs::table.into_boxed(), status, completed_only),
-        package_name.as_deref(),
-        mock_chroot.as_deref(),
+    let query = apply_deleted_filter(
+        apply_search_filters(
+            apply_status_filters(build_jobs::table.into_boxed(), status, completed_only),
+            package_name.as_deref(),
+            mock_chroot.as_deref(),
+        ),
+        include_deleted,
     );
     let rows = query
         .order(build_jobs::created_at.desc())
@@ -76,12 +91,16 @@ pub(in crate::db) async fn count_jobs(
     package_name: Option<String>,
     mock_chroot: Option<String>,
     completed_only: bool,
+    include_deleted: bool,
 ) -> anyhow::Result<u64> {
     let mut conn = store.get_connection().await?;
-    let count = apply_search_filters(
-        apply_status_filters(build_jobs::table.into_boxed(), status, completed_only),
-        package_name.as_deref(),
-        mock_chroot.as_deref(),
+    let count = apply_deleted_filter(
+        apply_search_filters(
+            apply_status_filters(build_jobs::table.into_boxed(), status, completed_only),
+            package_name.as_deref(),
+            mock_chroot.as_deref(),
+        ),
+        include_deleted,
     )
     .count()
     .get_result::<i64>(&mut conn)

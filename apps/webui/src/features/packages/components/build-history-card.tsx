@@ -39,7 +39,10 @@ export default function BuildHistoryCard({
 }: BuildHistoryCardProps) {
   const job = entry.build.job;
   const live = job.status === "pending" || job.status === "running";
-  const accent = STATUS_RAIL[job.status] ?? "var(--theme-text-soft)";
+  const isDeleted = job.deleted_at != null;
+  const accent = isDeleted
+    ? "var(--theme-text-soft)"
+    : (STATUS_RAIL[job.status] ?? "var(--theme-text-soft)");
   const signing = getBuildSigningSummary(entry);
   const duration = formatJobDuration(job);
 
@@ -49,7 +52,7 @@ export default function BuildHistoryCard({
         live
           ? "synforge-row-live border-2 border-edge-strong"
           : "border-2 border-edge-strong"
-      }`}
+      } ${isDeleted ? "opacity-60" : ""}`}
     >
       <span
         aria-hidden="true"
@@ -68,7 +71,16 @@ export default function BuildHistoryCard({
               {job.mock_chroot}
             </Link>
             <StatusPill status={job.status} />
-            <Badge variant={signing.variant}>{signing.label}</Badge>
+            {isDeleted ? (
+              <span
+                className="border-2 border-edge-strong bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-soft"
+                title="Build artifacts and logs were pruned. Row kept for statistics."
+              >
+                Deleted
+              </span>
+            ) : (
+              <Badge variant={signing.variant}>{signing.label}</Badge>
+            )}
           </div>
 
           <div className="mt-2 flex flex-wrap items-start gap-x-6 gap-y-2 font-mono text-xs">
@@ -108,7 +120,7 @@ export default function BuildHistoryCard({
               <FaIcon icon={faFolderOpen} />
             </Link>
           </Tooltip>
-          {!live ? (
+          {!live && !isDeleted ? (
             <>
               <Tooltip content="Refresh target" side="top">
                 <Button
@@ -133,19 +145,21 @@ export default function BuildHistoryCard({
               </Tooltip>
             </>
           ) : null}
-          <Tooltip content="Delete build" side="top">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => onDeleteJob(job.id)}
-              disabled={live || deleting}
-              loading={deleting}
-              aria-label={`Delete build ${job.id}`}
-              className="hover:border-error hover:text-error"
-            >
-              {deleting ? null : <FaIcon icon={faTrash} />}
-            </Button>
-          </Tooltip>
+          {!isDeleted ? (
+            <Tooltip content="Delete build" side="top">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => onDeleteJob(job.id)}
+                disabled={live || deleting}
+                loading={deleting}
+                aria-label={`Delete build ${job.id}`}
+                className="hover:border-error hover:text-error"
+              >
+                {deleting ? null : <FaIcon icon={faTrash} />}
+              </Button>
+            </Tooltip>
+          ) : null}
         </div>
       </div>
     </article>

@@ -115,6 +115,7 @@ impl JobStore for DieselStore {
         package_name: Option<String>,
         mock_chroot: Option<String>,
         completed_only: bool,
+        include_deleted: bool,
     ) -> anyhow::Result<Vec<BuildJobResponse>> {
         job::list_jobs(
             self,
@@ -124,6 +125,7 @@ impl JobStore for DieselStore {
             package_name,
             mock_chroot,
             completed_only,
+            include_deleted,
         )
         .await
     }
@@ -134,8 +136,17 @@ impl JobStore for DieselStore {
         package_name: Option<String>,
         mock_chroot: Option<String>,
         completed_only: bool,
+        include_deleted: bool,
     ) -> anyhow::Result<u64> {
-        job::count_jobs(self, status, package_name, mock_chroot, completed_only).await
+        job::count_jobs(
+            self,
+            status,
+            package_name,
+            mock_chroot,
+            completed_only,
+            include_deleted,
+        )
+        .await
     }
 
     async fn list_active_jobs(
@@ -159,8 +170,9 @@ impl JobStore for DieselStore {
     async fn list_jobs_for_package(
         &self,
         package_name: &str,
+        include_deleted: bool,
     ) -> anyhow::Result<Vec<BuildJobResponse>> {
-        job::list_jobs_for_package(self, package_name).await
+        job::list_jobs_for_package(self, package_name, include_deleted).await
     }
 
     async fn get_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>> {
@@ -168,7 +180,7 @@ impl JobStore for DieselStore {
     }
 
     async fn delete_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>> {
-        job::delete_job(self, job_id).await
+        job::soft_delete_job(self, job_id).await
     }
 
     async fn abort_unfinished_jobs(&self, message: &str) -> anyhow::Result<()> {

@@ -153,6 +153,7 @@ export default function JobDetail({ jobId }: Props) {
     jobQuery.data.job.job.status === "timed_out";
 
   const job = jobQuery.data.job.job;
+  const isDeleted = job.deleted_at != null;
   const artifactCount = jobQuery.data.artifacts.length;
   const duration = formatJobDuration(job);
 
@@ -178,6 +179,11 @@ export default function JobDetail({ jobId }: Props) {
               <Badge variant={getStatusVariant(job.status)} pulse={isLive}>
                 {job.status}
               </Badge>
+              {isDeleted ? (
+                <span className="border-2 border-edge-strong bg-black px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
+                  Deleted
+                </span>
+              ) : null}
               <h1 className="break-all font-mono text-2xl font-bold uppercase text-white sm:text-3xl">
                 {job.package_name}
               </h1>
@@ -242,7 +248,7 @@ export default function JobDetail({ jobId }: Props) {
               <FaIcon icon={faArrowLeft} />
               Back
             </Button>
-            {canRetry && (
+            {canRetry && !isDeleted && (
               <Button
                 variant="primary"
                 size="sm"
@@ -266,17 +272,19 @@ export default function JobDetail({ jobId }: Props) {
                 Kill
               </Button>
             )}
-            <Button
-              variant="danger"
-              size="sm"
-              fullWidth="responsive-lg"
-              onClick={handleDelete}
-              loading={deleteMutation.isPending}
-              disabled={killMutation.isPending || isLive}
-            >
-              {deleteMutation.isPending ? null : <FaIcon icon={faTrash} />}
-              Delete
-            </Button>
+            {!isDeleted ? (
+              <Button
+                variant="danger"
+                size="sm"
+                fullWidth="responsive-lg"
+                onClick={handleDelete}
+                loading={deleteMutation.isPending}
+                disabled={killMutation.isPending || isLive}
+              >
+                {deleteMutation.isPending ? null : <FaIcon icon={faTrash} />}
+                Delete
+              </Button>
+            ) : null}
           </div>
         </div>
       </header>
@@ -288,39 +296,58 @@ export default function JobDetail({ jobId }: Props) {
         />
       ) : null}
 
-      <Tabs
-        ariaLabel="Job detail sections"
-        value={activeTab}
-        onChange={setActiveTab}
-        items={[
-          { value: "logs", label: "Build Logs" },
-          {
-            value: "artifacts",
-            label: "Artifacts",
-            count: artifactCount > 0 ? artifactCount : null,
-            disabled: artifactCount === 0,
-          },
-        ]}
-      >
-        {activeTab === "logs" ? (
-          <Suspense
-            fallback={<LoadingBlock label="Loading logs…" lines={3} />}
-          >
-            <TabbedLogViewer jobId={jobId} isLive={isLive} />
-          </Suspense>
-        ) : null}
-        {activeTab === "artifacts" ? (
-          <div className="space-y-3">
-            {jobQuery.data.artifacts.map((artifact) => (
-              <ArtifactCard
-                key={`${artifact.id}:${artifact.file}`}
-                jobId={jobId}
-                artifact={artifact}
-              />
-            ))}
-          </div>
-        ) : null}
-      </Tabs>
+      {isDeleted ? (
+        <section className="border-2 border-edge-strong bg-surface-alt px-4 py-3 sm:px-5">
+          <p className="font-mono text-xs text-soft">
+            <span className="font-bold uppercase tracking-[0.22em] text-strong">
+              Deleted
+            </span>
+            {job.deleted_at ? (
+              <> on {formatDateTime(job.deleted_at)}.</>
+            ) : (
+              <>.</>
+            )}{" "}
+            Artifacts and logs are no longer available; this row is kept so
+            historical statistics still see the build.
+          </p>
+        </section>
+      ) : null}
+
+      {isDeleted ? null : (
+        <Tabs
+          ariaLabel="Job detail sections"
+          value={activeTab}
+          onChange={setActiveTab}
+          items={[
+            { value: "logs", label: "Build Logs" },
+            {
+              value: "artifacts",
+              label: "Artifacts",
+              count: artifactCount > 0 ? artifactCount : null,
+              disabled: artifactCount === 0,
+            },
+          ]}
+        >
+          {activeTab === "logs" ? (
+            <Suspense
+              fallback={<LoadingBlock label="Loading logs…" lines={3} />}
+            >
+              <TabbedLogViewer jobId={jobId} isLive={isLive} />
+            </Suspense>
+          ) : null}
+          {activeTab === "artifacts" ? (
+            <div className="space-y-3">
+              {jobQuery.data.artifacts.map((artifact) => (
+                <ArtifactCard
+                  key={`${artifact.id}:${artifact.file}`}
+                  jobId={jobId}
+                  artifact={artifact}
+                />
+              ))}
+            </div>
+          ) : null}
+        </Tabs>
+      )}
     </div>
   );
 }

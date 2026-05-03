@@ -76,14 +76,29 @@ impl SynforgeService {
         status: Option<BuildStatus>,
         package_name: Option<String>,
         mock_chroot: Option<String>,
+        include_deleted: bool,
     ) -> anyhow::Result<BuildJobListResponse> {
         let (limit, offset) = normalize_pagination(limit, offset);
         let job_store = PostgresJobStore::new(self.store.clone());
         let total = job_store
-            .count_jobs(status, package_name.clone(), mock_chroot.clone(), false)
+            .count_jobs(
+                status,
+                package_name.clone(),
+                mock_chroot.clone(),
+                false,
+                include_deleted,
+            )
             .await?;
         let jobs = job_store
-            .list_jobs(limit, offset, status, package_name, mock_chroot, false)
+            .list_jobs(
+                limit,
+                offset,
+                status,
+                package_name,
+                mock_chroot,
+                false,
+                include_deleted,
+            )
             .await?;
         Ok(BuildJobListResponse {
             page: build_page_info(limit, offset, total, jobs.len()),
@@ -98,14 +113,29 @@ impl SynforgeService {
         status: Option<BuildStatus>,
         package_name: Option<String>,
         mock_chroot: Option<String>,
+        include_deleted: bool,
     ) -> anyhow::Result<BuildJobListResponse> {
         let (limit, offset) = normalize_pagination(limit, offset);
         let job_store = PostgresJobStore::new(self.store.clone());
         let total = job_store
-            .count_jobs(status, package_name.clone(), mock_chroot.clone(), true)
+            .count_jobs(
+                status,
+                package_name.clone(),
+                mock_chroot.clone(),
+                true,
+                include_deleted,
+            )
             .await?;
         let jobs = job_store
-            .list_jobs(limit, offset, status, package_name, mock_chroot, true)
+            .list_jobs(
+                limit,
+                offset,
+                status,
+                package_name,
+                mock_chroot,
+                true,
+                include_deleted,
+            )
             .await?;
         Ok(BuildJobListResponse {
             page: build_page_info(limit, offset, total, jobs.len()),
@@ -205,12 +235,13 @@ impl SynforgeService {
             .delete_job(job_id)
             .await?
             .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(job_id.to_string())))?;
+        self.lifecycle.remove_job_dir(job_id).await;
         Ok(deleted)
     }
 
     pub async fn prune_failed_jobs(&self) -> anyhow::Result<PruneJobsResponse> {
         let jobs = PostgresJobStore::new(self.store.clone())
-            .list_jobs(10_000, 0, None, None, None, false)
+            .list_jobs(10_000, 0, None, None, None, false, false)
             .await?;
         let mut deleted_jobs = Vec::new();
         for job in jobs {

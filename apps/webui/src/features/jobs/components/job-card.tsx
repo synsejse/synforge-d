@@ -46,7 +46,13 @@ export default function JobCard({
   onDelete,
 }: JobCardProps) {
   const live = isLiveJob(entry);
-  const accent = STATUS_RAIL[entry.job.status] ?? "var(--theme-text-soft)";
+  const isDeleted = entry.job.deleted_at != null;
+  // Soft-deleted rows: pin the rail to the soft/grey colour and dim the
+  // body so they read as "kept for stats, not actionable" instead of
+  // looking like fresh failures.
+  const accent = isDeleted
+    ? "var(--theme-text-soft)"
+    : (STATUS_RAIL[entry.job.status] ?? "var(--theme-text-soft)");
   const duration = formatJobDuration(entry.job);
 
   return (
@@ -55,7 +61,7 @@ export default function JobCard({
         live
           ? "synforge-row-live border-2 border-edge-strong"
           : "border-2 border-edge-strong"
-      }`}
+      } ${isDeleted ? "opacity-60" : ""}`}
     >
       {/* Status accent rail */}
       <span
@@ -76,6 +82,14 @@ export default function JobCard({
               {entry.job.package_name}
             </Link>
             <StatusPill status={entry.job.status} />
+            {isDeleted ? (
+              <span
+                className="border-2 border-edge-strong bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-soft"
+                title="This job's artifacts and logs were pruned. The row is kept so historical statistics still see it."
+              >
+                Deleted
+              </span>
+            ) : null}
             <span className="border-2 border-edge-strong bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-soft">
               {entry.job.mock_chroot}
             </span>
@@ -137,7 +151,7 @@ export default function JobCard({
               </Button>
             </Tooltip>
           ) : null}
-          {mode !== "active" ? (
+          {mode !== "active" && !isDeleted ? (
             <Tooltip content="Delete build" side="top">
               <Button
                 variant="ghost"

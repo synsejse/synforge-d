@@ -11,6 +11,8 @@ interface PackageBuildHistorySectionProps {
   builds: PackageBuildInventoryEntry[];
   buildsOffset: number;
   buildsHasMore: boolean;
+  includeDeleted: boolean;
+  onIncludeDeletedChange: (next: boolean) => void;
   onLoadPrevious: () => void;
   onLoadNext: () => void;
   onRefreshTarget: (mockChroot: string) => void;
@@ -26,6 +28,8 @@ export default function PackageBuildHistorySection({
   builds,
   buildsOffset,
   buildsHasMore,
+  includeDeleted,
+  onIncludeDeletedChange,
   onLoadPrevious,
   onLoadNext,
   onRefreshTarget,
@@ -36,12 +40,34 @@ export default function PackageBuildHistorySection({
   if (buildsLoading && !buildsLoaded) {
     return <LoadingBlock label="Loading build history…" lines={4} />;
   }
+  const showDeletedToggle = (
+    <label className="inline-flex cursor-pointer items-center gap-2 border-2 border-edge-strong bg-black px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-soft transition-colors hover:border-accent-lime hover:text-strong">
+      <input
+        type="checkbox"
+        className="h-4 w-4 cursor-pointer accent-accent-lime"
+        checked={includeDeleted}
+        onChange={(e) => onIncludeDeletedChange(e.target.checked)}
+      />
+      Show deleted
+    </label>
+  );
+
   if (builds.length === 0) {
-    return <EmptyState>No build history yet.</EmptyState>;
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-end">{showDeletedToggle}</div>
+        <EmptyState>
+          {includeDeleted
+            ? "No build history yet."
+            : "No build history yet. Deleted builds may be hidden — toggle 'Show deleted' to include them."}
+        </EmptyState>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">{showDeletedToggle}</div>
       <div className="space-y-3">
         {builds.map((entry) => (
           <BuildHistoryCard

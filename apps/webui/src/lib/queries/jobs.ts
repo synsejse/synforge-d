@@ -8,6 +8,8 @@ export interface JobsListParams {
   status?: string;
   packageName?: string;
   mockChroot?: string;
+  /** When true, soft-deleted jobs are included (history scope only). */
+  includeDeleted?: boolean;
 }
 
 export const jobsQueries = {
@@ -28,6 +30,7 @@ export const jobsQueries = {
               status: params.status,
               packageName: params.packageName,
               mockChroot: params.mockChroot,
+              includeDeleted: params.includeDeleted,
             }),
       placeholderData: (previous) => previous,
     }),

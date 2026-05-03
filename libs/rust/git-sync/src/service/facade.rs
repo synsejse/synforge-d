@@ -80,11 +80,12 @@ impl GitSyncService {
         package_name: &str,
         limit: usize,
         offset: usize,
+        include_deleted: bool,
     ) -> anyhow::Result<PackageBuildHistoryResponse>
     where
         D: PackageBuildHistoryReader + PackageDetailsReader + Send + Sync,
     {
-        get_package_build_history(deps, package_name, limit, offset).await
+        get_package_build_history(deps, package_name, limit, offset, include_deleted).await
     }
 
     pub async fn browse_repository<D>(

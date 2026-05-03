@@ -47,8 +47,13 @@ impl EnabledPackageCatalog for DaemonPackageDeps {
 
 #[async_trait]
 impl PackageBuildHistoryReader for DaemonPackageDeps {
-    async fn count_package_builds(&self, package_name: &str) -> anyhow::Result<u64> {
-        self.load_package_build_count(package_name).await
+    async fn count_package_builds(
+        &self,
+        package_name: &str,
+        include_deleted: bool,
+    ) -> anyhow::Result<u64> {
+        self.load_package_build_count(package_name, include_deleted)
+            .await
     }
 
     async fn list_package_builds(
@@ -56,8 +61,10 @@ impl PackageBuildHistoryReader for DaemonPackageDeps {
         package_name: &str,
         limit: usize,
         offset: usize,
+        include_deleted: bool,
     ) -> anyhow::Result<Vec<BuildJobResponse>> {
-        self.load_package_builds(package_name, limit, offset).await
+        self.load_package_builds(package_name, limit, offset, include_deleted)
+            .await
     }
 
     async fn list_published_repo_files_for_package(
@@ -130,7 +137,9 @@ impl PackageDeletionJobReader for DaemonPackageDeps {
     async fn list_jobs_for_package(
         &self,
         package_name: &str,
+        include_deleted: bool,
     ) -> anyhow::Result<Vec<BuildJobResponse>> {
-        self.load_jobs_for_package(package_name).await
+        self.load_jobs_for_package(package_name, include_deleted)
+            .await
     }
 }

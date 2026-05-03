@@ -925,6 +925,13 @@ export interface components {
         BuildJob: {
             /** Format: date-time */
             created_at: string;
+            /**
+             * Format: date-time
+             * @description Soft-delete marker. NULL for active jobs. When set, the job's
+             *     artifacts, logs, signatures and on-disk dir have been pruned, but
+             *     the row is retained so historical statistics still see the build.
+             */
+            deleted_at?: string | null;
             error_message?: string | null;
             /** Format: date-time */
             finished_at?: string | null;
@@ -1115,6 +1122,12 @@ export interface components {
             job_id: string;
         };
         JobListQuery: {
+            /**
+             * @description When true, soft-deleted jobs are included in the result. Defaults
+             *     to false — soft-deleted jobs are hidden from listings; the
+             *     timeseries endpoint always counts them regardless.
+             */
+            include_deleted?: boolean | null;
             limit?: number | null;
             mock_chroot?: string | null;
             offset?: number | null;
@@ -1752,6 +1765,12 @@ export interface operations {
                 package_name?: string | null;
                 mock_chroot?: string | null;
                 scope?: null | components["schemas"]["JobListScope"];
+                /**
+                 * @description When true, soft-deleted jobs are included in the result. Defaults
+                 *     to false — soft-deleted jobs are hidden from listings; the
+                 *     timeseries endpoint always counts them regardless.
+                 */
+                include_deleted?: boolean | null;
             };
             header?: never;
             path?: never;
@@ -2543,6 +2562,13 @@ export interface operations {
                 name: string;
                 limit: number | null;
                 offset: number | null;
+                /**
+                 * @description When true, soft-deleted records are included in the result.
+                 *     Defaults to false. Currently consumed by the package-builds
+                 *     listing; harmless on endpoints that don't have a soft-delete
+                 *     concept (they ignore it).
+                 */
+                include_deleted: boolean | null;
             };
             cookie?: never;
         };
@@ -2668,6 +2694,13 @@ export interface operations {
             query?: {
                 limit?: number | null;
                 offset?: number | null;
+                /**
+                 * @description When true, soft-deleted records are included in the result.
+                 *     Defaults to false. Currently consumed by the package-builds
+                 *     listing; harmless on endpoints that don't have a soft-delete
+                 *     concept (they ignore it).
+                 */
+                include_deleted?: boolean | null;
             };
             header?: never;
             path: {

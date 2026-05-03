@@ -28,6 +28,7 @@ interface ListJobsOptions {
   status?: string;
   packageName?: string;
   mockChroot?: string;
+  includeDeleted?: boolean;
 }
 
 function listJobsByScope(
@@ -46,6 +47,9 @@ function listJobsByScope(
   }
   if (options.mockChroot?.trim()) {
     params.set("mock_chroot", options.mockChroot.trim());
+  }
+  if (options.includeDeleted) {
+    params.set("include_deleted", "true");
   }
   return request("GET", `/api/v1/jobs?${params.toString()}`);
 }

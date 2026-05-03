@@ -17,6 +17,12 @@ pub struct PaginationQuery {
     pub limit: Option<usize>,
     #[serde(default)]
     pub offset: Option<usize>,
+    /// When true, soft-deleted records are included in the result.
+    /// Defaults to false. Currently consumed by the package-builds
+    /// listing; harmless on endpoints that don't have a soft-delete
+    /// concept (they ignore it).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub include_deleted: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

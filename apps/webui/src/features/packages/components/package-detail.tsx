@@ -155,11 +155,13 @@ export default function PackageDetail({ packageName }: Props) {
   const [activeTab, setActiveTab] = useState<"builds" | "repo" | "sync">(
     "builds",
   );
+  const [includeDeletedBuilds, setIncludeDeletedBuilds] = useState(false);
 
   const buildsQuery = useQuery(
     packagesQueries.builds(packageName, {
       limit: BUILD_HISTORY_PAGE_SIZE,
       offset: buildsOffset,
+      includeDeleted: includeDeletedBuilds,
     }),
   );
 
@@ -464,6 +466,11 @@ export default function PackageDetail({ packageName }: Props) {
             builds={buildsQuery.data?.builds ?? []}
             buildsOffset={buildsOffset}
             buildsHasMore={buildsQuery.data?.page.has_more ?? false}
+            includeDeleted={includeDeletedBuilds}
+            onIncludeDeletedChange={(next) => {
+              setIncludeDeletedBuilds(next);
+              setBuildsOffset(0);
+            }}
             onLoadPrevious={() =>
               setBuildsOffset(Math.max(0, buildsOffset - BUILD_HISTORY_PAGE_SIZE))
             }

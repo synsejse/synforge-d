@@ -107,9 +107,22 @@ impl SynforgeService {
         package_name: &str,
         request: UpdatePackageRequest,
     ) -> anyhow::Result<PackageResponse> {
-        GitSyncService
+        let response = GitSyncService
             .update_package(&self.package_deps(), package_name, request)
-            .await
+            .await?;
+        // If the update leaves ccache disabled, drop the on-disk
+        // cache tree for this package immediately. Without this the
+        // dir would linger until the periodic orphan sweep runs.
+        // (mock-cache stays — it's used regardless of the ccache flag.)
+        if !response.package.ccache_enabled {
+            remove_package_cache_subtree(
+                &self.config.worker_ccache_root(),
+                package_name,
+                "ccache",
+            )
+            .await;
+        }
+        Ok(response)
     }
 
     pub async fn delete_package(&self, package_name: &str) -> anyhow::Result<()> {

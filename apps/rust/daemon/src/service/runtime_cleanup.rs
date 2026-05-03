@@ -112,29 +112,39 @@ impl SynforgeService {
 
     /// Sweep ccache and mock-cache roots and remove
     /// `{package}/{chroot}/` subtrees that no longer match a current
-    /// package definition. Catches three cases the explicit delete
-    /// hook can't:
+    /// package definition. Catches what the explicit hooks can't:
     /// - chroots removed from a package's mock_chroots
-    /// - packages deleted on the old code path (pre-cleanup-on-delete)
+    /// - packages deleted / ccache toggled off on the old code path
     /// - any historical dirs that predate this worker
+    ///
+    /// Policy:
+    /// - mock-cache root: orphan if package missing OR chroot missing.
+    /// - ccache root: same plus `ccache_enabled = false` reaps the
+    ///   whole package tree (matches the immediate cleanup that runs
+    ///   on toggle-off via update_package).
     async fn cleanup_orphan_cache_dirs(&self) -> anyhow::Result<()> {
-        let chroots_by_package = self.fetch_package_chroot_set().await?;
+        let snapshot = self.fetch_package_cache_snapshot().await?;
+        let ccache_chroots = snapshot.ccache_chroots_by_package();
+        let mock_chroots = snapshot.mock_chroots_by_package();
 
-        for (root, domain) in [
-            (self.config.worker_ccache_root(), "ccache"),
-            (self.config.worker_mock_cache_root(), "mock-cache"),
-        ] {
-            self.cleanup_orphan_package_chroot_dirs_under(&root, &chroots_by_package, domain)
-                .await?;
-        }
+        self.cleanup_orphan_package_chroot_dirs_under(
+            &self.config.worker_ccache_root(),
+            &ccache_chroots,
+            "ccache",
+        )
+        .await?;
+        self.cleanup_orphan_package_chroot_dirs_under(
+            &self.config.worker_mock_cache_root(),
+            &mock_chroots,
+            "mock-cache",
+        )
+        .await?;
         Ok(())
     }
 
-    async fn fetch_package_chroot_set(
-        &self,
-    ) -> anyhow::Result<HashMap<String, HashSet<String>>> {
+    async fn fetch_package_cache_snapshot(&self) -> anyhow::Result<PackageCacheSnapshot> {
         const PAGE_SIZE: usize = 200;
-        let mut result: HashMap<String, HashSet<String>> = HashMap::new();
+        let mut packages: Vec<PackageCacheEntry> = Vec::new();
         let mut offset = 0_usize;
         loop {
             let page = self
@@ -146,13 +156,14 @@ impl SynforgeService {
             }
             offset += page.len();
             for entry in page {
-                result.insert(
-                    entry.package.name,
-                    entry.package.mock_chroots.into_iter().collect(),
-                );
+                packages.push(PackageCacheEntry {
+                    name: entry.package.name,
+                    ccache_enabled: entry.package.ccache_enabled,
+                    mock_chroots: entry.package.mock_chroots.into_iter().collect(),
+                });
             }
         }
-        Ok(result)
+        Ok(PackageCacheSnapshot { packages })
     }
 
     async fn cleanup_orphan_package_chroot_dirs_under(
@@ -201,5 +212,36 @@ impl SynforgeService {
             );
         }
         Ok(())
+    }
+}
+
+struct PackageCacheEntry {
+    name: String,
+    ccache_enabled: bool,
+    mock_chroots: HashSet<String>,
+}
+
+struct PackageCacheSnapshot {
+    packages: Vec<PackageCacheEntry>,
+}
+
+impl PackageCacheSnapshot {
+    /// Packages eligible for ccache: only those with `ccache_enabled =
+    /// true`. Ones with the flag off act as "no such package" for
+    /// the ccache root, so the orphan sweep reaps their cache trees.
+    fn ccache_chroots_by_package(&self) -> HashMap<String, HashSet<String>> {
+        self.packages
+            .iter()
+            .filter(|entry| entry.ccache_enabled)
+            .map(|entry| (entry.name.clone(), entry.mock_chroots.clone()))
+            .collect()
+    }
+
+    /// All packages — mock-cache is used regardless of ccache flag.
+    fn mock_chroots_by_package(&self) -> HashMap<String, HashSet<String>> {
+        self.packages
+            .iter()
+            .map(|entry| (entry.name.clone(), entry.mock_chroots.clone()))
+            .collect()
     }
 }

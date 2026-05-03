@@ -14,13 +14,12 @@ use synforge_core::{
     error::SynforgeError,
     model::{BuildStatus, format_timestamp},
 };
-use synforge_database::jobs::PostgresJobStore;
+use synforge_database::{JobStore, RepoStore};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
 use super::SynforgeService;
 use super::sync::{SeriesBucket, bucket_succeeded_failed_events, snap_to_bucket};
-use synforge_database::JobStore;
 
 impl SynforgeService {
     pub async fn resolve_job_artifact_path(
@@ -28,7 +27,8 @@ impl SynforgeService {
         job_id: Uuid,
         relative_artifact_path: &str,
     ) -> anyhow::Result<PathBuf> {
-        let job = PostgresJobStore::new(self.store.clone())
+        let job = self
+            .store
             .get_job(job_id)
             .await?
             .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(job_id.to_string())))?;
@@ -79,8 +79,8 @@ impl SynforgeService {
         include_deleted: bool,
     ) -> anyhow::Result<BuildJobListResponse> {
         let (limit, offset) = normalize_pagination(limit, offset);
-        let job_store = PostgresJobStore::new(self.store.clone());
-        let total = job_store
+        let total = self
+            .store
             .count_jobs(
                 status,
                 package_name.clone(),
@@ -89,7 +89,8 @@ impl SynforgeService {
                 include_deleted,
             )
             .await?;
-        let jobs = job_store
+        let jobs = self
+            .store
             .list_jobs(
                 limit,
                 offset,
@@ -116,8 +117,8 @@ impl SynforgeService {
         include_deleted: bool,
     ) -> anyhow::Result<BuildJobListResponse> {
         let (limit, offset) = normalize_pagination(limit, offset);
-        let job_store = PostgresJobStore::new(self.store.clone());
-        let total = job_store
+        let total = self
+            .store
             .count_jobs(
                 status,
                 package_name.clone(),
@@ -126,7 +127,8 @@ impl SynforgeService {
                 include_deleted,
             )
             .await?;
-        let jobs = job_store
+        let jobs = self
+            .store
             .list_jobs(
                 limit,
                 offset,
@@ -151,11 +153,12 @@ impl SynforgeService {
         mock_chroot: Option<String>,
     ) -> anyhow::Result<BuildJobListResponse> {
         let (limit, offset) = normalize_pagination(limit, offset);
-        let job_store = PostgresJobStore::new(self.store.clone());
-        let total = job_store
+        let total = self
+            .store
             .count_active_jobs(package_name.clone(), mock_chroot.clone())
             .await?;
-        let jobs = job_store
+        let jobs = self
+            .store
             .list_active_jobs(limit, offset, package_name, mock_chroot)
             .await?;
         Ok(BuildJobListResponse {
@@ -165,15 +168,15 @@ impl SynforgeService {
     }
 
     pub async fn get_job(&self, job_id: Uuid) -> anyhow::Result<BuildJobResponse> {
-        PostgresJobStore::new(self.store.clone())
+        self.store
             .get_job(job_id)
             .await?
             .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(job_id.to_string())))
     }
 
     pub async fn kill_job(&self, job_id: Uuid) -> anyhow::Result<BuildJobResponse> {
-        let job_store = PostgresJobStore::new(self.store.clone());
-        let job = job_store
+        let job = self
+            .store
             .get_job(job_id)
             .await?
             .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(job_id.to_string())))?;
@@ -191,7 +194,7 @@ impl SynforgeService {
         self.store
             .finish_job(job_id, BuildStatus::Failed, Some(reason), &[], &[], &[])
             .await?;
-        job_store
+        self.store
             .get_job(job_id)
             .await?
             .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(job_id.to_string())))
@@ -226,12 +229,12 @@ impl SynforgeService {
     }
 
     pub async fn delete_job(&self, job_id: Uuid) -> anyhow::Result<BuildJobResponse> {
-        let job_store = PostgresJobStore::new(self.store.clone());
-        let published_files = job_store.list_published_repo_files_for_job(job_id).await?;
+        let published_files = self.store.list_published_repo_files_for_job(job_id).await?;
         self.lifecycle
             .remove_published_files(&published_files)
             .await?;
-        let deleted = job_store
+        let deleted = self
+            .store
             .delete_job(job_id)
             .await?
             .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(job_id.to_string())))?;
@@ -240,7 +243,8 @@ impl SynforgeService {
     }
 
     pub async fn prune_failed_jobs(&self) -> anyhow::Result<PruneJobsResponse> {
-        let jobs = PostgresJobStore::new(self.store.clone())
+        let jobs = self
+            .store
             .list_jobs(10_000, 0, None, None, None, false, false)
             .await?;
         let mut deleted_jobs = Vec::new();

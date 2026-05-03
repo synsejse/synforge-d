@@ -7,9 +7,7 @@ use synforge_core::{
     config::{DaemonConfig, RUNTIME_SETTING_SIGNING_PRIVATE_KEY_ARMORED},
     model::{ArtifactSignature, PublishedRepoFile},
 };
-use synforge_database::{
-    DieselStore, repo::PostgresRepoStore, runtime_settings::PostgresRuntimeSettingsStore,
-};
+use synforge_database::{DieselStore, RepoStore, runtime_settings::PostgresRuntimeSettingsStore};
 use synforge_publish::{
     RepoArtifactCatalog, RepoSigningCommandRunner, RepoSigningConfigLoader, RepoSigningInspector,
     RepoSigningKeyIdentity, RepoSigningProgressReader, RepoSigningProgressWriter,
@@ -30,40 +28,40 @@ pub(crate) struct RepoSigningDeps {
 }
 
 impl RepoSigningDeps {
-    fn repo_store(&self) -> PostgresRepoStore {
-        PostgresRepoStore::new(self.store.clone())
-    }
-
     fn signing_manager(&self) -> synforge_publish::RepoSigningManager {
         synforge_publish::RepoSigningManager
     }
 
-    delegate! {
-        to self.repo_store() {
-            #[call(count_all_published_repo_files)]
-            async fn load_published_repo_file_count(&self) -> anyhow::Result<u64>;
+    async fn load_published_repo_file_count(&self) -> anyhow::Result<u64> {
+        self.store.count_published_repo_files(None, None, None).await
+    }
 
-            #[call(list_all_published_repo_files)]
-            async fn load_published_repo_files(
-                &self,
-                limit: usize,
-                offset: usize,
-            ) -> anyhow::Result<Vec<PublishedRepoFile>>;
+    async fn load_published_repo_files(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> anyhow::Result<Vec<PublishedRepoFile>> {
+        self.store
+            .list_published_repo_files(limit, offset, None, None, None)
+            .await
+    }
 
-            #[call(update_build_artifact_metadata)]
-            async fn persist_build_artifact_metadata(
-                &self,
-                artifact_id: Uuid,
-                sha256: String,
-                size_bytes: u64,
-            ) -> anyhow::Result<()>;
+    async fn persist_build_artifact_metadata(
+        &self,
+        artifact_id: Uuid,
+        sha256: String,
+        size_bytes: u64,
+    ) -> anyhow::Result<()> {
+        self.store
+            .update_build_artifact_metadata(artifact_id, sha256, size_bytes)
+            .await
+    }
 
-            #[call(upsert_artifact_signatures)]
-            async fn persist_artifact_signatures(
-                &self,
-                signatures: Vec<ArtifactSignature>,
-            ) -> anyhow::Result<()>;
-        }
+    async fn persist_artifact_signatures(
+        &self,
+        signatures: Vec<ArtifactSignature>,
+    ) -> anyhow::Result<()> {
+        self.store.upsert_artifact_signatures(signatures).await
     }
 
     delegate! {
@@ -308,10 +306,6 @@ impl RepoArtifactCatalog for RepoSigningDeps {
 }
 
 impl SynforgeService {
-    pub(super) fn repo_store(&self) -> PostgresRepoStore {
-        PostgresRepoStore::new(self.store.clone())
-    }
-
     pub(super) fn repo_signing_deps(&self) -> RepoSigningDeps {
         RepoSigningDeps {
             store: self.store.clone(),

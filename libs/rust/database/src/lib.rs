@@ -2,9 +2,6 @@
 
 pub mod accounts;
 pub mod db;
-pub mod jobs;
-pub mod packages;
-pub mod repo;
 pub mod runtime_settings;
 pub mod schema;
 pub mod users;

@@ -9,9 +9,7 @@ use synforge_core::error::SynforgeError;
 use synforge_core::model::BuildTrigger;
 use synforge_core::package::{PackageDefinition, SpecRevision};
 use synforge_core::sync::SyncTriggerType;
-use synforge_database::DieselStore;
-use synforge_database::jobs::PostgresJobStore;
-use synforge_database::packages::PostgresPackageStore;
+use synforge_database::{DieselStore, JobStore, RepoStore};
 use synforge_git_sync::RuntimeGitRegistryAdapter;
 use synforge_worker_host::{
     ActiveTargetBuildReader, BuildJobReader, BuildQueue, DockerWorkerLauncher,
@@ -106,20 +104,12 @@ impl BuildQueue for JobRetryDeps {
 }
 
 impl JobRetryDeps {
-    fn job_store(&self) -> PostgresJobStore {
-        PostgresJobStore::new(self.store.clone())
-    }
-
-    fn package_store(&self) -> PostgresPackageStore {
-        PostgresPackageStore::new(self.store.clone())
-    }
-
     fn build_queue(&self) -> WorkerBuildQueue {
         WorkerBuildQueue::new(self.queue_tx.clone())
     }
 
     delegate! {
-        to self.job_store() {
+        to self.store {
             #[call(get_job)]
             async fn load_build_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>>;
 
@@ -128,11 +118,7 @@ impl JobRetryDeps {
 
             #[call(reset_job_for_retry)]
             async fn reset_retry_job(&self, job_id: Uuid, trigger: BuildTrigger, revision: &str) -> anyhow::Result<()>;
-        }
-    }
 
-    delegate! {
-        to self.package_store() {
             #[call(has_active_job_for_target)]
             async fn target_has_active_job(&self, package_name: &str, mock_chroot: &str) -> anyhow::Result<bool>;
         }

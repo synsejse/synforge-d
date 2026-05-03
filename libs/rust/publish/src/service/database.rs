@@ -3,19 +3,19 @@ use synforge_core::{
     api::RepoTargetSummary,
     model::{ArtifactKind, PublishedRepoFile},
 };
-use synforge_database::repo::PostgresRepoStore;
+use synforge_database::{DieselStore, RepoStore};
 
 use super::{RepoInventoryReader, RepoSummaryReader};
 
 #[async_trait]
-impl RepoInventoryReader for PostgresRepoStore {
+impl RepoInventoryReader for DieselStore {
     async fn count_published_repo_files(
         &self,
         package_name: Option<String>,
         mock_chroot: Option<String>,
         kind: Option<ArtifactKind>,
     ) -> anyhow::Result<u64> {
-        PostgresRepoStore::count_published_repo_files(self, package_name, mock_chroot, kind).await
+        RepoStore::count_published_repo_files(self, package_name, mock_chroot, kind).await
     }
 
     async fn list_published_repo_files(
@@ -26,7 +26,7 @@ impl RepoInventoryReader for PostgresRepoStore {
         mock_chroot: Option<String>,
         kind: Option<ArtifactKind>,
     ) -> anyhow::Result<Vec<PublishedRepoFile>> {
-        PostgresRepoStore::list_published_repo_files(
+        RepoStore::list_published_repo_files(
             self,
             limit,
             offset,
@@ -39,27 +39,27 @@ impl RepoInventoryReader for PostgresRepoStore {
 }
 
 #[async_trait]
-impl RepoSummaryReader for PostgresRepoStore {
+impl RepoSummaryReader for DieselStore {
     async fn get_repo_distinct_counts(&self) -> anyhow::Result<(u64, u64, u64)> {
-        PostgresRepoStore::get_repo_distinct_counts(self).await
+        RepoStore::get_repo_distinct_counts(self).await
     }
 
     async fn sum_published_repo_file_bytes(&self) -> anyhow::Result<u64> {
-        PostgresRepoStore::sum_published_repo_file_bytes(self).await
+        RepoStore::sum_published_repo_file_bytes(self).await
     }
 
     async fn count_all_published_repo_files(&self) -> anyhow::Result<u64> {
-        PostgresRepoStore::count_all_published_repo_files(self).await
+        RepoStore::count_published_repo_files(self, None, None, None).await
     }
 
     async fn list_repo_target_summaries(&self) -> anyhow::Result<Vec<RepoTargetSummary>> {
-        PostgresRepoStore::list_repo_target_summaries(self).await
+        RepoStore::list_repo_target_summaries(self).await
     }
 
     async fn list_recent_published_repo_files(
         &self,
         limit: usize,
     ) -> anyhow::Result<Vec<PublishedRepoFile>> {
-        PostgresRepoStore::list_recent_published_repo_files(self, limit).await
+        RepoStore::list_recent_published_repo_files(self, limit).await
     }
 }

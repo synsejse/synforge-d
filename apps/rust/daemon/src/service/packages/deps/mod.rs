@@ -4,12 +4,21 @@ mod git;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use delegate::delegate;
-use synforge_core::{api::PackageActionTargetResult, model::BuildTrigger};
-use synforge_database::packages::PostgresPackageStore;
+use synforge_core::{
+    api::{
+        BrowseRepositoryResponse, BuildJobResponse, PackageActionTargetResult, PackageResponse,
+        RefreshAllPackagesProgressView,
+    },
+    model::{BuildJob, BuildTrigger, PublishedRepoFile},
+    package::PackageDefinition,
+};
+use synforge_database::{DieselStore, JobStore, PackageStore, RepoStore};
 use synforge_git_sync::{RefreshAllProgressStore, RuntimeGitRegistryAdapter};
 use synforge_state::RefreshAllPackagesProgressState;
-use synforge_worker_host::{BuildQueue, BuildService, JobLifecycle, QueuedBuildRequest, WorkerBuildQueue};
+use synforge_worker_host::{
+    BuildQueue, BuildService, JobLifecycle, QueuedBuildRequest, WorkerBuildQueue,
+};
+use time::OffsetDateTime;
 use tracing::info;
 use uuid::Uuid;
 
@@ -17,7 +26,7 @@ use crate::service::SynforgeService;
 
 #[derive(Clone)]
 pub(crate) struct DaemonPackageDeps {
-    package_store: PostgresPackageStore,
+    store: DieselStore,
     git: RuntimeGitRegistryAdapter,
     build_queue: WorkerBuildQueue,
     build_service: BuildService,
@@ -26,73 +35,193 @@ pub(crate) struct DaemonPackageDeps {
 }
 
 impl DaemonPackageDeps {
-    delegate! {
-        to self.package_store {
-            #[call(list_all_enabled_package_names)]
-            async fn load_enabled_package_names(&self) -> anyhow::Result<Vec<String>>;
-
-            #[call(list_published_repo_files_for_job)]
-            async fn load_published_repo_files_for_job(&self, job_id: Uuid) -> anyhow::Result<Vec<synforge_core::model::PublishedRepoFile>>;
-
-            #[call(delete_job)]
-            async fn remove_job_record(&self, job_id: Uuid) -> anyhow::Result<Option<synforge_core::api::BuildJobResponse>>;
-
-            #[call(count_package_builds)]
-            async fn load_package_build_count(&self, package_name: &str, include_deleted: bool) -> anyhow::Result<u64>;
-
-            #[call(list_package_builds)]
-            async fn load_package_builds(&self, package_name: &str, limit: usize, offset: usize, include_deleted: bool) -> anyhow::Result<Vec<synforge_core::api::BuildJobResponse>>;
-
-            #[call(list_published_repo_files_for_package)]
-            async fn load_published_repo_files_for_package(&self, package_name: &str) -> anyhow::Result<Vec<synforge_core::model::PublishedRepoFile>>;
-
-            #[call(find_package)]
-            async fn load_package(&self, package_name: &str) -> anyhow::Result<Option<synforge_core::api::PackageResponse>>;
-
-            #[call(upsert_package_definition)]
-            async fn save_package_definition(&self, package: &synforge_core::package::PackageDefinition) -> anyhow::Result<()>;
-
-            #[call(has_active_job_for_target)]
-            async fn load_has_active_job_for_target(&self, package_name: &str, mock_chroot: &str) -> anyhow::Result<bool>;
-
-            #[call(get_last_successful_revision)]
-            async fn load_last_successful_revision(&self, package_name: &str, mock_chroot: &str) -> anyhow::Result<Option<String>>;
-
-            #[call(get_target_backoff_wait_seconds)]
-            async fn load_target_backoff_wait_seconds(&self, package_name: &str, mock_chroot: &str) -> anyhow::Result<Option<u64>>;
-
-            #[call(insert_build_job)]
-            async fn save_build_job(&self, job: &synforge_core::model::BuildJob) -> anyhow::Result<()>;
-
-            #[call(list_jobs_for_package)]
-            async fn load_jobs_for_package(&self, package_name: &str, include_deleted: bool) -> anyhow::Result<Vec<synforge_core::api::BuildJobResponse>>;
+    /// Page through all enabled packages and collect their names.
+    /// Used by the refresh-all flow.
+    pub(super) async fn load_enabled_package_names(&self) -> anyhow::Result<Vec<String>> {
+        const PAGE_SIZE: usize = 200;
+        let mut names = Vec::new();
+        let mut offset = 0;
+        loop {
+            let page = self
+                .store
+                .list_packages(PAGE_SIZE, offset, None, Some(true))
+                .await?;
+            if page.is_empty() {
+                break;
+            }
+            offset += page.len();
+            names.extend(page.into_iter().map(|entry| entry.package.name));
         }
+        Ok(names)
     }
 
-    delegate! {
-        to self.git {
-            #[call(browse_repository)]
-            async fn browse_git_repository(&self, repo_url: &str) -> anyhow::Result<synforge_core::api::BrowseRepositoryResponse>;
-
-            #[call(get_package)]
-            async fn load_git_package(&self, package_name: &str) -> anyhow::Result<synforge_core::api::PackageResponse>;
-
-            #[call(list_definitions)]
-            async fn load_package_definitions(&self) -> anyhow::Result<Vec<synforge_core::package::PackageDefinition>>;
-
-            #[call(get_definition)]
-            async fn load_package_definition(&self, package_name: &str) -> anyhow::Result<synforge_core::package::PackageDefinition>;
-
-            #[call(delete_package)]
-            async fn delete_git_package(&self, package_name: &str) -> anyhow::Result<()>;
-        }
+    pub(super) async fn load_published_repo_files_for_job(
+        &self,
+        job_id: Uuid,
+    ) -> anyhow::Result<Vec<PublishedRepoFile>> {
+        self.store.list_published_repo_files_for_job(job_id).await
     }
 
-    delegate! {
-        to self.build_queue {
-            #[call(enqueue_build)]
-            async fn queue_build_request(&self, build: QueuedBuildRequest) -> anyhow::Result<()>;
+    pub(super) async fn remove_job_record(
+        &self,
+        job_id: Uuid,
+    ) -> anyhow::Result<Option<BuildJobResponse>> {
+        self.store.delete_job(job_id).await
+    }
+
+    pub(super) async fn load_package_build_count(
+        &self,
+        package_name: &str,
+        include_deleted: bool,
+    ) -> anyhow::Result<u64> {
+        self.store
+            .count_jobs(
+                None,
+                Some(package_name.to_string()),
+                None,
+                false,
+                include_deleted,
+            )
+            .await
+    }
+
+    pub(super) async fn load_package_builds(
+        &self,
+        package_name: &str,
+        limit: usize,
+        offset: usize,
+        include_deleted: bool,
+    ) -> anyhow::Result<Vec<BuildJobResponse>> {
+        self.store
+            .list_jobs(
+                limit,
+                offset,
+                None,
+                Some(package_name.to_string()),
+                None,
+                false,
+                include_deleted,
+            )
+            .await
+    }
+
+    pub(super) async fn load_published_repo_files_for_package(
+        &self,
+        package_name: &str,
+    ) -> anyhow::Result<Vec<PublishedRepoFile>> {
+        self.store
+            .list_published_repo_files_for_package(package_name)
+            .await
+    }
+
+    pub(super) async fn load_package(
+        &self,
+        package_name: &str,
+    ) -> anyhow::Result<Option<PackageResponse>> {
+        self.store.get_package(package_name).await
+    }
+
+    pub(super) async fn save_package_definition(
+        &self,
+        package: &PackageDefinition,
+    ) -> anyhow::Result<()> {
+        self.store.upsert_package(package).await
+    }
+
+    pub(super) async fn load_has_active_job_for_target(
+        &self,
+        package_name: &str,
+        mock_chroot: &str,
+    ) -> anyhow::Result<bool> {
+        self.store
+            .has_active_job_for_target(package_name, mock_chroot)
+            .await
+    }
+
+    pub(super) async fn load_last_successful_revision(
+        &self,
+        package_name: &str,
+        mock_chroot: &str,
+    ) -> anyhow::Result<Option<String>> {
+        self.store
+            .get_last_successful_revision(package_name, mock_chroot)
+            .await
+    }
+
+    /// Translate the raw backoff record into "seconds remaining until
+    /// the target is eligible to build again", or `None` if no
+    /// backoff is active. Powers UI countdowns and the sync schedule.
+    pub(super) async fn load_target_backoff_wait_seconds(
+        &self,
+        package_name: &str,
+        mock_chroot: &str,
+    ) -> anyhow::Result<Option<u64>> {
+        let Some(backoff) = self
+            .store
+            .get_target_build_backoff(package_name, mock_chroot)
+            .await?
+        else {
+            return Ok(None);
+        };
+        let now = OffsetDateTime::now_utc();
+        if backoff.next_eligible_at <= now {
+            return Ok(None);
         }
+        Ok(Some(
+            (backoff.next_eligible_at - now).whole_seconds().max(1) as u64,
+        ))
+    }
+
+    pub(super) async fn save_build_job(&self, job: &BuildJob) -> anyhow::Result<()> {
+        self.store.insert_job(job).await
+    }
+
+    pub(super) async fn load_jobs_for_package(
+        &self,
+        package_name: &str,
+        include_deleted: bool,
+    ) -> anyhow::Result<Vec<BuildJobResponse>> {
+        self.store
+            .list_jobs_for_package(package_name, include_deleted)
+            .await
+    }
+
+    pub(super) async fn browse_git_repository(
+        &self,
+        repo_url: &str,
+    ) -> anyhow::Result<BrowseRepositoryResponse> {
+        self.git.browse_repository(repo_url).await
+    }
+
+    pub(super) async fn load_git_package(
+        &self,
+        package_name: &str,
+    ) -> anyhow::Result<PackageResponse> {
+        self.git.get_package(package_name).await
+    }
+
+    pub(super) async fn load_package_definitions(
+        &self,
+    ) -> anyhow::Result<Vec<PackageDefinition>> {
+        self.git.list_definitions().await
+    }
+
+    pub(super) async fn load_package_definition(
+        &self,
+        package_name: &str,
+    ) -> anyhow::Result<PackageDefinition> {
+        self.git.get_definition(package_name).await
+    }
+
+    pub(super) async fn delete_git_package(&self, package_name: &str) -> anyhow::Result<()> {
+        self.git.delete_package(package_name).await
+    }
+
+    pub(super) async fn queue_build_request(
+        &self,
+        build: QueuedBuildRequest,
+    ) -> anyhow::Result<()> {
+        self.build_queue.enqueue_build(build).await
     }
 }
 
@@ -100,13 +229,13 @@ impl DaemonPackageDeps {
 impl RefreshAllProgressStore for DaemonPackageDeps {
     async fn load_refresh_all_packages_progress(
         &self,
-    ) -> Option<synforge_core::api::RefreshAllPackagesProgressView> {
+    ) -> Option<RefreshAllPackagesProgressView> {
         self.progress.load().await
     }
 
     async fn save_refresh_all_packages_progress(
         &self,
-        progress: synforge_core::api::RefreshAllPackagesProgressView,
+        progress: RefreshAllPackagesProgressView,
     ) {
         self.progress.save(progress).await;
     }
@@ -115,7 +244,7 @@ impl RefreshAllProgressStore for DaemonPackageDeps {
 impl SynforgeService {
     pub(crate) fn package_deps(&self) -> DaemonPackageDeps {
         DaemonPackageDeps {
-            package_store: PostgresPackageStore::new(self.store.clone()),
+            store: self.store.clone(),
             git: self.registry.clone(),
             build_queue: WorkerBuildQueue::new(self.queue_tx.clone()),
             build_service: self.build_service.clone(),

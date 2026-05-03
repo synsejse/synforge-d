@@ -29,19 +29,12 @@ impl SynforgeService {
         kind: Option<ArtifactKind>,
     ) -> anyhow::Result<RepoInventoryResponse> {
         self.repo_service
-            .get_repo_inventory(
-                &self.repo_store(),
-                limit,
-                offset,
-                package_name,
-                mock_chroot,
-                kind,
-            )
+            .get_repo_inventory(&self.store, limit, offset, package_name, mock_chroot, kind)
             .await
     }
 
     pub async fn get_repo_summary(&self) -> anyhow::Result<RepoSummaryResponse> {
-        self.repo_service.get_repo_summary(&self.repo_store()).await
+        self.repo_service.get_repo_summary(&self.store).await
     }
 
     /// Returns just the bits needed to render the "Add repo" page —

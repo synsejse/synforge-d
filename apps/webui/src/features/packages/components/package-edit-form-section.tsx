@@ -271,7 +271,10 @@ export default function PackageEditFormSection({
                 }
               />
 
-              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,220px)] md:items-start">
+              {/* Twin cards: matching outer frame + height so the
+                  shared-ccache toggle and its size input read as a
+                  single paired control instead of misaligned columns. */}
+              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,220px)] md:items-stretch">
                 <ToggleField
                   label="Shared ccache"
                   description="Reuse compiler cache across builds for this package and mock chroot."
@@ -280,14 +283,21 @@ export default function PackageEditFormSection({
                     onFormChange({ ccache_enabled: checked })
                   }
                 />
-                <NumberField
-                  label="ccache size (MB)"
-                  value={form.ccacheMaxSizeMb}
-                  onChange={(value) =>
-                    onFormChange({ ccacheMaxSizeMb: value })
-                  }
-                  min={1}
-                />
+                <label className="flex h-full flex-col justify-between gap-2 border-2 border-edge-strong bg-surface-alt px-4 py-3">
+                  <span className="block font-mono text-xs font-bold uppercase tracking-[0.1em] text-white">
+                    ccache size (MB)
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={form.ccacheMaxSizeMb}
+                    onChange={(event) =>
+                      onFormChange({ ccacheMaxSizeMb: event.target.value })
+                    }
+                    className="w-full border-2 border-edge-strong bg-black px-3 py-2 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
+                  />
+                </label>
               </div>
               <p className="font-mono text-xs text-soft">
                 Leave size blank to use Mock&apos;s default cache size. Applies

@@ -189,7 +189,10 @@ function ConfigFieldInput({
 
   return (
     <label className="block">
-      <div className="mb-2 flex items-center justify-between gap-2">
+      {/* min-h matches the Reset button height (border-2 + py-0.5 +
+          10px text) so rows with and without the button line up at the
+          same input baseline when sitting side-by-side in a grid. */}
+      <div className="mb-2 flex min-h-[1.5rem] items-center justify-between gap-2">
         <span className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
           {field.label}
         </span>

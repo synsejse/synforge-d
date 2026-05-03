@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import api from "../../../lib/api";
 import { jobsQueries } from "../../../lib/queries";
-import { formatDateTime } from "../../../lib/datetime";
+import { formatDateTime, formatJobDuration } from "../../../lib/datetime";
 import type {
   JobResourceUsageSample,
   ServerHardwareResponse,
@@ -154,6 +154,7 @@ export default function JobDetail({ jobId }: Props) {
 
   const job = jobQuery.data.job.job;
   const artifactCount = jobQuery.data.artifacts.length;
+  const duration = formatJobDuration(job);
 
   return (
     <div className="min-w-0 space-y-6">
@@ -193,6 +194,13 @@ export default function JobDetail({ jobId }: Props) {
                   {formatDateTime(job.created_at)}
                 </span>
               </MetaPair>
+              {job.started_at ? (
+                <MetaPair label="Started">
+                  <span className="text-strong">
+                    {formatDateTime(job.started_at)}
+                  </span>
+                </MetaPair>
+              ) : null}
               {job.finished_at ? (
                 <MetaPair label="Finished">
                   <span className="text-strong">
@@ -200,6 +208,22 @@ export default function JobDetail({ jobId }: Props) {
                   </span>
                 </MetaPair>
               ) : null}
+              {job.signed_at ? (
+                <MetaPair label="Signed">
+                  <span className="text-strong">
+                    {formatDateTime(job.signed_at)}
+                  </span>
+                </MetaPair>
+              ) : null}
+              <MetaPair label={duration.label}>
+                <span
+                  className={
+                    isLive ? "text-accent-lime" : "text-strong"
+                  }
+                >
+                  {duration.value}
+                </span>
+              </MetaPair>
               <MetaPair label="Revision">
                 <span className="break-all text-strong">{job.revision}</span>
               </MetaPair>

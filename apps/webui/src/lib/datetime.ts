@@ -120,6 +120,41 @@ export function formatDurationBetween(
   return `${diffHour}h ${remainingMin}m`;
 }
 
+/**
+ * Build-job duration that does the right thing per status:
+ *   pending   → "Queued Xs"  (since created_at)
+ *   running   → "Running Xs" (since started_at; fallback created_at)
+ *   finished  → "Xs"         (started_at → finished_at; fallback to
+ *                             created_at → finished_at for jobs that
+ *                             pre-date the started_at column)
+ */
+export function formatJobDuration(job: {
+  status: string;
+  created_at?: string | null;
+  started_at?: string | null;
+  finished_at?: string | null;
+}): { label: string; value: string } {
+  if (job.status === "pending") {
+    return {
+      label: "Queued",
+      value: formatDurationBetween(job.created_at, null),
+    };
+  }
+  if (job.status === "running") {
+    return {
+      label: "Running",
+      value: formatDurationBetween(job.started_at ?? job.created_at, null),
+    };
+  }
+  return {
+    label: "Duration",
+    value: formatDurationBetween(
+      job.started_at ?? job.created_at,
+      job.finished_at,
+    ),
+  };
+}
+
 export function formatDurationSeconds(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds <= 0) {
     return "0s";

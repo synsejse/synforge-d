@@ -6,7 +6,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "@tanstack/react-router";
 import type { PackageBuildInventoryEntry } from "../../../lib/types";
-import { formatDateTime } from "../../../lib/datetime";
+import { formatDateTime, formatJobDuration } from "../../../lib/datetime";
 import Badge from "../../../components/ui/badge";
 import Button from "../../../components/ui/button";
 import FaIcon from "../../../components/ui/fa-icon";
@@ -41,6 +41,7 @@ export default function BuildHistoryCard({
   const live = job.status === "pending" || job.status === "running";
   const accent = STATUS_RAIL[job.status] ?? "var(--theme-text-soft)";
   const signing = getBuildSigningSummary(entry);
+  const duration = formatJobDuration(job);
 
   return (
     <article
@@ -79,6 +80,13 @@ export default function BuildHistoryCard({
             </MetaPair>
             <MetaPair label="Created">
               <span className="text-strong">{formatDateTime(job.created_at)}</span>
+            </MetaPair>
+            <MetaPair label={duration.label}>
+              <span
+                className={live ? "text-accent-lime" : "text-strong"}
+              >
+                {duration.value}
+              </span>
             </MetaPair>
             <MetaPair label="Repo files">
               <span className="text-strong">{entry.repo_files.length}</span>

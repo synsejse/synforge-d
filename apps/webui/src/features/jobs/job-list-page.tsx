@@ -67,8 +67,8 @@ function JobList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedPackage, debouncedTarget]);
 
-  const jobsQuery = useQuery(
-    jobsQueries.list({
+  const jobsQuery = useQuery({
+    ...jobsQueries.list({
       scope: filters.mode === "active" ? "active" : "completed",
       limit: PAGE_SIZE,
       offset: filters.offset,
@@ -76,7 +76,11 @@ function JobList() {
       packageName: filters.packageFilter,
       mockChroot: filters.targetFilter,
     }),
-  );
+    // Active mode: refresh the row data every 2s so durations tick and
+    // status badges flip live without manual refresh.
+    refetchInterval:
+      filters.mode === "active" ? USAGE_POLL_INTERVAL_MS * 2 : false,
+  });
 
   const usageQuery = useQuery({
     ...jobsQueries.usageList(),

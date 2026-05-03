@@ -9,7 +9,7 @@ import type {
   JobResourceUsageSample,
   ServerHardwareResponse,
 } from "../../../lib/types";
-import { formatDateTime, formatDurationBetween } from "../../../lib/datetime";
+import { formatDateTime, formatJobDuration } from "../../../lib/datetime";
 import Button from "../../../components/ui/button";
 import FaIcon from "../../../components/ui/fa-icon";
 import MetaPair from "../../../components/ui/meta-pair";
@@ -47,10 +47,7 @@ export default function JobCard({
 }: JobCardProps) {
   const live = isLiveJob(entry);
   const accent = STATUS_RAIL[entry.job.status] ?? "var(--theme-text-soft)";
-  const duration = formatDurationBetween(
-    entry.job.created_at,
-    entry.job.finished_at,
-  );
+  const duration = formatJobDuration(entry.job);
 
   return (
     <article
@@ -100,8 +97,14 @@ export default function JobCard({
                 {formatDateTime(entry.job.created_at)}
               </span>
             </MetaPair>
-            <MetaPair label="Duration">
-              <span className="text-strong">{duration}</span>
+            <MetaPair label={duration.label}>
+              <span
+                className={
+                  live ? "text-accent-lime" : "text-strong"
+                }
+              >
+                {duration.value}
+              </span>
             </MetaPair>
             <MetaPair label="Job">
               <span className="break-all text-soft">{entry.job.id}</span>

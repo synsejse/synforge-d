@@ -29,27 +29,31 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Hover lift mirrors the surface-card animation: -2px translate
-        // + 6px hard shadow. The shadow colour stays per-variant so each
-        // button keeps its tonal "outline" identity.
+        // All variants share the same shadow + lift vocabulary: -2px
+        // translate, 6px hard offset, white-ish shadow that reads
+        // against any button colour on the dark page background.
         primary: [
           "bg-accent-lime text-black border-accent-lime shadow-brutal-sm",
           "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
           "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
         ].join(" "),
         secondary: [
-          "bg-white text-black border-white shadow-[2px_2px_0_rgba(255,255,255,0.2)]",
-          "hover:bg-strong hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_rgba(255,255,255,0.25)]",
-          "active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_rgba(255,255,255,0.2)]",
+          "bg-white text-black border-white shadow-brutal-sm",
+          "hover:bg-strong hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
+          "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
         ].join(" "),
         ghost: [
-          "bg-transparent text-strong border-edge-strong",
+          "bg-transparent text-strong border-edge-strong shadow-brutal-sm",
           "hover:border-muted hover:bg-surface-hover hover:text-white",
-          "hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_rgba(255,255,255,0.12)]",
-          "active:translate-x-0 active:translate-y-0 active:shadow-none",
+          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
+          "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
         ].join(" "),
-        subtle:
-          "bg-transparent text-soft border-transparent hover:bg-surface-hover hover:text-white",
+        subtle: [
+          "bg-transparent text-soft border-transparent shadow-brutal-sm",
+          "hover:bg-surface-hover hover:text-white",
+          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
+          "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
+        ].join(" "),
         danger: [
           "bg-error text-white border-error shadow-brutal-sm",
           "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
@@ -61,10 +65,10 @@ export const buttonVariants = cva(
           "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
         ].join(" "),
         terminal: [
-          "bg-black text-success border-success font-mono",
+          "bg-black text-success border-success font-mono shadow-brutal-sm",
           "hover:bg-success hover:text-black",
-          "hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_rgba(0,255,128,0.25)]",
-          "active:translate-x-0 active:translate-y-0 active:shadow-none",
+          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
+          "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
         ].join(" "),
       },
       size: {

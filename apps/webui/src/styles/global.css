@@ -28,9 +28,11 @@
   --theme-error-red: #FF3333;
 
   /* Sharp Shadows (no blur) — actual values used by components */
-  --shadow-brutal-sm: 2px 2px 0 rgba(0, 0, 0, 0.8);
-  --shadow-brutal-md: 4px 4px 0 rgba(0, 0, 0, 0.9);
-  --shadow-brutal-lg: 6px 6px 0 rgba(0, 0, 0, 0.9);
+  /* Greyish white so the offset is visible on dark, red, lime, and
+     white buttons alike. Black-on-black was invisible on bg-error. */
+  --shadow-brutal-sm: 2px 2px 0 rgba(255, 255, 255, 0.28);
+  --shadow-brutal-md: 4px 4px 0 rgba(255, 255, 255, 0.32);
+  --shadow-brutal-lg: 6px 6px 0 rgba(255, 255, 255, 0.36);
   --shadow-card-sm: 4px 4px 0 rgba(255, 255, 255, 0.1);
   --shadow-card-md: 6px 6px 0 rgba(255, 255, 255, 0.2);
   --shadow-card-lg: 8px 8px 0 rgba(255, 255, 255, 0.3);

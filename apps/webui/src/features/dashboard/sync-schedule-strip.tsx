@@ -168,12 +168,12 @@ function Tick({ blocked, overdue }: { blocked: boolean; overdue: boolean }) {
     : overdue
       ? "bg-accent-lime"
       : "bg-success";
-  // Round dot, with a 2px black halo so the connector line visibly
-  // terminates AT the dot rather than embedding into it.
+  // Square tick with a 2px black halo so the connector line visibly
+  // terminates AT the tick rather than embedding into it.
   return (
     <div
       aria-hidden="true"
-      className={`relative z-10 rounded-full ring-2 ring-black ${fillClass}`}
+      className={`relative z-10 ring-2 ring-black ${fillClass}`}
       style={{ width: TICK_SIZE, height: TICK_SIZE }}
     />
   );

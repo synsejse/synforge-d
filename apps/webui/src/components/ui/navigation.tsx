@@ -247,7 +247,11 @@ function NavBadge({
   return (
     <span
       className={cn(
-        "ml-auto shrink-0 border bg-black px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-[0.16em]",
+        // inline-flex + leading-none + items-center keeps the digit
+        // optically centered inside the bordered chip; tracking is
+        // dropped because letter-spacing pads only the right side and
+        // shoves single-character badges off-center.
+        "ml-auto inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center border bg-black px-1 font-mono text-[10px] font-bold leading-none",
         toneClass,
       )}
     >

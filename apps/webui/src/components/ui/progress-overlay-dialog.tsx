@@ -1,20 +1,43 @@
+import type { ReactNode } from "react";
 import Button from "./button";
 
 interface ProgressOverlayDialogProps {
   open: boolean;
   title: string;
-  detail: string;
+  /** Optional accent — controls the title colour and progress-bar fill.
+   *  Defaults to the success/lime fill used while running. */
+  tone?: "running" | "success" | "error";
+  /** Optional one-line summary directly under the title (e.g.
+   *  "12 / 30 packages"). For richer content, use `children`. */
+  summary?: ReactNode;
   progress: number;
+  /** Anything to render below the progress bar and above the close
+   *  button — stat grid, status message, etc. */
+  children?: ReactNode;
   onClose: () => void;
   closeDisabled?: boolean;
   closeLabel?: string;
 }
 
+const TITLE_TONE: Record<NonNullable<ProgressOverlayDialogProps["tone"]>, string> = {
+  running: "text-accent-lime",
+  success: "text-success",
+  error: "text-error",
+};
+
+const BAR_TONE: Record<NonNullable<ProgressOverlayDialogProps["tone"]>, string> = {
+  running: "bg-accent-lime",
+  success: "bg-success",
+  error: "bg-error",
+};
+
 export default function ProgressOverlayDialog({
   open,
   title,
-  detail,
+  tone = "running",
+  summary,
   progress,
+  children,
   onClose,
   closeDisabled = false,
   closeLabel = "Close",
@@ -30,20 +53,43 @@ export default function ProgressOverlayDialog({
       <div
         role="dialog"
         aria-modal="true"
-        className="w-full max-w-xl border-2 border-white bg-black p-6 shadow-[8px_8px_0_rgba(255,255,255,0.25)]"
+        className="w-full max-w-xl border-4 border-edge-strong bg-black shadow-[8px_8px_0_rgba(255,255,255,0.18)]"
       >
-        <h3 className="text-base font-semibold text-white">{title}</h3>
-        <p className="mt-3 font-mono text-xs text-muted">{detail}</p>
-        <div className="mt-4 h-3 w-full overflow-hidden border border-edge-strong bg-surface-hover">
-          <div
-            className="h-full bg-success transition-[width] duration-300"
-            style={{ width: `${normalizedProgress}%` }}
-          />
+        {/* Header band — coloured by tone, mirrors the page-header
+            accent vocabulary used elsewhere in the app. */}
+        <div className="border-b-2 border-edge-strong bg-surface-alt px-5 py-3">
+          <h3
+            className={`font-mono text-xs font-bold uppercase tracking-[0.22em] ${TITLE_TONE[tone]}`}
+          >
+            {title}
+          </h3>
         </div>
-        <p className="mt-2 text-right font-mono text-xs text-muted">
-          {Math.round(normalizedProgress)}%
-        </p>
-        <div className="mt-4 flex justify-end">
+
+        <div className="px-5 py-5">
+          {summary !== undefined ? (
+            <div className="mb-3 font-mono text-2xl font-black uppercase tracking-tight text-white">
+              {summary}
+            </div>
+          ) : null}
+
+          <div className="flex items-center gap-3">
+            <div className="h-3 flex-1 border-2 border-edge-strong bg-black">
+              <div
+                className={`h-full transition-[width] duration-300 ${BAR_TONE[tone]}`}
+                style={{ width: `${normalizedProgress}%` }}
+              />
+            </div>
+            <span className="min-w-[3.5rem] text-right font-mono text-xs font-bold tracking-wider text-soft">
+              {Math.round(normalizedProgress)}%
+            </span>
+          </div>
+
+          {children !== undefined ? (
+            <div className="mt-5">{children}</div>
+          ) : null}
+        </div>
+
+        <div className="flex justify-end border-t-2 border-edge-strong bg-surface-alt px-5 py-3">
           <Button
             type="button"
             variant="secondary"

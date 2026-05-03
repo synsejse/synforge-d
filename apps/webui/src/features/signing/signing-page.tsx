@@ -402,11 +402,12 @@ function Signing() {
       <ProgressOverlayDialog
         open={overlayOpen}
         title={overlayTitle}
-        detail={overlayDetail}
         progress={overlayProgress}
         onClose={() => setOverlayOpen(false)}
         closeDisabled={toggleMutation.isPending}
-      />
+      >
+        <p className="font-mono text-xs text-soft">{overlayDetail}</p>
+      </ProgressOverlayDialog>
     </div>
   );
 }

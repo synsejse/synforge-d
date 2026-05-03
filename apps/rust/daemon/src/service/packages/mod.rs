@@ -1,6 +1,8 @@
 mod actions;
 mod deps;
 
+use std::path::Path;
+
 use synforge_core::api::{
     BrowseRepositoryRequest, BrowseRepositoryResponse, CreatePackageRequest,
     MockChrootListResponse, PackageBuildHistoryResponse, PackageListResponse, PackageResponse,
@@ -10,6 +12,7 @@ use synforge_core::api::{
 use synforge_database::PackageStore;
 use synforge_git_sync::GitSyncService;
 use synforge_worker_host::MockChrootService;
+use tracing::warn;
 
 use super::SynforgeService;
 
@@ -112,6 +115,39 @@ impl SynforgeService {
     pub async fn delete_package(&self, package_name: &str) -> anyhow::Result<()> {
         GitSyncService
             .delete_package(&self.package_deps(), package_name)
-            .await
+            .await?;
+        // Now that the package row is gone, drop its on-disk
+        // ccache and mock-cache trees. Best effort: a leaked dir is
+        // strictly worse than the existing behaviour, but we won't
+        // fail the delete if the FS removal trips on something
+        // unexpected.
+        self.cleanup_package_cache_dirs(package_name).await;
+        Ok(())
+    }
+
+    pub(super) async fn cleanup_package_cache_dirs(&self, package_name: &str) {
+        for (root, domain) in [
+            (self.config.worker_ccache_root(), "ccache"),
+            (self.config.worker_mock_cache_root(), "mock-cache"),
+        ] {
+            remove_package_cache_subtree(&root, package_name, domain).await;
+        }
+    }
+}
+
+async fn remove_package_cache_subtree(root: &Path, package_name: &str, domain: &'static str) {
+    let dir = root.join(package_name);
+    match tokio::fs::remove_dir_all(&dir).await {
+        Ok(()) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            warn!(
+                package_name,
+                domain,
+                path = %dir.display(),
+                error = %error,
+                "failed to remove package cache directory"
+            );
+        }
     }
 }

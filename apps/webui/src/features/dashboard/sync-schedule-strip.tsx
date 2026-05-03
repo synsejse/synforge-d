@@ -11,13 +11,22 @@ import LoadingBlock from "../../components/ui/loading-block";
 const SCHEDULE_LIMIT = 10;
 const POLL_INTERVAL_MS = 30_000;
 
+interface ScheduleItem {
+  package_name: string;
+  mock_chroot: string;
+  seconds_until: number;
+  next_eligible_at: string;
+  blocked_by_backoff: boolean;
+  consecutive_failures: number;
+}
+
 /**
- * Dashboard "Up next" widget — leans on /api/v1/sync/schedule. Each
- * row shows a package + chroot, a countdown that ticks against the
- * server-supplied `seconds_until`, and a backoff badge when applicable.
- *
- * The clock ticks locally every second using the server's `computed_at`
- * as the anchor — avoids drift across the polling interval.
+ * Dashboard "Up next" widget — leans on /api/v1/sync/schedule. Renders
+ * the upcoming sync targets as a horizontal timeline with cards
+ * alternating above and below a single track, ordered left-to-right by
+ * time-until. The countdown ticks locally every second using the
+ * server's `computed_at` as the anchor — avoids drift across the polling
+ * interval.
  */
 export default function SyncScheduleStrip() {
   const visible = usePageVisible();
@@ -58,101 +67,169 @@ export default function SyncScheduleStrip() {
             hint="enable a package to start polling"
           />
         ) : (
-          <ul className="space-y-2">
-            {data.items.map((item) => {
-              const remainingSec = computeRemaining(item, data.computed_at, now);
-              return (
-                <ScheduleRow
-                  key={`${item.package_name}:${item.mock_chroot}`}
-                  packageName={item.package_name}
-                  mockChroot={item.mock_chroot}
-                  remainingSec={remainingSec}
-                  blockedByBackoff={item.blocked_by_backoff}
-                  consecutiveFailures={item.consecutive_failures}
-                />
-              );
-            })}
-          </ul>
+          <ScheduleTimeline
+            items={data.items}
+            computedAt={data.computed_at}
+            now={now}
+          />
         )}
       </div>
     </section>
   );
 }
 
-function ScheduleRow({
-  packageName,
-  mockChroot,
-  remainingSec,
-  blockedByBackoff,
-  consecutiveFailures,
+const SLOT_HEIGHT = 168;
+const CARD_HEIGHT = 64;
+const CONNECTOR_HEIGHT = 14;
+const TICK_SIZE = 12;
+const SLOT_HALF_PAD = (SLOT_HEIGHT - CARD_HEIGHT - CONNECTOR_HEIGHT - TICK_SIZE) / 2;
+
+function ScheduleTimeline({
+  items,
+  computedAt,
+  now,
 }: {
-  packageName: string;
-  mockChroot: string;
+  items: ScheduleItem[];
+  computedAt: string;
+  now: number;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <div className="relative min-w-max">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-0 right-0 h-px bg-edge-strong"
+          style={{ top: SLOT_HEIGHT / 2 }}
+        />
+        <ul
+          className="relative flex items-stretch gap-3 px-1"
+          style={{ height: SLOT_HEIGHT }}
+        >
+          {items.map((item, i) => (
+            <ScheduleSlot
+              key={`${item.package_name}:${item.mock_chroot}`}
+              item={item}
+              above={i % 2 === 0}
+              remainingSec={computeRemaining(item, computedAt, now)}
+            />
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function ScheduleSlot({
+  item,
+  above,
+  remainingSec,
+}: {
+  item: ScheduleItem;
+  above: boolean;
   remainingSec: number;
-  blockedByBackoff: boolean;
-  consecutiveFailures: number;
 }) {
   const overdue = remainingSec <= 0;
-  // Visual progress: bar fills as countdown elapses. Cap window at 1h
-  // so even very-overdue packages don't fill 100% indefinitely.
-  const windowSec = blockedByBackoff
-    ? Math.max(remainingSec, 1)
-    : Math.min(Math.max(remainingSec, 60), 3_600);
-  const percentRemaining = overdue
-    ? 0
-    : Math.min(100, Math.max(0, (remainingSec / windowSec) * 100));
-  const accent = blockedByBackoff
+  const blocked = item.blocked_by_backoff;
+  const card = (
+    <ScheduleCard item={item} remainingSec={remainingSec} />
+  );
+  const connector = (
+    <div
+      aria-hidden="true"
+      className="w-px bg-edge-strong"
+      style={{ height: CONNECTOR_HEIGHT }}
+    />
+  );
+  const spacer = (
+    <div style={{ height: CARD_HEIGHT + CONNECTOR_HEIGHT + SLOT_HALF_PAD }} />
+  );
+  const tick = <Tick blocked={blocked} overdue={overdue} />;
+
+  return (
+    <li className="flex w-32 flex-shrink-0 flex-col items-center sm:w-36">
+      {above ? (
+        <>
+          <div style={{ height: SLOT_HALF_PAD }} />
+          {card}
+          {connector}
+          {tick}
+          {spacer}
+        </>
+      ) : (
+        <>
+          {spacer}
+          {tick}
+          {connector}
+          {card}
+          <div style={{ height: SLOT_HALF_PAD }} />
+        </>
+      )}
+    </li>
+  );
+}
+
+function Tick({ blocked, overdue }: { blocked: boolean; overdue: boolean }) {
+  const fillClass = blocked
     ? "bg-accent-orange"
     : overdue
       ? "bg-accent-lime"
       : "bg-success";
+  return (
+    <div
+      aria-hidden="true"
+      className={`relative z-10 border-2 border-black ${fillClass}`}
+      style={{ width: TICK_SIZE, height: TICK_SIZE }}
+    />
+  );
+}
+
+function ScheduleCard({
+  item,
+  remainingSec,
+}: {
+  item: ScheduleItem;
+  remainingSec: number;
+}) {
+  const overdue = remainingSec <= 0;
+  const blocked = item.blocked_by_backoff;
+  const borderClass = blocked
+    ? "border-accent-orange"
+    : overdue
+      ? "border-accent-lime"
+      : "border-edge-strong";
+  const timeClass = blocked
+    ? "text-accent-orange"
+    : overdue
+      ? "text-accent-lime"
+      : "text-strong";
 
   return (
-    <li className="relative border-2 border-edge bg-surface-alt/40">
-      <Link
-        to="/packages/view"
-        search={{ name: packageName }}
-        className="group block px-4 py-2.5 transition-colors hover:bg-surface-alt"
+    <Link
+      to="/packages/view"
+      search={{ name: item.package_name }}
+      className={`group flex w-full flex-col justify-between border-2 ${borderClass} bg-surface-alt/60 px-2 py-1.5 transition-colors hover:bg-surface-alt`}
+      style={{ height: CARD_HEIGHT }}
+      title={`${item.package_name} · ${item.mock_chroot}`}
+    >
+      <div className="truncate font-display text-xs font-bold uppercase text-white group-hover:text-accent-lime">
+        {item.package_name}
+      </div>
+      <div className="truncate font-mono text-[9px] uppercase tracking-[0.16em] text-soft">
+        {item.mock_chroot}
+      </div>
+      <div
+        className={`flex items-center gap-1 font-mono text-xs font-bold tabular-nums ${timeClass}`}
       >
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="font-display font-bold text-white transition-colors group-hover:text-accent-lime">
-            {packageName}
-          </span>
-          <span className="border-2 border-edge-strong bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-soft">
-            {mockChroot}
-          </span>
-          {blockedByBackoff ? (
-            <span className="inline-flex items-center gap-1 border-2 border-accent-orange bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-accent-orange">
-              <FaIcon icon={faTriangleExclamation} className="text-[0.7em]" />
-              Backoff · {consecutiveFailures} fail
-              {consecutiveFailures === 1 ? "" : "s"}
-            </span>
-          ) : null}
-          <span
-            className={`ml-auto font-mono text-xs tabular-nums ${
-              overdue && !blockedByBackoff
-                ? "text-accent-lime"
-                : blockedByBackoff
-                  ? "text-accent-orange"
-                  : "text-strong"
-            }`}
-          >
-            {overdue
-              ? blockedByBackoff
-                ? "blocked"
-                : "due now"
-              : `in ${formatRemaining(remainingSec)}`}
-          </span>
-        </div>
-        {/* Countdown bar — track sits at the bottom of the row */}
-        <div className="relative mt-2 h-1 bg-edge">
-          <div
-            className={`absolute inset-y-0 left-0 transition-[width] duration-1000 ease-linear ${accent}`}
-            style={{ width: `${percentRemaining}%` }}
-          />
-        </div>
-      </Link>
-    </li>
+        {blocked ? (
+          <FaIcon icon={faTriangleExclamation} className="text-[0.7em]" />
+        ) : null}
+        {overdue
+          ? blocked
+            ? "blocked"
+            : "due now"
+          : `in ${formatRemaining(remainingSec)}`}
+      </div>
+    </Link>
   );
 }
 

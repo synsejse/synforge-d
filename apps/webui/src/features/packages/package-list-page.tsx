@@ -20,7 +20,7 @@ import PackageCard from "./components/package-card";
 import ErrorMessage from "../../components/common/error-message";
 import { useDialogs } from "../../components/common/dialogs-provider";
 import { useToast } from "../../components/common/toast-provider";
-import { SkeletonListRow } from "../../components/ui/skeleton";
+import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import Select from "../../components/ui/select";
@@ -487,11 +487,7 @@ function PackageList() {
       ) : null}
 
       {loading ? (
-        <div className="space-y-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <SkeletonListRow key={i} />
-          ))}
-        </div>
+        <LoadingBlock label="Loading packages…" lines={4} />
       ) : packages.length === 0 ? (
         <div className="border-2 border-edge-strong bg-black p-12 text-center">
           <p className="font-mono text-sm font-bold uppercase tracking-[0.3em] text-soft">

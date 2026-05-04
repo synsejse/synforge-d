@@ -16,7 +16,7 @@ import type {
 import ErrorMessage from "../../components/common/error-message";
 import Button from "../../components/ui/button";
 import FaIcon from "../../components/ui/fa-icon";
-import { SkeletonForm } from "../../components/ui/skeleton";
+import LoadingBlock from "../../components/ui/loading-block";
 import MetaPair from "../../components/ui/meta-pair";
 import PageHeader from "../../components/ui/page-header";
 import ProgressOverlayDialog from "../../components/ui/progress-overlay-dialog";
@@ -211,7 +211,7 @@ function Signing() {
             { to: "/repository/use", label: "Repo Setup", icon: faCheckCircle },
           ]}
         />
-        <SkeletonForm sections={2} fieldsPerSection={3} />
+        <LoadingBlock label="Loading signing status…" lines={3} />
       </div>
     );
   }

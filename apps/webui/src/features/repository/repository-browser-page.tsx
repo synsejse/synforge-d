@@ -13,7 +13,7 @@ import { repositoryQueries } from "../../lib/queries";
 import { formatBytes } from "../../lib/bytes";
 import ErrorMessage from "../../components/common/error-message";
 import EmptyState from "../../components/ui/empty-state";
-import { SkeletonListRow } from "../../components/ui/skeleton";
+import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import SegmentedControl from "../../components/ui/segmented-control";
@@ -109,37 +109,37 @@ function RepositoryBrowser() {
         ]}
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Packages"
-          value={summary?.package_count ?? 0}
-          detail="Published package names"
-          icon={<FaIcon icon={faBoxesStacked} />}
-          loading={summaryLoading}
-        />
-        <MetricCard
-          label="Targets"
-          value={summary?.target_count ?? 0}
-          detail="Active build targets"
-          variant="accent"
-          icon={<FaIcon icon={faBullseye} />}
-          loading={summaryLoading}
-        />
-        <MetricCard
-          label="Builds"
-          value={summary?.build_count ?? 0}
-          detail="Recorded publish jobs"
-          icon={<FaIcon icon={faHammer} />}
-          loading={summaryLoading}
-        />
-        <MetricCard
-          label="Stored Size"
-          value={summaryLoading ? "" : formatBytes(summary?.stored_bytes ?? 0)}
-          detail={`${summary?.published_file_count ?? 0} published files`}
-          icon={<FaIcon icon={faHardDrive} />}
-          loading={summaryLoading}
-        />
-      </div>
+      {summaryLoading ? (
+        <LoadingBlock label="Loading metrics…" lines={2} />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <MetricCard
+            label="Packages"
+            value={summary?.package_count ?? 0}
+            detail="Published package names"
+            icon={<FaIcon icon={faBoxesStacked} />}
+          />
+          <MetricCard
+            label="Targets"
+            value={summary?.target_count ?? 0}
+            detail="Active build targets"
+            variant="accent"
+            icon={<FaIcon icon={faBullseye} />}
+          />
+          <MetricCard
+            label="Builds"
+            value={summary?.build_count ?? 0}
+            detail="Recorded publish jobs"
+            icon={<FaIcon icon={faHammer} />}
+          />
+          <MetricCard
+            label="Stored Size"
+            value={formatBytes(summary?.stored_bytes ?? 0)}
+            detail={`${summary?.published_file_count ?? 0} published files`}
+            icon={<FaIcon icon={faHardDrive} />}
+          />
+        </div>
+      )}
 
       <form onSubmit={handleApply}>
         <FilterBar
@@ -222,11 +222,7 @@ function RepositoryBrowser() {
         </div>
 
         {inventoryLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <SkeletonListRow key={i} />
-            ))}
-          </div>
+          <LoadingBlock label="Loading published files…" lines={4} />
         ) : repoFiles.length === 0 ? (
           <EmptyState
             title="No files match"

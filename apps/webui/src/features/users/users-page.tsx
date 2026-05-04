@@ -16,7 +16,7 @@ import { useSession } from "../../components/common/session-provider";
 import Button from "../../components/ui/button";
 import EmptyState from "../../components/ui/empty-state";
 import FaIcon from "../../components/ui/fa-icon";
-import { SkeletonListRow } from "../../components/ui/skeleton";
+import LoadingBlock from "../../components/ui/loading-block";
 import PageHeader from "../../components/ui/page-header";
 import { PermissionGroup, TextField, ToggleField } from "./components/form-fields";
 import { UserModalActions, UserModalShell } from "./components/modal-shell";
@@ -315,11 +315,7 @@ function Users() {
       {error ? <ErrorMessage message={error} /> : null}
 
       {loading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <SkeletonListRow key={i} />
-          ))}
-        </div>
+        <LoadingBlock label="Loading users…" lines={4} />
       ) : users.length === 0 ? (
         <EmptyState>No users have been created yet.</EmptyState>
       ) : (

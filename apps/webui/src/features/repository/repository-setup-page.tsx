@@ -4,7 +4,7 @@ import { faCopy, faFolderTree } from "@fortawesome/free-solid-svg-icons";
 import { repositoryQueries } from "../../lib/queries";
 import ErrorMessage from "../../components/common/error-message";
 import { useSession } from "../../components/common/session-provider";
-import { SkeletonForm } from "../../components/ui/skeleton";
+import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import PageHeader from "../../components/ui/page-header";
@@ -70,7 +70,7 @@ function RepositorySetup() {
             { to: "/repository", label: "Browse Repository", icon: faFolderTree },
           ]}
         />
-        <SkeletonForm sections={2} fieldsPerSection={2} />
+        <LoadingBlock label="Loading repository setup…" lines={3} />
       </div>
     );
   }

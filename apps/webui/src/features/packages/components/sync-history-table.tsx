@@ -4,7 +4,7 @@ import { syncQueries } from "../../../lib/queries";
 import type { SyncStatus } from "../../../lib/types";
 import EmptyState from "../../../components/ui/empty-state";
 import ErrorMessage from "../../../components/common/error-message";
-import { SkeletonListRow } from "../../../components/ui/skeleton";
+import LoadingBlock from "../../../components/ui/loading-block";
 import PaginationControls from "../../../components/common/pagination-controls";
 import SegmentedControl from "../../../components/ui/segmented-control";
 import SyncOpCard from "./sync-op-card";
@@ -68,11 +68,7 @@ export default function SyncHistoryTable({ packageName }: SyncHistoryTableProps)
       </div>
 
       {operationsQuery.isPending ? (
-        <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <SkeletonListRow key={i} />
-          ))}
-        </div>
+        <LoadingBlock label="Loading sync history…" lines={3} />
       ) : operations.length === 0 ? (
         <EmptyState
           title="No sync operations"

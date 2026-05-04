@@ -5,10 +5,10 @@ import { formatBytes } from "../../lib/bytes";
 import ErrorMessage from "../../components/common/error-message";
 import { usePageVisible } from "../../components/common/page-visibility-provider";
 import FaIcon from "../../components/ui/fa-icon";
+import LoadingBlock from "../../components/ui/loading-block";
 import MetricCard from "../../components/ui/metric-card";
 import PageHeader from "../../components/ui/page-header";
-import { Skeleton } from "../../components/ui/skeleton";
-import MiniJobRow, { MiniJobRowSkeleton } from "./mini-job-row";
+import MiniJobRow from "./mini-job-row";
 import SyncScheduleStrip from "./sync-schedule-strip";
 import {
   faBoxesStacked,
@@ -64,40 +64,40 @@ function Dashboard() {
         ]}
       />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Packages"
-          value={data?.packageCount ?? 0}
-          detail="Registered sources"
-          icon={<FaIcon icon={faBoxesStacked} />}
-          sparkline={syncSparkline.length > 0 ? syncSparkline : null}
-          loading={loading}
-        />
-        <MetricCard
-          label="Enabled"
-          value={data?.enabledPackageCount ?? 0}
-          detail="Actively buildable"
-          variant="accent"
-          icon={<FaIcon icon={faCircleCheck} />}
-          loading={loading}
-        />
-        <MetricCard
-          label="Active jobs"
-          value={data?.activeJobCount ?? 0}
-          detail="Pending or running"
-          variant="terminal"
-          icon={<FaIcon icon={faRocket} />}
-          sparkline={jobsSparkline.length > 0 ? jobsSparkline : null}
-          loading={loading}
-        />
-        <MetricCard
-          label="Stored"
-          value={loading ? "" : formatBytes(data?.repoSummary.stored_bytes ?? 0)}
-          detail="Published repository data"
-          icon={<FaIcon icon={faFolderTree} />}
-          loading={loading}
-        />
-      </section>
+      {loading ? (
+        <LoadingBlock label="Loading metrics…" lines={2} />
+      ) : (
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <MetricCard
+            label="Packages"
+            value={data?.packageCount ?? 0}
+            detail="Registered sources"
+            icon={<FaIcon icon={faBoxesStacked} />}
+            sparkline={syncSparkline.length > 0 ? syncSparkline : null}
+          />
+          <MetricCard
+            label="Enabled"
+            value={data?.enabledPackageCount ?? 0}
+            detail="Actively buildable"
+            variant="accent"
+            icon={<FaIcon icon={faCircleCheck} />}
+          />
+          <MetricCard
+            label="Active jobs"
+            value={data?.activeJobCount ?? 0}
+            detail="Pending or running"
+            variant="terminal"
+            icon={<FaIcon icon={faRocket} />}
+            sparkline={jobsSparkline.length > 0 ? jobsSparkline : null}
+          />
+          <MetricCard
+            label="Stored"
+            value={formatBytes(data?.repoSummary.stored_bytes ?? 0)}
+            detail="Published repository data"
+            icon={<FaIcon icon={faFolderTree} />}
+          />
+        </section>
+      )}
 
       <section className="border-2 border-edge-strong bg-black shadow-card-sm">
         <div className="flex items-baseline justify-between gap-4 border-b-2 border-edge-strong app-section-band px-5 py-4">
@@ -112,11 +112,7 @@ function Dashboard() {
 
         <div className="p-5">
           {loading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <MiniJobRowSkeleton key={i} />
-              ))}
-            </div>
+            <LoadingBlock label="Loading recent builds…" lines={3} />
           ) : jobs.length === 0 ? (
             <div className="flex min-h-[200px] items-center justify-center border-2 border-dashed border-edge bg-surface-alt/30 px-6 py-8">
               <div className="text-center">
@@ -135,12 +131,13 @@ function Dashboard() {
         </div>
       </section>
 
-      <PipelineStrip
-        queued={queued}
-        building={building}
-        recentDone={jobs.length}
-        loading={loading}
-      />
+      {!loading && (
+        <PipelineStrip
+          queued={queued}
+          building={building}
+          recentDone={jobs.length}
+        />
+      )}
 
       <SyncScheduleStrip />
 
@@ -153,9 +150,7 @@ function Dashboard() {
             </span>
             <h2 className="text-xl font-bold text-white">Builds in flight</h2>
           </div>
-          {loading ? (
-            <Skeleton className="h-3 w-16" />
-          ) : (
+          {!loading && (
             <span className="font-mono text-xs uppercase tracking-[0.18em] text-soft">
               {liveJobs.length} active
             </span>
@@ -163,11 +158,7 @@ function Dashboard() {
         </div>
         <div className="p-5">
           {loading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 2 }).map((_, i) => (
-                <MiniJobRowSkeleton key={i} />
-              ))}
-            </div>
+            <LoadingBlock label="Loading active builds…" lines={2} />
           ) : liveJobs.length === 0 ? (
             <div className="flex min-h-[140px] items-center justify-center border-2 border-dashed border-edge bg-surface-alt/30 px-6 py-8">
               <div className="font-mono text-sm text-soft">
@@ -195,7 +186,6 @@ interface PipelineStripProps {
   queued: number;
   building: number;
   recentDone: number;
-  loading?: boolean;
 }
 
 /**
@@ -204,12 +194,7 @@ interface PipelineStripProps {
  * borders. On md:+ this lives on a single line; below md it stacks to
  * three rows with vertical connectors.
  */
-function PipelineStrip({
-  queued,
-  building,
-  recentDone,
-  loading = false,
-}: PipelineStripProps) {
+function PipelineStrip({ queued, building, recentDone }: PipelineStripProps) {
   return (
     <section
       aria-label="Build pipeline"
@@ -220,7 +205,6 @@ function PipelineStrip({
           label="Queued"
           count={queued}
           tone={queued > 0 ? "orange" : "muted"}
-          loading={loading}
         />
         <PipelineConnector />
         <PipelineStage
@@ -228,7 +212,6 @@ function PipelineStrip({
           count={building}
           tone={building > 0 ? "lime" : "muted"}
           live={building > 0}
-          loading={loading}
         />
         <PipelineConnector />
         <Link
@@ -239,13 +222,9 @@ function PipelineStrip({
             <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
               Recent done
             </span>
-            {loading ? (
-              <Skeleton className="h-7 w-10" />
-            ) : (
-              <span className="font-display text-2xl font-black tabular-nums text-white">
-                {recentDone}
-              </span>
-            )}
+            <span className="font-display text-2xl font-black tabular-nums text-white">
+              {recentDone}
+            </span>
           </div>
           <span className="font-mono text-xs uppercase tracking-[0.18em] text-soft transition-colors group-hover:text-success">
             view all →
@@ -261,13 +240,11 @@ function PipelineStage({
   count,
   tone,
   live = false,
-  loading = false,
 }: {
   label: string;
   count: number;
   tone: "orange" | "lime" | "muted";
   live?: boolean;
-  loading?: boolean;
 }) {
   const toneClasses =
     tone === "orange"
@@ -283,19 +260,15 @@ function PipelineStage({
         [ {label} ]
       </span>
       <span className="flex items-center gap-2">
-        {live && !loading ? (
+        {live ? (
           <span
             aria-hidden="true"
             className="inline-block h-2 w-2 animate-pulse bg-accent-lime"
           />
         ) : null}
-        {loading ? (
-          <Skeleton className="h-7 w-10" />
-        ) : (
-          <span className="font-display text-2xl font-black tabular-nums">
-            {count}
-          </span>
-        )}
+        <span className="font-display text-2xl font-black tabular-nums">
+          {count}
+        </span>
       </span>
     </div>
   );

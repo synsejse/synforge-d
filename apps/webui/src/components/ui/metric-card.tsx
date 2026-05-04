@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
-import { Skeleton } from "./skeleton";
 
 interface MetricCardProps {
   label: string;
@@ -13,10 +12,6 @@ interface MetricCardProps {
    * 2px-wide vertical bars at the bottom of the card. Pass null to skip.
    */
   sparkline?: ReadonlyArray<number> | null;
-  /** When true, the label/value/detail/sparkline render as skeleton
-   *  placeholders inside the real card frame. Useful so the page layout
-   *  is fixed before the data lands. */
-  loading?: boolean;
   className?: string;
 }
 
@@ -27,7 +22,6 @@ export default function MetricCard({
   icon,
   variant = "default",
   sparkline,
-  loading = false,
   className,
 }: MetricCardProps) {
   const borderColor = {
@@ -70,37 +64,25 @@ export default function MetricCard({
             {icon}
           </div>
         )}
-        {loading ? (
-          <>
-            <Skeleton className="h-3 w-1/2" />
-            <Skeleton className="mt-3 h-9 w-2/3" />
-            <Skeleton className="mt-2 h-3 w-3/4" />
-          </>
-        ) : (
-          <>
-            <div className="font-mono text-xs font-bold uppercase tracking-[0.25em] text-soft">
-              {label}
-            </div>
-            <div
-              className={cn(
-                "font-display mt-3 text-4xl font-black uppercase tracking-tighter",
-                textColor,
-              )}
-            >
-              {value}
-            </div>
-            {detail && (
-              <div className="mt-2 font-mono text-xs text-muted">{detail}</div>
-            )}
-          </>
+        <div className="font-mono text-xs font-bold uppercase tracking-[0.25em] text-soft">
+          {label}
+        </div>
+        <div
+          className={cn(
+            "font-display mt-3 text-4xl font-black uppercase tracking-tighter",
+            textColor,
+          )}
+        >
+          {value}
+        </div>
+        {detail && (
+          <div className="mt-2 font-mono text-xs text-muted">{detail}</div>
         )}
       </div>
 
       {/* Sparkline gutter — always reserve the slot so cards in a grid
           stay the same height regardless of which ones have a series. */}
-      {loading ? (
-        <Skeleton className="mt-auto mt-3 h-4 w-1/2" />
-      ) : sparkline && sparkline.length > 0 ? (
+      {sparkline && sparkline.length > 0 ? (
         <Sparkline values={sparkline} barClass={barColor} />
       ) : (
         <div aria-hidden="true" className="mt-auto h-7 pt-3" />

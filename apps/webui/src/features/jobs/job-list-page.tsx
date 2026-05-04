@@ -23,7 +23,7 @@ import ErrorMessage from "../../components/common/error-message";
 import { useDialogs } from "../../components/common/dialogs-provider";
 import { useToast } from "../../components/common/toast-provider";
 import { useServerHardware } from "../../components/common/server-hardware-provider";
-import { SkeletonListRow } from "../../components/ui/skeleton";
+import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import SegmentedControl from "../../components/ui/segmented-control";
@@ -358,10 +358,8 @@ function JobList() {
         </div>
 
         {loading ? (
-          <div className="space-y-3 p-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <SkeletonListRow key={i} />
-            ))}
+          <div className="p-6">
+            <LoadingBlock label="Loading jobs…" lines={4} />
           </div>
         ) : (
           <JobListTable

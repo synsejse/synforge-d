@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { cn } from "../../lib/utils";
 import EmptyState from "./empty-state";
-import { SkeletonTable } from "./skeleton";
+import LoadingBlock from "./loading-block";
 
 /**
  * One column declaration. The same config drives both the desktop
@@ -73,7 +73,7 @@ export default function DataTable<T>({
   cardFooter,
 }: DataTableProps<T>) {
   if (loading) {
-    return <SkeletonTable columns={columns.length} rows={loadingRows} />;
+    return <LoadingBlock label="Loading…" lines={loadingRows} />;
   }
 
   if (rows.length === 0) {

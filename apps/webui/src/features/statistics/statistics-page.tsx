@@ -12,7 +12,7 @@ import { formatDateTime } from "../../lib/datetime";
 import type { TimeRange } from "../../lib/types";
 import ErrorMessage from "../../components/common/error-message";
 import { usePageVisible } from "../../components/common/page-visibility-provider";
-import { SkeletonCardList } from "../../components/ui/skeleton";
+import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
 import PageHeader from "../../components/ui/page-header";
 import RatioBar from "../../components/ui/ratio-bar";
@@ -71,7 +71,7 @@ function Statistics() {
             { to: "/jobs", label: "Jobs", icon: faRocket },
           ]}
         />
-        <SkeletonCardList count={3} lines={3} />
+        <LoadingBlock label="Loading statistics…" lines={4} />
       </div>
     );
   }

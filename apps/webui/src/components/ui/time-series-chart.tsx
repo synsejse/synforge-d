@@ -10,7 +10,7 @@ import {
   AreaChart,
 } from "recharts";
 import type { TimeSeriesPoint, TimeSeriesResponse } from "../../lib/types";
-import { Skeleton } from "./skeleton";
+import LoadingBlock from "./loading-block";
 
 interface Props {
   data: TimeSeriesResponse | undefined;
@@ -61,7 +61,11 @@ export default function TimeSeriesChart({
   const totalEvents = rows.reduce((sum, r) => sum + r.succeeded + r.failed, 0);
 
   if (isLoading) {
-    return <Skeleton className="w-full" height={height} />;
+    return (
+      <div style={{ height }}>
+        <LoadingBlock label="Loading chart…" lines={0} />
+      </div>
+    );
   }
 
   if (!data || rows.length === 0 || totalEvents === 0) {

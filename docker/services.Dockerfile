@@ -21,7 +21,11 @@ RUN --mount=type=cache,id=synforge-cargo-registry,target=/usr/local/cargo/regist
     --mount=type=cache,id=synforge-cargo-target-v2,target=/app/target \
     cargo chef cook --release --recipe-path recipe.json
 
-FROM chef AS rust-builder
+# rust-builder starts FROM cooker so the cargo-chef pre-cooked
+# dependency layer is the cache base. Without this the cooker stage
+# runs but its output is never consumed — every cold build had to
+# recompile every dependency from scratch.
+FROM cooker AS rust-builder
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY apps/rust ./apps/rust
@@ -33,15 +37,18 @@ RUN --mount=type=cache,id=synforge-cargo-registry,target=/usr/local/cargo/regist
       -p synforge-worker-bin \
     && mkdir -p /out \
     && cp /app/target/release/daemon /out/daemon \
-    && cp /app/target/release/worker /out/worker \
-    && cargo run --release --bin openapi-export > /out/openapi.json
+    && cp /app/target/release/worker /out/worker
 
+# webui-builder is independent of rust-builder. The committed
+# api-schema.ts is the source of truth for webui types; bumping the
+# OpenAPI surface requires regenerating + committing it (npm run
+# generate:api). With this split, a webui-only edit never invalidates
+# the Rust build cache.
 FROM node:22-alpine AS webui-builder
 WORKDIR /app/apps/webui
 COPY apps/webui/package*.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 COPY apps/webui ./
-COPY --from=rust-builder /out/openapi.json ./src/generated/api/openapi.json
 RUN npm run build
 
 FROM fedora:44 AS daemon-runtime

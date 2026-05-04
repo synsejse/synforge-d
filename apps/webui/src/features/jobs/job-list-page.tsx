@@ -23,7 +23,7 @@ import ErrorMessage from "../../components/common/error-message";
 import { useDialogs } from "../../components/common/dialogs-provider";
 import { useToast } from "../../components/common/toast-provider";
 import { useServerHardware } from "../../components/common/server-hardware-provider";
-import { SkeletonCardList } from "../../components/ui/skeleton";
+import { SkeletonListRow } from "../../components/ui/skeleton";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import SegmentedControl from "../../components/ui/segmented-control";
@@ -206,10 +206,6 @@ function JobList() {
     setFilters({ offset });
   }
 
-  if (jobsQuery.isPending) {
-    return <SkeletonCardList count={6} lines={2} />;
-  }
-
   if (jobsQuery.error) {
     return (
       <ErrorMessage
@@ -222,11 +218,14 @@ function JobList() {
     );
   }
 
+  const loading = jobsQuery.isPending;
+  const data = jobsQuery.data;
+  const jobs = data?.jobs ?? [];
   const killingJobId =
     killMutation.isPending && killMutation.variables
       ? killMutation.variables
       : null;
-  const failedJobsCount = jobsQuery.data.jobs.filter(
+  const failedJobsCount = jobs.filter(
     (entry) => entry.job.status === "failed" || entry.job.status === "timed_out",
   ).length;
 
@@ -358,24 +357,32 @@ function JobList() {
           </div>
         </div>
 
-        <JobListTable
-          jobs={jobsQuery.data.jobs}
-          killingJobId={killingJobId}
-          mode={filters.mode}
-          onDelete={(job) => void handleDelete(job)}
-          onKill={(job) => void handleKill(job)}
-          serverHardware={serverHardware}
-          usageByJob={usageByJob}
-        />
+        {loading ? (
+          <div className="space-y-3 p-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonListRow key={i} />
+            ))}
+          </div>
+        ) : (
+          <JobListTable
+            jobs={jobs}
+            killingJobId={killingJobId}
+            mode={filters.mode}
+            onDelete={(job) => void handleDelete(job)}
+            onKill={(job) => void handleKill(job)}
+            serverHardware={serverHardware}
+            usageByJob={usageByJob}
+          />
+        )}
 
-        {(filters.offset > 0 || jobsQuery.data.page.has_more) && (
+        {data && (filters.offset > 0 || data.page.has_more) && (
           <div className="border-t-4 border-edge-strong bg-surface-alt px-6 py-4">
             <PaginationControls
               onPrevious={() => setOffset(Math.max(0, filters.offset - PAGE_SIZE))}
               onNext={() => setOffset(filters.offset + PAGE_SIZE)}
               previousDisabled={filters.offset === 0}
-              nextDisabled={!jobsQuery.data.page.has_more}
-              summary={`Showing ${filters.offset + 1}-${filters.offset + jobsQuery.data.jobs.length}`}
+              nextDisabled={!data.page.has_more}
+              summary={`Showing ${filters.offset + 1}-${filters.offset + jobs.length}`}
             />
           </div>
         )}

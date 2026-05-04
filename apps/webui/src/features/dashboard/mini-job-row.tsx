@@ -4,6 +4,7 @@ import type { BuildJobResponse } from "../../lib/types";
 import { formatDateTime } from "../../lib/datetime";
 import Badge from "../../components/ui/badge";
 import FaIcon from "../../components/ui/fa-icon";
+import { Skeleton } from "../../components/ui/skeleton";
 
 interface MiniJobRowProps {
   entry: BuildJobResponse;
@@ -78,4 +79,32 @@ function getStatusVariant(status: string) {
   if (status === "running") return "lime" as const;
   if (status === "pending") return "warning" as const;
   return "default" as const;
+}
+
+/**
+ * Loading-state twin of MiniJobRow — real outer frame + accent rail
+ * placeholder, skeleton placeholders for the package name / chroot /
+ * revision / status / timestamp slots so the row height matches the
+ * resolved layout exactly.
+ */
+export function MiniJobRowSkeleton() {
+  return (
+    <div className="relative bg-black border-2 border-edge">
+      <span
+        aria-hidden="true"
+        className="absolute inset-y-0 left-0 w-1 bg-edge-strong"
+      />
+      <div className="flex flex-col gap-2 pl-4 pr-3 py-2.5 sm:pl-5 sm:pr-4 md:flex-row md:items-center md:gap-4">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <Skeleton className="h-5 w-16" />
+          <Skeleton className="hidden h-3 w-24 md:block" />
+        </div>
+      </div>
+    </div>
+  );
 }

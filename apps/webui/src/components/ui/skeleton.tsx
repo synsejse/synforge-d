@@ -108,8 +108,50 @@ export function SkeletonCardList({
     >
       <span className="sr-only">Loading…</span>
       {Array.from({ length: count }).map((_, index) => (
-        <SkeletonCard key={index} lines={lines} />
+        <SkeletonListRow key={index} />
       ))}
+    </div>
+  );
+}
+
+/**
+ * Skeleton variant matching the brutalist card chrome used across
+ * jobs / packages / users / repo file lists: bordered box with the
+ * 1px status rail on the left, a header line + chips, and a meta row.
+ * Renders in place of a real card so the page layout is fixed before
+ * data lands.
+ */
+export function SkeletonListRow({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        "relative border-2 border-edge-strong bg-black",
+        className,
+      )}
+    >
+      <span
+        aria-hidden="true"
+        className="absolute inset-y-0 left-0 w-1 bg-edge-strong"
+      />
+      <div className="flex flex-col gap-3 pl-4 pr-4 py-3 sm:pl-6 sm:pr-5 sm:py-4 lg:flex-row lg:items-start lg:gap-4">
+        <div className="min-w-0 flex-1 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-5 w-20" />
+          </div>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-3 w-32" />
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-3 w-36" />
+          </div>
+        </div>
+        <div className="flex shrink-0 gap-1">
+          <Skeleton className="h-8 w-8" />
+          <Skeleton className="h-8 w-8" />
+        </div>
+      </div>
     </div>
   );
 }

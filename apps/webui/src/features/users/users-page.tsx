@@ -16,7 +16,7 @@ import { useSession } from "../../components/common/session-provider";
 import Button from "../../components/ui/button";
 import EmptyState from "../../components/ui/empty-state";
 import FaIcon from "../../components/ui/fa-icon";
-import { SkeletonCardList } from "../../components/ui/skeleton";
+import { SkeletonListRow } from "../../components/ui/skeleton";
 import PageHeader from "../../components/ui/page-header";
 import { PermissionGroup, TextField, ToggleField } from "./components/form-fields";
 import { UserModalActions, UserModalShell } from "./components/modal-shell";
@@ -282,10 +282,6 @@ function Users() {
     deleteMutation.mutate(modal.user.user.id);
   }
 
-  if (usersQuery.isPending) {
-    return <SkeletonCardList count={5} lines={1} />;
-  }
-
   const loadError = usersQuery.error;
   if (loadError) {
     return (
@@ -296,6 +292,9 @@ function Users() {
       />
     );
   }
+
+  const loading = usersQuery.isPending;
+  const users = usersQuery.data?.users ?? [];
 
   return (
     <div className="space-y-8">
@@ -315,11 +314,17 @@ function Users() {
 
       {error ? <ErrorMessage message={error} /> : null}
 
-      {usersQuery.data.users.length === 0 ? (
+      {loading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <SkeletonListRow key={i} />
+          ))}
+        </div>
+      ) : users.length === 0 ? (
         <EmptyState>No users have been created yet.</EmptyState>
       ) : (
         <UserDirectory
-          users={usersQuery.data.users}
+          users={users}
           currentUserId={currentUserId}
           onEdit={openEditModal}
           onPassword={openPasswordModal}

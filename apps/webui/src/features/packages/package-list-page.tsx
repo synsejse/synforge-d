@@ -20,7 +20,7 @@ import PackageCard from "./components/package-card";
 import ErrorMessage from "../../components/common/error-message";
 import { useDialogs } from "../../components/common/dialogs-provider";
 import { useToast } from "../../components/common/toast-provider";
-import { SkeletonCardList } from "../../components/ui/skeleton";
+import { SkeletonListRow } from "../../components/ui/skeleton";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import Select from "../../components/ui/select";
@@ -331,10 +331,6 @@ function PackageList() {
     setSearch(searchInput);
   }
 
-  if (listQuery.isPending) {
-    return <SkeletonCardList count={6} lines={2} />;
-  }
-
   if (listQuery.error) {
     return (
       <ErrorMessage
@@ -346,6 +342,9 @@ function PackageList() {
       />
     );
   }
+
+  const loading = listQuery.isPending;
+  const packages = listQuery.data?.packages ?? [];
 
   const refreshingNameForMutation =
     triggerMutation.isPending &&
@@ -454,30 +453,30 @@ function PackageList() {
         </div>
       </FilterBar>
 
-      {listQuery.data.packages.length > 0 ? (
+      {!loading && packages.length > 0 ? (
         <div className="flex items-center justify-between gap-3 border-2 border-edge-strong bg-surface-alt px-4 py-2 font-mono text-xs uppercase tracking-[0.15em]">
           <label className="flex items-center gap-3 text-muted hover:text-white">
             <input
               type="checkbox"
               checked={selection.allSelected(
-                listQuery.data.packages.map((p) => p.package.name),
+                packages.map((p) => p.package.name),
               )}
               ref={(el) => {
                 if (el) {
                   el.indeterminate = selection.someSelected(
-                    listQuery.data.packages.map((p) => p.package.name),
+                    packages.map((p) => p.package.name),
                   );
                 }
               }}
               onChange={(event) =>
                 selection.setMany(
-                  listQuery.data.packages.map((p) => p.package.name),
+                  packages.map((p) => p.package.name),
                   event.target.checked,
                 )
               }
               aria-label="Select all packages on this page"
             />
-            Select all on page ({listQuery.data.packages.length})
+            Select all on page ({packages.length})
           </label>
           {selection.count > 0 ? (
             <span className="text-soft">
@@ -487,7 +486,13 @@ function PackageList() {
         </div>
       ) : null}
 
-      {listQuery.data.packages.length === 0 ? (
+      {loading ? (
+        <div className="space-y-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonListRow key={i} />
+          ))}
+        </div>
+      ) : packages.length === 0 ? (
         <div className="border-2 border-edge-strong bg-black p-12 text-center">
           <p className="font-mono text-sm font-bold uppercase tracking-[0.3em] text-soft">
             NO_PACKAGES_CONFIGURED
@@ -498,7 +503,7 @@ function PackageList() {
         </div>
       ) : (
         <div className="space-y-4">
-          {listQuery.data.packages.map((entry) => (
+          {packages.map((entry) => (
             <PackageCard
               key={entry.package.name}
               entry={entry}
@@ -514,7 +519,7 @@ function PackageList() {
         </div>
       )}
 
-      {listQuery.data.packages.length > 0 && (
+      {!loading && listQuery.data && packages.length > 0 && (
         <div className="border-2 border-white bg-black p-4">
           <PaginationControls
             onPrevious={() => setOffset(Math.max(0, offset - PAGE_SIZE))}

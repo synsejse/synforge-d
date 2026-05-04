@@ -1,3 +1,21 @@
+# Synforge dev / single-host deployment.
+#
+# Required env (read from .env):
+#   SYNFORGE_DB_PASSWORD       — Postgres password (no default; required)
+#   SYNFORGE_PGADMIN_PASSWORD  — only if you launch the debug-tools profile
+#
+# Optional env (sensible defaults shown inline):
+#   SYNFORGE_DB_NAME / SYNFORGE_DB_USER
+#   SYNFORGE_DB_PATH / SYNFORGE_REDIS_PATH / SYNFORGE_PGADMIN_PATH
+#   SYNFORGE_RUNTIME_PATH / SYNFORGE_WORKER_JOBS_PATH
+#   SYNFORGE_PGADMIN_PORT / SYNFORGE_PGADMIN_EMAIL
+#
+# Profiles:
+#   (default)         — postgres + redis + daemon
+#   debug-tools       — adds pgadmin
+#   build-images-only — builds the worker-fedora image without running it
+#                       (the daemon spawns worker containers on demand)
+
 services:
   postgres:
     image: postgres:17
@@ -9,11 +27,7 @@ services:
     volumes:
       - ${SYNFORGE_DB_PATH:-/data/db}:/var/lib/postgresql/data:rw,z
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${SYNFORGE_DB_USER:-synforge} -d ${SYNFORGE_DB_NAME:-synforge}",
-        ]
+      test: ["CMD-SHELL", "pg_isready -U ${SYNFORGE_DB_USER:-synforge} -d ${SYNFORGE_DB_NAME:-synforge}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,11 +46,62 @@ services:
       retries: 5
       start_period: 10s
 
+  daemon:
+    build:
+      context: .
+      dockerfile: docker/services.Dockerfile
+      target: daemon-runtime
+    image: synforge-daemon:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${SYNFORGE_DB_USER:-synforge}:${SYNFORGE_DB_PASSWORD:?set SYNFORGE_DB_PASSWORD in .env}@postgres:5432/${SYNFORGE_DB_NAME:-synforge}
+      REDIS_URL: redis://redis:6379/0
+      SYNFORGE_WORKER_JOBS_PATH: ${SYNFORGE_WORKER_JOBS_PATH:-/data/jobs}
+    ports:
+      # 8080 = HTTP API + webui. 8090 (worker socket) is reachable on
+      # the compose network only — no host binding by design.
+      - "8080:8080"
+    volumes:
+      # The daemon launches worker containers via the docker socket.
+      - /var/run/docker.sock:/var/run/docker.sock:ro,z
+      # Persistent runtime tree — repo, state, cache, signing keys.
+      - ${SYNFORGE_RUNTIME_PATH:-/data/runtime}:/var/lib/synforge:rw,z
+      # Per-job artifact + log dir, shared with worker containers.
+      - ${SYNFORGE_WORKER_JOBS_PATH:-/data/jobs}:/var/lib/synforge-worker-jobs:rw,z
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/readyz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Worker image is built but never runs as a long-lived service —
+  # the daemon spawns one container per build job and tears it down.
+  # Hidden behind the build-images-only profile so `docker compose up`
+  # doesn't try to start it.
+  worker-fedora:
+    build:
+      context: .
+      dockerfile: docker/services.Dockerfile
+      target: worker-runtime
+    image: synforge-worker-fedora:latest
+    profiles: ["build-images-only"]
+
+  # pgadmin for inspecting the daemon's Postgres. Hidden behind the
+  # debug-tools profile; bring up with `docker compose --profile debug-tools up`.
   pgadmin:
     image: dpage/pgadmin4:latest
     restart: unless-stopped
     user: "5050:5050"
     profiles: ["debug-tools"]
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       PGADMIN_DEFAULT_EMAIL: ${SYNFORGE_PGADMIN_EMAIL:-admin@example.com}
       PGADMIN_DEFAULT_PASSWORD: ${SYNFORGE_PGADMIN_PASSWORD:?set SYNFORGE_PGADMIN_PASSWORD in .env}
@@ -45,45 +110,3 @@ services:
       - "${SYNFORGE_PGADMIN_PORT:-5050}:80"
     volumes:
       - ${SYNFORGE_PGADMIN_PATH:-/data/pgadmin}:/var/lib/pgadmin:rw,z
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  daemon:
-    build:
-      context: .
-      dockerfile: docker/services.Dockerfile
-      target: daemon-runtime
-    image: synforge-daemon:latest
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      DATABASE_URL: postgresql://${SYNFORGE_DB_USER:-synforge}:${SYNFORGE_DB_PASSWORD:?set SYNFORGE_DB_PASSWORD in .env}@postgres:5432/${SYNFORGE_DB_NAME:-synforge}
-      REDIS_URL: redis://redis:6379/0
-      SYNFORGE_WORKER_JOBS_PATH: ${SYNFORGE_WORKER_JOBS_PATH:-/data/jobs}
-    expose:
-      - "8090"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/readyz"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro,z
-      - ${SYNFORGE_RUNTIME_PATH:-/data/runtime}:/var/lib/synforge:rw,z
-      - ${SYNFORGE_WORKER_JOBS_PATH:-/data/jobs}:/var/lib/synforge-worker-jobs:rw,z
-
-  worker-fedora:
-    build:
-      context: .
-      dockerfile: docker/services.Dockerfile
-      target: worker-runtime
-    image: synforge-worker-fedora:latest
-    profiles: ["build-images-only"]

@@ -29,47 +29,45 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Hover lift + shadow are driven by the WRAPPER span's hover
-        // (group-hover) so the cursor never lands in a "stuck off" zone
-        // when the button translates away from the pointer. Cosmetic
-        // hover (colour/border) stays on the button itself.
+        // All variants share the same shadow + lift vocabulary: -2px
+        // translate, 6px hard offset, white-ish shadow that reads
+        // against any button colour on the dark page background.
         primary: [
           "bg-accent-lime text-black border-accent-lime shadow-brutal-sm",
-          "group-hover:shadow-brutal-lg group-hover:-translate-x-0.5 group-hover:-translate-y-0.5",
+          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
           "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
         ].join(" "),
         secondary: [
           "bg-white text-black border-white shadow-brutal-sm",
-          "hover:bg-strong",
-          "group-hover:shadow-brutal-lg group-hover:-translate-x-0.5 group-hover:-translate-y-0.5",
+          "hover:bg-strong hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
           "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
         ].join(" "),
         ghost: [
           "bg-transparent text-strong border-edge-strong shadow-brutal-sm",
           "hover:border-muted hover:bg-surface-hover hover:text-white",
-          "group-hover:shadow-brutal-lg group-hover:-translate-x-0.5 group-hover:-translate-y-0.5",
+          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
           "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
         ].join(" "),
         subtle: [
           "bg-transparent text-soft border-transparent shadow-brutal-sm",
           "hover:bg-surface-hover hover:text-white",
-          "group-hover:shadow-brutal-lg group-hover:-translate-x-0.5 group-hover:-translate-y-0.5",
+          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
           "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
         ].join(" "),
         danger: [
           "bg-error text-white border-error shadow-brutal-sm",
-          "group-hover:shadow-brutal-lg group-hover:-translate-x-0.5 group-hover:-translate-y-0.5",
+          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
           "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
         ].join(" "),
         warning: [
           "bg-accent-orange text-black border-accent-orange shadow-brutal-sm",
-          "group-hover:shadow-brutal-lg group-hover:-translate-x-0.5 group-hover:-translate-y-0.5",
+          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
           "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
         ].join(" "),
         terminal: [
           "bg-black text-success border-success font-mono shadow-brutal-sm",
           "hover:bg-success hover:text-black",
-          "group-hover:shadow-brutal-lg group-hover:-translate-x-0.5 group-hover:-translate-y-0.5",
+          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
           "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
         ].join(" "),
       },
@@ -105,11 +103,8 @@ export const buttonVariants = cva(
       // and the hover-translate; keep colour/border hover only.
       {
         size: ["icon-sm", "icon", "icon-lg"],
-        className: [
-          "shadow-none",
-          "group-hover:shadow-none group-hover:translate-x-0 group-hover:translate-y-0",
-          "active:shadow-none",
-        ].join(" "),
+        className:
+          "shadow-none hover:shadow-none hover:translate-x-0 hover:translate-y-0 active:shadow-none",
       },
     ],
     defaultVariants: {
@@ -130,24 +125,6 @@ export interface ButtonProps
   children?: ReactNode;
 }
 
-/**
- * Width handling for the wrapper span — mirrors the button's fullWidth
- * variant so the wrapper takes the same outer footprint as the button
- * used to. Without this, full-width buttons would shrink-wrap.
- */
-function wrapperWidthClass(fullWidth: ButtonProps["fullWidth"]): string {
-  switch (fullWidth) {
-    case true:
-      return "flex w-full";
-    case "responsive":
-      return "flex w-full sm:inline-flex sm:w-auto";
-    case "responsive-lg":
-      return "flex w-full lg:inline-flex lg:w-auto";
-    default:
-      return "inline-flex";
-  }
-}
-
 export default function Button({
   className,
   variant,
@@ -159,31 +136,18 @@ export default function Button({
   type = "button",
   ...props
 }: ButtonProps) {
-  // Wrapper provides a stable hover hit-area: the button inside
-  // translates on hover, but the wrapper's box doesn't move, so the
-  // pointer never falls outside its hover region during the lift —
-  // no more flicker at the seam. The ::before extends 6px past every
-  // edge to absorb the shadow zone.
   return (
-    <span
-      className={cn(
-        "group relative",
-        wrapperWidthClass(fullWidth),
-        "before:absolute before:-inset-1.5 before:content-['']",
-      )}
+    <button
+      type={type}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      className={cn(buttonVariants({ variant, size, fullWidth }), className)}
+      {...props}
     >
-      <button
-        type={type}
-        disabled={disabled || loading}
-        aria-busy={loading || undefined}
-        className={cn(buttonVariants({ variant, size, fullWidth }), className)}
-        {...props}
-      >
-        {loading ? (
-          <FaIcon icon={faSpinner} className="animate-spin" aria-hidden="true" />
-        ) : null}
-        {children}
-      </button>
-    </span>
+      {loading ? (
+        <FaIcon icon={faSpinner} className="animate-spin" aria-hidden="true" />
+      ) : null}
+      {children}
+    </button>
   );
 }

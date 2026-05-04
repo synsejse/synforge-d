@@ -13,10 +13,7 @@ import { repositoryQueries } from "../../lib/queries";
 import { formatBytes } from "../../lib/bytes";
 import ErrorMessage from "../../components/common/error-message";
 import EmptyState from "../../components/ui/empty-state";
-import {
-  SkeletonCardList,
-  SkeletonMetricGrid,
-} from "../../components/ui/skeleton";
+import { SkeletonListRow } from "../../components/ui/skeleton";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import SegmentedControl from "../../components/ui/segmented-control";
@@ -81,17 +78,8 @@ function RepositoryBrowser() {
     });
   }
 
-  if (summaryQuery.isPending || inventoryQuery.isPending) {
-    return (
-      <div className="space-y-8">
-        <SkeletonMetricGrid />
-        <SkeletonCardList count={5} lines={2} />
-      </div>
-    );
-  }
-
   const loadError = summaryQuery.error ?? inventoryQuery.error;
-  if (loadError || !summaryQuery.data || !inventoryQuery.data) {
+  if (loadError) {
     return (
       <ErrorMessage
         message={
@@ -102,6 +90,12 @@ function RepositoryBrowser() {
       />
     );
   }
+
+  const summaryLoading = summaryQuery.isPending;
+  const inventoryLoading = inventoryQuery.isPending;
+  const summary = summaryQuery.data;
+  const inventory = inventoryQuery.data;
+  const repoFiles = inventory?.repo_files ?? [];
 
   return (
     <div className="space-y-8">
@@ -118,28 +112,32 @@ function RepositoryBrowser() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Packages"
-          value={summaryQuery.data.package_count}
+          value={summary?.package_count ?? 0}
           detail="Published package names"
           icon={<FaIcon icon={faBoxesStacked} />}
+          loading={summaryLoading}
         />
         <MetricCard
           label="Targets"
-          value={summaryQuery.data.target_count}
+          value={summary?.target_count ?? 0}
           detail="Active build targets"
           variant="accent"
           icon={<FaIcon icon={faBullseye} />}
+          loading={summaryLoading}
         />
         <MetricCard
           label="Builds"
-          value={summaryQuery.data.build_count}
+          value={summary?.build_count ?? 0}
           detail="Recorded publish jobs"
           icon={<FaIcon icon={faHammer} />}
+          loading={summaryLoading}
         />
         <MetricCard
           label="Stored Size"
-          value={formatBytes(summaryQuery.data.stored_bytes)}
-          detail={`${summaryQuery.data.published_file_count} published files`}
+          value={summaryLoading ? "" : formatBytes(summary?.stored_bytes ?? 0)}
+          detail={`${summary?.published_file_count ?? 0} published files`}
           icon={<FaIcon icon={faHardDrive} />}
+          loading={summaryLoading}
         />
       </div>
 
@@ -216,21 +214,27 @@ function RepositoryBrowser() {
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-4 border-b-2 border-edge-strong pb-2">
           <h2 className="text-base font-semibold text-white">Published files</h2>
-          {inventoryQuery.data.repo_files.length > 0 ? (
+          {!inventoryLoading && repoFiles.length > 0 ? (
             <span className="font-mono text-xs uppercase tracking-[0.18em] text-soft">
-              {inventoryQuery.data.repo_files.length} shown
+              {repoFiles.length} shown
             </span>
           ) : null}
         </div>
 
-        {inventoryQuery.data.repo_files.length === 0 ? (
+        {inventoryLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <SkeletonListRow key={i} />
+            ))}
+          </div>
+        ) : repoFiles.length === 0 ? (
           <EmptyState
             title="No files match"
             description="No files match the current filters."
           />
         ) : (
           <div className="space-y-3">
-            {inventoryQuery.data.repo_files.map((file) => (
+            {repoFiles.map((file) => (
               <RepoFileCard
                 key={`${file.job_id}:${file.path}`}
                 file={file}
@@ -240,7 +244,7 @@ function RepositoryBrowser() {
           </div>
         )}
 
-        {inventoryQuery.data.repo_files.length > 0 && (
+        {!inventoryLoading && inventory && repoFiles.length > 0 && (
           <div className="border-2 border-edge-strong bg-black px-4 py-3">
             <PaginationControls
               onPrevious={() =>
@@ -251,7 +255,7 @@ function RepositoryBrowser() {
               }
               previousDisabled={inventoryQuery.isFetching || filters.offset === 0}
               nextDisabled={
-                inventoryQuery.isFetching || !inventoryQuery.data.page.has_more
+                inventoryQuery.isFetching || !inventory.page.has_more
               }
               summary={`Offset: ${filters.offset}`}
             />

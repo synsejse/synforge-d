@@ -137,7 +137,17 @@ export default function JobDetail({ jobId }: Props) {
   }
 
   if (jobQuery.isPending) {
-    return <SkeletonForm sections={2} fieldsPerSection={4} />;
+    return (
+      <div className="min-w-0 space-y-6">
+        <Breadcrumbs
+          items={[
+            { label: "Jobs", to: "/jobs" },
+            { label: jobId },
+          ]}
+        />
+        <SkeletonForm sections={2} fieldsPerSection={4} />
+      </div>
+    );
   }
 
   if (jobQuery.error || !jobQuery.data) {

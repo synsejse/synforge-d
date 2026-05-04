@@ -59,7 +59,17 @@ function Settings() {
   }
 
   if (configQuery.isPending || schemaQuery.isPending) {
-    return <SkeletonForm sections={3} fieldsPerSection={4} />;
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          title="Configuration"
+          description="Runtime settings and effective daemon values."
+          color="purple"
+          actions={[{ to: "/", label: "Overview", icon: faServer }]}
+        />
+        <SkeletonForm sections={3} fieldsPerSection={4} />
+      </div>
+    );
   }
 
   const loadError = configQuery.error ?? schemaQuery.error;

@@ -201,7 +201,19 @@ function Signing() {
   }
 
   if (statusQuery.isPending) {
-    return <SkeletonForm sections={2} fieldsPerSection={3} />;
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          title="GPG Signing"
+          description="Generate or import a private key, then toggle repository signing."
+          color="orange"
+          actions={[
+            { to: "/repository/use", label: "Repo Setup", icon: faCheckCircle },
+          ]}
+        />
+        <SkeletonForm sections={2} fieldsPerSection={3} />
+      </div>
+    );
   }
 
   if (statusQuery.error || !status) {

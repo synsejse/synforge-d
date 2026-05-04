@@ -1,7 +1,7 @@
 import type { PackageBuildInventoryEntry } from "../../../lib/types";
 import PaginationControls from "../../../components/common/pagination-controls";
 import EmptyState from "../../../components/ui/empty-state";
-import { SkeletonCardList } from "../../../components/ui/skeleton";
+import { SkeletonListRow } from "../../../components/ui/skeleton";
 import BuildHistoryCard from "./build-history-card";
 
 interface PackageBuildHistorySectionProps {
@@ -37,9 +37,7 @@ export default function PackageBuildHistorySection({
   onDeleteJob,
   deletingJobId,
 }: PackageBuildHistorySectionProps) {
-  if (buildsLoading && !buildsLoaded) {
-    return <SkeletonCardList count={4} lines={2} />;
-  }
+  const loading = buildsLoading && !buildsLoaded;
   const showDeletedToggle = (
     <label className="inline-flex cursor-pointer items-center gap-2 border-2 border-edge-strong bg-black px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-soft transition-colors hover:border-accent-lime hover:text-strong">
       <input
@@ -52,48 +50,51 @@ export default function PackageBuildHistorySection({
     </label>
   );
 
-  if (builds.length === 0) {
-    return (
-      <div className="space-y-4">
-        <div className="flex justify-end">{showDeletedToggle}</div>
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">{showDeletedToggle}</div>
+      {loading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonListRow key={i} />
+          ))}
+        </div>
+      ) : builds.length === 0 ? (
         <EmptyState>
           {includeDeleted
             ? "No build history yet."
             : "No build history yet. Deleted builds may be hidden — toggle 'Show deleted' to include them."}
         </EmptyState>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-end">{showDeletedToggle}</div>
-      <div className="space-y-3">
-        {builds.map((entry) => (
-          <BuildHistoryCard
-            key={entry.build.job.id}
-            entry={entry}
-            deleting={deletingJobId === entry.build.job.id}
-            onRefreshTarget={onRefreshTarget}
-            onRebuildTarget={onRebuildTarget}
-            onDeleteJob={onDeleteJob}
+      ) : (
+        <div className="space-y-3">
+          {builds.map((entry) => (
+            <BuildHistoryCard
+              key={entry.build.job.id}
+              entry={entry}
+              deleting={deletingJobId === entry.build.job.id}
+              onRefreshTarget={onRefreshTarget}
+              onRebuildTarget={onRebuildTarget}
+              onDeleteJob={onDeleteJob}
+            />
+          ))}
+        </div>
+      )}
+      {!loading && builds.length > 0 ? (
+        <div className="border-2 border-edge-strong bg-black px-4 py-3">
+          <PaginationControls
+            onPrevious={onLoadPrevious}
+            onNext={onLoadNext}
+            previousDisabled={buildsLoading || buildsOffset === 0}
+            nextDisabled={buildsLoading || !buildsHasMore}
+            summary={
+              <>
+                Showing {buildsOffset + 1}-{buildsOffset + builds.length}
+                {buildsTotal !== null ? ` of ${buildsTotal}` : ""}
+              </>
+            }
           />
-        ))}
-      </div>
-      <div className="border-2 border-edge-strong bg-black px-4 py-3">
-        <PaginationControls
-          onPrevious={onLoadPrevious}
-          onNext={onLoadNext}
-          previousDisabled={buildsLoading || buildsOffset === 0}
-          nextDisabled={buildsLoading || !buildsHasMore}
-          summary={
-            <>
-              Showing {buildsOffset + 1}-{buildsOffset + builds.length}
-              {buildsTotal !== null ? ` of ${buildsTotal}` : ""}
-            </>
-          }
-        />
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }

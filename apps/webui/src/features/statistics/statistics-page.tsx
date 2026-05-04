@@ -60,7 +60,20 @@ function Statistics() {
   });
 
   if (isPending) {
-    return <SkeletonCardList count={3} lines={3} />;
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          title="Statistics"
+          description="Dedicated operational metrics for system throughput, sync health, and cache behavior."
+          color="cyan"
+          actions={[
+            { to: "/", label: "Overview", icon: faLayerGroup },
+            { to: "/jobs", label: "Jobs", icon: faRocket },
+          ]}
+        />
+        <SkeletonCardList count={3} lines={3} />
+      </div>
+    );
   }
 
   if (error) {

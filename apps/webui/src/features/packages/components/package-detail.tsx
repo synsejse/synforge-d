@@ -378,7 +378,17 @@ export default function PackageDetail({ packageName }: Props) {
   }
 
   if (packageQuery.isPending) {
-    return <SkeletonForm sections={3} fieldsPerSection={4} />;
+    return (
+      <div className="min-w-0 space-y-6">
+        <Breadcrumbs
+          items={[
+            { label: "Packages", to: "/packages" },
+            { label: packageName },
+          ]}
+        />
+        <SkeletonForm sections={3} fieldsPerSection={4} />
+      </div>
+    );
   }
 
   if (packageQuery.error || !packageQuery.data) {

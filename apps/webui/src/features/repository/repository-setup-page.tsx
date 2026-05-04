@@ -60,7 +60,19 @@ function RepositorySetup() {
   }
 
   if (setupQuery.isPending) {
-    return <SkeletonForm sections={2} fieldsPerSection={2} />;
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Add Repo to Fedora"
+          description="Fedora repo file and basic DNF usage."
+          color="orange"
+          actions={[
+            { to: "/repository", label: "Browse Repository", icon: faFolderTree },
+          ]}
+        />
+        <SkeletonForm sections={2} fieldsPerSection={2} />
+      </div>
+    );
   }
 
   if (setupQuery.error) {

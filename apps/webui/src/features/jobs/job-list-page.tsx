@@ -23,7 +23,7 @@ import ErrorMessage from "../../components/common/error-message";
 import { useDialogs } from "../../components/common/dialogs-provider";
 import { useToast } from "../../components/common/toast-provider";
 import { useServerHardware } from "../../components/common/server-hardware-provider";
-import LoadingBlock from "../../components/ui/loading-block";
+import { SkeletonCardList } from "../../components/ui/skeleton";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import SegmentedControl from "../../components/ui/segmented-control";
@@ -207,7 +207,7 @@ function JobList() {
   }
 
   if (jobsQuery.isPending) {
-    return <LoadingBlock label="Loading jobs…" lines={4} />;
+    return <SkeletonCardList count={6} lines={2} />;
   }
 
   if (jobsQuery.error) {

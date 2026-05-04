@@ -20,7 +20,7 @@ import PackageCard from "./components/package-card";
 import ErrorMessage from "../../components/common/error-message";
 import { useDialogs } from "../../components/common/dialogs-provider";
 import { useToast } from "../../components/common/toast-provider";
-import LoadingBlock from "../../components/ui/loading-block";
+import { SkeletonCardList } from "../../components/ui/skeleton";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import Select from "../../components/ui/select";
@@ -332,7 +332,7 @@ function PackageList() {
   }
 
   if (listQuery.isPending) {
-    return <LoadingBlock label="Loading packages…" lines={4} />;
+    return <SkeletonCardList count={6} lines={2} />;
   }
 
   if (listQuery.error) {

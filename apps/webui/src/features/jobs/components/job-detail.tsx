@@ -12,7 +12,10 @@ import ErrorMessage from "../../../components/common/error-message";
 import { useDialogs } from "../../../components/common/dialogs-provider";
 import { useToast } from "../../../components/common/toast-provider";
 import { useServerHardware } from "../../../components/common/server-hardware-provider";
-import LoadingBlock from "../../../components/ui/loading-block";
+import {
+  SkeletonForm,
+  SkeletonTable,
+} from "../../../components/ui/skeleton";
 import FaIcon from "../../../components/ui/fa-icon";
 import Badge from "../../../components/ui/badge";
 import Button from "../../../components/ui/button";
@@ -134,7 +137,7 @@ export default function JobDetail({ jobId }: Props) {
   }
 
   if (jobQuery.isPending) {
-    return <LoadingBlock label="Loading job details…" lines={6} />;
+    return <SkeletonForm sections={2} fieldsPerSection={4} />;
   }
 
   if (jobQuery.error || !jobQuery.data) {
@@ -329,7 +332,7 @@ export default function JobDetail({ jobId }: Props) {
         >
           {activeTab === "logs" ? (
             <Suspense
-              fallback={<LoadingBlock label="Loading logs…" lines={3} />}
+              fallback={<SkeletonTable columns={1} rows={8} />}
             >
               <TabbedLogViewer jobId={jobId} isLive={isLive} />
             </Suspense>

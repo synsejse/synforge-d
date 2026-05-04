@@ -16,7 +16,7 @@ import type {
 import ErrorMessage from "../../components/common/error-message";
 import Button from "../../components/ui/button";
 import FaIcon from "../../components/ui/fa-icon";
-import LoadingBlock from "../../components/ui/loading-block";
+import { SkeletonForm } from "../../components/ui/skeleton";
 import MetaPair from "../../components/ui/meta-pair";
 import PageHeader from "../../components/ui/page-header";
 import ProgressOverlayDialog from "../../components/ui/progress-overlay-dialog";
@@ -201,7 +201,7 @@ function Signing() {
   }
 
   if (statusQuery.isPending) {
-    return <LoadingBlock label="Loading signing status…" lines={4} />;
+    return <SkeletonForm sections={2} fieldsPerSection={3} />;
   }
 
   if (statusQuery.error || !status) {

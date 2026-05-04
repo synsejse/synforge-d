@@ -13,7 +13,10 @@ import { repositoryQueries } from "../../lib/queries";
 import { formatBytes } from "../../lib/bytes";
 import ErrorMessage from "../../components/common/error-message";
 import EmptyState from "../../components/ui/empty-state";
-import LoadingBlock from "../../components/ui/loading-block";
+import {
+  SkeletonCardList,
+  SkeletonMetricGrid,
+} from "../../components/ui/skeleton";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import SegmentedControl from "../../components/ui/segmented-control";
@@ -79,7 +82,12 @@ function RepositoryBrowser() {
   }
 
   if (summaryQuery.isPending || inventoryQuery.isPending) {
-    return <LoadingBlock label="Loading repository inventory…" lines={4} />;
+    return (
+      <div className="space-y-8">
+        <SkeletonMetricGrid />
+        <SkeletonCardList count={5} lines={2} />
+      </div>
+    );
   }
 
   const loadError = summaryQuery.error ?? inventoryQuery.error;

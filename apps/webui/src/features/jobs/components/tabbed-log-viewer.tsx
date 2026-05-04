@@ -12,7 +12,7 @@ import { formatBytes } from "../../../lib/bytes";
 import type { LogManifestResponse } from "../../../lib/types";
 import EmptyState from "../../../components/ui/empty-state";
 import FaIcon from "../../../components/ui/fa-icon";
-import LoadingBlock from "../../../components/ui/loading-block";
+import { SkeletonTable } from "../../../components/ui/skeleton";
 import { usePageVisible } from "../../../components/common/page-visibility-provider";
 import { useDebounce } from "../../../lib/hooks/use-debounce";
 
@@ -234,7 +234,7 @@ export default function TabbedLogViewer({ jobId, isLive }: Props) {
   }, [currentLog?.text, followLogs]);
 
   if (manifestLoading) {
-    return <LoadingBlock label="Loading log sources…" lines={3} />;
+    return <SkeletonTable columns={1} rows={6} />;
   }
 
   return (

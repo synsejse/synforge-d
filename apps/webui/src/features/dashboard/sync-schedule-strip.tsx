@@ -6,7 +6,7 @@ import { syncQueries } from "../../lib/queries";
 import { usePageVisible } from "../../components/common/page-visibility-provider";
 import EmptyState from "../../components/ui/empty-state";
 import FaIcon from "../../components/ui/fa-icon";
-import LoadingBlock from "../../components/ui/loading-block";
+import { Skeleton } from "../../components/ui/skeleton";
 
 const SCHEDULE_LIMIT = 10;
 const POLL_INTERVAL_MS = 30_000;
@@ -54,7 +54,7 @@ export default function SyncScheduleStrip() {
       </div>
       <div className="p-5">
         {isPending ? (
-          <LoadingBlock label="Loading schedule…" lines={0} />
+          <Skeleton className="h-40 w-full" />
         ) : error || !data ? (
           <EmptyState>
             Couldn&apos;t load schedule.{" "}

@@ -11,7 +11,7 @@ import ErrorMessage from "../../../components/common/error-message";
 import { useDialogs } from "../../../components/common/dialogs-provider";
 import { useToast } from "../../../components/common/toast-provider";
 import { useServerHardware } from "../../../components/common/server-hardware-provider";
-import LoadingBlock from "../../../components/ui/loading-block";
+import { SkeletonForm } from "../../../components/ui/skeleton";
 import Breadcrumbs from "../../../components/ui/breadcrumbs";
 import Tabs from "../../../components/ui/tabs";
 import PackageBuildHistorySection from "./package-build-history-section";
@@ -378,7 +378,7 @@ export default function PackageDetail({ packageName }: Props) {
   }
 
   if (packageQuery.isPending) {
-    return <LoadingBlock label="Loading package…" lines={4} />;
+    return <SkeletonForm sections={3} fieldsPerSection={4} />;
   }
 
   if (packageQuery.error || !packageQuery.data) {

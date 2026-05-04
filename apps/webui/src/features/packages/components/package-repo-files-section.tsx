@@ -1,7 +1,7 @@
 import type { PublishedRepoFile } from "../../../lib/types";
 import PaginationControls from "../../../components/common/pagination-controls";
 import EmptyState from "../../../components/ui/empty-state";
-import LoadingBlock from "../../../components/ui/loading-block";
+import { SkeletonCardList } from "../../../components/ui/skeleton";
 import RepoFileCard from "../../repository/components/repo-file-card";
 
 interface PackageRepoFilesSectionProps {
@@ -26,7 +26,7 @@ export default function PackageRepoFilesSection({
   onLoadNext,
 }: PackageRepoFilesSectionProps) {
   if (repoFilesLoading && !repoFilesLoaded) {
-    return <LoadingBlock label="Loading repository files…" lines={4} />;
+    return <SkeletonCardList count={4} lines={2} />;
   }
   if (repoFiles.length === 0) {
     return (

@@ -4,12 +4,13 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 interface Props {
   icon: IconDefinition;
   className?: string;
-  fixedWidth?: boolean;
 }
 
-export default function FaIcon({ icon, className, fixedWidth = true }: Props) {
-  void fixedWidth;
-  const classes = ["inline-block h-[1em] w-[1.25em] shrink-0 align-[-0.125em]", className]
+export default function FaIcon({ icon, className }: Props) {
+  const classes = [
+    "inline-block h-[1em] w-[1.25em] shrink-0 align-[-0.125em]",
+    className,
+  ]
     .filter(Boolean)
     .join(" ");
 

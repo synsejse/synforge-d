@@ -1,7 +1,7 @@
 import type { PackageBuildInventoryEntry } from "../../../lib/types";
 import PaginationControls from "../../../components/common/pagination-controls";
 import EmptyState from "../../../components/ui/empty-state";
-import LoadingBlock from "../../../components/ui/loading-block";
+import { SkeletonCardList } from "../../../components/ui/skeleton";
 import BuildHistoryCard from "./build-history-card";
 
 interface PackageBuildHistorySectionProps {
@@ -38,7 +38,7 @@ export default function PackageBuildHistorySection({
   deletingJobId,
 }: PackageBuildHistorySectionProps) {
   if (buildsLoading && !buildsLoaded) {
-    return <LoadingBlock label="Loading build history…" lines={4} />;
+    return <SkeletonCardList count={4} lines={2} />;
   }
   const showDeletedToggle = (
     <label className="inline-flex cursor-pointer items-center gap-2 border-2 border-edge-strong bg-black px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-soft transition-colors hover:border-accent-lime hover:text-strong">

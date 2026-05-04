@@ -16,7 +16,7 @@ import { useSession } from "../../components/common/session-provider";
 import Button from "../../components/ui/button";
 import EmptyState from "../../components/ui/empty-state";
 import FaIcon from "../../components/ui/fa-icon";
-import LoadingBlock from "../../components/ui/loading-block";
+import { SkeletonCardList } from "../../components/ui/skeleton";
 import PageHeader from "../../components/ui/page-header";
 import { PermissionGroup, TextField, ToggleField } from "./components/form-fields";
 import { UserModalActions, UserModalShell } from "./components/modal-shell";
@@ -283,7 +283,7 @@ function Users() {
   }
 
   if (usersQuery.isPending) {
-    return <LoadingBlock label="Loading users…" lines={4} />;
+    return <SkeletonCardList count={5} lines={1} />;
   }
 
   const loadError = usersQuery.error;

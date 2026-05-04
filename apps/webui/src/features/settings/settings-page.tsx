@@ -9,7 +9,7 @@ import api from "../../lib/api";
 import { configQueries } from "../../lib/queries";
 import type { ConfigFieldDescriptor, DaemonConfig } from "../../lib/types";
 import ErrorMessage from "../../components/common/error-message";
-import LoadingBlock from "../../components/ui/loading-block";
+import { SkeletonForm } from "../../components/ui/skeleton";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import PageHeader from "../../components/ui/page-header";
@@ -59,7 +59,7 @@ function Settings() {
   }
 
   if (configQuery.isPending || schemaQuery.isPending) {
-    return <LoadingBlock label="Loading config…" lines={4} />;
+    return <SkeletonForm sections={3} fieldsPerSection={4} />;
   }
 
   const loadError = configQuery.error ?? schemaQuery.error;

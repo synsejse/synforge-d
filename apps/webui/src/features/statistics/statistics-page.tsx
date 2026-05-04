@@ -12,7 +12,7 @@ import { formatDateTime } from "../../lib/datetime";
 import type { TimeRange } from "../../lib/types";
 import ErrorMessage from "../../components/common/error-message";
 import { usePageVisible } from "../../components/common/page-visibility-provider";
-import LoadingBlock from "../../components/ui/loading-block";
+import { SkeletonCardList } from "../../components/ui/skeleton";
 import FaIcon from "../../components/ui/fa-icon";
 import PageHeader from "../../components/ui/page-header";
 import RatioBar from "../../components/ui/ratio-bar";
@@ -60,7 +60,7 @@ function Statistics() {
   });
 
   if (isPending) {
-    return <LoadingBlock label="Loading statistics…" lines={4} />;
+    return <SkeletonCardList count={3} lines={3} />;
   }
 
   if (error) {

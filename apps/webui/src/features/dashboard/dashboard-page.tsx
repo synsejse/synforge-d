@@ -4,7 +4,10 @@ import { dashboardQueries, statisticsQueries } from "../../lib/queries";
 import { formatBytes } from "../../lib/bytes";
 import ErrorMessage from "../../components/common/error-message";
 import { usePageVisible } from "../../components/common/page-visibility-provider";
-import LoadingBlock from "../../components/ui/loading-block";
+import {
+  SkeletonCardList,
+  SkeletonMetricGrid,
+} from "../../components/ui/skeleton";
 import FaIcon from "../../components/ui/fa-icon";
 import MetricCard from "../../components/ui/metric-card";
 import PageHeader from "../../components/ui/page-header";
@@ -38,7 +41,12 @@ function Dashboard() {
   );
 
   if (isPending) {
-    return <LoadingBlock label="Loading overview…" lines={4} />;
+    return (
+      <div className="space-y-8">
+        <SkeletonMetricGrid />
+        <SkeletonCardList count={5} lines={1} />
+      </div>
+    );
   }
 
   if (error) {

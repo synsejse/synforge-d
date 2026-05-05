@@ -34,7 +34,7 @@ export function UserModalShell({ title, children, onClose }: UserModalShellProps
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="w-full max-w-xl border-4 border-white bg-black p-6 shadow-[6px_6px_0_rgba(255,255,255,0.25)]"
+        className="w-full max-w-xl border-4 border-white bg-black p-6 shadow-modal"
       >
         <div className="mb-5 border-b-2 border-edge pb-4">
           <h2 id={titleId} className="text-2xl font-bold text-white">

@@ -208,7 +208,7 @@ export default function AddPackageModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="flex max-h-[calc(100dvh-3rem)] w-full max-w-3xl flex-col border-4 border-white bg-black shadow-[6px_6px_0_rgba(255,255,255,0.25)]"
+        className="flex max-h-[calc(100dvh-3rem)] w-full max-w-3xl flex-col border-4 border-white bg-black shadow-modal"
       >
         <div className="border-b-2 border-edge px-6 py-5">
           <h2 id={titleId} className="text-2xl font-bold text-white">

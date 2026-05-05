@@ -1,4 +1,13 @@
-use super::super::*;
+use async_trait::async_trait;
+use synforge_core::{
+    api::BuildJobResponse,
+    model::{
+        ArtifactSignature, BuildArtifact, BuildJob, BuildStatus, BuildTrigger, PublishedRepoFile,
+    },
+};
+use uuid::Uuid;
+
+use crate::db::{BuildFailureBackoffState, BuildLogRecord, DieselStore, JobStore, job};
 
 #[async_trait]
 impl JobStore for DieselStore {

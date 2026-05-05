@@ -36,6 +36,10 @@
   --shadow-card-sm: 4px 4px 0 rgba(255, 255, 255, 0.1);
   --shadow-card-md: 6px 6px 0 rgba(255, 255, 255, 0.2);
   --shadow-card-lg: 8px 8px 0 rgba(255, 255, 255, 0.3);
+  /* Modal/dialog containers paired with `border-4 border-white bg-black`.
+     Sits between card-md (0.2) and card-lg (0.3); used by every full-screen
+     modal shell so they read as a single visual family. */
+  --shadow-modal: 6px 6px 0 rgba(255, 255, 255, 0.25);
 }
 
 /* Tailwind v4: expose tokens as semantic utilities (bg-surface, text-muted, shadow-brutal-sm, etc.) */
@@ -70,6 +74,7 @@
   --shadow-card-sm: var(--shadow-card-sm);
   --shadow-card-md: var(--shadow-card-md);
   --shadow-card-lg: var(--shadow-card-lg);
+  --shadow-modal: var(--shadow-modal);
 }
 
 html,

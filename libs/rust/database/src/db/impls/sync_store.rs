@@ -1,4 +1,6 @@
-use super::super::*;
+use async_trait::async_trait;
+
+use crate::db::{DieselStore, SyncStore, sync};
 
 #[async_trait]
 impl SyncStore for DieselStore {

@@ -16,7 +16,7 @@ export default function SelectionDialog({
 }: SelectionDialogProps) {
   return (
     <div className="fixed inset-0 z-[60] overflow-y-auto bg-black/80 px-4 py-8">
-      <div className="mx-auto w-full max-w-3xl border-4 border-white bg-black shadow-[6px_6px_0_rgba(255,255,255,0.25)]">
+      <div className="mx-auto w-full max-w-3xl border-4 border-white bg-black shadow-modal">
         <div className="flex items-start justify-between gap-4 border-b-2 border-edge px-6 py-5">
           <div>
             <h3 className="text-xl font-bold text-white">{title}</h3>

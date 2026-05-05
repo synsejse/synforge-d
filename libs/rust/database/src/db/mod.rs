@@ -13,7 +13,6 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
-use async_trait::async_trait;
 use diesel::prelude::*;
 use diesel_async::{
     AsyncConnection, AsyncMigrationHarness, AsyncPgConnection, RunQueryDsl,

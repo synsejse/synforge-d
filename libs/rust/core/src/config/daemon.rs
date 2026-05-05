@@ -133,6 +133,17 @@ impl DaemonConfig {
                 "database_url must use a PostgreSQL URL".to_string(),
             ));
         }
+        // Refuse to start with the literal placeholder values shipped in
+        // .env.example. Callers should set a real password.
+        if self.database_url.contains("__SET_ME__")
+            || self.database_url.contains("change_me_db_password")
+        {
+            return Err(SynforgeError::Config(
+                "database_url contains the literal placeholder value from .env.example; \
+                 set SYNFORGE_DB_PASSWORD to a real value"
+                    .to_string(),
+            ));
+        }
         if self.redis_url.trim().is_empty() {
             return Err(SynforgeError::Config(
                 "redis_url must not be empty".to_string(),

@@ -76,7 +76,10 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      # First-run setup (migrations + initial signing keyring) can take
+      # ~30–40 s on cold storage; give it room before retries decide the
+      # daemon is unhealthy.
+      start_period: 45s
 
   # Image is built but never run here — the daemon spawns one container
   # per build job. Pinned to a profile so `docker compose up` skips it.

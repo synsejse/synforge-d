@@ -321,13 +321,19 @@ impl JobLifecycle {
         config: &mut DaemonConfig,
         settings: &BTreeMap<String, Value>,
     ) -> anyhow::Result<()> {
-        let Some(armored_private_key) = settings
-            .get("signing_private_key_armored")
-            .and_then(Value::as_str)
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-        else {
-            return Ok(());
+        let armored_private_key = match settings.get("signing_private_key_armored") {
+            None => return Ok(()),
+            Some(Value::Null) => return Ok(()),
+            Some(Value::String(value)) => {
+                let trimmed = value.trim();
+                if trimmed.is_empty() {
+                    return Ok(());
+                }
+                trimmed
+            }
+            Some(_) => anyhow::bail!(
+                "runtime setting must be a string or null: signing_private_key_armored"
+            ),
         };
         let signing_manager = RepoSigningManager;
         let status = signing_manager.status(config).await?;

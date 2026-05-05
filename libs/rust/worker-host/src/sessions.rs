@@ -3,7 +3,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use dashmap::DashMap;
-use path_clean::PathClean;
 use sha2::Digest;
 use tokio::io::AsyncReadExt;
 use tokio::sync::{Mutex, Notify};
@@ -16,6 +15,7 @@ use synforge_core::{
         WorkerJobPayload, WorkerResult,
     },
     package::parse_mock_chroot,
+    runtime::sanitize_relative_path,
 };
 
 #[derive(Clone)]
@@ -287,15 +287,4 @@ fn merge_result(result: WorkerResult, artifacts: &[BuildArtifact]) -> WorkerResu
             ..build
         }),
     }
-}
-
-fn sanitize_relative_path(path: &str) -> PathBuf {
-    std::path::Path::new(path)
-        .clean()
-        .components()
-        .filter_map(|component| match component {
-            std::path::Component::Normal(part) => Some(PathBuf::from(part)),
-            _ => None,
-        })
-        .collect()
 }

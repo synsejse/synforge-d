@@ -1,6 +1,23 @@
 use super::*;
 use diesel_async::{AsyncConnection, RunQueryDsl};
 
+/// Escape `%`, `_`, and `\` in user-supplied search text so they are
+/// treated as literal characters by SQL `LIKE`. Without this, a user
+/// typing `_` would silently match any single character.
+pub(in crate::db) fn escape_like_pattern(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '\\' | '%' | '_' => {
+                out.push('\\');
+                out.push(ch);
+            }
+            _ => out.push(ch),
+        }
+    }
+    out
+}
+
 pub(super) async fn list_packages(
     store: &DieselStore,
     limit: usize,
@@ -8,7 +25,7 @@ pub(super) async fn list_packages(
     search: Option<String>,
     enabled: Option<bool>,
 ) -> anyhow::Result<Vec<PackageResponse>> {
-    let search = search.map(|value| format!("%{}%", value));
+    let search = search.map(|value| format!("%{}%", escape_like_pattern(&value)));
     let mut conn = store.get_connection().await?;
     let mut query = packages::table.into_boxed();
     if let Some(search) = search.as_deref() {
@@ -36,7 +53,7 @@ pub(super) async fn count_packages(
     search: Option<String>,
     enabled: Option<bool>,
 ) -> anyhow::Result<u64> {
-    let search = search.map(|value| format!("%{}%", value));
+    let search = search.map(|value| format!("%{}%", escape_like_pattern(&value)));
     let mut conn = store.get_connection().await?;
     let mut query = packages::table.into_boxed();
     if let Some(search) = search.as_deref() {

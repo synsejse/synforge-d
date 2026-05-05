@@ -83,6 +83,7 @@ pub trait JobStore: Send + Sync {
         file: &str,
     ) -> anyhow::Result<Option<BuildLogRecord>>;
 
+    #[allow(clippy::too_many_arguments)]
     async fn list_jobs(
         &self,
         limit: usize,

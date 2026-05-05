@@ -62,9 +62,9 @@ impl SynforgeService {
     /// Compute the next-up poll schedule across all enabled+polling
     /// packages. Each (package, mock_chroot) pair gets a row with
     /// `next_eligible_at` derived from the most recent sync attempt
-    /// + the package's poll_interval, capped against any active build
-    /// failure backoff. Items are sorted soonest-first; pass `limit` to
-    /// cap the response (default 20, max 100).
+    /// plus the package's poll_interval, capped against any active
+    /// build failure backoff. Items are sorted soonest-first; pass
+    /// `limit` to cap the response (default 20, max 100).
     pub async fn get_sync_schedule(
         &self,
         limit: Option<usize>,

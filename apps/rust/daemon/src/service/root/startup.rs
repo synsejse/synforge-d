@@ -62,10 +62,7 @@ impl SynforgeService {
             return outcome.clone().map_err(anyhow::Error::msg);
         }
         let outcome = self.run_health_check().await;
-        let cached = outcome
-            .as_ref()
-            .map(|()| ())
-            .map_err(|error| error.to_string());
+        let cached = outcome.as_ref().map_err(|error| error.to_string()).copied();
         *cache = Some((Instant::now(), cached));
         outcome
     }

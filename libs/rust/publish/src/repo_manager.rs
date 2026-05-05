@@ -26,7 +26,7 @@ fn should_skip_artifact(artifact: &BuildArtifact, package: &PackageDefinition) -
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct FileRepoManager;
 
 impl FileRepoManager {

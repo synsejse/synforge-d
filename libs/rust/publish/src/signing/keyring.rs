@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 use synforge_core::config::DaemonConfig;
@@ -83,10 +83,10 @@ impl RepoSigningManager {
     }
 
     pub async fn remove_all_keys(&self, config: &DaemonConfig) -> anyhow::Result<()> {
-        let signing_root = config.runtime_paths().signing_root().to_path_buf();
+        let signing_root = config.runtime_paths().signing_root();
         let keyring_dir = self.keyring_dir(config);
         if signing_root.as_os_str().is_empty()
-            || signing_root == PathBuf::from("/")
+            || signing_root.as_path() == Path::new("/")
             || !keyring_dir.starts_with(&signing_root)
             || keyring_dir.file_name().and_then(|name| name.to_str()) != Some(KEYRING_DIR_NAME)
         {

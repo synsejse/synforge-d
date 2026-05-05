@@ -56,6 +56,7 @@ fn apply_active_job_filter<'a>(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(in crate::db) async fn list_jobs(
     store: &DieselStore,
     limit: usize,

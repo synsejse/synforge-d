@@ -39,6 +39,30 @@ pub(in crate::db) async fn get_job(
         .transpose()
 }
 
+pub(in crate::db) async fn filter_existing_job_ids(
+    store: &DieselStore,
+    candidate_ids: Vec<Uuid>,
+) -> anyhow::Result<std::collections::HashSet<Uuid>> {
+    use std::collections::HashSet;
+    if candidate_ids.is_empty() {
+        return Ok(HashSet::new());
+    }
+    let mut conn = store.get_connection().await?;
+    // Postgres caps the bind-parameter count per statement at 65535;
+    // chunk well below that to leave room for other parameters.
+    const CHUNK_SIZE: usize = 1024;
+    let mut existing: HashSet<Uuid> = HashSet::with_capacity(candidate_ids.len());
+    for chunk in candidate_ids.chunks(CHUNK_SIZE) {
+        let rows: Vec<Uuid> = build_jobs::table
+            .filter(build_jobs::id.eq_any(chunk))
+            .select(build_jobs::id)
+            .load(&mut conn)
+            .await?;
+        existing.extend(rows);
+    }
+    Ok(existing)
+}
+
 pub(in crate::db) async fn list_build_logs_for_job(
     store: &DieselStore,
     job_id: Uuid,

@@ -3,17 +3,14 @@ use std::path::{Path, PathBuf};
 use async_trait::async_trait;
 use synforge_core::{
     api::{
-        PageInfo, RepoInventoryResponse, RepoSigningReconcileProgressResponse,
+        RepoInventoryResponse, RepoSigningReconcileProgressResponse,
         RepoSigningReconcileProgressView, RepoSigningStatusResponse, RepoSigningStatusView,
-        RepoSummaryResponse,
+        RepoSummaryResponse, build_page_info, normalize_pagination,
     },
     config::DaemonConfig,
     error::SynforgeError,
     model::{ArtifactKind, PublishedRepoFile},
 };
-
-const DEFAULT_PAGE_SIZE: usize = 50;
-const MAX_PAGE_SIZE: usize = 200;
 
 #[async_trait]
 pub trait RepoInventoryReader {
@@ -158,23 +155,6 @@ where
     Ok(RepoSigningReconcileProgressResponse {
         operation: deps.load_repo_signing_reconcile_progress().await,
     })
-}
-
-fn normalize_pagination(limit: Option<usize>, offset: Option<usize>) -> (usize, usize) {
-    (
-        limit.unwrap_or(DEFAULT_PAGE_SIZE).clamp(1, MAX_PAGE_SIZE),
-        offset.unwrap_or(0),
-    )
-}
-
-fn build_page_info(limit: usize, offset: usize, total: u64, returned: usize) -> PageInfo {
-    PageInfo {
-        limit,
-        offset,
-        returned,
-        total: Some(total),
-        has_more: (offset as u64) + (returned as u64) < total,
-    }
 }
 
 fn normalize_repo_path(path: &str) -> anyhow::Result<String> {

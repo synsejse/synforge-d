@@ -14,9 +14,9 @@ import { packagesQueries } from "../../lib/queries";
 
 const route = getRouteApi("/_authed/packages/");
 import { summarizePackageAction } from "../../lib/package-actions";
-import type { RefreshAllPackagesProgressView } from "../../lib/types";
 import AddPackageModal from "./components/add-package-modal";
 import PackageCard from "./components/package-card";
+import RefreshAllOverlay from "./components/refresh-all-overlay";
 import ErrorMessage from "../../components/common/error-message";
 import { useDialogs } from "../../components/common/dialogs-provider";
 import { useToast } from "../../components/common/toast-provider";
@@ -25,7 +25,6 @@ import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
 import Select from "../../components/ui/select";
 import PageHeader from "../../components/ui/page-header";
-import ProgressOverlayDialog from "../../components/ui/progress-overlay-dialog";
 import PaginationControls from "../../components/common/pagination-controls";
 import FilterBar from "../../components/common/filter-bar";
 import SelectionActionBar from "../../components/common/selection-action-bar";
@@ -33,79 +32,6 @@ import SelectionActionBar from "../../components/common/selection-action-bar";
 const PAGE_SIZE = 50;
 
 type EnabledFilter = "all" | "true" | "false";
-
-function refreshTitle(state: RefreshAllPackagesProgressView["state"]): string {
-  if (state === "running") return "Refreshing enabled packages";
-  if (state === "failed") return "Refresh all failed";
-  return "Refresh all complete";
-}
-
-function refreshTone(
-  state: RefreshAllPackagesProgressView["state"],
-): "running" | "success" | "error" {
-  if (state === "failed") return "error";
-  if (state === "running") return "running";
-  return "success";
-}
-
-function StatRow({
-  label,
-  value,
-  emphasis,
-}: {
-  label: string;
-  value: number;
-  emphasis?: "lime" | "error" | "muted";
-}) {
-  const valueClass =
-    value === 0
-      ? "text-soft"
-      : emphasis === "error"
-        ? "text-error"
-        : emphasis === "lime"
-          ? "text-accent-lime"
-          : "text-white";
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
-        {label}
-      </span>
-      <span className={`font-mono text-sm font-bold ${valueClass}`}>{value}</span>
-    </div>
-  );
-}
-
-function RefreshAllStats({
-  operation,
-}: {
-  operation: RefreshAllPackagesProgressView;
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-px border-2 border-edge-strong bg-edge-strong">
-      <div className="space-y-2 bg-black px-4 py-3">
-        <div className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-soft">
-          Packages
-        </div>
-        <StatRow label="Queued" value={operation.queued_packages} emphasis="lime" />
-        <StatRow label="Skipped" value={operation.skipped_packages} />
-        <StatRow label="Blocked" value={operation.blocked_packages} />
-        <StatRow
-          label="Failed"
-          value={operation.failed_packages}
-          emphasis="error"
-        />
-      </div>
-      <div className="space-y-2 bg-black px-4 py-3">
-        <div className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-soft">
-          Targets
-        </div>
-        <StatRow label="Queued" value={operation.queued_targets} emphasis="lime" />
-        <StatRow label="Skipped" value={operation.skipped_targets} />
-        <StatRow label="Blocked" value={operation.blocked_targets} />
-      </div>
-    </div>
-  );
-}
 
 function PackageList() {
   const queryClient = useQueryClient();
@@ -352,35 +278,6 @@ function PackageList() {
       ? triggerMutation.variables.name
       : null;
 
-  const overlayTitle = liveOperation
-    ? refreshTitle(liveOperation.state)
-    : "Refreshing enabled packages";
-  const overlayTone = liveOperation ? refreshTone(liveOperation.state) : "running";
-  const overlayProgress = liveOperation
-    ? liveOperation.total_packages === 0
-      ? liveOperation.state === "running"
-        ? 0
-        : 100
-      : Math.min(
-          100,
-          Math.round(
-            (liveOperation.processed_packages / liveOperation.total_packages) * 100,
-          ),
-        )
-    : 0;
-  const overlaySummary = liveOperation
-    ? liveOperation.total_packages === 0
-      ? "Preparing…"
-      : `${liveOperation.processed_packages} / ${liveOperation.total_packages} packages`
-    : "Preparing…";
-  // Only surface the message line when it's not redundant with the
-  // stats (e.g. an error string while failed, or "collecting enabled
-  // packages" pre-roll). Plain progress noise gets suppressed.
-  const overlayMessage =
-    liveOperation?.message && liveOperation.state !== "completed"
-      ? liveOperation.message
-      : null;
-
   return (
     <div className="space-y-8">
       <PageHeader
@@ -539,28 +436,12 @@ function PackageList() {
         />
       )}
 
-      <ProgressOverlayDialog
+      <RefreshAllOverlay
         open={refreshOverlayOpen}
-        title={overlayTitle}
-        tone={overlayTone}
-        summary={overlaySummary}
-        progress={overlayProgress}
+        operation={liveOperation}
+        refreshing={refreshingAll}
         onClose={() => setRefreshOverlayOpen(false)}
-        closeDisabled={refreshingAll}
-      >
-        {liveOperation && liveOperation.total_packages > 0 ? (
-          <RefreshAllStats operation={liveOperation} />
-        ) : null}
-        {overlayMessage ? (
-          <p
-            className={`mt-4 font-mono text-xs ${
-              overlayTone === "error" ? "text-error" : "text-soft"
-            }`}
-          >
-            {overlayMessage}
-          </p>
-        ) : null}
-      </ProgressOverlayDialog>
+      />
 
       <SelectionActionBar
         count={selection.count}

@@ -73,7 +73,7 @@ impl SynforgeService {
             return Ok(());
         }
 
-        let mut removed = 0_u64;
+        let mut candidates: Vec<(std::path::PathBuf, Uuid)> = Vec::new();
         let mut scanned = 0_u64;
         let mut entries = tokio::fs::read_dir(root).await?;
         while let Some(entry) = entries.next_entry().await? {
@@ -91,10 +91,18 @@ impl SynforgeService {
             if active_job_ids.contains(&job_id) {
                 continue;
             }
-            if self.store.get_job(job_id).await?.is_some() {
+            candidates.push((entry.path(), job_id));
+        }
+
+        let candidate_ids: Vec<Uuid> = candidates.iter().map(|(_, id)| *id).collect();
+        let existing = self.store.filter_existing_job_ids(candidate_ids).await?;
+
+        let mut removed = 0_u64;
+        for (path, job_id) in candidates {
+            if existing.contains(&job_id) {
                 continue;
             }
-            tokio::fs::remove_dir_all(entry.path()).await?;
+            tokio::fs::remove_dir_all(path).await?;
             removed += 1;
         }
 

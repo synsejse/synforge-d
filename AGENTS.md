@@ -35,7 +35,7 @@ Generated artifacts: `target/`, `apps/webui/dist/`, `apps/webui/node_modules/`.
 
 ## Refactor Guardrails
 
-- Non-generated source files should target `< 400` lines.
+- Non-generated source files should target `< 600` lines.
 - Composition roots should target `< 250` lines.
 - TanStack Router route files should target `< 50` lines.
 - Generated files and lockfiles are excluded from these size targets.

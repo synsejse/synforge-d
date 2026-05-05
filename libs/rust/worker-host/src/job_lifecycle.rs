@@ -274,12 +274,25 @@ impl JobLifecycle {
         }
 
         for job_id in old_job_ids {
-            let published_files = self.store.list_published_repo_files_for_job(job_id).await?;
-            self.remove_published_files(&published_files).await?;
-            self.store.delete_job(job_id).await?;
-            self.remove_job_dir(job_id).await;
+            if let Err(error) = self.prune_one_job(job_id).await {
+                warn!(
+                    job_id = %job_id,
+                    package_name = %package.name,
+                    mock_chroot,
+                    error = %error,
+                    "failed to prune one historical job; continuing with remainder"
+                );
+            }
         }
 
+        Ok(())
+    }
+
+    async fn prune_one_job(&self, job_id: Uuid) -> anyhow::Result<()> {
+        let published_files = self.store.list_published_repo_files_for_job(job_id).await?;
+        self.remove_published_files(&published_files).await?;
+        self.store.delete_job(job_id).await?;
+        self.remove_job_dir(job_id).await;
         Ok(())
     }
 

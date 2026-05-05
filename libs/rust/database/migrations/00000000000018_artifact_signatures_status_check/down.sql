@@ -1,0 +1,1 @@
+ALTER TABLE artifact_signatures DROP CONSTRAINT IF EXISTS chk_artifact_signatures_status;

@@ -1,10 +1,22 @@
+use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
 
+use futures_util::FutureExt;
 use tokio::sync::{Semaphore, mpsc, watch};
 use tracing::{error, info, warn};
 
 use crate::service::SynforgeService;
 use synforge_worker_host::QueuedBuild;
+
+fn describe_panic(payload: Box<dyn std::any::Any + Send>) -> String {
+    if let Some(message) = payload.downcast_ref::<&'static str>() {
+        (*message).to_string()
+    } else if let Some(message) = payload.downcast_ref::<String>() {
+        message.clone()
+    } else {
+        "non-string panic payload".to_string()
+    }
+}
 
 impl SynforgeService {
     pub async fn graceful_shutdown(&self) {
@@ -58,10 +70,28 @@ impl SynforgeService {
                 let task_tracker = task_tracker.clone();
                 match semaphore.acquire_owned().await {
                     Ok(permit) => {
+                        let job_id = build.job_id;
+                        let package_name = build.package.name.clone();
+                        let mock_chroot = build.mock_chroot.clone();
                         task_tracker.spawn(async move {
                             let _permit = permit;
-                            if let Err(error) = runner.process_build(build).await {
-                                error!("build processing failed: {}", error);
+                            let outcome = AssertUnwindSafe(runner.process_build(build))
+                                .catch_unwind()
+                                .await;
+                            match outcome {
+                                Ok(Ok(())) => {}
+                                Ok(Err(error)) => error!(
+                                    job_id = %job_id,
+                                    package_name = %package_name,
+                                    mock_chroot = %mock_chroot,
+                                    "build processing failed: {}", error
+                                ),
+                                Err(payload) => error!(
+                                    job_id = %job_id,
+                                    package_name = %package_name,
+                                    mock_chroot = %mock_chroot,
+                                    "build task panicked: {}", describe_panic(payload)
+                                ),
                             }
                         });
                     }

@@ -99,7 +99,12 @@ fn parse_basic_authorization(value: &str) -> Option<&str> {
     value.strip_prefix("Basic ")
 }
 
+const MAX_BASIC_CREDENTIAL_BYTES: usize = 1024;
+
 fn decode_basic_credentials(encoded: &str) -> Result<(String, String), AppError> {
+    if encoded.len() > MAX_BASIC_CREDENTIAL_BYTES {
+        return Err(AppError::auth("invalid credentials"));
+    }
     let decoded = base64::engine::general_purpose::STANDARD
         .decode(encoded)
         .map_err(|_| AppError::auth("invalid credentials"))?;

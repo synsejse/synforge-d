@@ -2618,6 +2618,7 @@ dependencies = [
  "axum-helmet",
  "base64",
  "delegate",
+ "futures-util",
  "helmet-core",
  "serde",
  "serde_json",

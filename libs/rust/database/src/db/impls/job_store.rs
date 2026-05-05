@@ -179,6 +179,13 @@ impl JobStore for DieselStore {
         job::get_job(self, job_id).await
     }
 
+    async fn filter_existing_job_ids(
+        &self,
+        candidate_ids: Vec<Uuid>,
+    ) -> anyhow::Result<std::collections::HashSet<Uuid>> {
+        job::filter_existing_job_ids(self, candidate_ids).await
+    }
+
     async fn delete_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>> {
         job::soft_delete_job(self, job_id).await
     }

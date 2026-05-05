@@ -123,8 +123,10 @@ h1, h2, h3,
 
 /* Brutalist Scrollbar */
 :root {
-  --sb-track-color: #0a0a0a;
-  --sb-thumb-color: #BFFF00;
+  --sb-track-color: var(--theme-surface);
+  --sb-thumb-color: var(--theme-accent-lime);
+  --sb-thumb-color-hover: #d8ff72;
+  --sb-thumb-color-active: var(--theme-accent-cyan);
   --sb-size: 14px;
 }
 
@@ -144,11 +146,11 @@ h1, h2, h3,
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: #d8ff72;
+  background: var(--sb-thumb-color-hover);
 }
 
 *::-webkit-scrollbar-thumb:active {
-  background: #fff;
+  background: var(--sb-thumb-color-active);
 }
 
 *::-webkit-scrollbar-corner {

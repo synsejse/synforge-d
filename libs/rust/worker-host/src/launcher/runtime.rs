@@ -148,21 +148,20 @@ impl DockerWorkerLauncher {
                     None::<bollard::query_parameters::KillContainerOptions>,
                 )
                 .await
-            {
-                if !matches!(
+                && !matches!(
                     error,
                     bollard::errors::Error::DockerResponseServerError {
                         status_code: 404,
                         ..
                     }
-                ) {
-                    warn!(
-                        job_id = %payload.job_id,
-                        container_id = %container_id,
-                        error = %error,
-                        "failed to kill timed-out worker container"
-                    );
-                }
+                )
+            {
+                warn!(
+                    job_id = %payload.job_id,
+                    container_id = %container_id,
+                    error = %error,
+                    "failed to kill timed-out worker container"
+                );
             }
             self.sessions
                 .fail_build_result(

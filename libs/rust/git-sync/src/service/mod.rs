@@ -1,5 +1,3 @@
-//! Git/source synchronization service.
-
 mod commands;
 mod facade;
 mod queries;

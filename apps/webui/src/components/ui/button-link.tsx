@@ -13,19 +13,12 @@ type RouterLinkProps = ButtonLinkOwnProps & Omit<LinkProps, "className" | "child
 type ExternalLinkProps = ButtonLinkOwnProps &
   Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "className" | "children"> & {
     href: string;
-    /** Force a plain `<a>` (e.g. for non-SPA targets like /docs Swagger UI). */
     external: true;
   };
 
 export type ButtonLinkProps = RouterLinkProps | ExternalLinkProps;
 
-/**
- * Renders a styled link that visually matches `<Button>`.
- *
- * Use this for navigation actions ("Open detail", "Back to list"); use
- * `<Button>` for in-place actions (submit, delete, toggle). Pass icons as
- * children — wrap them with `<FaIcon>`.
- */
+/** Use for navigation actions; use `<Button>` for in-place actions. */
 export default function ButtonLink(props: ButtonLinkProps) {
   if ("external" in props && props.external) {
     const {

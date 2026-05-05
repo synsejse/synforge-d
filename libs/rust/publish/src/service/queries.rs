@@ -1,5 +1,3 @@
-//! Query-side operations for repository workflows.
-
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;

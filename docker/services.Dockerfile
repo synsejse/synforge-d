@@ -1,39 +1,28 @@
 # syntax=docker/dockerfile:1.7
 #
-# Two runtime images come out of this Dockerfile:
-#   - daemon-runtime  — the long-running synforge daemon + bundled webui
-#   - worker-runtime  — short-lived per-build mock executor, launched by
-#                       the daemon over docker socket
-#
-# Build chain:
-#   chef → planner → cooker → rust-builder → {daemon,worker}-runtime
-#                                          ↘ webui-builder ↗
-#   webui-builder is independent of rust-builder so a frontend-only
-#   change doesn't trigger any cargo work.
+# Build chain: chef → planner → cooker → rust-builder → {daemon,worker}-runtime
+#                                      ↘ webui-builder ↗
+# webui-builder is parallel to rust-builder so webui-only edits don't
+# invalidate the cargo cache. api-schema.ts is committed; regenerate
+# via `npm run generate:api` when the OpenAPI surface changes.
 
 FROM rust:1.94 AS chef
 RUN cargo install cargo-chef
 WORKDIR /app
 
-# Snapshot the workspace's dependency graph as recipe.json so the
-# cooker can build only the deps without the source.
 FROM chef AS planner
 COPY Cargo.toml Cargo.lock ./
 COPY apps/rust ./apps/rust
 COPY libs/rust ./libs/rust
 RUN cargo chef prepare --recipe-path recipe.json
 
-# Pre-cook the dependencies into the cargo target cache mount. Output
-# is consumed by rust-builder via the same id=synforge-cargo-target-v2
-# cache mount. Source changes don't invalidate this layer.
 FROM chef AS cooker
 COPY --from=planner /app/recipe.json recipe.json
 RUN --mount=type=cache,id=synforge-cargo-registry,target=/usr/local/cargo/registry \
     --mount=type=cache,id=synforge-cargo-target-v2,target=/app/target \
     cargo chef cook --release --recipe-path recipe.json
 
-# Source-build stage. Starts FROM cooker so the cooked deps are the
-# cache base — without this the cooker's work would be orphaned.
+# FROM cooker so the cooked deps are the cache base for the source build.
 FROM cooker AS rust-builder
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
@@ -48,19 +37,12 @@ RUN --mount=type=cache,id=synforge-cargo-registry,target=/usr/local/cargo/regist
     && cp /app/target/release/daemon /out/daemon \
     && cp /app/target/release/worker /out/worker
 
-# Webui build is decoupled from rust-builder. The committed
-# api-schema.ts is the source of truth for webui types; bumping the
-# OpenAPI surface requires regenerating + committing it
-# (`npm run generate:api`). With this split, a webui-only edit never
-# invalidates the Rust build cache.
 FROM node:22-alpine AS webui-builder
 WORKDIR /app/apps/webui
 COPY apps/webui/package*.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 COPY apps/webui ./
 RUN npm run build
-
-# --- Runtime images -----------------------------------------------------
 
 FROM fedora:44 AS daemon-runtime
 RUN dnf -y --setopt=install_weak_deps=False --nodocs upgrade-minimal \
@@ -83,7 +65,7 @@ RUN mkdir -p \
     /var/lib/synforge/cache \
     /var/lib/synforge/work
 
-# 8080 = HTTP API + webui;  8090 = inter-container worker socket.
+# 8080 = HTTP API + webui; 8090 = worker socket (compose-network only).
 EXPOSE 8080 8090
 ENTRYPOINT ["/usr/local/bin/daemon"]
 

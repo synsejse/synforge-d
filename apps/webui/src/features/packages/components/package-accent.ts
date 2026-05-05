@@ -1,11 +1,3 @@
-/**
- * Deterministic accent color for a package, derived from a stable hash
- * of its name. Used as a small leading rule on the list card and the
- * detail header so users can scan a long list by color alone.
- *
- * Six brutalist hues — picked to read on both dark and print themes
- * (CSS variables get desaturated under [data-theme="print"]).
- */
 const PALETTE: ReadonlyArray<{ var: string; name: string }> = [
   { var: "var(--theme-accent-lime)", name: "lime" },
   { var: "var(--theme-accent-orange)", name: "orange" },

@@ -28,7 +28,6 @@ interface PackageCardProps {
   onDelete: (name: string) => void;
   refreshing?: boolean;
   refreshDisabled?: boolean;
-  /** When provided, renders a selection checkbox at the top of the card. */
   selected?: boolean;
   onToggleSelected?: (name: string, value: boolean) => void;
 }

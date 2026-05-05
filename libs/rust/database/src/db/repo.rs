@@ -191,13 +191,13 @@ pub(super) async fn list_repo_target_summaries(
             build_artifacts::table.on(published_repo_files::artifact_id.eq(build_artifacts::id)),
         )
         .group_by(build_artifacts::mock_chroot)
-        .order(build_artifacts::mock_chroot.desc())
         .select((
             build_artifacts::mock_chroot,
             count(build_artifacts::package_name).aggregate_distinct(),
             count(build_artifacts::job_id).aggregate_distinct(),
             sum(build_artifacts::size_bytes),
         ))
+        .order(build_artifacts::mock_chroot.desc())
         .load::<(String, i64, i64, Option<BigDecimal>)>(&mut conn)
         .await?;
 

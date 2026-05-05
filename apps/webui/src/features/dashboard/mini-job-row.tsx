@@ -17,12 +17,6 @@ const STATUS_RAIL: Record<string, string> = {
   pending: "var(--theme-accent-orange)",
 };
 
-/**
- * Compact one-line job row for the dashboard. Same accent-rail
- * vocabulary as JobCard but stripped down — package name + chroot chip
- * + revision + status + timestamp on a single row that wraps cleanly
- * on mobile.
- */
 export default function MiniJobRow({ entry }: MiniJobRowProps) {
   const accent = STATUS_RAIL[entry.job.status] ?? "var(--theme-text-soft)";
   const isLive =

@@ -12,7 +12,6 @@ export interface JobsListSearch {
   offset?: number;
   packageFilter?: string;
   targetFilter?: string;
-  /** Show soft-deleted jobs in the history list. */
   includeDeleted?: boolean;
 }
 

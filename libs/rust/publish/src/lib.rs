@@ -1,5 +1,3 @@
-//! Repository publication infrastructure for the rewrite target architecture.
-
 pub mod repo_manager;
 mod service;
 pub mod signing;

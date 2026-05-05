@@ -1,5 +1,3 @@
-//! Facade for git synchronization workflows.
-
 use synforge_core::{
     api::{
         BrowseRepositoryRequest, BrowseRepositoryResponse, CreatePackageRequest,

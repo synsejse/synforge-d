@@ -5,13 +5,7 @@ import { cn } from "../../lib/utils";
 import FaIcon from "./fa-icon";
 
 interface DisclosureGroupProps {
-  /**
-   * If "single", only one item open at a time. If "multiple", any subset.
-   * Default "multiple" — long detail pages should let users open several
-   * sections without forcing them to dismiss others.
-   */
   type?: "single" | "multiple";
-  /** Item value(s) open by default. */
   defaultValue?: string | string[];
   children: ReactNode;
   className?: string;

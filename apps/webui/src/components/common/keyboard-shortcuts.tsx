@@ -6,19 +6,6 @@ interface ShortcutGroup {
   rows: { keys: ReactNode; description: string }[];
 }
 
-/**
- * Global keyboard shortcuts:
- *   g d        Dashboard
- *   g j        Jobs
- *   g p        Packages
- *   g r        Repository
- *   g s        Settings
- *   /          Focus the page's primary search/filter input
- *   ?          Toggle this overlay
- *
- * Shortcuts are ignored while focus is inside an input / textarea /
- * contentEditable region — typing is sacred.
- */
 const NAV_KEYS: Record<string, { to: string; label: string }> = {
   d: { to: "/", label: "Dashboard" },
   j: { to: "/jobs", label: "Jobs" },
@@ -55,8 +42,6 @@ export function KeyboardShortcutsProvider({ children }: { children: ReactNode })
     }
 
     function focusFirstSearch() {
-      // Conventional: pages put their primary text input as the first
-      // type=search/text inside the main content area.
       const main = document.getElementById("main-content");
       if (!main) return;
       const candidate = main.querySelector<HTMLInputElement>(
@@ -73,7 +58,6 @@ export function KeyboardShortcutsProvider({ children }: { children: ReactNode })
         return;
       }
 
-      // Toggle overlay
       if (event.key === "?" || (event.shiftKey && event.key === "/")) {
         event.preventDefault();
         setOverlayOpen((open) => !open);
@@ -81,21 +65,18 @@ export function KeyboardShortcutsProvider({ children }: { children: ReactNode })
         return;
       }
 
-      // Close overlay
       if (event.key === "Escape" && overlayOpen) {
         event.preventDefault();
         setOverlayOpen(false);
         return;
       }
 
-      // / focuses search
       if (event.key === "/" && !pendingPrefix) {
         event.preventDefault();
         focusFirstSearch();
         return;
       }
 
-      // g-prefix: g d, g j, g p, ...
       if (pendingPrefix === "g") {
         const target = NAV_KEYS[event.key.toLowerCase()];
         clearPrefix();

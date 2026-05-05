@@ -36,15 +36,6 @@ function writeDismissed(set: Set<string>) {
   }
 }
 
-/**
- * Top-of-app marquee that surfaces daemon-level notices. Currently
- * derives notices from signing status; the list is user-dismissible
- * (per-id, persisted in localStorage). When the resolved list is
- * empty the bar renders nothing.
- *
- * The marquee scrolls left at ~60s per cycle; on hover the animation
- * pauses so users can read.
- */
 export default function SystemNoticeBar() {
   const signingQuery = useQuery({ ...signingQueries.status(), retry: false });
   const [dismissed, setDismissed] = useState<Set<string>>(readDismissed);

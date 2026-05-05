@@ -10,8 +10,6 @@ import Tooltip from "../../../components/ui/tooltip";
 
 interface RepoFileCardProps {
   file: PublishedRepoFile;
-  /** When true, surface package name + target chroot in the header
-      (used by the cross-package repository browser). */
   showPackageContext?: boolean;
 }
 
@@ -83,9 +81,6 @@ export default function RepoFileCard({
             ) : null}
           </div>
 
-          {/* Full path — only on md+ where the extra line earns its keep.
-              On mobile the filename link is enough; the path is reachable
-              via the download link anyway. */}
           <div className="mt-1 hidden break-all font-mono text-[11px] text-soft md:block">
             {file.path}
           </div>
@@ -106,7 +101,6 @@ export default function RepoFileCard({
                 className="break-all text-strong transition-colors hover:text-accent-lime"
               >
                 <FaIcon icon={faBoxesStacked} className="mr-1.5 text-soft" />
-                {/* Short id on mobile, full uuid on md+ */}
                 <span className="md:hidden">{file.job_id.slice(0, 8)}</span>
                 <span className="hidden md:inline">{file.job_id}</span>
               </Link>

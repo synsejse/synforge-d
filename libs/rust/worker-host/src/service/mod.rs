@@ -1,5 +1,3 @@
-//! Build orchestration service.
-
 mod commands;
 mod facade;
 mod state;

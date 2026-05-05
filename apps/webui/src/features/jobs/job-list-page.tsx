@@ -78,8 +78,6 @@ function JobList() {
       mockChroot: filters.targetFilter,
       includeDeleted: filters.mode === "history" && filters.includeDeleted,
     }),
-    // Active mode: refresh the row data every 2s so durations tick and
-    // status badges flip live without manual refresh.
     refetchInterval:
       filters.mode === "active" ? USAGE_POLL_INTERVAL_MS * 2 : false,
   });

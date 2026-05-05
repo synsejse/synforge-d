@@ -1,5 +1,3 @@
-//! Repository publication and serving service.
-
 mod commands;
 mod database;
 mod facade;

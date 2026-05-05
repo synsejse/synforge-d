@@ -5,17 +5,11 @@ import FaIcon from "../ui/fa-icon";
 
 interface Props {
   count: number;
-  /** What's been selected — used in the summary copy ("N packages selected"). */
   noun?: { singular: string; plural: string };
   onClear: () => void;
   children: ReactNode;
 }
 
-/**
- * Sticky bottom-of-viewport bar that surfaces bulk actions when the user has
- * checked at least one row. Hidden when `count === 0`. Renders nothing on
- * its own — pass action buttons via `children`.
- */
 export default function SelectionActionBar({
   count,
   noun = { singular: "item", plural: "items" },

@@ -7,20 +7,11 @@ export interface SelectionApi<K> {
   toggle: (key: K) => void;
   setOne: (key: K, value: boolean) => void;
   setMany: (keys: K[], value: boolean) => void;
-  /** True if all keys are currently selected and `keys` is non-empty. */
   allSelected: (keys: K[]) => boolean;
-  /** True if at least one of `keys` is selected, but not all. */
   someSelected: (keys: K[]) => boolean;
   clear: () => void;
 }
 
-/**
- * Multi-select state keyed by any value (typically string id).
- *
- * Selection is purely local; persists across pagination as long as the
- * component instance lives. Wire `clear()` to filter changes if the
- * out-of-page selection set could become misleading.
- */
 export function useSelection<K>(): SelectionApi<K> {
   const [selected, setSelected] = useState<Set<K>>(() => new Set());
 

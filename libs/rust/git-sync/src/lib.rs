@@ -1,5 +1,3 @@
-//! Git infrastructure adapters for the rewrite target architecture.
-
 mod cache;
 mod package_store;
 mod service;

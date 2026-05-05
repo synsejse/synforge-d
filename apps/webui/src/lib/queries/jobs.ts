@@ -8,7 +8,6 @@ export interface JobsListParams {
   status?: string;
   packageName?: string;
   mockChroot?: string;
-  /** When true, soft-deleted jobs are included (history scope only). */
   includeDeleted?: boolean;
 }
 

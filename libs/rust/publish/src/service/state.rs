@@ -1,5 +1,3 @@
-//! Stateful coordination types for repository workflows.
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RepoSigningKeyIdentity {
     pub key_id: String,

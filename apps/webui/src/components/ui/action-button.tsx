@@ -29,13 +29,7 @@ const variantMap = {
   danger: "danger",
 } as const;
 
-/**
- * Thin compatibility shim: existing callers keep using `<ActionButton>`,
- * but rendering now delegates to the unified `<Button>` / `<ButtonLink>`
- * primitives so visual updates flow through one place.
- *
- * Prefer `<Button>` or `<ButtonLink>` directly in new code.
- */
+/** Compat shim — prefer `<Button>` or `<ButtonLink>` in new code. */
 export default function ActionButton(
   props: LinkActionProps | ButtonActionProps,
 ) {

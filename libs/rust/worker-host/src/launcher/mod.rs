@@ -1,5 +1,3 @@
-//! Worker launcher implementation.
-
 mod binds;
 mod queue;
 mod runtime;

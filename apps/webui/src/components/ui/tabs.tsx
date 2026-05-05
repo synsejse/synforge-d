@@ -4,7 +4,6 @@ import { cn } from "../../lib/utils";
 export interface TabItem<TValue extends string> {
   value: TValue;
   label: string;
-  /** Optional count badge ("Builds 42"). */
   count?: number | null;
   disabled?: boolean;
 }
@@ -14,15 +13,10 @@ interface TabsProps<TValue extends string> {
   value: TValue;
   onChange: (next: TValue) => void;
   ariaLabel: string;
-  /** The active tab's panel content. */
   children: ReactNode;
   className?: string;
 }
 
-/**
- * Brutalist tab strip with proper ARIA roles + roving keyboard nav
- * (Left/Right + Home/End cycle through tabs). Only the active panel renders.
- */
 export default function Tabs<TValue extends string>({
   items,
   value,

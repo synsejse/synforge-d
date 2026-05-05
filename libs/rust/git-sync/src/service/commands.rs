@@ -1,5 +1,3 @@
-//! Command-side operations for git synchronization.
-
 use async_trait::async_trait;
 use synforge_core::{
     api::{

@@ -7,18 +7,11 @@ interface Props {
   title?: string;
   description?: string;
   action?: ReactNode;
-  /** Free-form fallback. Used when title/description are not provided. */
   children?: ReactNode;
   className?: string;
-  /** Optional prompt-style hint below the description, e.g. "create the first package". */
   hint?: string;
 }
 
-/**
- * Brutalist empty state — corner brackets, mono prompt with a blinking
- * cursor for the optional hint, and the existing icon/title/description
- * structure for richer states.
- */
 export default function EmptyState({
   icon,
   title,
@@ -75,7 +68,6 @@ export default function EmptyState({
   );
 }
 
-/** Decorative corner brackets — purely visual, sits absolutely at corners. */
 function CornerBrackets() {
   return (
     <>

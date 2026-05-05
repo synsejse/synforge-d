@@ -34,7 +34,6 @@ const colorMap: Record<HeaderColor, { bar: string; text: string }> = {
 };
 
 interface Props {
-  /** Optional small uppercase tag above the title. Most pages omit this. */
   eyebrow?: string;
   title: string;
   description: string;

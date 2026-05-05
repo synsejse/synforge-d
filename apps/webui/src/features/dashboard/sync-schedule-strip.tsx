@@ -20,14 +20,6 @@ interface ScheduleItem {
   consecutive_failures: number;
 }
 
-/**
- * Dashboard "Up next" widget — leans on /api/v1/sync/schedule. Renders
- * the upcoming sync targets as a horizontal timeline with cards
- * alternating above and below a single track, ordered left-to-right by
- * time-until. The countdown ticks locally every second using the
- * server's `computed_at` as the anchor — avoids drift across the polling
- * interval.
- */
 export default function SyncScheduleStrip() {
   const visible = usePageVisible();
   const { data, isPending, error } = useQuery({

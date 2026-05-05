@@ -4,16 +4,13 @@ import { cn } from "../../lib/utils";
 export interface RatioSegment {
   label: string;
   value: number;
-  /** CSS color (hex / var()). Defaults rotate through a brutalist palette. */
   color?: string;
 }
 
 interface RatioBarProps {
   segments: RatioSegment[];
   className?: string;
-  /** Render below the bar as label/value pairs. Default true. */
   showLegend?: boolean;
-  /** Optional summary line above the bar. */
   caption?: ReactNode;
 }
 
@@ -26,10 +23,6 @@ const DEFAULT_PALETTE = [
   "var(--theme-error-red)",
 ];
 
-/**
- * Horizontal stacked bar showing the proportional split of a fixed total.
- * Use for hit/miss/stale distributions, success/failure ratios, etc.
- */
 export default function RatioBar({
   segments,
   className,

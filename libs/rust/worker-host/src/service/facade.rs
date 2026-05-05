@@ -1,5 +1,3 @@
-//! Facade for build and worker workflows.
-
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},

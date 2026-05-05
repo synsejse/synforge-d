@@ -13,9 +13,6 @@ const ITEMS = [
   { value: "30d" as const, label: "30d" },
 ];
 
-/**
- * Compact segmented selector for the statistics page time window.
- */
 export default function TimeRangeSelector({ value, onChange, className }: Props) {
   return (
     <SegmentedControl

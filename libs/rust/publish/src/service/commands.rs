@@ -1,5 +1,3 @@
-//! Command-side operations for repository workflows.
-
 use std::path::Path;
 
 use async_trait::async_trait;

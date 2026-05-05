@@ -1,5 +1,3 @@
-//! Command-side operations for build orchestration.
-
 use async_trait::async_trait;
 use synforge_core::{
     api::BuildJobResponse,

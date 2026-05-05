@@ -1,7 +1,6 @@
 import type { UserPermission } from "../../../lib/types";
 import { PERMISSIONS } from "./model";
 
-// Re-export shared form components
 export { TextField, ToggleField } from "../../../components/ui/form-fields";
 
 interface PermissionGroupProps {

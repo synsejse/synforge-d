@@ -1,7 +1,7 @@
 use std::cmp::min;
 
 use diesel::OptionalExtension;
-use diesel_async::{AsyncConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::{AsyncConnection, RunQueryDsl};
 use time::Duration;
 
 use super::super::*;
@@ -42,42 +42,37 @@ pub(in crate::db) async fn soft_delete_job(
         return Err(anyhow::anyhow!("cannot delete a pending or running job"));
     }
 
-    conn.transaction::<(), anyhow::Error, _>(|conn| {
-        async move {
-            diesel::delete(
-                published_repo_files::table.filter(
-                    published_repo_files::artifact_id.eq_any(
-                        build_artifacts::table
-                            .filter(build_artifacts::job_id.eq(job_id))
-                            .select(build_artifacts::id),
-                    ),
+    conn.transaction::<(), anyhow::Error, _>(async |conn| {
+        diesel::delete(
+            published_repo_files::table.filter(
+                published_repo_files::artifact_id.eq_any(
+                    build_artifacts::table
+                        .filter(build_artifacts::job_id.eq(job_id))
+                        .select(build_artifacts::id),
                 ),
-            )
+            ),
+        )
+        .execute(conn)
+        .await?;
+        diesel::delete(build_artifacts::table.filter(build_artifacts::job_id.eq(job_id)))
             .execute(conn)
             .await?;
-            diesel::delete(
-                build_artifacts::table.filter(build_artifacts::job_id.eq(job_id)),
-            )
+        diesel::delete(build_logs::table.filter(build_logs::job_id.eq(job_id)))
             .execute(conn)
             .await?;
-            diesel::delete(build_logs::table.filter(build_logs::job_id.eq(job_id)))
-                .execute(conn)
-                .await?;
-            let now = now_utc();
-            diesel::update(
-                build_jobs::table
-                    .find(job_id)
-                    .filter(build_jobs::deleted_at.is_null()),
-            )
-            .set((
-                build_jobs::deleted_at.eq(Some(now)),
-                build_jobs::updated_at.eq(now),
-            ))
-            .execute(conn)
-            .await?;
-            Ok(())
-        }
-        .scope_boxed()
+        let now = now_utc();
+        diesel::update(
+            build_jobs::table
+                .find(job_id)
+                .filter(build_jobs::deleted_at.is_null()),
+        )
+        .set((
+            build_jobs::deleted_at.eq(Some(now)),
+            build_jobs::updated_at.eq(now),
+        ))
+        .execute(conn)
+        .await?;
+        Ok(())
     })
     .await?;
 
@@ -149,71 +144,68 @@ pub(in crate::db) async fn update_build_failure_backoff(
     let max_backoff_seconds = i64::try_from(max_backoff_seconds)
         .map_err(|_| anyhow::anyhow!("max backoff seconds out of range"))?;
     let mut conn = store.get_connection().await?;
-    conn.transaction::<(), anyhow::Error, _>(|conn| {
-        async move {
-            let job = build_jobs::table
-                .find(job_id)
-                .select((build_jobs::package_name, build_jobs::mock_chroot))
-                .first::<(String, String)>(conn)
+    conn.transaction::<(), anyhow::Error, _>(async |conn| {
+        let job = build_jobs::table
+            .find(job_id)
+            .select((build_jobs::package_name, build_jobs::mock_chroot))
+            .first::<(String, String)>(conn)
+            .await?;
+
+        let now = now_utc();
+        if status == BuildStatus::Succeeded {
+            diesel::delete(build_failure_backoff::table.find((job.0.as_str(), job.1.as_str())))
+                .execute(conn)
                 .await?;
-
-            let now = now_utc();
-            if status == BuildStatus::Succeeded {
-                diesel::delete(build_failure_backoff::table.find((job.0.as_str(), job.1.as_str())))
-                    .execute(conn)
-                    .await?;
-                return Ok(());
-            }
-
-            let should_backoff = matches!(status, BuildStatus::Failed | BuildStatus::TimedOut);
-            if !should_backoff {
-                return Ok(());
-            }
-
-            let existing = build_failure_backoff::table
-                .find((job.0.as_str(), job.1.as_str()))
-                .select(BuildFailureBackoffRecord::as_select())
-                .first(conn)
-                .await
-                .optional()?;
-            let next_failures = existing
-                .as_ref()
-                .map_or(1_i32, |record| {
-                    record.consecutive_failures.saturating_add(1)
-                })
-                .clamp(1, 31);
-            let exponent = (next_failures - 1) as u32;
-            let backoff_seconds = min(
-                base_backoff_seconds.saturating_mul(1_i64 << exponent),
-                max_backoff_seconds,
-            );
-            let next_eligible = now + Duration::seconds(backoff_seconds);
-
-            if existing.is_some() {
-                diesel::update(build_failure_backoff::table.find((job.0.as_str(), job.1.as_str())))
-                    .set((
-                        build_failure_backoff::consecutive_failures.eq(next_failures),
-                        build_failure_backoff::next_eligible_at.eq(next_eligible),
-                        build_failure_backoff::updated_at.eq(now),
-                    ))
-                    .execute(conn)
-                    .await?;
-            } else {
-                let row = NewBuildFailureBackoffRecord {
-                    package_name: job.0.as_str(),
-                    mock_chroot: job.1.as_str(),
-                    consecutive_failures: next_failures,
-                    next_eligible_at: next_eligible,
-                    updated_at: now,
-                };
-                diesel::insert_into(build_failure_backoff::table)
-                    .values(&row)
-                    .execute(conn)
-                    .await?;
-            }
-            Ok(())
+            return Ok(());
         }
-        .scope_boxed()
+
+        let should_backoff = matches!(status, BuildStatus::Failed | BuildStatus::TimedOut);
+        if !should_backoff {
+            return Ok(());
+        }
+
+        let existing = build_failure_backoff::table
+            .find((job.0.as_str(), job.1.as_str()))
+            .select(BuildFailureBackoffRecord::as_select())
+            .first(conn)
+            .await
+            .optional()?;
+        let next_failures = existing
+            .as_ref()
+            .map_or(1_i32, |record| {
+                record.consecutive_failures.saturating_add(1)
+            })
+            .clamp(1, 31);
+        let exponent = (next_failures - 1) as u32;
+        let backoff_seconds = min(
+            base_backoff_seconds.saturating_mul(1_i64 << exponent),
+            max_backoff_seconds,
+        );
+        let next_eligible = now + Duration::seconds(backoff_seconds);
+
+        if existing.is_some() {
+            diesel::update(build_failure_backoff::table.find((job.0.as_str(), job.1.as_str())))
+                .set((
+                    build_failure_backoff::consecutive_failures.eq(next_failures),
+                    build_failure_backoff::next_eligible_at.eq(next_eligible),
+                    build_failure_backoff::updated_at.eq(now),
+                ))
+                .execute(conn)
+                .await?;
+        } else {
+            let row = NewBuildFailureBackoffRecord {
+                package_name: job.0.as_str(),
+                mock_chroot: job.1.as_str(),
+                consecutive_failures: next_failures,
+                next_eligible_at: next_eligible,
+                updated_at: now,
+            };
+            diesel::insert_into(build_failure_backoff::table)
+                .values(&row)
+                .execute(conn)
+                .await?;
+        }
+        Ok(())
     })
     .await?;
     Ok(())

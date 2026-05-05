@@ -1,5 +1,3 @@
-//! Worker infrastructure adapters for the rewrite target architecture.
-
 mod build_runner;
 mod container;
 mod hardware;

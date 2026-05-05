@@ -198,7 +198,6 @@ export default function PackageDetail({ packageName }: Props) {
     setPristine(null);
   }, [packageName]);
 
-  // After a successful save the API result becomes the new pristine.
   useEffect(() => {
     if (formInitialized && packageQuery.data) {
       setPristine(buildFormFromPackage(packageQuery.data));

@@ -13,21 +13,17 @@ use crate::protocol::WorkerTransportHandle;
 
 pub(crate) use commands::{command_exists, run_logged_command, run_mock_command};
 
-/// Multi-stream build logger that writes to separate files for different log sources.
-/// This avoids interleaving mock output with structured worker logs.
+/// Writes mock output and structured worker logs to separate files so they don't interleave.
 #[derive(Clone)]
 pub(crate) struct BuildLogger {
-    /// Primary structured log (sections, status messages)
     primary: LogFile,
-    /// Transport for streaming to daemon
     transport: Option<WorkerTransportHandle>,
-    /// Logs directory for named log streams.
     logs_dir: PathBuf,
 }
 
 #[derive(Clone)]
 struct LogFile {
-    #[allow(dead_code)] // will be used for log path queries
+    #[allow(dead_code)]
     path: PathBuf,
     file: Arc<Mutex<tokio::fs::File>>,
 }
@@ -73,7 +69,6 @@ impl BuildLogger {
         })
     }
 
-    /// Write a plain text section header to the primary log.
     pub(crate) async fn section(&self, title: impl AsRef<str>) -> anyhow::Result<()> {
         let message = format!("\n== {} ==\n", title.as_ref());
         self.primary.write(message.as_bytes()).await?;
@@ -82,7 +77,6 @@ impl BuildLogger {
         Ok(())
     }
 
-    /// Write a line to the primary log
     pub(crate) async fn line(&self, message: impl AsRef<str>) -> anyhow::Result<()> {
         let formatted = format!("{}\n", message.as_ref());
         self.primary.write(formatted.as_bytes()).await?;
@@ -91,15 +85,13 @@ impl BuildLogger {
         Ok(())
     }
 
-    /// Write raw bytes to the primary log
     pub(crate) async fn write(&self, bytes: &[u8]) -> anyhow::Result<()> {
         self.primary.write(bytes).await?;
         self.stream_to_transport("worker.log", bytes).await?;
         Ok(())
     }
 
-    /// Get the path to the primary log file
-    #[allow(dead_code)] // will be used when we need individual log path
+    #[allow(dead_code)]
     pub(crate) fn primary_log_path(&self) -> &Path {
         &self.primary.path
     }

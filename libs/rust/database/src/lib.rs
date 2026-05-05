@@ -1,5 +1,3 @@
-//! Persistence adapters for the rewrite target architecture.
-
 pub mod accounts;
 pub mod db;
 pub mod runtime_settings;

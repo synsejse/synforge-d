@@ -120,7 +120,6 @@ export type ButtonVariantProps = VariantProps<typeof buttonVariants>;
 export interface ButtonProps
   extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children">,
     ButtonVariantProps {
-  /** Renders a leading spinner and disables the button while truthy. */
   loading?: boolean;
   children?: ReactNode;
 }

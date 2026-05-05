@@ -10,26 +10,21 @@ export interface NavItem {
   label: string;
   icon: IconDefinition;
   description: string;
-  /** When true, render as a regular anchor that opens in a new tab. */
   external?: boolean;
-  /** Optional badge — small bracketed count or short text on the right. */
   badge?: number | string | null;
-  /** Visual treatment of the badge. Defaults to neutral. */
   badgeTone?: "lime" | "orange" | "neutral";
 }
 
 export interface NavGroup {
-  /** Section label shown in expanded mode; hidden visually in rail mode. */
   label: string;
   items: NavItem[];
 }
 
 interface NavigationProps {
   groups: NavGroup[];
-  /** External / reference items pinned at the bottom of the nav. */
   external?: NavItem[];
   onNavigate?: () => void;
-  /** When true, render icon-only on desktop (lg+). Mobile is unaffected. */
+  /** Icon-only on desktop (lg+). Mobile is unaffected. */
   rail?: boolean;
 }
 

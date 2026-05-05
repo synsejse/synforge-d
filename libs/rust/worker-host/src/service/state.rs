@@ -1,5 +1,3 @@
-//! Stateful coordination types for build orchestration.
-
 use synforge_core::{
     model::BuildTrigger,
     package::{PackageDefinition, SpecRevision},

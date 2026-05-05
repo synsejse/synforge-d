@@ -7,10 +7,6 @@ interface MetricCardProps {
   detail?: string;
   icon?: ReactNode;
   variant?: "default" | "accent" | "terminal" | "success" | "error";
-  /**
-   * Optional sparkline series (most-recent-last). Rendered as a row of
-   * 2px-wide vertical bars at the bottom of the card. Pass null to skip.
-   */
   sparkline?: ReadonlyArray<number> | null;
   className?: string;
 }
@@ -103,11 +99,6 @@ export default function MetricCard({
   );
 }
 
-/**
- * Brutalist sparkline — fixed-width 2px bars, no smoothing, sat at the
- * bottom of the card. Each bar's height encodes the value relative to
- * the series max. Empty/zero series renders a flat baseline.
- */
 function Sparkline({
   values,
   barClass,

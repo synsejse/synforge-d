@@ -63,15 +63,13 @@ services:
       REDIS_URL: redis://redis:6379/0
       SYNFORGE_WORKER_JOBS_PATH: ${SYNFORGE_WORKER_JOBS_PATH:-/data/jobs}
     ports:
-      # 8080 = HTTP API + webui. 8090 (worker socket) is reachable on
-      # the compose network only — no host binding by design.
+      # 8090 (worker socket) is intentionally not exposed to the host.
       - "8080:8080"
     volumes:
-      # The daemon launches worker containers via the docker socket.
+      # Daemon spawns worker containers via the host docker socket.
       - /var/run/docker.sock:/var/run/docker.sock:ro,z
-      # Persistent runtime tree — repo, state, cache, signing keys.
       - ${SYNFORGE_RUNTIME_PATH:-/data/runtime}:/var/lib/synforge:rw,z
-      # Per-job artifact + log dir, shared with worker containers.
+      # Shared with worker containers spawned by the daemon.
       - ${SYNFORGE_WORKER_JOBS_PATH:-/data/jobs}:/var/lib/synforge-worker-jobs:rw,z
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/readyz"]
@@ -80,10 +78,8 @@ services:
       retries: 3
       start_period: 10s
 
-  # Worker image is built but never runs as a long-lived service —
-  # the daemon spawns one container per build job and tears it down.
-  # Hidden behind the build-images-only profile so `docker compose up`
-  # doesn't try to start it.
+  # Image is built but never run here — the daemon spawns one container
+  # per build job. Pinned to a profile so `docker compose up` skips it.
   worker-fedora:
     build:
       context: .
@@ -92,8 +88,6 @@ services:
     image: synforge-worker-fedora:latest
     profiles: ["build-images-only"]
 
-  # pgadmin for inspecting the daemon's Postgres. Hidden behind the
-  # debug-tools profile; bring up with `docker compose --profile debug-tools up`.
   pgadmin:
     image: dpage/pgadmin4:latest
     restart: unless-stopped

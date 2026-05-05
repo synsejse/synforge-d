@@ -1,5 +1,3 @@
-//! Persistence adapter for users and permissions.
-
 use crate::{DieselStore, UserAuthRecord, UserStore};
 use synforge_core::model::{UserPermission, UserSummary};
 use uuid::Uuid;

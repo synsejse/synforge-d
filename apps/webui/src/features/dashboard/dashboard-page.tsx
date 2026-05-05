@@ -188,12 +188,6 @@ interface PipelineStripProps {
   recentDone: number;
 }
 
-/**
- * ASCII-style flow:  [QUEUED] N ──→ [BUILDING] N ──→ [DONE] view all →
- * The arrows are mono Unicode glyphs, the stages are boxed with sharp
- * borders. On md:+ this lives on a single line; below md it stacks to
- * three rows with vertical connectors.
- */
 function PipelineStrip({ queued, building, recentDone }: PipelineStripProps) {
   return (
     <section

@@ -1,16 +1,9 @@
 interface Props {
   label: string;
-  /**
-   * Number of skeleton bars to render. Pass 0 for a label-only "typewriter"
-   * style block (used in compact contexts like tab panels).
-   */
+  /** Pass 0 to render the label-only block (no skeleton bars). */
   lines?: number;
 }
 
-/**
- * Brutalist loading state — label with a blinking cursor + a 4-cell
- * `▰▰▱▱` progress strip, optionally followed by skeleton bars.
- */
 export default function LoadingBlock({ label, lines = 3 }: Props) {
   return (
     <div

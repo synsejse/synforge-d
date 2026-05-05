@@ -4,15 +4,9 @@ import Button from "./button";
 interface ProgressOverlayDialogProps {
   open: boolean;
   title: string;
-  /** Optional accent — controls the title colour and progress-bar fill.
-   *  Defaults to the success/lime fill used while running. */
   tone?: "running" | "success" | "error";
-  /** Optional one-line summary directly under the title (e.g.
-   *  "12 / 30 packages"). For richer content, use `children`. */
   summary?: ReactNode;
   progress: number;
-  /** Anything to render below the progress bar and above the close
-   *  button — stat grid, status message, etc. */
   children?: ReactNode;
   onClose: () => void;
   closeDisabled?: boolean;
@@ -55,8 +49,6 @@ export default function ProgressOverlayDialog({
         aria-modal="true"
         className="w-full max-w-xl border-4 border-edge-strong bg-black shadow-[8px_8px_0_rgba(255,255,255,0.18)]"
       >
-        {/* Header band — coloured by tone, mirrors the page-header
-            accent vocabulary used elsewhere in the app. */}
         <div className="border-b-2 border-edge-strong bg-surface-alt px-5 py-3">
           <h3
             className={`font-mono text-xs font-bold uppercase tracking-[0.22em] ${TITLE_TONE[tone]}`}

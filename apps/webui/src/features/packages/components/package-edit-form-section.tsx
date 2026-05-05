@@ -41,7 +41,6 @@ export interface PackageEditFormState {
 
 interface PackageEditFormSectionProps {
   form: PackageEditFormState;
-  /** Pristine form state (what the package currently looks like in the API). */
   pristine: PackageEditFormState | null;
   maxCpuCores: number | null;
   maxMemoryMb: number | null;
@@ -60,7 +59,6 @@ interface PackageEditFormSectionProps {
   onOpenChrootPicker: () => void;
   onCloseChrootPicker: () => void;
   onBrowseRepository: () => void;
-  /** Reset form back to pristine. Wired by the sticky footer's Discard button. */
   onDiscard: () => void;
 }
 

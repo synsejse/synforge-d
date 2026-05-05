@@ -1,5 +1,3 @@
-//! Persistence adapter for runtime settings.
-
 use std::collections::BTreeMap;
 
 use crate::DieselStore;

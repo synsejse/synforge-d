@@ -16,11 +16,8 @@ interface Props {
   data: TimeSeriesResponse | undefined;
   isLoading?: boolean;
   height?: number;
-  /** Hex / var() colour for the "succeeded" stack. */
   succeededColor?: string;
-  /** Hex / var() colour for the "failed" stack. */
   failedColor?: string;
-  /** Optional message rendered when there are no events at all in the window. */
   emptyLabel?: string;
 }
 
@@ -31,10 +28,6 @@ interface ChartRow {
   failed: number;
 }
 
-/**
- * Stacked area chart for succeeded/failed event counts over time. Built
- * on recharts. Brutalist palette: solid fills, no gradients, sharp grid.
- */
 export default function TimeSeriesChart({
   data,
   isLoading = false,

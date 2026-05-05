@@ -1,5 +1,5 @@
 use super::*;
-use diesel_async::{AsyncConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::{AsyncConnection, RunQueryDsl};
 
 pub(super) async fn list_packages(
     store: &DieselStore,
@@ -113,84 +113,81 @@ pub(super) async fn upsert_package(
     let mut mock_chroots = package.mock_chroots;
     mock_chroots.sort_unstable();
     mock_chroots.dedup();
-    conn.transaction::<(), anyhow::Error, _>(|conn| {
-        async move {
-            let new_row = NewPackageRecord {
-                name: package_name.as_str(),
-                description: description.as_str(),
-                enabled,
-                repo_subdir: repo_subdir.as_str(),
-                publish_srpm,
-                publish_debuginfo,
-                network_access,
-                source_repo_url: source_repo_url.as_str(),
-                source_spec_file: source_spec_file.as_str(),
-                source_poll,
-                poll_interval_seconds,
-                build_timeout_seconds,
-                package_history_count,
-                cpu_limit_millicores,
-                memory_limit_mb,
-                ccache_enabled,
-                ccache_max_size_mb,
-                build_env_json: build_env_json.clone(),
-                spec_file: spec_file.as_str(),
-                version: version.as_str(),
-                release: release.as_str(),
-            };
-            diesel::insert_into(packages::table)
-                .values(&new_row)
-                .on_conflict(packages::name)
-                .do_update()
-                .set((
-                    packages::description.eq(new_row.description),
-                    packages::enabled.eq(new_row.enabled),
-                    packages::repo_subdir.eq(new_row.repo_subdir),
-                    packages::publish_srpm.eq(new_row.publish_srpm),
-                    packages::publish_debuginfo.eq(new_row.publish_debuginfo),
-                    packages::network_access.eq(new_row.network_access),
-                    packages::source_repo_url.eq(new_row.source_repo_url),
-                    packages::source_spec_file.eq(new_row.source_spec_file),
-                    packages::source_poll.eq(new_row.source_poll),
-                    packages::poll_interval_seconds.eq(new_row.poll_interval_seconds),
-                    packages::build_timeout_seconds.eq(new_row.build_timeout_seconds),
-                    packages::package_history_count.eq(new_row.package_history_count),
-                    packages::cpu_limit_millicores.eq(new_row.cpu_limit_millicores),
-                    packages::memory_limit_mb.eq(new_row.memory_limit_mb),
-                    packages::ccache_enabled.eq(new_row.ccache_enabled),
-                    packages::ccache_max_size_mb.eq(new_row.ccache_max_size_mb),
-                    packages::build_env_json.eq(new_row.build_env_json.clone()),
-                    packages::spec_file.eq(new_row.spec_file),
-                    packages::version.eq(new_row.version),
-                    packages::release.eq(new_row.release),
-                ))
-                .execute(conn)
-                .await?;
-
-            diesel::delete(
-                package_mock_chroots::table
-                    .filter(package_mock_chroots::package_name.eq(package_name.as_str())),
-            )
+    conn.transaction::<(), anyhow::Error, _>(async |conn| {
+        let new_row = NewPackageRecord {
+            name: package_name.as_str(),
+            description: description.as_str(),
+            enabled,
+            repo_subdir: repo_subdir.as_str(),
+            publish_srpm,
+            publish_debuginfo,
+            network_access,
+            source_repo_url: source_repo_url.as_str(),
+            source_spec_file: source_spec_file.as_str(),
+            source_poll,
+            poll_interval_seconds,
+            build_timeout_seconds,
+            package_history_count,
+            cpu_limit_millicores,
+            memory_limit_mb,
+            ccache_enabled,
+            ccache_max_size_mb,
+            build_env_json: build_env_json.clone(),
+            spec_file: spec_file.as_str(),
+            version: version.as_str(),
+            release: release.as_str(),
+        };
+        diesel::insert_into(packages::table)
+            .values(&new_row)
+            .on_conflict(packages::name)
+            .do_update()
+            .set((
+                packages::description.eq(new_row.description),
+                packages::enabled.eq(new_row.enabled),
+                packages::repo_subdir.eq(new_row.repo_subdir),
+                packages::publish_srpm.eq(new_row.publish_srpm),
+                packages::publish_debuginfo.eq(new_row.publish_debuginfo),
+                packages::network_access.eq(new_row.network_access),
+                packages::source_repo_url.eq(new_row.source_repo_url),
+                packages::source_spec_file.eq(new_row.source_spec_file),
+                packages::source_poll.eq(new_row.source_poll),
+                packages::poll_interval_seconds.eq(new_row.poll_interval_seconds),
+                packages::build_timeout_seconds.eq(new_row.build_timeout_seconds),
+                packages::package_history_count.eq(new_row.package_history_count),
+                packages::cpu_limit_millicores.eq(new_row.cpu_limit_millicores),
+                packages::memory_limit_mb.eq(new_row.memory_limit_mb),
+                packages::ccache_enabled.eq(new_row.ccache_enabled),
+                packages::ccache_max_size_mb.eq(new_row.ccache_max_size_mb),
+                packages::build_env_json.eq(new_row.build_env_json.clone()),
+                packages::spec_file.eq(new_row.spec_file),
+                packages::version.eq(new_row.version),
+                packages::release.eq(new_row.release),
+            ))
             .execute(conn)
             .await?;
 
-            if !mock_chroots.is_empty() {
-                let rows = mock_chroots
-                    .iter()
-                    .map(|mock_chroot| NewPackageMockChrootRecord {
-                        package_name: package_name.as_str(),
-                        mock_chroot: mock_chroot.as_str(),
-                    })
-                    .collect::<Vec<_>>();
-                diesel::insert_into(package_mock_chroots::table)
-                    .values(&rows)
-                    .execute(conn)
-                    .await?;
-            }
+        diesel::delete(
+            package_mock_chroots::table
+                .filter(package_mock_chroots::package_name.eq(package_name.as_str())),
+        )
+        .execute(conn)
+        .await?;
 
-            Ok(())
+        if !mock_chroots.is_empty() {
+            let rows = mock_chroots
+                .iter()
+                .map(|mock_chroot| NewPackageMockChrootRecord {
+                    package_name: package_name.as_str(),
+                    mock_chroot: mock_chroot.as_str(),
+                })
+                .collect::<Vec<_>>();
+            diesel::insert_into(package_mock_chroots::table)
+                .values(&rows)
+                .execute(conn)
+                .await?;
         }
-        .scope_boxed()
+
+        Ok(())
     })
     .await?;
     Ok(())

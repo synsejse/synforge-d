@@ -7,15 +7,6 @@ interface Props {
   pkg: PackageResponse;
 }
 
-/**
- * Compact read-only status header. Replaces the old right-side
- * `<PackageStateSidebar>` with a horizontal strip that surfaces the
- * "what's happening right now" data: enabled state, last successful
- * revision, active job, and per-target state.
- *
- * Settings (poll interval, build timeout, ccache, etc.) are not
- * duplicated here — they live in the edit form below.
- */
 export default function PackageStatusStrip({ pkg }: Props) {
   const enabled = pkg.package.enabled ?? true;
   const lastRevision = pkg.state.last_revision || null;
@@ -94,6 +85,5 @@ export default function PackageStatusStrip({ pkg }: Props) {
 }
 
 function shortRevision(rev: string): string {
-  // Show up to 12 chars; if it's a git sha it'll cleanly show short form.
   return rev.length > 12 ? rev.slice(0, 12) : rev;
 }

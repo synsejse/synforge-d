@@ -14,7 +14,7 @@ diesel.workspace = true
 diesel-async.workspace = true
 diesel_migrations.workspace = true
 futures-util.workspace = true
-rand_core.workspace = true
+getrandom.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 synforge-core = { path = "../core" }

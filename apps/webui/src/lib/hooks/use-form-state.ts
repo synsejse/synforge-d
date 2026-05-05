@@ -8,19 +8,10 @@ export interface FormState<T> {
   setValues: (next: T | ((prev: T) => T)) => void;
   validate: () => { ok: true; data: T } | { ok: false; errors: Partial<Record<keyof T, string>> };
   reset: (next?: T) => void;
-  /** True if validate() has been called at least once and produced errors. */
+  /** True after validate() has run at least once. */
   attempted: boolean;
 }
 
-/**
- * Tiny form-state hook. Holds typed values, exposes setField for
- * inputs, and runs a zod schema on demand. On validation failure the
- * `errors` map carries one message per field path.
- *
- * Inputs read errors via `errors[field]` and render inline; validate()
- * gates the submit. Errors clear when the user edits the offending
- * field.
- */
 export function useFormState<T extends Record<string, unknown>>(
   initial: T,
   schema: ZodType<T>,

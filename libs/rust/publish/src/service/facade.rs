@@ -1,5 +1,3 @@
-//! Facade for repository workflows.
-
 use std::path::{Path, PathBuf};
 
 use synforge_core::{

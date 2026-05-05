@@ -2,11 +2,6 @@ interface ErrorMessageProps {
   message: string;
 }
 
-/**
- * Brutalist error block. Brief glitch on first paint — the [ERR] tag
- * displaces and recovers once. Plays once via the synforge-glitch-once
- * CSS class; the keyframe is a no-op when prefers-reduced-motion is set.
- */
 export default function ErrorMessage({ message }: ErrorMessageProps) {
   return (
     <div role="alert" className="border-2 border-error bg-black p-4">

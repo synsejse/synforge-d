@@ -1,5 +1,3 @@
-//! Stateful coordination types for git synchronization.
-
 use synforge_core::package::{BuildEnvVar, SpecRevision};
 
 #[derive(Debug, Clone)]

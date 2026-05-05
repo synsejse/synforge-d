@@ -57,10 +57,7 @@ impl SynforgeService {
         relative_repo_path: &str,
     ) -> anyhow::Result<PathBuf> {
         self.repo_service
-            .resolve_repo_file_path(
-                self.config.runtime_paths().repo_dir(),
-                relative_repo_path,
-            )
+            .resolve_repo_file_path(self.config.runtime_paths().repo_dir(), relative_repo_path)
             .await
     }
 

@@ -71,7 +71,8 @@ impl PackageBuildHistoryReader for DaemonPackageDeps {
         &self,
         package_name: &str,
     ) -> anyhow::Result<Vec<PublishedRepoFile>> {
-        self.load_published_repo_files_for_package(package_name).await
+        self.load_published_repo_files_for_package(package_name)
+            .await
     }
 }
 

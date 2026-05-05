@@ -47,21 +47,56 @@ impl JobUsageService {
     pub fn start_sampler(&self, task_tracker: TaskTracker, mut shutdown_rx: watch::Receiver<bool>) {
         let service = self.clone();
         task_tracker.spawn(async move {
-            let docker = match Docker::connect_with_local_defaults() {
-                Ok(docker) => docker,
-                Err(error) => {
-                    warn!(error = %error, "failed to initialize docker client for job usage polling");
-                    return;
-                }
-            };
-            let mut ticker = tokio::time::interval(Duration::from_secs(1));
-            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            let mut backoff_seconds: u64 = 1;
             loop {
-                tokio::select! {
-                    _ = shutdown_rx.changed() => break,
-                    _ = ticker.tick() => {
-                        if let Err(error) = service.poll_once(&docker).await {
-                            warn!(error = %error, "job usage polling cycle failed");
+                if *shutdown_rx.borrow() {
+                    break;
+                }
+                let docker = match Docker::connect_with_local_defaults() {
+                    Ok(docker) => {
+                        backoff_seconds = 1;
+                        docker
+                    }
+                    Err(error) => {
+                        warn!(
+                            error = %error,
+                            backoff_seconds,
+                            "failed to initialize docker client for job usage polling; will retry"
+                        );
+                        let sleep = tokio::time::sleep(Duration::from_secs(backoff_seconds));
+                        tokio::pin!(sleep);
+                        tokio::select! {
+                            _ = shutdown_rx.changed() => break,
+                            _ = &mut sleep => {}
+                        }
+                        backoff_seconds = (backoff_seconds * 2).min(60);
+                        continue;
+                    }
+                };
+                let mut ticker = tokio::time::interval(Duration::from_secs(1));
+                ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+                let mut consecutive_failures: u32 = 0;
+                loop {
+                    tokio::select! {
+                        _ = shutdown_rx.changed() => return,
+                        _ = ticker.tick() => {
+                            match service.poll_once(&docker).await {
+                                Ok(()) => consecutive_failures = 0,
+                                Err(error) => {
+                                    consecutive_failures += 1;
+                                    warn!(
+                                        error = %error,
+                                        consecutive_failures,
+                                        "job usage polling cycle failed"
+                                    );
+                                    if consecutive_failures >= 5 {
+                                        warn!(
+                                            "reconnecting docker client after repeated job usage polling failures"
+                                        );
+                                        break;
+                                    }
+                                }
+                            }
                         }
                     }
                 }

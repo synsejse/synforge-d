@@ -253,8 +253,8 @@ fn hash_password(password: &str) -> anyhow::Result<String> {
     let mut salt_bytes = [0_u8; Salt::RECOMMENDED_LENGTH];
     getrandom::fill(&mut salt_bytes)
         .map_err(|error| anyhow::anyhow!("OS RNG unavailable: {error}"))?;
-    let salt = SaltString::encode_b64(&salt_bytes)
-        .map_err(|error| anyhow::anyhow!(error.to_string()))?;
+    let salt =
+        SaltString::encode_b64(&salt_bytes).map_err(|error| anyhow::anyhow!(error.to_string()))?;
     Argon2::default()
         .hash_password(password.as_bytes(), &salt)
         .map(|hash| hash.to_string())

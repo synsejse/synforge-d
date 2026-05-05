@@ -76,7 +76,19 @@ impl GitMirrorCache {
         let mirror_key = Self::mirror_key(&repo_url);
         let mirror_dir = self.mirror_dir_for_key(&mirror_key);
         let lock = self.repo_lock(&mirror_key);
-        let _guard = lock.lock().await;
+        let lock_timeout = self
+            .git_timeout
+            .saturating_mul(2)
+            .saturating_add(Duration::from_secs(60));
+        let _guard = tokio::time::timeout(lock_timeout, lock.lock())
+            .await
+            .map_err(|_| {
+                anyhow::anyhow!(
+                    "timed out after {}s waiting for git mirror lock for {}",
+                    lock_timeout.as_secs(),
+                    repo_url
+                )
+            })?;
         let now = unix_timestamp_now();
 
         let existing_state = self.store.get_git_mirror_cache_state(&mirror_key).await?;

@@ -124,6 +124,14 @@ pub trait JobStore: Send + Sync {
     ) -> anyhow::Result<Vec<BuildJobResponse>>;
 
     async fn get_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>>;
+
+    /// Returns the subset of `candidate_ids` that exist in `build_jobs`,
+    /// including soft-deleted rows. Lets callers filter a large set of
+    /// candidate IDs in a single round-trip instead of N point lookups.
+    async fn filter_existing_job_ids(
+        &self,
+        candidate_ids: Vec<Uuid>,
+    ) -> anyhow::Result<std::collections::HashSet<Uuid>>;
     /// Soft-delete a finished job: drops artifacts, logs, signatures and
     /// published-file rows, sets `deleted_at = now()` on the build_jobs
     /// row. Returns the prior artifact list so the caller can clean up

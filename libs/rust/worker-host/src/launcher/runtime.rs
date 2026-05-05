@@ -110,20 +110,66 @@ impl DockerWorkerLauncher {
             container_id = %container_id,
             "waiting for worker container exit"
         );
-        let mut wait = self.docker.wait_container(
-            &container_id,
-            None::<bollard::query_parameters::WaitContainerOptions>,
+        let wait_deadline = Duration::from_secs(
+            payload
+                .timeout_seconds
+                .saturating_add(config.worker_result_timeout_seconds)
+                .saturating_add(60),
         );
-        while let Some(next) = wait.next().await {
-            if let Err(error) = next {
-                warn!(
-                    job_id = %payload.job_id,
-                    container_id = %container_id,
-                    error = %error,
-                    "worker container wait stream returned error; continuing to uploaded result check"
-                );
-                break;
+        let wait_outcome = tokio::time::timeout(wait_deadline, async {
+            let mut wait = self.docker.wait_container(
+                &container_id,
+                None::<bollard::query_parameters::WaitContainerOptions>,
+            );
+            while let Some(next) = wait.next().await {
+                if let Err(error) = next {
+                    warn!(
+                        job_id = %payload.job_id,
+                        container_id = %container_id,
+                        error = %error,
+                        "worker container wait stream returned error; continuing to uploaded result check"
+                    );
+                    break;
+                }
             }
+        })
+        .await;
+        if wait_outcome.is_err() {
+            warn!(
+                job_id = %payload.job_id,
+                container_id = %container_id,
+                wait_deadline_seconds = wait_deadline.as_secs(),
+                "worker container exceeded host-side wait deadline; killing container"
+            );
+            if let Err(error) = self
+                .docker
+                .kill_container(
+                    &container_id,
+                    None::<bollard::query_parameters::KillContainerOptions>,
+                )
+                .await
+            {
+                if !matches!(
+                    error,
+                    bollard::errors::Error::DockerResponseServerError {
+                        status_code: 404,
+                        ..
+                    }
+                ) {
+                    warn!(
+                        job_id = %payload.job_id,
+                        container_id = %container_id,
+                        error = %error,
+                        "failed to kill timed-out worker container"
+                    );
+                }
+            }
+            self.sessions
+                .fail_build_result(
+                    payload.job_id,
+                    "worker container exceeded host wait deadline",
+                )
+                .await?;
         }
         info!(
             job_id = %payload.job_id,

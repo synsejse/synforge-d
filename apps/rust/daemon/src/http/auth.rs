@@ -20,7 +20,7 @@ pub(crate) async fn authenticate_api_request(
         return Ok(next.run(request).await);
     }
     if !is_setup_complete(&state).await? {
-        return Err(AppError::unavailable("daemon setup is not complete"));
+        return Err(AppError::setup_incomplete());
     }
     let required = required_api_permission(request.method(), request.uri().path());
     let user = authenticate_session_headers(&state, &headers, required).await?;
@@ -35,7 +35,7 @@ pub(crate) async fn authenticate_repo_request(
     next: Next,
 ) -> Result<Response, AppError> {
     if !is_setup_complete(&state).await? {
-        return Err(AppError::unavailable("daemon setup is not complete"));
+        return Err(AppError::setup_incomplete());
     }
     if is_public_repo_route(request.method(), request.uri().path()) {
         return Ok(next.run(request).await);
@@ -57,7 +57,7 @@ pub(crate) async fn authenticate_docs_request(
         return Ok(next.run(request).await);
     }
     if !is_setup_complete(&state).await? {
-        return Err(AppError::unavailable("daemon setup is not complete"));
+        return Err(AppError::setup_incomplete());
     }
     let _user = authenticate_session_headers(&state, &headers, UserPermission::Read).await?;
     Ok(next.run(request).await)
@@ -99,7 +99,12 @@ fn parse_basic_authorization(value: &str) -> Option<&str> {
     value.strip_prefix("Basic ")
 }
 
+const MAX_BASIC_CREDENTIAL_BYTES: usize = 1024;
+
 fn decode_basic_credentials(encoded: &str) -> Result<(String, String), AppError> {
+    if encoded.len() > MAX_BASIC_CREDENTIAL_BYTES {
+        return Err(AppError::auth("invalid credentials"));
+    }
     let decoded = base64::engine::general_purpose::STANDARD
         .decode(encoded)
         .map_err(|_| AppError::auth("invalid credentials"))?;

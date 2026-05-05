@@ -260,26 +260,24 @@ impl SynforgeService {
         &self,
         range: Option<String>,
     ) -> anyhow::Result<TimeSeriesResponse> {
-        let (_unit, bucket_seconds, window_seconds, label) =
-            resolve_time_range(range.as_deref());
+        let (_unit, bucket_seconds, window_seconds, label) = resolve_time_range(range.as_deref());
         let now = OffsetDateTime::now_utc();
-        let cutoff =
-            snap_to_bucket(now - time::Duration::seconds(window_seconds), bucket_seconds);
+        let cutoff = snap_to_bucket(
+            now - time::Duration::seconds(window_seconds),
+            bucket_seconds,
+        );
         let events = self.store.list_recent_build_status_events(cutoff).await?;
 
         // Jobs have richer status enum than sync; "failed" and "timed_out"
         // both count toward the failure tally.
-        let points = bucket_succeeded_failed_events(
-            cutoff,
-            now,
-            bucket_seconds,
-            events,
-            |status| match status {
-                "succeeded" => Some(SeriesBucket::Succeeded),
-                "failed" | "timed_out" => Some(SeriesBucket::Failed),
-                _ => None,
-            },
-        );
+        let points =
+            bucket_succeeded_failed_events(cutoff, now, bucket_seconds, events, |status| {
+                match status {
+                    "succeeded" => Some(SeriesBucket::Succeeded),
+                    "failed" | "timed_out" => Some(SeriesBucket::Failed),
+                    _ => None,
+                }
+            });
 
         Ok(TimeSeriesResponse {
             range: label.to_string(),

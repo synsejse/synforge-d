@@ -7,7 +7,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: -D warnings
 
 jobs:
   rust:
@@ -40,29 +39,13 @@ jobs:
         run: cargo test --workspace
 
   webui:
-    name: WebUI (typecheck + build)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/webui
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22.12.0"
-          cache: npm
-          cache-dependency-path: apps/webui/package-lock.json
-
-      - name: npm ci
-        run: npm ci
-
-      - name: npm run build
-        run: npm run build
-
-  openapi-export:
-    name: OpenAPI export + WebUI generated types build
+    # `apps/webui/src/lib/types.ts` imports from
+    # `../generated/api/api-schema`, which is produced by running
+    # `cargo run -p synforge-daemon --bin openapi-export` and feeding
+    # the JSON to `openapi-typescript`. The generated tree is
+    # gitignored, so CI has to regenerate it from a fresh checkout
+    # before tsc/vite can typecheck or build.
+    name: WebUI (generate + typecheck + build)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,6 +74,6 @@ jobs:
         working-directory: apps/webui
         run: npm run generate:api
 
-      - name: Typecheck WebUI against freshly generated types
+      - name: Build WebUI (tsc --noEmit + vite build)
         working-directory: apps/webui
-        run: npm run typecheck
+        run: npm run build

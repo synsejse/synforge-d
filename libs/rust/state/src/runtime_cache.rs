@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::time::Duration;
 
 use base64::Engine;
 use redis::{AsyncCommands, aio::ConnectionManager};
@@ -8,7 +9,56 @@ use synforge_core::{
     config::DaemonConfig,
     model::now_utc,
 };
+use tracing::warn;
 use uuid::Uuid;
+
+const REDIS_MAX_ATTEMPTS: u32 = 3;
+const REDIS_RETRY_BASE_DELAY: Duration = Duration::from_millis(50);
+
+/// Retry idempotent Redis operations on transient errors. Mutations
+/// must not call this — only reads (GET/HGET/HGETALL/PING). The
+/// underlying ConnectionManager already auto-reconnects on dropped
+/// connections, but a single op that lands during the reconnect
+/// still surfaces an `IoError` to us; retrying covers that gap.
+async fn retry_redis_read<T, F, Fut>(label: &'static str, mut op: F) -> anyhow::Result<T>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = redis::RedisResult<T>>,
+{
+    let mut delay = REDIS_RETRY_BASE_DELAY;
+    for attempt in 1..=REDIS_MAX_ATTEMPTS {
+        match op().await {
+            Ok(value) => return Ok(value),
+            Err(error) if attempt < REDIS_MAX_ATTEMPTS && is_transient_redis_error(&error) => {
+                warn!(
+                    label,
+                    attempt,
+                    delay_ms = delay.as_millis() as u64,
+                    error = %error,
+                    "redis read failed; retrying"
+                );
+                tokio::time::sleep(delay).await;
+                delay *= 2;
+            }
+            Err(error) => return Err(error.into()),
+        }
+    }
+    unreachable!("retry loop exited without returning")
+}
+
+fn is_transient_redis_error(error: &redis::RedisError) -> bool {
+    use redis::{ErrorKind, ServerErrorKind};
+    matches!(
+        error.kind(),
+        ErrorKind::Io
+            | ErrorKind::Server(
+                ServerErrorKind::TryAgain
+                    | ServerErrorKind::BusyLoading
+                    | ServerErrorKind::ClusterDown
+                    | ServerErrorKind::MasterDown,
+            )
+    )
+}
 
 pub const UI_SESSION_TTL_SECONDS: u64 = 60 * 60 * 24 * 7;
 
@@ -44,8 +94,11 @@ impl RuntimeCache {
     }
 
     pub async fn health_check(&self) -> anyhow::Result<()> {
-        let mut connection = self.connection.clone();
-        let pong: String = redis::cmd("PING").query_async(&mut connection).await?;
+        let pong: String = retry_redis_read("ping", || {
+            let mut connection = self.connection.clone();
+            async move { redis::cmd("PING").query_async(&mut connection).await }
+        })
+        .await?;
         if pong != "PONG" {
             anyhow::bail!("unexpected redis ping response: {pong}");
         }
@@ -78,8 +131,13 @@ impl RuntimeCache {
         if token.trim().is_empty() {
             return Ok(None);
         }
-        let mut connection = self.connection.clone();
-        let value: Option<String> = connection.get(self.ui_session_key(token)).await?;
+        let key = self.ui_session_key(token);
+        let value: Option<String> = retry_redis_read("get_ui_session", || {
+            let mut connection = self.connection.clone();
+            let key = key.clone();
+            async move { connection.get(key).await }
+        })
+        .await?;
         let session = value
             .map(|value| {
                 serde_json::from_str::<UiSessionRecord>(&value)
@@ -109,8 +167,13 @@ impl RuntimeCache {
         &self,
         worker_image: &str,
     ) -> anyhow::Result<Option<CachedMockChrootEntry>> {
-        let mut connection = self.connection.clone();
-        let value: Option<String> = connection.get(self.mock_chroots_key(worker_image)).await?;
+        let key = self.mock_chroots_key(worker_image);
+        let value: Option<String> = retry_redis_read("get_mock_chroot_entry", || {
+            let mut connection = self.connection.clone();
+            let key = key.clone();
+            async move { connection.get(key).await }
+        })
+        .await?;
         value
             .map(|value| {
                 serde_json::from_str(&value)
@@ -134,8 +197,13 @@ impl RuntimeCache {
     }
 
     pub async fn list_job_usage_samples(&self) -> anyhow::Result<Vec<JobResourceUsageSample>> {
-        let mut connection = self.connection.clone();
-        let values: HashMap<String, String> = connection.hgetall(self.job_usage_key()).await?;
+        let key = self.job_usage_key();
+        let values: HashMap<String, String> = retry_redis_read("list_job_usage_samples", || {
+            let mut connection = self.connection.clone();
+            let key = key.clone();
+            async move { connection.hgetall(key).await }
+        })
+        .await?;
         values
             .into_values()
             .map(|value| {
@@ -149,10 +217,15 @@ impl RuntimeCache {
         &self,
         job_id: Uuid,
     ) -> anyhow::Result<Option<JobResourceUsageSample>> {
-        let mut connection = self.connection.clone();
-        let value: Option<String> = connection
-            .hget(self.job_usage_key(), job_id.to_string())
-            .await?;
+        let key = self.job_usage_key();
+        let field = job_id.to_string();
+        let value: Option<String> = retry_redis_read("get_job_usage_sample", || {
+            let mut connection = self.connection.clone();
+            let key = key.clone();
+            let field = field.clone();
+            async move { connection.hget(key, field).await }
+        })
+        .await?;
         value
             .map(|value| {
                 serde_json::from_str(&value)

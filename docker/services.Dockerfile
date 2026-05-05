@@ -37,7 +37,7 @@ RUN --mount=type=cache,id=synforge-cargo-registry,target=/usr/local/cargo/regist
     && cp /app/target/release/daemon /out/daemon \
     && cp /app/target/release/worker /out/worker
 
-FROM node:22-alpine AS webui-builder
+FROM node:22.12.0-alpine AS webui-builder
 WORKDIR /app/apps/webui
 COPY apps/webui/package*.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci

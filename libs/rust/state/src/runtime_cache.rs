@@ -53,7 +53,7 @@ impl RuntimeCache {
     }
 
     pub async fn create_ui_session(&self, user_id: Uuid) -> anyhow::Result<UiSessionRecord> {
-        let token = generate_session_token();
+        let token = generate_session_token()?;
         let issued_at = now_utc().unix_timestamp();
         let expires_at = issued_at + UI_SESSION_TTL_SECONDS as i64;
         let session = UiSessionRecord {
@@ -194,8 +194,9 @@ impl RuntimeCache {
     }
 }
 
-fn generate_session_token() -> String {
+fn generate_session_token() -> anyhow::Result<String> {
     let mut bytes = [0_u8; 32];
-    getrandom::fill(&mut bytes).expect("OS entropy source must be available");
-    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
+    getrandom::fill(&mut bytes)
+        .map_err(|error| anyhow::anyhow!("failed to read OS entropy: {}", error))?;
+    Ok(base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes))
 }

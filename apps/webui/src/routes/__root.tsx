@@ -13,8 +13,29 @@ export interface RouterContext {
   queryClient: QueryClient;
 }
 
+function RouteErrorFallback({ error }: { error: Error }) {
+  return (
+    <div
+      role="alert"
+      aria-live="assertive"
+      className="border-2 border-error bg-black p-6"
+    >
+      <div className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-error">
+        Route error
+      </div>
+      <p className="mt-3 text-sm text-strong">
+        Failed to load this page. Reload or navigate elsewhere to try again.
+      </p>
+      <pre className="mt-4 overflow-x-auto border border-edge bg-surface-alt p-3 font-mono text-xs text-muted">
+        {error.message}
+      </pre>
+    </div>
+  );
+}
+
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
+  errorComponent: RouteErrorFallback,
 });
 
 function RootLayout() {

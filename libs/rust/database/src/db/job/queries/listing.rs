@@ -27,10 +27,12 @@ fn apply_search_filters<'a>(
     mock_chroot: Option<&str>,
 ) -> build_jobs::BoxedQuery<'a, Pg> {
     if let Some(package_name) = package_name {
-        query = query.filter(build_jobs::package_name.like(format!("%{}%", package_name)));
+        let escaped = crate::db::package::escape_like_pattern(package_name);
+        query = query.filter(build_jobs::package_name.like(format!("%{}%", escaped)));
     }
     if let Some(mock_chroot) = mock_chroot {
-        query = query.filter(build_jobs::mock_chroot.like(format!("%{}%", mock_chroot)));
+        let escaped = crate::db::package::escape_like_pattern(mock_chroot);
+        query = query.filter(build_jobs::mock_chroot.like(format!("%{}%", escaped)));
     }
     query
 }

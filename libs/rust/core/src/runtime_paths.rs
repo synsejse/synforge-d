@@ -104,7 +104,10 @@ impl RuntimePaths {
     }
 }
 
-fn sanitize_relative_path(path: &str) -> PathBuf {
+/// Strip `..` traversal segments and absolute roots from a relative path.
+/// Returns a `PathBuf` containing only `Normal` components — safe to join
+/// onto a trusted root directory without escaping it.
+pub fn sanitize_relative_path(path: &str) -> PathBuf {
     Path::new(path)
         .clean()
         .components()

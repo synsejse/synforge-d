@@ -30,7 +30,7 @@ bollard = "0.21.0"
 bytes = "1.11.1"
 clap = { version = "4.6.1", features = ["derive", "env"] }
 delegate = "0.13.5"
-diesel = { version = "2.3.9", features = ["postgres", "numeric", "r2d2", "time", "uuid", "serde_json"] }
+diesel = { version = "2.3.9", features = ["postgres", "numeric", "time", "uuid", "serde_json"] }
 diesel-async = { version = "0.9", features = ["postgres", "bb8", "migrations", "async-connection-wrapper"] }
 diesel_migrations = "2.3.2"
 flate2 = "1.1.9"

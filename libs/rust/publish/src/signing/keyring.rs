@@ -10,6 +10,9 @@ use super::commands::{
 };
 use super::{ImportedSigningKey, RepoSigningManager, RepoSigningStatus};
 
+const MAX_ARMORED_PRIVATE_KEY_BYTES: usize = 64 * 1024;
+const KEYRING_DIR_NAME: &str = "gnupg";
+
 impl RepoSigningManager {
     pub async fn generate_new_managed_signing_key(
         &self,
@@ -49,13 +52,24 @@ impl RepoSigningManager {
         config: &DaemonConfig,
         armored_private_key: &str,
     ) -> anyhow::Result<ImportedSigningKey> {
+        let bytes = armored_private_key.as_bytes();
+        if bytes.is_empty() {
+            anyhow::bail!("armored private key must not be empty");
+        }
+        if bytes.len() > MAX_ARMORED_PRIVATE_KEY_BYTES {
+            anyhow::bail!(
+                "armored private key exceeds {} byte limit",
+                MAX_ARMORED_PRIVATE_KEY_BYTES
+            );
+        }
+        if !armored_private_key.contains("-----BEGIN PGP PRIVATE KEY BLOCK-----")
+            || !armored_private_key.contains("-----END PGP PRIVATE KEY BLOCK-----")
+        {
+            anyhow::bail!("armored private key is missing PGP private key block markers");
+        }
+
         let keyring_dir = self.ensure_keyring_dir(config).await?;
-        run_gpg_with_input(
-            &keyring_dir,
-            &["--batch", "--yes", "--import"],
-            armored_private_key.as_bytes(),
-        )
-        .await?;
+        run_gpg_with_input(&keyring_dir, &["--batch", "--yes", "--import"], bytes).await?;
 
         let fingerprint = self
             .first_secret_key_fingerprint(config, None)
@@ -69,7 +83,19 @@ impl RepoSigningManager {
     }
 
     pub async fn remove_all_keys(&self, config: &DaemonConfig) -> anyhow::Result<()> {
+        let signing_root = config.runtime_paths().signing_root().to_path_buf();
         let keyring_dir = self.keyring_dir(config);
+        if signing_root.as_os_str().is_empty()
+            || signing_root == PathBuf::from("/")
+            || !keyring_dir.starts_with(&signing_root)
+            || keyring_dir.file_name().and_then(|name| name.to_str()) != Some(KEYRING_DIR_NAME)
+        {
+            anyhow::bail!(
+                "refusing to remove signing keyring at {}: outside signing root {}",
+                keyring_dir.display(),
+                signing_root.display()
+            );
+        }
         if tokio::fs::try_exists(&keyring_dir).await? {
             tokio::fs::remove_dir_all(&keyring_dir)
                 .await
@@ -131,7 +157,7 @@ impl RepoSigningManager {
     }
 
     pub(super) fn keyring_dir(&self, config: &DaemonConfig) -> PathBuf {
-        config.runtime_paths().signing_root().join("gnupg")
+        config.runtime_paths().signing_root().join(KEYRING_DIR_NAME)
     }
 
     pub(super) async fn ensure_keyring_dir(

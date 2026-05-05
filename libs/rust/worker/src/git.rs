@@ -32,11 +32,16 @@ pub(crate) async fn clone_repository(
         tokio::fs::create_dir_all(parent).await?;
     }
 
+    if let Some(commit) = commit {
+        validate_commit_ref(commit)?;
+    }
+
     let mut clone_command = Command::new("git");
     clone_command
         .arg("clone")
         .arg("--depth")
         .arg(SHALLOW_CLONE_DEPTH)
+        .arg("--")
         .arg(&source.repo_url)
         .arg(destination);
     run_command(&mut clone_command)
@@ -51,6 +56,7 @@ pub(crate) async fn clone_repository(
                 .arg("--depth")
                 .arg(SHALLOW_CLONE_DEPTH)
                 .arg("origin")
+                .arg("--")
                 .arg(commit),
         )
         .await
@@ -60,6 +66,7 @@ pub(crate) async fn clone_repository(
                 .current_dir(destination)
                 .arg("checkout")
                 .arg("--detach")
+                .arg("--")
                 .arg(commit),
         )
         .await
@@ -75,9 +82,11 @@ pub(crate) async fn clone_repository(
 }
 
 pub(crate) async fn git_rev_parse(repo_dir: &Path, rev: &str) -> anyhow::Result<String> {
+    validate_commit_ref(rev)?;
     let output = Command::new("git")
         .current_dir(repo_dir)
         .arg("rev-parse")
+        .arg("--")
         .arg(rev)
         .output()
         .await?;
@@ -99,6 +108,22 @@ pub(crate) async fn run_command(command: &mut Command) -> anyhow::Result<()> {
     let output = command.output().await?;
     if !output.status.success() {
         anyhow::bail!("{}", String::from_utf8_lossy(&output.stderr).trim());
+    }
+    Ok(())
+}
+
+fn validate_commit_ref(rev: &str) -> anyhow::Result<()> {
+    if rev.is_empty() {
+        anyhow::bail!("git revision must not be empty");
+    }
+    if rev.starts_with('-') {
+        anyhow::bail!("git revision {} must not start with '-'", rev);
+    }
+    if rev
+        .chars()
+        .any(|ch| ch.is_whitespace() || ch == '\0' || ch == '\n')
+    {
+        anyhow::bail!("git revision {} contains forbidden whitespace", rev);
     }
     Ok(())
 }

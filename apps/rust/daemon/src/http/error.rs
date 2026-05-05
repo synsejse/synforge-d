@@ -18,9 +18,9 @@ impl AppError {
         }
     }
 
-    pub(crate) fn unavailable(message: impl Into<String>) -> Self {
+    pub(crate) fn setup_incomplete() -> Self {
         Self {
-            error: anyhow::anyhow!(message.into()),
+            error: anyhow::anyhow!(SynforgeError::SetupIncomplete),
             basic_challenge: false,
         }
     }
@@ -80,12 +80,14 @@ impl IntoResponse for AppError {
                         code = "internal_error";
                         message = error.to_string();
                     }
+                    SynforgeError::SetupIncomplete => {
+                        status = StatusCode::SERVICE_UNAVAILABLE;
+                        code = "setup_incomplete";
+                        message = error.to_string();
+                    }
                 }
                 break;
             }
-        }
-        if message == "daemon setup is not complete" {
-            status = StatusCode::SERVICE_UNAVAILABLE;
         }
         let mut response = (status, Json(ApiError { code, message })).into_response();
         if status == StatusCode::UNAUTHORIZED && self.basic_challenge {

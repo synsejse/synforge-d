@@ -6,14 +6,14 @@ You connect source repositories, sync updates, run builds, and view results in o
 
 ## Quick start
 
-1. Copy `.env.example` to `.env` and set non-default PostgreSQL and MinIO credentials.
-2. Configure storage paths in `.env` (defaults to `./data/*` subdirectories; point to large disks for production).
+1. Copy `.env.example` to `.env` and set a non-default PostgreSQL password.
+2. Configure storage paths in `.env` (defaults under `/data/*`; point to large disks for production).
 3. Start the stack with Docker Compose.
 4. Open the daemon-served web app at `http://localhost:8080`.
 5. Complete first-time setup and create an admin user.
 6. Add packages and start syncing/building.
 
-The default compose stack runs PostgreSQL for relational state, Redis for hot runtime cache/state, and MinIO for job artifacts, logs, and published repository objects. The daemon requires all three services at startup. It still materializes a local repo workspace for `createrepo_c` and signing, but object storage is the durable backing store.
+The default compose stack runs PostgreSQL for relational state and Redis for hot runtime cache/state. Job artifacts, logs, and published repository contents live on the host volumes mounted at `SYNFORGE_RUNTIME_PATH` and `SYNFORGE_WORKER_JOBS_PATH` — point those at large disks in production. The daemon requires Postgres and Redis at startup.
 
 ## Architecture
 
@@ -22,7 +22,7 @@ The default compose stack runs PostgreSQL for relational state, Redis for hot ru
 - `libs/rust/state`: Redis-backed runtime cache/state and ephemeral coordination data
 - `libs/rust/git-sync`: git/source inspection, mirrors, and package sync mechanics
 - `libs/rust/worker-host`: worker launch, session/socket protocol, and build execution
-- `libs/rust/publish`: object storage, repo publication, and signing
+- `libs/rust/publish`: repo publication, signing, and repo-file resolution
 - `apps/rust/daemon`: main process, service composition, API, docs, repo endpoints, and built WebUI
 - `apps/webui`: Vite + React + TanStack Router SPA, organized toward `src/features/*` ownership
 

@@ -16,4 +16,6 @@ pub enum SynforgeError {
     BadRequest(String),
     #[error("internal error: {0}")]
     Internal(String),
+    #[error("daemon setup is not complete")]
+    SetupIncomplete,
 }

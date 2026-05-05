@@ -7,6 +7,7 @@ use path_clean::PathClean;
 use sha2::Digest;
 use tokio::io::AsyncReadExt;
 use tokio::sync::{Mutex, Notify};
+use tracing::warn;
 use uuid::Uuid;
 
 use synforge_core::{
@@ -77,9 +78,15 @@ impl WorkerSessionBroker {
     }
 
     pub async fn set_container_id(&self, job_id: Uuid, container_id: String) {
-        if let Some(entry) = self.state.get(&job_id) {
-            *entry.container_id.lock().await = Some(container_id);
-        }
+        let Some(entry) = self.state.get(&job_id) else {
+            warn!(
+                job_id = %job_id,
+                container_id = %container_id,
+                "set_container_id called for unknown session; container will not be tracked for kill"
+            );
+            return;
+        };
+        *entry.container_id.lock().await = Some(container_id);
     }
 
     pub async fn container_id_for_job(&self, job_id: Uuid) -> Option<String> {

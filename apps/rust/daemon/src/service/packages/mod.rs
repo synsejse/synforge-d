@@ -115,12 +115,8 @@ impl SynforgeService {
         // dir would linger until the periodic orphan sweep runs.
         // (mock-cache stays — it's used regardless of the ccache flag.)
         if !response.package.ccache_enabled {
-            remove_package_cache_subtree(
-                &self.config.worker_ccache_root(),
-                package_name,
-                "ccache",
-            )
-            .await;
+            remove_package_cache_subtree(&self.config.worker_ccache_root(), package_name, "ccache")
+                .await;
         }
         Ok(response)
     }

@@ -33,7 +33,9 @@ impl RepoSigningDeps {
     }
 
     async fn load_published_repo_file_count(&self) -> anyhow::Result<u64> {
-        self.store.count_published_repo_files(None, None, None).await
+        self.store
+            .count_published_repo_files(None, None, None)
+            .await
     }
 
     async fn load_published_repo_files(
@@ -180,7 +182,10 @@ impl RepoSigningCommandRunner for RepoSigningDeps {
         &self,
         config: &DaemonConfig,
     ) -> anyhow::Result<RepoSigningKeyIdentity> {
-        let key = self.signing_manager().generate_new_managed_signing_key(config).await?;
+        let key = self
+            .signing_manager()
+            .generate_new_managed_signing_key(config)
+            .await?;
         Ok(RepoSigningKeyIdentity {
             key_id: key.key_id,
             fingerprint: key.fingerprint,

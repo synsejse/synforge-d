@@ -37,8 +37,7 @@ pub(super) async fn run_git_clone(
     dir: Option<&Path>,
     args: &[&str],
     timeout: Duration,
-) -> anyhow::Result<()>
-{
+) -> anyhow::Result<()> {
     let mut command = Command::new("git");
     if let Some(dir) = dir {
         command.current_dir(dir);

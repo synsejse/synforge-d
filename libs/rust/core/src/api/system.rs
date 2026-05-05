@@ -153,8 +153,8 @@ pub struct TimeSeriesQuery {
 /// Unknown values fall back to 24h so the frontend can't poison the daemon.
 pub fn resolve_time_range(range: Option<&str>) -> (&'static str, u64, i64, &'static str) {
     match range.unwrap_or("24h") {
-        "7d" => ("hour", 3_600, 7 * 24 * 3600, "7d"),    // 168 hourly points
+        "7d" => ("hour", 3_600, 7 * 24 * 3600, "7d"), // 168 hourly points
         "30d" => ("day", 86_400, 30 * 24 * 3600, "30d"), // 30 daily points
-        _ => ("hour", 3_600, 24 * 3600, "24h"),          // 24 hourly points
+        _ => ("hour", 3_600, 24 * 3600, "24h"),       // 24 hourly points
     }
 }

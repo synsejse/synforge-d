@@ -93,7 +93,10 @@ impl SynforgeService {
             .await?
             .into_iter()
             .map(|(pkg, chroot, state)| {
-                ((pkg, chroot), (state.consecutive_failures, state.next_eligible_at))
+                (
+                    (pkg, chroot),
+                    (state.consecutive_failures, state.next_eligible_at),
+                )
             })
             .collect();
 
@@ -103,8 +106,7 @@ impl SynforgeService {
             if !pkg.enabled || !pkg.source.poll {
                 continue;
             }
-            let interval =
-                time::Duration::seconds(pkg.poll_interval_seconds.max(1) as i64);
+            let interval = time::Duration::seconds(pkg.poll_interval_seconds.max(1) as i64);
             // Without a recorded sync we treat the package as eligible
             // immediately (next_at = now).
             let interval_eligible_at = last_sync
@@ -146,23 +148,22 @@ impl SynforgeService {
         &self,
         range: Option<String>,
     ) -> anyhow::Result<TimeSeriesResponse> {
-        let (_unit, bucket_seconds, window_seconds, label) =
-            resolve_time_range(range.as_deref());
+        let (_unit, bucket_seconds, window_seconds, label) = resolve_time_range(range.as_deref());
         let now = OffsetDateTime::now_utc();
-        let cutoff = snap_to_bucket(now - time::Duration::seconds(window_seconds), bucket_seconds);
+        let cutoff = snap_to_bucket(
+            now - time::Duration::seconds(window_seconds),
+            bucket_seconds,
+        );
         let events = self.store.list_recent_sync_status_events(cutoff).await?;
 
-        let points = bucket_succeeded_failed_events(
-            cutoff,
-            now,
-            bucket_seconds,
-            events,
-            |status| match status {
-                "succeeded" => Some(SeriesBucket::Succeeded),
-                "failed" => Some(SeriesBucket::Failed),
-                _ => None,
-            },
-        );
+        let points =
+            bucket_succeeded_failed_events(cutoff, now, bucket_seconds, events, |status| {
+                match status {
+                    "succeeded" => Some(SeriesBucket::Succeeded),
+                    "failed" => Some(SeriesBucket::Failed),
+                    _ => None,
+                }
+            });
 
         Ok(TimeSeriesResponse {
             range: label.to_string(),

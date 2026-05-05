@@ -120,8 +120,7 @@ where
 pub async fn resolve_repo_file_path(
     repo_root: &Path,
     relative_repo_path: &str,
-) -> anyhow::Result<PathBuf>
-{
+) -> anyhow::Result<PathBuf> {
     let requested = normalize_repo_path(relative_repo_path)?;
     let path = repo_root.join(&requested);
     if !tokio::fs::try_exists(&path).await? {

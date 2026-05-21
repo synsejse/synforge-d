@@ -224,25 +224,21 @@ impl JobLifecycle {
             .await
     }
 
-    /// Best-effort removal of `state/jobs/{job_id}/` (artifacts + logs).
+    /// Best-effort removal of both per-job on-disk trees:
+    ///   - `{runtime}/state/jobs/{job_id}/`  — daemon-visible artifacts/logs
+    ///   - `{worker_jobs_root}/{job_id}/`    — worker-side bind-mounted copy
     /// Called when a job is soft-deleted or pruned. NotFound is fine
     /// (already gone). Other I/O errors are logged but not propagated:
     /// the DB soft-delete already succeeded, so leaking an orphan
     /// directory is preferable to wedging UI state with a half-applied
     /// delete.
     pub async fn remove_job_dir(&self, job_id: Uuid) {
-        let dir = self.config.runtime_paths().job_root(job_id);
-        match tokio::fs::remove_dir_all(&dir).await {
-            Ok(()) => {}
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-            Err(error) => {
-                warn!(
-                    job_id = %job_id,
-                    path = %dir.display(),
-                    error = %error,
-                    "failed to remove on-disk job directory after soft-delete"
-                );
-            }
+        let runtime_dir = self.config.runtime_paths().job_root(job_id);
+        remove_job_dir_best_effort(&runtime_dir, job_id).await;
+
+        let worker_dir = self.config.worker_jobs_root().join(job_id.to_string());
+        if worker_dir != runtime_dir {
+            remove_job_dir_best_effort(&worker_dir, job_id).await;
         }
     }
 
@@ -350,6 +346,21 @@ fn apply_bool_setting(target: &mut bool, value: Option<&Value>, key: &str) -> an
         *target = value;
     }
     Ok(())
+}
+
+async fn remove_job_dir_best_effort(dir: &std::path::Path, job_id: Uuid) {
+    match tokio::fs::remove_dir_all(dir).await {
+        Ok(()) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            warn!(
+                job_id = %job_id,
+                path = %dir.display(),
+                error = %error,
+                "failed to remove on-disk job directory after soft-delete"
+            );
+        }
+    }
 }
 
 fn apply_optional_string_setting(

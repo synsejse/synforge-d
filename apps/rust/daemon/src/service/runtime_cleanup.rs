@@ -91,8 +91,13 @@ impl SynforgeService {
             if active_job_ids.contains(&job_id) {
                 continue;
             }
-            if self.store.get_job(job_id).await?.is_some() {
-                continue;
+            // Live job rows keep their on-disk dir. Soft-deleted rows
+            // (deleted_at IS NOT NULL) had their artifacts/logs pruned
+            // by the soft-delete path; the row is only retained for
+            // historical stats, so the dir is fair game on disk.
+            match self.store.get_job(job_id).await? {
+                Some(response) if response.job.deleted_at.is_none() => continue,
+                _ => {}
             }
             tokio::fs::remove_dir_all(entry.path()).await?;
             removed += 1;

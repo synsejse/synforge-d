@@ -10,7 +10,7 @@
 - `libs/rust/database`: Diesel persistence, schema, migrations, and PostgreSQL-backed adapters
 - `libs/rust/state`: Redis-backed runtime cache/state and short-lived coordination data
 - `libs/rust/git-sync`: git/source inspection, mirrors, package materialization, and sync mechanics
-- `libs/rust/publish`: object storage, repo publication, and signing
+- `libs/rust/publish`: repo publication, signing, and repo-file resolution
 - `libs/rust/worker-host`: daemon-side worker launch, sessions, socket handling, queueing, and build lifecycle
 - `libs/rust/worker`: worker runtime logic used by containerized build workers
 - `apps/rust/daemon`: main daemon binary serving the API, repo endpoints, docs, and built frontend
@@ -25,7 +25,7 @@ Generated artifacts: `target/`, `apps/webui/dist/`, `apps/webui/node_modules/`.
 - `synforge-database` owns Diesel-only persistence concerns, schema, migrations, and PostgreSQL-backed adapters.
 - `synforge-state` owns Redis and in-memory runtime state.
 - `synforge-git-sync` owns package source sync, git mirrors, source inspection, and package materialization.
-- `synforge-publish` owns repo publication, signing, object storage, and repo-file resolution.
+- `synforge-publish` owns repo publication, signing, and repo-file resolution.
 - `synforge-worker-host` owns daemon-side worker orchestration and build lifecycle.
 - `apps/rust/daemon` owns HTTP transport, startup, background loops, and composition wiring.
 - `apps/webui/src/routes` should stay thin TanStack Router route files.

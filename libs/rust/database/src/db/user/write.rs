@@ -124,16 +124,12 @@ pub(in crate::db) async fn delete_user(
                 return Ok(None);
             };
             let existing = load_user_summary(conn, user_id).await?;
-            diesel::delete(
-                user_permissions::table.filter(user_permissions::user_id.eq(user_id)),
-            )
-            .execute(conn)
-            .await?;
-            diesel::delete(
-                user_repo_metrics::table.filter(user_repo_metrics::user_id.eq(user_id)),
-            )
-            .execute(conn)
-            .await?;
+            diesel::delete(user_permissions::table.filter(user_permissions::user_id.eq(user_id)))
+                .execute(conn)
+                .await?;
+            diesel::delete(user_repo_metrics::table.filter(user_repo_metrics::user_id.eq(user_id)))
+                .execute(conn)
+                .await?;
             diesel::delete(users::table.find(user_id))
                 .execute(conn)
                 .await?;

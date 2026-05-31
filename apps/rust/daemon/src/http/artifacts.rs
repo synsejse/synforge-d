@@ -3,11 +3,12 @@ use std::path::{Component, PathBuf};
 use super::{AppError, AppState};
 use axum::Json;
 use axum::Router;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{HeaderValue, header};
 use axum::response::IntoResponse;
 use axum::routing::get;
-use synforge_core::api::{JobArtifactListResponse, JobArtifactMetaResponse};
+use synforge_core::api::{JobArtifactListResponse, JobArtifactMetaResponse, PaginationQuery};
+use synforge_core::error::SynforgeError;
 use tokio_util::io::ReaderStream;
 use uuid::Uuid;
 
@@ -29,7 +30,8 @@ pub fn router() -> Router<AppState> {
     path = "/api/v1/jobs/{id}/artifacts",
     tag = "Jobs",
     params(
-        ("id" = Uuid, Path, description = "Job identifier")
+        ("id" = Uuid, Path, description = "Job identifier"),
+        PaginationQuery
     ),
     security(("session_auth" = [])),
     responses(
@@ -41,8 +43,14 @@ pub fn router() -> Router<AppState> {
 pub(super) async fn list_job_artifacts(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
+    Query(query): Query<PaginationQuery>,
 ) -> Result<Json<JobArtifactListResponse>, AppError> {
-    Ok(Json(state.service.get_job_artifacts(id).await?))
+    Ok(Json(
+        state
+            .service
+            .get_job_artifacts(id, query.limit, query.offset)
+            .await?,
+    ))
 }
 
 #[utoipa::path(
@@ -120,14 +128,18 @@ fn normalize_artifact_path(path: &str) -> anyhow::Result<String> {
     let trimmed = path.trim_start_matches('/');
     let normalized = PathBuf::from(trimmed);
     if normalized.as_os_str().is_empty() {
-        anyhow::bail!("artifact path must not be empty");
+        return Err(anyhow::anyhow!(SynforgeError::BadRequest(
+            "artifact path must not be empty".to_string()
+        )));
     }
 
     if normalized
         .components()
         .any(|component| !matches!(component, Component::Normal(_)))
     {
-        anyhow::bail!("artifact path contains invalid components");
+        return Err(anyhow::anyhow!(SynforgeError::BadRequest(
+            "artifact path contains invalid components".to_string()
+        )));
     }
 
     Ok(normalized.to_string_lossy().into_owned())

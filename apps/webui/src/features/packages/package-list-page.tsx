@@ -16,6 +16,7 @@ const route = getRouteApi("/_authed/packages/");
 import { summarizePackageAction } from "../../lib/package-actions";
 import type { RefreshAllPackagesProgressView } from "../../lib/types";
 import AddPackageModal from "./components/add-package-modal";
+import { useBulkAction } from "./use-bulk-action";
 import PackageCard from "./components/package-card";
 import ErrorMessage from "../../components/common/error-message";
 import { useDialogs } from "../../components/common/dialogs-provider";
@@ -120,7 +121,6 @@ function PackageList() {
   const debouncedSearch = useDebounce(searchInput, 250);
   const [showAddModal, setShowAddModal] = useState(false);
   const [refreshOverlayOpen, setRefreshOverlayOpen] = useState(false);
-  const [bulkRunning, setBulkRunning] = useState(false);
   const selection = useSelection<string>();
 
   const setOffset = (next: number) =>
@@ -152,6 +152,8 @@ function PackageList() {
 
   const invalidatePackages = () =>
     queryClient.invalidateQueries({ queryKey: ["packages"] });
+
+  const bulkAction = useBulkAction(invalidatePackages);
 
   const deleteMutation = useMutation({
     mutationFn: (name: string) => api.deletePackage(name),
@@ -232,40 +234,6 @@ function PackageList() {
     await refreshAllMutation.mutateAsync().catch(() => undefined);
   }
 
-  async function runBulk(
-    action: "refresh" | "rebuild",
-    names: string[],
-  ): Promise<void> {
-    setBulkRunning(true);
-    try {
-      const results = await Promise.allSettled(
-        names.map((name) =>
-          action === "refresh"
-            ? api.refreshPackage(name)
-            : api.rebuildPackage(name),
-        ),
-      );
-      const ok = results.filter((r) => r.status === "fulfilled").length;
-      const failed = results.length - ok;
-      if (failed === 0) {
-        toast.success(
-          action === "refresh" ? "Bulk refresh queued" : "Bulk rebuild queued",
-          `${ok} package${ok === 1 ? "" : "s"} processed.`,
-        );
-      } else {
-        toast.error(
-          action === "refresh"
-            ? "Bulk refresh partial"
-            : "Bulk rebuild partial",
-          `${ok} succeeded · ${failed} failed.`,
-        );
-      }
-      await invalidatePackages();
-    } finally {
-      setBulkRunning(false);
-    }
-  }
-
   async function handleBulkRefresh() {
     const names = Array.from(selection.selected);
     if (names.length === 0) return;
@@ -275,7 +243,14 @@ function PackageList() {
       confirmLabel: "Refresh",
     });
     if (!ok) return;
-    await runBulk("refresh", names);
+    await bulkAction.run({
+      items: names,
+      action: (name) => api.refreshPackage(name),
+      successTitle: "Bulk refresh queued",
+      partialTitle: "Bulk refresh partial",
+      successMessage: (count) =>
+        `${count} package${count === 1 ? "" : "s"} processed.`,
+    });
     selection.clear();
   }
 
@@ -288,7 +263,14 @@ function PackageList() {
       confirmLabel: "Rebuild",
     });
     if (!ok) return;
-    await runBulk("rebuild", names);
+    await bulkAction.run({
+      items: names,
+      action: (name) => api.rebuildPackage(name),
+      successTitle: "Bulk rebuild queued",
+      partialTitle: "Bulk rebuild partial",
+      successMessage: (count) =>
+        `${count} package${count === 1 ? "" : "s"} processed.`,
+    });
     selection.clear();
   }
 
@@ -302,29 +284,15 @@ function PackageList() {
       destructive: true,
     });
     if (!ok) return;
-    setBulkRunning(true);
-    try {
-      const results = await Promise.allSettled(
-        names.map((name) => api.deletePackage(name)),
-      );
-      const ok2 = results.filter((r) => r.status === "fulfilled").length;
-      const failed = results.length - ok2;
-      if (failed === 0) {
-        toast.success(
-          "Packages deleted",
-          `${ok2} package${ok2 === 1 ? "" : "s"} removed.`,
-        );
-      } else {
-        toast.error(
-          "Bulk delete partial",
-          `${ok2} succeeded · ${failed} failed.`,
-        );
-      }
-      await invalidatePackages();
-    } finally {
-      setBulkRunning(false);
-      selection.clear();
-    }
+    await bulkAction.run({
+      items: names,
+      action: (name) => api.deletePackage(name),
+      successTitle: "Packages deleted",
+      partialTitle: "Bulk delete partial",
+      successMessage: (count) =>
+        `${count} package${count === 1 ? "" : "s"} removed.`,
+    });
+    selection.clear();
   }
 
   function applyFilters() {
@@ -382,7 +350,7 @@ function PackageList() {
       : null;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title="Packages"
         description="Sources, targets, and builds."
@@ -571,7 +539,7 @@ function PackageList() {
           variant="ghost"
           size="sm"
           onClick={handleBulkRefresh}
-          disabled={bulkRunning}
+          disabled={bulkAction.running}
         >
           <FaIcon icon={faRotate} />
           Refresh
@@ -580,7 +548,7 @@ function PackageList() {
           variant="ghost"
           size="sm"
           onClick={handleBulkRebuild}
-          disabled={bulkRunning}
+          disabled={bulkAction.running}
         >
           <FaIcon icon={faHammer} />
           Rebuild
@@ -589,7 +557,7 @@ function PackageList() {
           variant="danger"
           size="sm"
           onClick={handleBulkDelete}
-          disabled={bulkRunning}
+          disabled={bulkAction.running}
         >
           <FaIcon icon={faTrash} />
           Delete

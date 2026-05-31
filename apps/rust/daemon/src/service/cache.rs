@@ -44,7 +44,7 @@ fn build_mock_chroot_cache_stats(
     let (cached_chroot_count, age_seconds, worker_image, last_refresh_at) =
         if let Some(entry) = cache.entry.as_ref() {
             (
-                entry.response.chroots.len(),
+                entry.chroots.len(),
                 now_unix_seconds
                     .checked_sub(entry.fetched_at_unix_seconds)
                     .map(|value| value as u64),

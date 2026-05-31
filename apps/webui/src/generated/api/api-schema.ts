@@ -525,6 +525,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Browse a remote repository's files. Modeled as POST (not GET) because it
+         *     takes a `repo_url` request body rather than encoding the URL in the path.
+         */
         post: operations["browse_repository"];
         delete?: never;
         options?: never;
@@ -1115,6 +1119,7 @@ export interface components {
             artifacts: components["schemas"]["BuildArtifact"][];
             /** Format: uuid */
             job_id: string;
+            page: components["schemas"]["PageInfo"];
         };
         JobArtifactMetaResponse: {
             artifact: components["schemas"]["BuildArtifact"];
@@ -1138,6 +1143,7 @@ export interface components {
         /** @enum {string} */
         JobListScope: "all" | "active" | "completed";
         JobResourceUsageListResponse: {
+            page: components["schemas"]["PageInfo"];
             samples: components["schemas"]["JobResourceUsageSample"][];
         };
         JobResourceUsageResponse: {
@@ -1152,6 +1158,17 @@ export interface components {
             memory_limit_bytes: number;
             /** Format: int64 */
             memory_usage_bytes: number;
+        };
+        LogChunkQuery: {
+            /** Format: int64 */
+            cursor?: number | null;
+            /**
+             * @description Maximum bytes to read in this chunk. Defaults to 65536 (64 KiB) and is
+             *     clamped server-side to the range 1024..=524288 (1 KiB..=512 KiB).
+             */
+            limit?: number | null;
+            /** Format: int64 */
+            offset?: number | null;
         };
         LogChunkResponse: {
             complete: boolean;
@@ -1203,6 +1220,7 @@ export interface components {
         };
         MockChrootListResponse: {
             chroots: string[];
+            page: components["schemas"]["PageInfo"];
         };
         /** @enum {string} */
         PackageActionDisposition: "queued" | "skipped" | "blocked";
@@ -1297,6 +1315,17 @@ export interface components {
             returned: number;
             /** Format: int64 */
             total?: number | null;
+        };
+        PaginationQuery: {
+            /**
+             * @description When true, soft-deleted records are included in the result.
+             *     Defaults to false. Currently consumed by the package-builds
+             *     listing; harmless on endpoints that don't have a soft-delete
+             *     concept (they ignore it).
+             */
+            include_deleted?: boolean | null;
+            limit?: number | null;
+            offset?: number | null;
         };
         PruneJobsResponse: {
             deleted_jobs: components["schemas"]["BuildJobResponse"][];
@@ -1515,6 +1544,8 @@ export interface components {
         SyncScheduleQuery: {
             /** @description Maximum number of entries to return. Defaults to 20, capped at 100. */
             limit?: number | null;
+            /** @description Number of entries to skip before returning results. Defaults to 0. */
+            offset?: number | null;
         };
         SyncScheduleResponse: {
             /**
@@ -1523,6 +1554,7 @@ export interface components {
              */
             computed_at: string;
             items: components["schemas"]["SyncScheduleEntry"][];
+            page: components["schemas"]["PageInfo"];
         };
         /** @enum {string} */
         SyncStatus: "succeeded" | "failed";
@@ -1612,6 +1644,7 @@ export interface components {
             updated_at: string;
         };
         UserListResponse: {
+            page: components["schemas"]["PageInfo"];
             users: components["schemas"]["UserResponse"][];
         };
         UserMetricsResponse: {
@@ -1861,7 +1894,17 @@ export interface operations {
     };
     list_job_usage: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: number | null;
+                offset?: number | null;
+                /**
+                 * @description When true, soft-deleted records are included in the result.
+                 *     Defaults to false. Currently consumed by the package-builds
+                 *     listing; harmless on endpoints that don't have a soft-delete
+                 *     concept (they ignore it).
+                 */
+                include_deleted?: boolean | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1938,14 +1981,12 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Delete job */
-            200: {
+            /** @description Job deleted */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["BuildJobResponse"];
-                };
+                content?: never;
             };
             401: {
                 headers: {
@@ -1967,7 +2008,17 @@ export interface operations {
     };
     list_job_artifacts: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: number | null;
+                offset?: number | null;
+                /**
+                 * @description When true, soft-deleted records are included in the result.
+                 *     Defaults to false. Currently consumed by the package-builds
+                 *     listing; harmless on endpoints that don't have a soft-delete
+                 *     concept (they ignore it).
+                 */
+                include_deleted?: boolean | null;
+            };
             header?: never;
             path: {
                 /** @description Job identifier */
@@ -2187,7 +2238,7 @@ export interface operations {
                 cursor?: number;
                 /** @description Relative byte offset from the cursor */
                 offset?: number;
-                /** @description Maximum bytes to read */
+                /** @description Maximum bytes to read (default 65536; clamped server-side to 1024..=524288) */
                 limit?: number;
             };
             header?: never;
@@ -2373,7 +2424,17 @@ export interface operations {
     };
     list_mock_chroots: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: number | null;
+                offset?: number | null;
+                /**
+                 * @description When true, soft-deleted records are included in the result.
+                 *     Defaults to false. Currently consumed by the package-builds
+                 *     listing; harmless on endpoints that don't have a soft-delete
+                 *     concept (they ignore it).
+                 */
+                include_deleted?: boolean | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2447,7 +2508,7 @@ export interface operations {
         };
         responses: {
             /** @description Create package */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2560,15 +2621,6 @@ export interface operations {
             path: {
                 /** @description Package name */
                 name: string;
-                limit: number | null;
-                offset: number | null;
-                /**
-                 * @description When true, soft-deleted records are included in the result.
-                 *     Defaults to false. Currently consumed by the package-builds
-                 *     listing; harmless on endpoints that don't have a soft-delete
-                 *     concept (they ignore it).
-                 */
-                include_deleted: boolean | null;
             };
             cookie?: never;
         };
@@ -3251,7 +3303,7 @@ export interface operations {
         };
         responses: {
             /** @description Initialize daemon and first admin */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3655,6 +3707,8 @@ export interface operations {
             query?: {
                 /** @description Maximum number of entries to return. Defaults to 20, capped at 100. */
                 limit?: number | null;
+                /** @description Number of entries to skip before returning results. Defaults to 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -3745,7 +3799,17 @@ export interface operations {
     };
     list_users: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: number | null;
+                offset?: number | null;
+                /**
+                 * @description When true, soft-deleted records are included in the result.
+                 *     Defaults to false. Currently consumed by the package-builds
+                 *     listing; harmless on endpoints that don't have a soft-delete
+                 *     concept (they ignore it).
+                 */
+                include_deleted?: boolean | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3785,7 +3849,7 @@ export interface operations {
         };
         responses: {
             /** @description Create user */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3921,14 +3985,12 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Delete user */
-            200: {
+            /** @description User deleted */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["UserResponse"];
-                };
+                content?: never;
             };
             400: {
                 headers: {
@@ -3947,6 +4009,14 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

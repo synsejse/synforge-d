@@ -55,7 +55,9 @@ export function browseRepository(
 }
 
 export function listMockChroots(): Promise<MockChrootListResponse> {
-  return request("GET", "/api/v1/mock/chroots");
+  // Chroots feed selectors, not paginated UI; request the server max so
+  // nothing is truncated.
+  return request("GET", "/api/v1/mock/chroots?limit=200&offset=0");
 }
 
 export function updatePackage(

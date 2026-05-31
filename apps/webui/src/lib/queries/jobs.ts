@@ -37,13 +37,13 @@ export const jobsQueries = {
   detail: (id: string) =>
     queryOptions({
       queryKey: ["jobs", "detail", id] as const,
-      queryFn: async () => {
-        const [job, artifacts] = await Promise.all([
-          api.getJob(id),
-          api.listJobArtifacts(id),
-        ]);
-        return { job, artifacts: artifacts.artifacts };
-      },
+      queryFn: () => api.getJob(id),
+    }),
+  artifacts: (id: string, params: { limit: number; offset: number }) =>
+    queryOptions({
+      queryKey: ["jobs", "artifacts", id, params] as const,
+      queryFn: () => api.listJobArtifacts(id, params.limit, params.offset),
+      placeholderData: (previous) => previous,
     }),
   usageList: () =>
     queryOptions({

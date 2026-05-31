@@ -65,7 +65,8 @@ impl JobLifecycle {
         error_message: &str,
     ) -> anyhow::Result<()> {
         error!(error = error_message, "build launch failed");
-        self.store
+        let finalized = self
+            .store
             .finish_job(
                 build.job_id,
                 BuildStatus::Failed,
@@ -76,6 +77,13 @@ impl JobLifecycle {
             )
             .await
             .context("failed to persist failed build result")?;
+        if !finalized {
+            info!(
+                job_id = %build.job_id,
+                "job already finalized by another writer; skipping backoff update"
+            );
+            return Ok(());
+        }
         self.store
             .update_build_failure_backoff(
                 build.job_id,
@@ -169,7 +177,8 @@ impl JobLifecycle {
             }
         }
 
-        self.store
+        let finalized = self
+            .store
             .finish_job(
                 build.job_id,
                 status,
@@ -179,6 +188,18 @@ impl JobLifecycle {
                 &artifact_signatures,
             )
             .await?;
+        if !finalized {
+            // A racing finisher (e.g. a user-requested kill) already
+            // transitioned this job out of an active state. Don't clobber
+            // its recorded outcome or backoff bookkeeping.
+            info!(
+                job_id = %build.job_id,
+                package_name = %build.package.name,
+                mock_chroot = %build.mock_chroot,
+                "job already finalized by another writer; skipping finalize"
+            );
+            return Ok(());
+        }
         self.store
             .update_build_failure_backoff(
                 build.job_id,

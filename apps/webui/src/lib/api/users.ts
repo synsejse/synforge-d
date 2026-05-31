@@ -8,8 +8,15 @@ import type {
 } from "../types";
 import { request } from "./client";
 
-export function listUsers(): Promise<UserListResponse> {
-  return request("GET", "/api/v1/users");
+export function listUsers(
+  limit = 50,
+  offset = 0,
+): Promise<UserListResponse> {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+  return request("GET", `/api/v1/users?${params.toString()}`);
 }
 
 export function createUser(req: CreateUserPayload): Promise<UserResponse> {
@@ -34,8 +41,8 @@ export function changeUserPassword(
   );
 }
 
-export function deleteUser(id: string): Promise<UserResponse> {
-  return request("DELETE", `/api/v1/users/${encodeURIComponent(id)}`);
+export function deleteUser(id: string): Promise<void> {
+  return request<void>("DELETE", `/api/v1/users/${encodeURIComponent(id)}`);
 }
 
 export function getUserMetrics(id: string): Promise<UserMetricsResponse> {

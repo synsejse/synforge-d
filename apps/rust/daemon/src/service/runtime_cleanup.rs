@@ -7,6 +7,7 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 use super::SynforgeService;
+use super::loop_backoff::LoopBackoff;
 use synforge_database::{JobStore, PackageStore};
 
 const JOB_RUNTIME_CLEANUP_TICK_SECONDS: u64 = 120;
@@ -22,22 +23,37 @@ impl SynforgeService {
             "starting runtime cleanup worker"
         );
         self.task_tracker.spawn(async move {
-            let mut ticker = tokio::time::interval(std::time::Duration::from_secs(
-                JOB_RUNTIME_CLEANUP_TICK_SECONDS,
-            ));
+            let tick = std::time::Duration::from_secs(JOB_RUNTIME_CLEANUP_TICK_SECONDS);
+            let mut ticker = tokio::time::interval(tick);
             // Skip the immediate first tick to avoid running cleanup during startup.
             ticker.tick().await;
+            let mut backoff = LoopBackoff::new(tick);
             loop {
                 tokio::select! {
                     _ = shutdown_rx.changed() => {
                         break;
                     }
                     _ = ticker.tick() => {
+                        let mut iteration_failed = false;
                         if let Err(error) = service.cleanup_orphan_job_runtime_dirs().await {
                             warn!(error = %error, "runtime cleanup worker iteration failed");
+                            iteration_failed = true;
                         }
                         if let Err(error) = service.cleanup_orphan_cache_dirs().await {
                             warn!(error = %error, "cache cleanup worker iteration failed");
+                            iteration_failed = true;
+                        }
+                        if iteration_failed {
+                            // Back off on a persistent FS/DB outage so the
+                            // loop doesn't spin on the fixed tick and flood
+                            // logs; reset to the normal cadence on success.
+                            let delay = backoff.next_delay();
+                            tokio::select! {
+                                _ = shutdown_rx.changed() => break,
+                                _ = tokio::time::sleep(delay) => {}
+                            }
+                        } else {
+                            backoff.reset();
                         }
                     }
                 }

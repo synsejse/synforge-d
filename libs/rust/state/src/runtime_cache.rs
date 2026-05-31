@@ -4,11 +4,7 @@ use base64::Engine;
 use rand_core::{OsRng, RngCore};
 use redis::{AsyncCommands, aio::ConnectionManager};
 use serde::{Deserialize, Serialize};
-use synforge_core::{
-    api::{JobResourceUsageSample, MockChrootListResponse},
-    config::DaemonConfig,
-    model::now_utc,
-};
+use synforge_core::{api::JobResourceUsageSample, config::DaemonConfig, model::now_utc};
 use uuid::Uuid;
 
 pub const UI_SESSION_TTL_SECONDS: u64 = 60 * 60 * 24 * 7;
@@ -17,7 +13,7 @@ pub const UI_SESSION_TTL_SECONDS: u64 = 60 * 60 * 24 * 7;
 pub struct CachedMockChrootEntry {
     pub worker_image: String,
     pub fetched_at_unix_seconds: i64,
-    pub response: MockChrootListResponse,
+    pub chroots: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

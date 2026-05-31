@@ -24,6 +24,7 @@ import Tooltip from "../ui/tooltip";
 import { cn } from "../../lib/utils";
 import api from "../../lib/api";
 import { dashboardQueries } from "../../lib/queries";
+import BrandMark from "./brand-mark";
 import { useSession } from "./session-provider";
 import { usePageVisible } from "./page-visibility-provider";
 import { KeyboardShortcutsProvider } from "./keyboard-shortcuts";
@@ -251,9 +252,9 @@ function SidebarHeader({
       >
         <div
           aria-hidden="true"
-          className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-accent-lime bg-black font-mono text-base font-extrabold uppercase tracking-tighter text-accent-lime shadow-brutal-sm"
+          className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-accent-lime bg-black shadow-brutal-sm"
         >
-          S
+          <BrandMark className="h-6 w-6" />
         </div>
 
         <div

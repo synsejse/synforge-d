@@ -49,7 +49,7 @@ pub(super) async fn get_job_log_manifest(
         ("source" = String, Path, description = "Log source path"),
         ("cursor" = Option<u64>, Query, description = "Current byte cursor"),
         ("offset" = Option<i64>, Query, description = "Relative byte offset from the cursor"),
-        ("limit" = Option<usize>, Query, description = "Maximum bytes to read")
+        ("limit" = Option<usize>, Query, description = "Maximum bytes to read (default 65536; clamped server-side to 1024..=524288)")
     ),
     security(("session_auth" = [])),
     responses(

@@ -71,15 +71,28 @@ export function getJob(id: string): Promise<BuildJobResponse> {
 }
 
 export function listJobUsage(): Promise<JobResourceUsageListResponse> {
-  return request("GET", "/api/v1/jobs/usage");
+  // Live usage feed, not paginated UI; request the server max so no
+  // active job's sample is truncated.
+  return request("GET", "/api/v1/jobs/usage?limit=200&offset=0");
 }
 
 export function getJobUsage(id: string): Promise<JobResourceUsageResponse> {
   return request("GET", `/api/v1/jobs/${encodeURIComponent(id)}/usage`);
 }
 
-export function listJobArtifacts(id: string): Promise<JobArtifactListResponse> {
-  return request("GET", `/api/v1/jobs/${encodeURIComponent(id)}/artifacts`);
+export function listJobArtifacts(
+  id: string,
+  limit = 50,
+  offset = 0,
+): Promise<JobArtifactListResponse> {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+  return request(
+    "GET",
+    `/api/v1/jobs/${encodeURIComponent(id)}/artifacts?${params.toString()}`,
+  );
 }
 
 export function getJobArtifactMeta(
@@ -144,8 +157,8 @@ export async function downloadJobLog(id: string, source: string): Promise<void> 
   triggerDownload(blob, source);
 }
 
-export function deleteJob(id: string): Promise<BuildJobResponse> {
-  return request("DELETE", `/api/v1/jobs/${encodeURIComponent(id)}`);
+export function deleteJob(id: string): Promise<void> {
+  return request<void>("DELETE", `/api/v1/jobs/${encodeURIComponent(id)}`);
 }
 
 export function killJob(id: string): Promise<BuildJobResponse> {

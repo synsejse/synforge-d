@@ -9,6 +9,7 @@ import type {
   ServerHardwareResponse,
 } from "../../../lib/types";
 import ErrorMessage from "../../../components/common/error-message";
+import PaginationControls from "../../../components/common/pagination-controls";
 import { useDialogs } from "../../../components/common/dialogs-provider";
 import { useToast } from "../../../components/common/toast-provider";
 import { useServerHardware } from "../../../components/common/server-hardware-provider";
@@ -33,6 +34,7 @@ interface Props {
 
 const POLL_INTERVAL_MS = 2000;
 const USAGE_POLL_INTERVAL_MS = 1000;
+const ARTIFACTS_PAGE_SIZE = 50;
 const TabbedLogViewer = lazy(() => import("./tabbed-log-viewer"));
 
 function isLiveStatus(status: string | undefined): boolean {
@@ -49,10 +51,10 @@ export default function JobDetail({ jobId }: Props) {
   const jobQuery = useQuery({
     ...jobsQueries.detail(jobId),
     refetchInterval: (query) =>
-      isLiveStatus(query.state.data?.job.job.status) ? POLL_INTERVAL_MS : false,
+      isLiveStatus(query.state.data?.job.status) ? POLL_INTERVAL_MS : false,
   });
 
-  const isLive = isLiveStatus(jobQuery.data?.job.job.status);
+  const isLive = isLiveStatus(jobQuery.data?.job.status);
 
   const usageQuery = useQuery({
     ...jobsQueries.usage(jobId),
@@ -62,6 +64,21 @@ export default function JobDetail({ jobId }: Props) {
   const latestUsage = usageQuery.data?.sample ?? null;
 
   const [activeTab, setActiveTab] = useState<"logs" | "artifacts">("logs");
+  const [artifactOffset, setArtifactOffset] = useState(0);
+
+  const isDeleted = jobQuery.data?.job.deleted_at != null;
+
+  const artifactsQuery = useQuery({
+    ...jobsQueries.artifacts(jobId, {
+      limit: ARTIFACTS_PAGE_SIZE,
+      offset: artifactOffset,
+    }),
+    enabled: !isDeleted,
+    refetchInterval: isLive ? POLL_INTERVAL_MS : false,
+  });
+  const artifacts = artifactsQuery.data?.artifacts ?? [];
+  const artifactCount =
+    artifactsQuery.data?.page.total ?? artifacts.length;
 
   const invalidateJob = () =>
     queryClient.invalidateQueries({ queryKey: ["jobs"] });
@@ -115,7 +132,7 @@ export default function JobDetail({ jobId }: Props) {
     if (!jobQuery.data) return;
     const ok = await confirm({
       title: "Retry build?",
-      message: `Queue a fresh build for ${jobQuery.data.job.job.package_name}.`,
+      message: `Queue a fresh build for ${jobQuery.data.job.package_name}.`,
       confirmLabel: "Retry",
     });
     if (!ok) return;
@@ -158,13 +175,11 @@ export default function JobDetail({ jobId }: Props) {
   }
 
   const canRetry =
-    jobQuery.data.job.job.status === "succeeded" ||
-    jobQuery.data.job.job.status === "failed" ||
-    jobQuery.data.job.job.status === "timed_out";
+    jobQuery.data.job.status === "succeeded" ||
+    jobQuery.data.job.status === "failed" ||
+    jobQuery.data.job.status === "timed_out";
 
-  const job = jobQuery.data.job.job;
-  const isDeleted = job.deleted_at != null;
-  const artifactCount = jobQuery.data.artifacts.length;
+  const job = jobQuery.data.job;
   const duration = formatJobDuration(job);
 
   return (
@@ -346,13 +361,35 @@ export default function JobDetail({ jobId }: Props) {
           ) : null}
           {activeTab === "artifacts" ? (
             <div className="space-y-3">
-              {jobQuery.data.artifacts.map((artifact) => (
+              {artifacts.map((artifact) => (
                 <ArtifactCard
                   key={`${artifact.id}:${artifact.file}`}
                   jobId={jobId}
                   artifact={artifact}
                 />
               ))}
+              {artifactsQuery.data && artifacts.length > 0 ? (
+                <div className="border-2 border-white bg-black p-4">
+                  <PaginationControls
+                    onPrevious={() =>
+                      setArtifactOffset(
+                        Math.max(0, artifactOffset - ARTIFACTS_PAGE_SIZE),
+                      )
+                    }
+                    onNext={() =>
+                      setArtifactOffset(artifactOffset + ARTIFACTS_PAGE_SIZE)
+                    }
+                    previousDisabled={
+                      artifactsQuery.isFetching || artifactOffset === 0
+                    }
+                    nextDisabled={
+                      artifactsQuery.isFetching ||
+                      !artifactsQuery.data.page.has_more
+                    }
+                    summary={`Offset: ${artifactOffset}`}
+                  />
+                </div>
+              ) : null}
             </div>
           ) : null}
         </Tabs>

@@ -12,12 +12,14 @@ pub struct LogChunkResponse {
     pub complete: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, IntoParams)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, IntoParams, ToSchema)]
 pub struct LogChunkQuery {
     #[serde(default)]
     pub cursor: Option<u64>,
     #[serde(default)]
     pub offset: Option<i64>,
+    /// Maximum bytes to read in this chunk. Defaults to 65536 (64 KiB) and is
+    /// clamped server-side to the range 1024..=524288 (1 KiB..=512 KiB).
     #[serde(default)]
     pub limit: Option<usize>,
 }

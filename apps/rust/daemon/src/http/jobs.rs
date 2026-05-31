@@ -2,11 +2,12 @@ use super::{AppError, AppState};
 use axum::Json;
 use axum::Router;
 use axum::extract::{Path, Query, State};
+use axum::http::StatusCode;
 use axum::routing::{get, post};
 use synforge_core::api::{
     BuildJobListResponse, BuildJobResponse, JobListQuery, JobListScope,
-    JobResourceUsageListResponse, JobResourceUsageResponse, PruneJobsResponse, TimeSeriesQuery,
-    TimeSeriesResponse,
+    JobResourceUsageListResponse, JobResourceUsageResponse, PaginationQuery, PruneJobsResponse,
+    TimeSeriesQuery, TimeSeriesResponse,
 };
 use uuid::Uuid;
 
@@ -124,6 +125,7 @@ pub(super) async fn get_job(
     get,
     path = "/api/v1/jobs/usage",
     tag = "Jobs",
+    params(PaginationQuery),
     security(("session_auth" = [])),
     responses(
         (status = 200, description = "List live usage for active jobs", body = JobResourceUsageListResponse),
@@ -132,8 +134,14 @@ pub(super) async fn get_job(
 )]
 pub(super) async fn list_job_usage(
     State(state): State<AppState>,
+    Query(query): Query<PaginationQuery>,
 ) -> Result<Json<JobResourceUsageListResponse>, AppError> {
-    Ok(Json(state.service.list_job_resource_usage().await?))
+    Ok(Json(
+        state
+            .service
+            .list_job_resource_usage(query.limit, query.offset)
+            .await?,
+    ))
 }
 
 #[utoipa::path(
@@ -210,7 +218,7 @@ pub(super) async fn retry_job(
     ),
     security(("session_auth" = [])),
     responses(
-        (status = 200, description = "Delete job", body = BuildJobResponse),
+        (status = 204, description = "Job deleted"),
         (status = 401, body = synforge_core::api::ApiError),
         (status = 404, body = synforge_core::api::ApiError)
     )
@@ -218,8 +226,9 @@ pub(super) async fn retry_job(
 pub(super) async fn delete_job(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
-) -> Result<Json<BuildJobResponse>, AppError> {
-    Ok(Json(state.service.delete_job(id).await?))
+) -> Result<StatusCode, AppError> {
+    state.service.delete_job(id).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[utoipa::path(

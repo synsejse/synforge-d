@@ -191,7 +191,11 @@ impl SynforgeService {
         self.worker_launcher
             .kill_job(job_id, job.job.worker_container_id.clone(), reason)
             .await?;
-        self.store
+        // Compare-and-set finish: if the in-flight run_job finalizer wins
+        // the race this is a no-op (returns false), so we don't double-write
+        // the row or its backoff state.
+        let _finalized = self
+            .store
             .finish_job(job_id, BuildStatus::Failed, Some(reason), &[], &[], &[])
             .await?;
         self.store
@@ -206,11 +210,22 @@ impl SynforgeService {
             .await
     }
 
-    pub async fn get_job_artifacts(&self, job_id: Uuid) -> anyhow::Result<JobArtifactListResponse> {
-        let job = self.get_job(job_id).await?;
+    pub async fn get_job_artifacts(
+        &self,
+        job_id: Uuid,
+        limit: Option<usize>,
+        offset: Option<usize>,
+    ) -> anyhow::Result<JobArtifactListResponse> {
+        // Ensure the job exists so a missing job maps to 404 rather than an
+        // empty page.
+        self.get_job(job_id).await?;
+        let (limit, offset) = normalize_pagination(limit, offset);
+        let total = self.store.count_job_artifacts(job_id).await?;
+        let artifacts = self.store.list_job_artifacts(job_id, limit, offset).await?;
         Ok(JobArtifactListResponse {
+            page: build_page_info(limit, offset, total, artifacts.len()),
             job_id,
-            artifacts: job.artifacts,
+            artifacts,
         })
     }
 
@@ -260,26 +275,24 @@ impl SynforgeService {
         &self,
         range: Option<String>,
     ) -> anyhow::Result<TimeSeriesResponse> {
-        let (_unit, bucket_seconds, window_seconds, label) =
-            resolve_time_range(range.as_deref());
+        let (_unit, bucket_seconds, window_seconds, label) = resolve_time_range(range.as_deref());
         let now = OffsetDateTime::now_utc();
-        let cutoff =
-            snap_to_bucket(now - time::Duration::seconds(window_seconds), bucket_seconds);
+        let cutoff = snap_to_bucket(
+            now - time::Duration::seconds(window_seconds),
+            bucket_seconds,
+        );
         let events = self.store.list_recent_build_status_events(cutoff).await?;
 
         // Jobs have richer status enum than sync; "failed" and "timed_out"
         // both count toward the failure tally.
-        let points = bucket_succeeded_failed_events(
-            cutoff,
-            now,
-            bucket_seconds,
-            events,
-            |status| match status {
-                "succeeded" => Some(SeriesBucket::Succeeded),
-                "failed" | "timed_out" => Some(SeriesBucket::Failed),
-                _ => None,
-            },
-        );
+        let points =
+            bucket_succeeded_failed_events(cutoff, now, bucket_seconds, events, |status| {
+                match status {
+                    "succeeded" => Some(SeriesBucket::Succeeded),
+                    "failed" | "timed_out" => Some(SeriesBucket::Failed),
+                    _ => None,
+                }
+            });
 
         Ok(TimeSeriesResponse {
             range: label.to_string(),

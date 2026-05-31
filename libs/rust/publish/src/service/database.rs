@@ -26,15 +26,8 @@ impl RepoInventoryReader for DieselStore {
         mock_chroot: Option<String>,
         kind: Option<ArtifactKind>,
     ) -> anyhow::Result<Vec<PublishedRepoFile>> {
-        RepoStore::list_published_repo_files(
-            self,
-            limit,
-            offset,
-            package_name,
-            mock_chroot,
-            kind,
-        )
-        .await
+        RepoStore::list_published_repo_files(self, limit, offset, package_name, mock_chroot, kind)
+            .await
     }
 }
 

@@ -55,11 +55,9 @@ pub(in crate::db) async fn soft_delete_job(
             )
             .execute(conn)
             .await?;
-            diesel::delete(
-                build_artifacts::table.filter(build_artifacts::job_id.eq(job_id)),
-            )
-            .execute(conn)
-            .await?;
+            diesel::delete(build_artifacts::table.filter(build_artifacts::job_id.eq(job_id)))
+                .execute(conn)
+                .await?;
             diesel::delete(build_logs::table.filter(build_logs::job_id.eq(job_id)))
                 .execute(conn)
                 .await?;

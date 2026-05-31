@@ -1,11 +1,11 @@
 use super::{AppError, AppState};
 use axum::Json;
 use axum::Router;
-use axum::extract::{Extension, Path, State};
+use axum::extract::{Extension, Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use synforge_core::api::{
-    ChangePasswordRequest, CreateUserRequest, UpdateUserRequest, UserListResponse,
+    ChangePasswordRequest, CreateUserRequest, PaginationQuery, UpdateUserRequest, UserListResponse,
     UserMetricsResponse, UserResponse,
 };
 use synforge_core::model::UserAccount;
@@ -28,6 +28,7 @@ pub fn router() -> Router<AppState> {
     get,
     path = "/api/v1/users",
     tag = "Users",
+    params(PaginationQuery),
     security(("session_auth" = [])),
     responses(
         (status = 200, description = "List users", body = UserListResponse),
@@ -36,8 +37,11 @@ pub fn router() -> Router<AppState> {
 )]
 pub(super) async fn list_users(
     State(state): State<AppState>,
+    Query(query): Query<PaginationQuery>,
 ) -> Result<Json<UserListResponse>, AppError> {
-    Ok(Json(state.service.list_users().await?))
+    Ok(Json(
+        state.service.list_users(query.limit, query.offset).await?,
+    ))
 }
 
 #[utoipa::path(
@@ -47,7 +51,7 @@ pub(super) async fn list_users(
     request_body = CreateUserRequest,
     security(("session_auth" = [])),
     responses(
-        (status = 200, description = "Create user", body = UserResponse),
+        (status = 201, description = "Create user", body = UserResponse),
         (status = 400, body = synforge_core::api::ApiError),
         (status = 401, body = synforge_core::api::ApiError),
         (status = 409, body = synforge_core::api::ApiError)
@@ -56,8 +60,9 @@ pub(super) async fn list_users(
 pub(super) async fn create_user(
     State(state): State<AppState>,
     Json(request): Json<CreateUserRequest>,
-) -> Result<Json<UserResponse>, AppError> {
-    Ok(Json(state.service.create_user(request).await?))
+) -> Result<(StatusCode, Json<UserResponse>), AppError> {
+    let response = state.service.create_user(request).await?;
+    Ok((StatusCode::CREATED, Json(response)))
 }
 
 #[utoipa::path(
@@ -118,23 +123,27 @@ pub(super) async fn change_user_password(
     ),
     security(("session_auth" = [])),
     responses(
-        (status = 200, description = "Delete user", body = UserResponse),
+        (status = 204, description = "User deleted"),
         (status = 400, body = synforge_core::api::ApiError),
         (status = 401, body = synforge_core::api::ApiError),
-        (status = 404, body = synforge_core::api::ApiError)
+        (status = 404, body = synforge_core::api::ApiError),
+        (status = 409, body = synforge_core::api::ApiError)
     )
 )]
 pub(super) async fn delete_user(
     Extension(current_user): Extension<UserAccount>,
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
-) -> Result<Json<UserResponse>, AppError> {
+) -> Result<StatusCode, AppError> {
     if current_user.id == id {
         return Err(AppError::from(anyhow::anyhow!(
-            "cannot delete the currently authenticated user"
+            synforge_core::error::SynforgeError::Conflict(
+                "cannot delete the currently authenticated user".to_string()
+            )
         )));
     }
-    Ok(Json(state.service.delete_user(id).await?))
+    state.service.delete_user(id).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[utoipa::path(

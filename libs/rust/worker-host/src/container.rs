@@ -1,8 +1,18 @@
 use bollard::Docker;
 use bollard::models::{ContainerCreateBody, HostConfig};
 use synforge_core::{config::DaemonConfig, constants::DEFAULT_DAEMON_WORKER_SOCKET_PORT};
+use uuid::Uuid;
 
 use crate::resources::WorkerResourceLimits;
+
+/// Deterministic name prefix for per-job worker containers. The full name is
+/// `{prefix}{job_id}` (see [`worker_container_name`]). Used both to create
+/// containers and to enumerate/reap orphans left behind by a daemon crash.
+pub(crate) const WORKER_CONTAINER_NAME_PREFIX: &str = "synforge-worker-";
+
+pub(crate) fn worker_container_name(job_id: Uuid) -> String {
+    format!("{WORKER_CONTAINER_NAME_PREFIX}{job_id}")
+}
 
 pub(super) fn worker_container_body(
     config: &DaemonConfig,

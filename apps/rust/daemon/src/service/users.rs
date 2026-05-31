@@ -1,7 +1,7 @@
 use synforge_core::{
     api::{
         ChangePasswordRequest, CreateUserRequest, SessionResponse, UpdateUserRequest,
-        UserListResponse, UserMetricsResponse, UserResponse,
+        UserListResponse, UserMetricsResponse, UserResponse, normalize_pagination,
     },
     error::SynforgeError,
     model::{UserAccount, UserPermission},
@@ -63,8 +63,13 @@ impl SynforgeService {
         SessionResponse { user }
     }
 
-    pub async fn list_users(&self) -> anyhow::Result<UserListResponse> {
-        self.account_service().list_users().await
+    pub async fn list_users(
+        &self,
+        limit: Option<usize>,
+        offset: Option<usize>,
+    ) -> anyhow::Result<UserListResponse> {
+        let (limit, offset) = normalize_pagination(limit, offset);
+        self.account_service().list_users(limit, offset).await
     }
 
     pub async fn create_user(&self, request: CreateUserRequest) -> anyhow::Result<UserResponse> {

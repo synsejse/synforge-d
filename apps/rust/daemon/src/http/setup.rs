@@ -2,6 +2,7 @@ use super::{AppError, AppState};
 use axum::Json;
 use axum::Router;
 use axum::extract::State;
+use axum::http::StatusCode;
 use axum::routing::{get, post};
 use synforge_core::api::{EffectiveConfigDto, SetupInitializeRequest, SetupStatusResponse};
 
@@ -37,7 +38,7 @@ pub(super) async fn get_setup_status(
     tag = "Setup",
     request_body = SetupInitializeRequest,
     responses(
-        (status = 200, description = "Initialize daemon and first admin", body = EffectiveConfigDto),
+        (status = 201, description = "Initialize daemon and first admin", body = EffectiveConfigDto),
         (status = 400, body = synforge_core::api::ApiError),
         (status = 409, body = synforge_core::api::ApiError)
     )
@@ -45,6 +46,7 @@ pub(super) async fn get_setup_status(
 pub(super) async fn initialize_setup(
     State(state): State<AppState>,
     Json(request): Json<SetupInitializeRequest>,
-) -> Result<Json<EffectiveConfigDto>, AppError> {
-    Ok(Json(state.service.initialize_setup(request).await?))
+) -> Result<(StatusCode, Json<EffectiveConfigDto>), AppError> {
+    let response = state.service.initialize_setup(request).await?;
+    Ok((StatusCode::CREATED, Json(response)))
 }

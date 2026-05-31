@@ -52,7 +52,7 @@ function Dashboard() {
   const building = liveJobs.filter((j) => j.job.status === "running").length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title="Dashboard"
         description="High-signal snapshot of package state, active builds, and execution history."

@@ -91,7 +91,10 @@ pub(crate) async fn package_responses_from_records(
     let now = now_utc();
     let mut responses = Vec::with_capacity(records.len());
     for record in records {
-        let chroots = aggregate.chroots_by_pkg.remove(&record.name).unwrap_or_default();
+        let chroots = aggregate
+            .chroots_by_pkg
+            .remove(&record.name)
+            .unwrap_or_default();
         let targets = chroots
             .iter()
             .map(|chroot| build_target_runtime_state(&record.name, chroot, &aggregate, now))
@@ -202,7 +205,11 @@ async fn load_package_runtime_aggregate(
             build_jobs::finished_at.desc(),
         ))
         .distinct_on(build_jobs::package_name)
-        .select((build_jobs::package_name, build_jobs::id, build_jobs::revision))
+        .select((
+            build_jobs::package_name,
+            build_jobs::id,
+            build_jobs::revision,
+        ))
         .load(conn)
         .await?;
     let pkg_success = pkg_success_rows
@@ -293,7 +300,5 @@ fn build_package_definition(record: PackageRecord, mock_chroots: Vec<String>) ->
 }
 
 fn positive_u64(value: Option<i64>) -> Option<u64> {
-    value
-        .and_then(|v| u64::try_from(v).ok())
-        .filter(|v| *v > 0)
+    value.and_then(|v| u64::try_from(v).ok()).filter(|v| *v > 0)
 }

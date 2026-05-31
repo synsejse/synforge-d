@@ -60,7 +60,7 @@ function Settings() {
 
   if (configQuery.isPending || schemaQuery.isPending) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-6">
         <PageHeader
           title="Configuration"
           description="Runtime settings and effective daemon values."
@@ -84,7 +84,7 @@ function Settings() {
   const groupedFields = groupConfigFields(schemaQuery.data.fields);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title="Configuration"
         description="Runtime settings and effective daemon values."

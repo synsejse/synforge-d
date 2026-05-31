@@ -40,7 +40,5 @@ pub trait SyncStore: Send + Sync {
     /// Returns the most recent sync attempt timestamp per package, regardless
     /// of outcome. Used by the sync-schedule endpoint to compute when each
     /// target becomes eligible to poll again.
-    async fn last_sync_at_per_package(
-        &self,
-    ) -> anyhow::Result<Vec<(String, OffsetDateTime)>>;
+    async fn last_sync_at_per_package(&self) -> anyhow::Result<Vec<(String, OffsetDateTime)>>;
 }

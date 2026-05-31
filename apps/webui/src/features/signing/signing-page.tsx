@@ -202,7 +202,7 @@ function Signing() {
 
   if (statusQuery.isPending) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-6">
         <PageHeader
           title="GPG Signing"
           description="Generate or import a private key, then toggle repository signing."
@@ -242,7 +242,7 @@ function Signing() {
     : "Preparing artifact reconciliation…";
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title="GPG Signing"
         description="Generate or import a private key, then toggle repository signing."

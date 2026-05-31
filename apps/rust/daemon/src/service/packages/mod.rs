@@ -42,13 +42,23 @@ impl SynforgeService {
             .await
     }
 
-    pub async fn list_mock_chroots(&self) -> anyhow::Result<MockChrootListResponse> {
-        MockChrootService::new(self.runtime_cache.clone(), self.mock_chroot_cache.clone())
-            .list_mock_chroots(
-                &self.config.worker_image,
-                self.config.mock_chroot_cache_ttl_seconds,
-            )
-            .await
+    pub async fn list_mock_chroots(
+        &self,
+        limit: Option<usize>,
+        offset: Option<usize>,
+    ) -> anyhow::Result<MockChrootListResponse> {
+        let full =
+            MockChrootService::new(self.runtime_cache.clone(), self.mock_chroot_cache.clone())
+                .list_mock_chroots(
+                    &self.config.worker_image,
+                    self.config.mock_chroot_cache_ttl_seconds,
+                )
+                .await?;
+        let total = full.len();
+        let (limit, offset) = normalize_pagination(limit, offset);
+        let chroots: Vec<String> = full.into_iter().skip(offset).take(limit).collect();
+        let page = build_page_info(limit, offset, total as u64, chroots.len());
+        Ok(MockChrootListResponse { chroots, page })
     }
 
     pub async fn get_refresh_all_packages_progress(
@@ -115,12 +125,8 @@ impl SynforgeService {
         // dir would linger until the periodic orphan sweep runs.
         // (mock-cache stays — it's used regardless of the ccache flag.)
         if !response.package.ccache_enabled {
-            remove_package_cache_subtree(
-                &self.config.worker_ccache_root(),
-                package_name,
-                "ccache",
-            )
-            .await;
+            remove_package_cache_subtree(&self.config.worker_ccache_root(), package_name, "ccache")
+                .await;
         }
         Ok(response)
     }

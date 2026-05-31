@@ -51,7 +51,7 @@ export default function MetricCard({
   return (
     <div
       className={cn(
-        "group relative flex min-h-[10rem] flex-col border-4 bg-black p-6 transition-all duration-100 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_rgba(255,255,255,0.15)]",
+        "group relative flex min-h-[10rem] flex-col border-4 bg-black p-6 transition-all duration-100 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-card-md",
         borderColor,
         className
       )}

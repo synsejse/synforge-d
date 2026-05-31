@@ -1,7 +1,8 @@
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import Button from "../../../components/ui/button";
 import FaIcon from "../../../components/ui/fa-icon";
+import ModalFrame, { ModalTitle } from "../../../components/ui/modal-frame";
 
 interface UserModalShellProps {
   title: string;
@@ -10,40 +11,22 @@ interface UserModalShellProps {
 }
 
 export function UserModalShell({ title, children, onClose }: UserModalShellProps) {
-  const titleId = useId();
-  const dialogRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
-      'input, select, textarea, button, [href], [tabindex]:not([tabindex="-1"])',
-    );
-    firstFocusable?.focus();
-  }, []);
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 py-8"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
+    <ModalFrame
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
       }}
+      overlayClassName="flex items-center justify-center px-4 py-8"
+      className="max-w-xl border-4 border-white bg-black p-6 shadow-card-md"
     >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="w-full max-w-xl border-4 border-white bg-black p-6 shadow-[6px_6px_0_rgba(255,255,255,0.25)]"
-      >
-        <div className="mb-5 border-b-2 border-edge pb-4">
-          <h2 id={titleId} className="text-2xl font-bold text-white">
-            {title}
-          </h2>
-        </div>
-        {children}
+      <div className="mb-5 border-b-2 border-edge pb-4">
+        <ModalTitle asChild>
+          <h2 className="text-2xl font-bold text-white">{title}</h2>
+        </ModalTitle>
       </div>
-    </div>
+      {children}
+    </ModalFrame>
   );
 }
 

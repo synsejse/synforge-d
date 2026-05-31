@@ -6,7 +6,7 @@ use rand_core::OsRng;
 use synforge_core::{
     api::{
         ChangePasswordRequest, CreateUserRequest, UpdateUserRequest, UserListResponse,
-        UserMetricsResponse, UserResponse,
+        UserMetricsResponse, UserResponse, build_page_info,
     },
     error::SynforgeError,
     model::{UserAccount, UserPermission},
@@ -77,10 +77,15 @@ impl AccountService {
         Ok(summary.user)
     }
 
-    pub async fn list_users(&self) -> anyhow::Result<UserListResponse> {
-        let users = self
+    pub async fn list_users(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> anyhow::Result<UserListResponse> {
+        let total = self.users.user_count().await?;
+        let users: Vec<UserResponse> = self
             .users
-            .list_users()
+            .list_users_paginated(limit, offset)
             .await?
             .into_iter()
             .map(|summary| UserResponse {
@@ -88,7 +93,8 @@ impl AccountService {
                 metrics: summary.metrics,
             })
             .collect();
-        Ok(UserListResponse { users })
+        let page = build_page_info(limit, offset, total, users.len());
+        Ok(UserListResponse { users, page })
     }
 
     pub async fn create_user(&self, request: CreateUserRequest) -> anyhow::Result<UserResponse> {

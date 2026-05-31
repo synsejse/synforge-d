@@ -1,16 +1,10 @@
-import {
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  type SyntheticEvent,
-} from "react";
+import { useEffect, useMemo, useState, type SyntheticEvent } from "react";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import api from "../../../lib/api";
 import type { CreatePackageRequest, SpecSource } from "../../../lib/types";
 import Button from "../../../components/ui/button";
 import FaIcon from "../../../components/ui/fa-icon";
+import ModalFrame, { ModalTitle } from "../../../components/ui/modal-frame";
 import { useServerHardware } from "../../../components/common/server-hardware-provider";
 import BuildSettingsSection from "./add-package/build-settings-section";
 import ChrootPickerDialog from "./add-package/chroot-picker-dialog";
@@ -61,8 +55,6 @@ export default function AddPackageModal({
   const [showChrootPicker, setShowChrootPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const titleId = useId();
-  const dialogRef = useRef<HTMLDivElement | null>(null);
 
   const selectableFiles = useMemo(
     () => browseFiles.filter((file) => file.endsWith(".spec")),
@@ -112,13 +104,6 @@ export default function AddPackageModal({
     }
 
     loadChroots();
-  }, []);
-
-  useEffect(() => {
-    const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
-      'input, select, textarea, button, [href], [tabindex]:not([tabindex="-1"])',
-    );
-    firstFocusable?.focus();
   }, []);
 
   async function handleBrowse() {
@@ -195,31 +180,24 @@ export default function AddPackageModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden overscroll-none bg-black/70 px-4 py-6"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
+    <ModalFrame
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
       }}
+      overlayClassName="flex items-center justify-center overflow-hidden overscroll-none bg-black/70 px-4 py-6"
+      className="flex max-h-[calc(100dvh-3rem)] max-w-3xl flex-col border-4 border-white bg-black shadow-card-md"
     >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="flex max-h-[calc(100dvh-3rem)] w-full max-w-3xl flex-col border-4 border-white bg-black shadow-[6px_6px_0_rgba(255,255,255,0.25)]"
-      >
-        <div className="border-b-2 border-edge px-6 py-5">
-          <h2 id={titleId} className="text-2xl font-bold text-white">
-            Add package
-          </h2>
-        </div>
+      <div className="border-b-2 border-edge px-6 py-5">
+        <ModalTitle asChild>
+          <h2 className="text-2xl font-bold text-white">Add package</h2>
+        </ModalTitle>
+      </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-6 py-6"
-        >
+      <form
+        onSubmit={handleSubmit}
+        className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-6 py-6"
+      >
           <SourceBasicsSection
             ccacheEnabled={ccacheEnabled}
             ccacheMaxSizeMb={ccacheMaxSizeMb}
@@ -291,11 +269,10 @@ export default function AddPackageModal({
               loading={submitting}
             >
               {submitting ? null : <FaIcon icon={faPlus} />}
-              {submitting ? "Adding…" : "Add Package"}
-            </Button>
-          </div>
-        </form>
-      </div>
+            {submitting ? "Adding…" : "Add Package"}
+          </Button>
+        </div>
+      </form>
 
       {showSpecPicker && (
         <SpecPickerDialog
@@ -321,6 +298,6 @@ export default function AddPackageModal({
           onToggleChroot={toggleChroot}
         />
       )}
-    </div>
+    </ModalFrame>
   );
 }

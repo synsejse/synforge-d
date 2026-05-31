@@ -19,12 +19,12 @@ interface PackageDetailTabsProps {
   buildsLoading: boolean;
   builds: PackageBuildInventoryEntry[];
   buildsOffset: number;
+  buildsPageSize: number;
   buildsHasMore: boolean;
   includeDeleted: boolean;
   deletingJobId: string | null;
   onIncludeDeletedChange: (next: boolean) => void;
-  onLoadPreviousBuilds: () => void;
-  onLoadNextBuilds: () => void;
+  onBuildsOffsetChange: (offset: number) => void;
   onRefreshTarget: (mockChroot: string) => void;
   onRebuildTarget: (mockChroot: string) => void;
   onDeleteJob: (jobId: string) => void;
@@ -34,9 +34,9 @@ interface PackageDetailTabsProps {
   repoFilesLoading: boolean;
   repoFiles: PublishedRepoFile[];
   repoFilesOffset: number;
+  repoFilesPageSize: number;
   repoFilesHasMore: boolean;
-  onLoadPreviousRepoFiles: () => void;
-  onLoadNextRepoFiles: () => void;
+  onRepoFilesOffsetChange: (offset: number) => void;
 }
 
 export default function PackageDetailTabs({
@@ -48,12 +48,12 @@ export default function PackageDetailTabs({
   buildsLoading,
   builds,
   buildsOffset,
+  buildsPageSize,
   buildsHasMore,
   includeDeleted,
   deletingJobId,
   onIncludeDeletedChange,
-  onLoadPreviousBuilds,
-  onLoadNextBuilds,
+  onBuildsOffsetChange,
   onRefreshTarget,
   onRebuildTarget,
   onDeleteJob,
@@ -62,9 +62,9 @@ export default function PackageDetailTabs({
   repoFilesLoading,
   repoFiles,
   repoFilesOffset,
+  repoFilesPageSize,
   repoFilesHasMore,
-  onLoadPreviousRepoFiles,
-  onLoadNextRepoFiles,
+  onRepoFilesOffsetChange,
 }: PackageDetailTabsProps) {
   return (
     <Tabs
@@ -84,11 +84,11 @@ export default function PackageDetailTabs({
           buildsLoading={buildsLoading}
           builds={builds}
           buildsOffset={buildsOffset}
+          buildsPageSize={buildsPageSize}
           buildsHasMore={buildsHasMore}
           includeDeleted={includeDeleted}
           onIncludeDeletedChange={onIncludeDeletedChange}
-          onLoadPrevious={onLoadPreviousBuilds}
-          onLoadNext={onLoadNextBuilds}
+          onOffsetChange={onBuildsOffsetChange}
           onRefreshTarget={onRefreshTarget}
           onRebuildTarget={onRebuildTarget}
           onDeleteJob={onDeleteJob}
@@ -102,9 +102,9 @@ export default function PackageDetailTabs({
           repoFilesLoading={repoFilesLoading}
           repoFiles={repoFiles}
           repoFilesOffset={repoFilesOffset}
+          repoFilesPageSize={repoFilesPageSize}
           repoFilesHasMore={repoFilesHasMore}
-          onLoadPrevious={onLoadPreviousRepoFiles}
-          onLoadNext={onLoadNextRepoFiles}
+          onOffsetChange={onRepoFilesOffsetChange}
         />
       ) : null}
       {activeTab === "sync" ? (

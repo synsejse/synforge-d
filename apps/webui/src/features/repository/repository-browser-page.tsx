@@ -241,21 +241,15 @@ function RepositoryBrowser() {
         )}
 
         {!inventoryLoading && inventory && repoFiles.length > 0 && (
-          <div className="border-2 border-edge-strong bg-black px-4 py-3">
-            <PaginationControls
-              onPrevious={() =>
-                setFilters({ offset: Math.max(0, filters.offset - PAGE_SIZE) })
-              }
-              onNext={() =>
-                setFilters({ offset: filters.offset + PAGE_SIZE })
-              }
-              previousDisabled={inventoryQuery.isFetching || filters.offset === 0}
-              nextDisabled={
-                inventoryQuery.isFetching || !inventory.page.has_more
-              }
-              summary={`Offset: ${filters.offset}`}
-            />
-          </div>
+          <PaginationControls
+            offset={filters.offset}
+            pageSize={PAGE_SIZE}
+            count={repoFiles.length}
+            hasMore={inventory.page.has_more}
+            total={inventory.page.total}
+            isFetching={inventoryQuery.isFetching}
+            onOffsetChange={(o) => setFilters({ offset: o })}
+          />
         )}
       </section>
     </div>

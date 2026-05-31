@@ -10,11 +10,11 @@ interface PackageBuildHistorySectionProps {
   buildsLoading: boolean;
   builds: PackageBuildInventoryEntry[];
   buildsOffset: number;
+  buildsPageSize: number;
   buildsHasMore: boolean;
   includeDeleted: boolean;
   onIncludeDeletedChange: (next: boolean) => void;
-  onLoadPrevious: () => void;
-  onLoadNext: () => void;
+  onOffsetChange: (offset: number) => void;
   onRefreshTarget: (mockChroot: string) => void;
   onRebuildTarget: (mockChroot: string) => void;
   onDeleteJob: (jobId: string) => void;
@@ -27,11 +27,11 @@ export default function PackageBuildHistorySection({
   buildsLoading,
   builds,
   buildsOffset,
+  buildsPageSize,
   buildsHasMore,
   includeDeleted,
   onIncludeDeletedChange,
-  onLoadPrevious,
-  onLoadNext,
+  onOffsetChange,
   onRefreshTarget,
   onRebuildTarget,
   onDeleteJob,
@@ -76,20 +76,15 @@ export default function PackageBuildHistorySection({
         </div>
       )}
       {!loading && builds.length > 0 ? (
-        <div className="border-2 border-edge-strong bg-black px-4 py-3">
-          <PaginationControls
-            onPrevious={onLoadPrevious}
-            onNext={onLoadNext}
-            previousDisabled={buildsLoading || buildsOffset === 0}
-            nextDisabled={buildsLoading || !buildsHasMore}
-            summary={
-              <>
-                Showing {buildsOffset + 1}-{buildsOffset + builds.length}
-                {buildsTotal !== null ? ` of ${buildsTotal}` : ""}
-              </>
-            }
-          />
-        </div>
+        <PaginationControls
+          offset={buildsOffset}
+          pageSize={buildsPageSize}
+          count={builds.length}
+          hasMore={buildsHasMore}
+          total={buildsTotal}
+          isFetching={buildsLoading}
+          onOffsetChange={onOffsetChange}
+        />
       ) : null}
     </div>
   );

@@ -334,6 +334,7 @@ export default function PackageDetail({ packageName }: Props) {
         buildsLoading={buildsQuery.isFetching}
         builds={buildsQuery.data?.builds ?? []}
         buildsOffset={buildsOffset}
+        buildsPageSize={BUILD_HISTORY_PAGE_SIZE}
         buildsHasMore={buildsQuery.data?.page.has_more ?? false}
         includeDeleted={includeDeletedBuilds}
         deletingJobId={
@@ -345,12 +346,7 @@ export default function PackageDetail({ packageName }: Props) {
           setIncludeDeletedBuilds(next);
           setBuildsOffset(0);
         }}
-        onLoadPreviousBuilds={() =>
-          setBuildsOffset(Math.max(0, buildsOffset - BUILD_HISTORY_PAGE_SIZE))
-        }
-        onLoadNextBuilds={() =>
-          setBuildsOffset(buildsOffset + BUILD_HISTORY_PAGE_SIZE)
-        }
+        onBuildsOffsetChange={setBuildsOffset}
         onRefreshTarget={(mockChroot) =>
           triggerTargetMutation.mutate({ mockChroot, action: "refresh" })
         }
@@ -363,13 +359,9 @@ export default function PackageDetail({ packageName }: Props) {
         repoFilesLoading={repoFilesQuery.isFetching}
         repoFiles={repoFilesQuery.data?.repo_files ?? []}
         repoFilesOffset={repoFilesOffset}
+        repoFilesPageSize={REPO_FILES_PAGE_SIZE}
         repoFilesHasMore={repoFilesQuery.data?.page.has_more ?? false}
-        onLoadPreviousRepoFiles={() =>
-          setRepoFilesOffset(Math.max(0, repoFilesOffset - REPO_FILES_PAGE_SIZE))
-        }
-        onLoadNextRepoFiles={() =>
-          setRepoFilesOffset(repoFilesOffset + REPO_FILES_PAGE_SIZE)
-        }
+        onRepoFilesOffsetChange={setRepoFilesOffset}
       />
     </div>
   );

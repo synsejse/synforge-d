@@ -10,9 +10,9 @@ interface PackageRepoFilesSectionProps {
   repoFilesLoading: boolean;
   repoFiles: PublishedRepoFile[];
   repoFilesOffset: number;
+  repoFilesPageSize: number;
   repoFilesHasMore: boolean;
-  onLoadPrevious: () => void;
-  onLoadNext: () => void;
+  onOffsetChange: (offset: number) => void;
 }
 
 export default function PackageRepoFilesSection({
@@ -21,9 +21,9 @@ export default function PackageRepoFilesSection({
   repoFilesLoading,
   repoFiles,
   repoFilesOffset,
+  repoFilesPageSize,
   repoFilesHasMore,
-  onLoadPrevious,
-  onLoadNext,
+  onOffsetChange,
 }: PackageRepoFilesSectionProps) {
   const loading = repoFilesLoading && !repoFilesLoaded;
 
@@ -43,20 +43,15 @@ export default function PackageRepoFilesSection({
         </div>
       )}
       {!loading && repoFiles.length > 0 ? (
-        <div className="border-2 border-edge-strong bg-black px-4 py-3">
-          <PaginationControls
-            onPrevious={onLoadPrevious}
-            onNext={onLoadNext}
-            previousDisabled={repoFilesLoading || repoFilesOffset === 0}
-            nextDisabled={repoFilesLoading || !repoFilesHasMore}
-            summary={
-              <>
-                Showing {repoFilesOffset + 1}-{repoFilesOffset + repoFiles.length}
-                {repoFilesTotal !== null ? ` of ${repoFilesTotal}` : ""}
-              </>
-            }
-          />
-        </div>
+        <PaginationControls
+          offset={repoFilesOffset}
+          pageSize={repoFilesPageSize}
+          count={repoFiles.length}
+          hasMore={repoFilesHasMore}
+          total={repoFilesTotal}
+          isFetching={repoFilesLoading}
+          onOffsetChange={onOffsetChange}
+        />
       ) : null}
     </div>
   );

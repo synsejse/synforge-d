@@ -484,17 +484,15 @@ function PackageList() {
       )}
 
       {!loading && listQuery.data && packages.length > 0 && (
-        <div className="border-2 border-white bg-black p-4">
-          <PaginationControls
-            onPrevious={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
-            onNext={() => setOffset(offset + PAGE_SIZE)}
-            previousDisabled={listQuery.isFetching || offset === 0}
-            nextDisabled={
-              listQuery.isFetching || !listQuery.data.page.has_more
-            }
-            summary={`Offset: ${offset}`}
-          />
-        </div>
+        <PaginationControls
+          offset={offset}
+          pageSize={PAGE_SIZE}
+          count={packages.length}
+          hasMore={listQuery.data.page.has_more}
+          total={listQuery.data.page.total}
+          isFetching={listQuery.isFetching}
+          onOffsetChange={setOffset}
+        />
       )}
 
       {showAddModal && (

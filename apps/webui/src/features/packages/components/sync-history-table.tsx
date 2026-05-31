@@ -83,24 +83,15 @@ export default function SyncHistoryTable({ packageName }: SyncHistoryTableProps)
       )}
 
       {operationsQuery.data && operations.length > 0 ? (
-        <div className="border-2 border-edge-strong bg-black px-4 py-3">
-          <PaginationControls
-            onPrevious={() => setOffset((current) => Math.max(0, current - PAGE_SIZE))}
-            onNext={() => setOffset((current) => current + PAGE_SIZE)}
-            previousDisabled={operationsQuery.isFetching || offset === 0}
-            nextDisabled={
-              operationsQuery.isFetching || !operationsQuery.data.page.has_more
-            }
-            summary={
-              <>
-                Showing {offset + 1}-{offset + operations.length}
-                {operationsQuery.data.page.total !== null
-                  ? ` of ${operationsQuery.data.page.total}`
-                  : ""}
-              </>
-            }
-          />
-        </div>
+        <PaginationControls
+          offset={offset}
+          pageSize={PAGE_SIZE}
+          count={operations.length}
+          hasMore={operationsQuery.data.page.has_more}
+          total={operationsQuery.data.page.total}
+          isFetching={operationsQuery.isFetching}
+          onOffsetChange={setOffset}
+        />
       ) : null}
     </div>
   );

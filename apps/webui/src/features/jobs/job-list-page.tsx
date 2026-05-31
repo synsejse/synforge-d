@@ -373,16 +373,16 @@ function JobList() {
           />
         )}
 
-        {data && (filters.offset > 0 || data.page.has_more) && (
-          <div className="border-t-4 border-edge-strong bg-surface-alt px-6 py-4">
-            <PaginationControls
-              onPrevious={() => setOffset(Math.max(0, filters.offset - PAGE_SIZE))}
-              onNext={() => setOffset(filters.offset + PAGE_SIZE)}
-              previousDisabled={filters.offset === 0}
-              nextDisabled={!data.page.has_more}
-              summary={`Showing ${filters.offset + 1}-${filters.offset + jobs.length}`}
-            />
-          </div>
+        {data && jobs.length > 0 && (
+          <PaginationControls
+            offset={filters.offset}
+            pageSize={PAGE_SIZE}
+            count={jobs.length}
+            hasMore={data.page.has_more}
+            total={data.page.total}
+            isFetching={jobsQuery.isFetching}
+            onOffsetChange={setOffset}
+          />
         )}
       </div>
     </div>

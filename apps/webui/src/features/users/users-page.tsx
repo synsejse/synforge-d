@@ -261,17 +261,15 @@ function Users() {
       )}
 
       {!loading && usersQuery.data && users.length > 0 && (
-        <div className="border-2 border-white bg-black p-4">
-          <PaginationControls
-            onPrevious={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
-            onNext={() => setOffset(offset + PAGE_SIZE)}
-            previousDisabled={usersQuery.isFetching || offset === 0}
-            nextDisabled={
-              usersQuery.isFetching || !usersQuery.data.page.has_more
-            }
-            summary={`Offset: ${offset}`}
-          />
-        </div>
+        <PaginationControls
+          offset={offset}
+          pageSize={PAGE_SIZE}
+          count={users.length}
+          hasMore={usersQuery.data.page.has_more}
+          total={usersQuery.data.page.total}
+          isFetching={usersQuery.isFetching}
+          onOffsetChange={setOffset}
+        />
       )}
 
       <UserModals

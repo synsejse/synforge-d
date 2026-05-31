@@ -369,26 +369,15 @@ export default function JobDetail({ jobId }: Props) {
                 />
               ))}
               {artifactsQuery.data && artifacts.length > 0 ? (
-                <div className="border-2 border-white bg-black p-4">
-                  <PaginationControls
-                    onPrevious={() =>
-                      setArtifactOffset(
-                        Math.max(0, artifactOffset - ARTIFACTS_PAGE_SIZE),
-                      )
-                    }
-                    onNext={() =>
-                      setArtifactOffset(artifactOffset + ARTIFACTS_PAGE_SIZE)
-                    }
-                    previousDisabled={
-                      artifactsQuery.isFetching || artifactOffset === 0
-                    }
-                    nextDisabled={
-                      artifactsQuery.isFetching ||
-                      !artifactsQuery.data.page.has_more
-                    }
-                    summary={`Offset: ${artifactOffset}`}
-                  />
-                </div>
+                <PaginationControls
+                  offset={artifactOffset}
+                  pageSize={ARTIFACTS_PAGE_SIZE}
+                  count={artifacts.length}
+                  hasMore={artifactsQuery.data.page.has_more}
+                  total={artifactsQuery.data.page.total}
+                  isFetching={artifactsQuery.isFetching}
+                  onOffsetChange={setArtifactOffset}
+                />
               ) : null}
             </div>
           ) : null}

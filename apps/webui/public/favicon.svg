@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Synforge">
+  <title>Synforge</title>
+  <desc>A brutalist anvil with a forge ember — the Synforge mark.</desc>
+
+  <!-- Sharp-cornered tile (brutalist, no radius). -->
+  <rect width="64" height="64" fill="#0a0a0a"/>
+
+  <!-- Faint blueprint grid for texture. -->
+  <g stroke="#ffffff" stroke-width="1" opacity="0.05">
+    <line x1="21.3" y1="0" x2="21.3" y2="64"/>
+    <line x1="42.6" y1="0" x2="42.6" y2="64"/>
+    <line x1="0" y1="21.3" x2="64" y2="21.3"/>
+    <line x1="0" y1="42.6" x2="64" y2="42.6"/>
+  </g>
+
+  <!-- Quiet framing edge. -->
+  <rect x="1.5" y="1.5" width="61" height="61" fill="none" stroke="#3f3f46" stroke-width="1.5"/>
+
+  <!-- Signature hard offset shadow (down-right, white), echoing the brutal shadow token.
+       Anvil silhouette: flat top face + horn, narrow waist, flared base. -->
+  <g transform="translate(2.6 2.6)">
+    <path d="M12 19 H46 L58 24 L46 27 H39 V39 L51 41 V47 H13 V41 L25 39 V27 H12 Z"
+          fill="#ffffff" opacity="0.9"/>
+  </g>
+
+  <!-- Anvil in the hero lime accent. -->
+  <path d="M12 19 H46 L58 24 L46 27 H39 V39 L51 41 V47 H13 V41 L25 39 V27 H12 Z"
+        fill="#BFFF00"/>
+
+  <!-- Hardy hole punched through the face (negative space). -->
+  <rect x="34" y="21" width="4" height="3.4" fill="#0a0a0a"/>
+
+  <!-- Hot ember struck off the face. -->
+  <path d="M45 6 L47.3 10 L51 11.5 L47.3 13 L45 17 L42.7 13 L39 11.5 L42.7 10 Z" fill="#FF6B00"/>
+  <!-- Secondary spark, lime. -->
+  <path d="M21 11 L22.4 13 L21 15 L19.6 13 Z" fill="#BFFF00"/>
+</svg>

@@ -105,7 +105,12 @@ pub(super) async fn get_sync_schedule(
     State(state): State<AppState>,
     Query(query): Query<SyncScheduleQuery>,
 ) -> Result<Json<SyncScheduleResponse>, AppError> {
-    Ok(Json(state.service.get_sync_schedule(query.limit).await?))
+    Ok(Json(
+        state
+            .service
+            .get_sync_schedule(query.limit, query.offset)
+            .await?,
+    ))
 }
 
 #[utoipa::path(

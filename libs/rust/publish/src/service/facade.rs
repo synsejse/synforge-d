@@ -57,8 +57,7 @@ impl RepoService {
         &self,
         repo_root: &Path,
         relative_repo_path: &str,
-    ) -> anyhow::Result<PathBuf>
-    {
+    ) -> anyhow::Result<PathBuf> {
         resolve_repo_file_path(repo_root, relative_repo_path).await
     }
 

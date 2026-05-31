@@ -5,7 +5,7 @@ use bollard::Docker;
 use bollard::query_parameters::StatsOptionsBuilder;
 use futures_util::StreamExt;
 use synforge_core::{
-    api::{JobResourceUsageListResponse, JobResourceUsageResponse, JobResourceUsageSample},
+    api::{JobResourceUsageResponse, JobResourceUsageSample},
     model::{format_timestamp, now_utc},
 };
 use synforge_state::RuntimeCache;
@@ -30,10 +30,10 @@ impl JobUsageService {
         }
     }
 
-    pub async fn list_job_resource_usage(&self) -> anyhow::Result<JobResourceUsageListResponse> {
+    pub async fn list_job_resource_usage(&self) -> anyhow::Result<Vec<JobResourceUsageSample>> {
         let mut samples = self.runtime_cache.list_job_usage_samples().await?;
         samples.sort_by_key(|sample| sample.job_id);
-        Ok(JobResourceUsageListResponse { samples })
+        Ok(samples)
     }
 
     pub async fn get_job_resource_usage(

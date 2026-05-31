@@ -10,6 +10,7 @@ use synforge_core::api::{
     get,
     path = "/api/v1/mock/chroots",
     tag = "Packages",
+    params(PaginationQuery),
     security(("session_auth" = [])),
     responses(
         (status = 200, description = "List available mock chroots", body = MockChrootListResponse),
@@ -18,10 +19,18 @@ use synforge_core::api::{
 )]
 pub(crate) async fn list_mock_chroots(
     State(state): State<AppState>,
+    Query(query): Query<PaginationQuery>,
 ) -> Result<Json<MockChrootListResponse>, AppError> {
-    Ok(Json(state.service.list_mock_chroots().await?))
+    Ok(Json(
+        state
+            .service
+            .list_mock_chroots(query.limit, query.offset)
+            .await?,
+    ))
 }
 
+/// Browse a remote repository's files. Modeled as POST (not GET) because it
+/// takes a `repo_url` request body rather than encoding the URL in the path.
 #[utoipa::path(
     post,
     path = "/api/v1/repositories/browse",

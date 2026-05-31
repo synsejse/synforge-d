@@ -5,6 +5,7 @@ mod hardware;
 mod job_usage;
 mod jobs;
 mod logs;
+mod loop_backoff;
 mod packages;
 mod repo;
 mod root;

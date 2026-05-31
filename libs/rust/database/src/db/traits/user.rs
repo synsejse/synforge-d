@@ -8,6 +8,11 @@ use super::super::UserAuthRecord;
 pub trait UserStore: Send + Sync {
     async fn user_count(&self) -> anyhow::Result<u64>;
     async fn list_users(&self) -> anyhow::Result<Vec<UserSummary>>;
+    async fn list_users_paginated(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> anyhow::Result<Vec<UserSummary>>;
     async fn get_user(&self, user_id: Uuid) -> anyhow::Result<Option<UserSummary>>;
     async fn get_user_by_handle(&self, handle: &str) -> anyhow::Result<Option<UserSummary>>;
     async fn get_user_auth_by_handle(&self, handle: &str)

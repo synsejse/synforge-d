@@ -4,106 +4,24 @@ import { useNavigate } from "@tanstack/react-router";
 import api, { ApiClientError } from "../../lib/api";
 import { configQueries } from "../../lib/queries";
 import { sessionQueries } from "../../lib/queries/session";
-import type {
-  ConfigFieldDescriptor,
-  SetupInitializeRequest,
-} from "../../lib/types";
-import Button from "../../components/ui/button";
-
-type Step = "config" | "signing" | "admin";
-type SigningMode = "generate" | "import";
-
-const STEP_LABELS: Record<Step, string> = {
-  config: "Step 1 of 3 · Configuration",
-  signing: "Step 2 of 3 · Signing",
-  admin: "Step 3 of 3 · First account",
-};
-
-const STEP_DESCRIPTIONS: Record<Step, string> = {
-  config: "Configure daemon settings for first run.",
-  signing: "Choose whether to enable managed repository signing.",
-  admin: "Create the first admin account.",
-};
-
-const inputClass =
-  "w-full border-2 border-edge-strong bg-black px-4 py-3 font-mono text-sm text-strong outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime";
-
-const labelTitleClass =
-  "mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted";
-
-interface AdminForm {
-  handle: string;
-  displayName: string;
-  password: string;
-  passwordConfirm: string;
-}
-
-interface SigningState {
-  enabled: boolean;
-  mode: SigningMode;
-  privateKey: string;
-  filename: string;
-}
-
-const EMPTY_ADMIN: AdminForm = {
-  handle: "admin",
-  displayName: "Administrator",
-  password: "",
-  passwordConfirm: "",
-};
-
-const DEFAULT_SIGNING: SigningState = {
-  enabled: true,
-  mode: "generate",
-  privateKey: "",
-  filename: "",
-};
-
-function defaultFieldValue(field: ConfigFieldDescriptor): string {
-  if (field.key === "public_base_url" && typeof window !== "undefined") {
-    return window.location.origin;
-  }
-  return String(field.default_value ?? "");
-}
-
-function groupBySection(fields: ConfigFieldDescriptor[]) {
-  const sections = new Map<string, { label: string; fields: ConfigFieldDescriptor[] }>();
-  for (const field of fields) {
-    if (!sections.has(field.section_key)) {
-      sections.set(field.section_key, { label: field.section_label, fields: [] });
-    }
-    sections.get(field.section_key)!.fields.push(field);
-  }
-  return Array.from(sections.values());
-}
-
-function validateConfig(
-  fields: ConfigFieldDescriptor[],
-  values: Record<string, string>,
-): string | null {
-  for (const field of fields) {
-    const raw = (values[field.key] ?? "").trim();
-    if (field.required && raw.length === 0) {
-      return `${field.label} is required.`;
-    }
-    if (field.type === "number" && raw.length > 0 && Number.isNaN(Number(raw))) {
-      return `${field.label} must be a valid number.`;
-    }
-  }
-  return null;
-}
-
-function buildSettings(
-  fields: ConfigFieldDescriptor[],
-  values: Record<string, string>,
-): SetupInitializeRequest["settings"] {
-  const settings: SetupInitializeRequest["settings"] = {};
-  for (const field of fields) {
-    const raw = values[field.key] ?? String(field.default_value ?? "");
-    settings[field.key] = field.type === "number" ? Number(raw) : raw.trim();
-  }
-  return settings;
-}
+import type { SetupInitializeRequest } from "../../lib/types";
+import AdminStep from "./components/admin-step";
+import ConfigStep from "./components/config-step";
+import SetupNav from "./components/setup-nav";
+import SigningStep from "./components/signing-step";
+import {
+  DEFAULT_SIGNING,
+  EMPTY_ADMIN,
+  STEP_DESCRIPTIONS,
+  STEP_LABELS,
+  buildSettings,
+  defaultFieldValue,
+  groupBySection,
+  validateConfig,
+  type AdminForm,
+  type SigningState,
+  type Step,
+} from "./model";
 
 export default function SetupPage() {
   const navigate = useNavigate();
@@ -250,7 +168,7 @@ export default function SetupPage() {
 
   return (
     <div className="flex min-h-full items-start justify-center px-3 py-3 sm:px-6 sm:py-6 lg:items-center lg:py-12">
-      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden border-4 border-white bg-black shadow-[6px_6px_0_rgba(255,255,255,0.25)] sm:max-h-[calc(100dvh-3rem)] lg:max-h-[calc(100dvh-6rem)] xl:max-w-3xl">
+      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden border-4 border-white bg-black shadow-card-md sm:max-h-[calc(100dvh-3rem)] lg:max-h-[calc(100dvh-6rem)] xl:max-w-3xl">
         <header className="mb-6 shrink-0 border-b-2 border-edge px-4 pb-5 pt-5 sm:mb-8 sm:px-8 sm:pb-6 sm:pt-8">
           <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-accent-lime">
             Synforge
@@ -313,237 +231,13 @@ export default function SetupPage() {
             </p>
           ) : null}
 
-          <div className="mt-4 flex items-center justify-between gap-3">
-            {step !== "config" ? (
-              <Button type="button" variant="ghost" size="md" onClick={goBack}>
-                Back
-              </Button>
-            ) : null}
-            <div className="ml-auto flex items-center gap-3">
-              {step !== "admin" ? (
-                <Button type="button" variant="primary" size="md" onClick={goNext}>
-                  Continue
-                </Button>
-              ) : (
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="md"
-                  loading={initializeMutation.isPending}
-                >
-                  {initializeMutation.isPending
-                    ? "Initializing…"
-                    : "Initialize Synforge"}
-                </Button>
-              )}
-            </div>
-          </div>
+          <SetupNav
+            step={step}
+            submitting={initializeMutation.isPending}
+            onBack={goBack}
+            onNext={goNext}
+          />
         </form>
-      </div>
-    </div>
-  );
-}
-
-function ConfigStep({
-  sections,
-  values,
-  onChange,
-}: {
-  sections: { label: string; fields: ConfigFieldDescriptor[] }[];
-  values: Record<string, string>;
-  onChange: (key: string, value: string) => void;
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-4 xl:grid-cols-2">
-        {sections.map((section) => (
-          <section
-            key={section.label}
-            className="xl:col-span-2 border-2 border-edge-strong bg-black p-5"
-          >
-            <h2 className="text-lg font-bold text-white">
-              {section.label}
-            </h2>
-            <div className="mt-4 grid gap-4 xl:grid-cols-2">
-              {section.fields.map((field) => (
-                <label key={field.key} className="block">
-                  <span className={labelTitleClass}>{field.label}</span>
-                  <input
-                    type={field.type === "number" ? "number" : "text"}
-                    required={field.required}
-                    min={field.min_value !== undefined ? String(field.min_value) : undefined}
-                    value={values[field.key] ?? ""}
-                    onChange={(e) => onChange(field.key, e.target.value)}
-                    className={inputClass}
-                  />
-                  <span className="mt-2 block text-xs text-soft">
-                    {field.description}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function SigningStep({
-  signing,
-  onToggle,
-  onSelectGenerate,
-  onSelectImport,
-  fileInputRef,
-  onFileChange,
-}: {
-  signing: SigningState;
-  onToggle: () => void;
-  onSelectGenerate: () => void;
-  onSelectImport: () => void;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
-  onFileChange: (file: File) => void;
-}) {
-  const keyNote = !signing.enabled
-    ? "Key actions are disabled while signing is disabled."
-    : signing.mode === "import"
-      ? signing.filename
-        ? `Import selected: ${signing.filename}`
-        : "Import mode selected. Choose a private key file."
-      : "Managed key generation is selected.";
-
-  return (
-    <div className="space-y-4">
-      <section className="border-2 border-edge-strong bg-black p-5">
-        <h2 className="text-lg font-bold text-white">Signing</h2>
-        <p className="mt-3 text-sm leading-6 text-muted">
-          Configure repository signing before initialization. You can keep signing
-          disabled, generate a managed key, or import an existing key file.
-        </p>
-
-        <div className="mt-5 space-y-5">
-          <div>
-            <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted">
-              Signing State
-            </p>
-            <Button
-              type="button"
-              variant={signing.enabled ? "primary" : "ghost"}
-              size="md"
-              onClick={onToggle}
-            >
-              {signing.enabled ? "Disable Signing" : "Enable Signing"}
-            </Button>
-            <p className="mt-2 font-mono text-xs text-soft">
-              {signing.enabled
-                ? "Signing will be enabled after initialization."
-                : "Signing will stay disabled after initialization."}
-            </p>
-          </div>
-
-          <div>
-            <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted">
-              Key Lifecycle
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Button
-                type="button"
-                variant={
-                  signing.enabled && signing.mode === "generate"
-                    ? "primary"
-                    : "ghost"
-                }
-                size="md"
-                disabled={!signing.enabled}
-                onClick={onSelectGenerate}
-              >
-                Generate Key
-              </Button>
-              <Button
-                type="button"
-                variant={
-                  signing.enabled && signing.mode === "import"
-                    ? "primary"
-                    : "ghost"
-                }
-                size="md"
-                disabled={!signing.enabled}
-                onClick={onSelectImport}
-              >
-                Import Key File
-              </Button>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".asc,.key,.pgp,.gpg,text/plain"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) onFileChange(file);
-              }}
-            />
-            <p className="mt-2 font-mono text-xs text-soft">{keyNote}</p>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function AdminStep({
-  admin,
-  onChange,
-}: {
-  admin: AdminForm;
-  onChange: (next: AdminForm) => void;
-}) {
-  const update = (patch: Partial<AdminForm>) => onChange({ ...admin, ...patch });
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-4 xl:grid-cols-2">
-        <label className="block">
-          <span className={labelTitleClass}>Admin handle</span>
-          <input
-            type="text"
-            required
-            value={admin.handle}
-            onChange={(e) => update({ handle: e.target.value })}
-            className={inputClass}
-          />
-        </label>
-        <label className="block">
-          <span className={labelTitleClass}>Admin display name</span>
-          <input
-            type="text"
-            required
-            value={admin.displayName}
-            onChange={(e) => update({ displayName: e.target.value })}
-            className={inputClass}
-          />
-        </label>
-        <label className="block xl:col-span-2">
-          <span className={labelTitleClass}>Admin password</span>
-          <input
-            type="password"
-            required
-            placeholder="Choose a strong password"
-            value={admin.password}
-            onChange={(e) => update({ password: e.target.value })}
-            className={inputClass}
-          />
-        </label>
-        <label className="block xl:col-span-2">
-          <span className={labelTitleClass}>Confirm password</span>
-          <input
-            type="password"
-            required
-            placeholder="Re-enter admin password"
-            value={admin.passwordConfirm}
-            onChange={(e) => update({ passwordConfirm: e.target.value })}
-            className={inputClass}
-          />
-        </label>
       </div>
     </div>
   );

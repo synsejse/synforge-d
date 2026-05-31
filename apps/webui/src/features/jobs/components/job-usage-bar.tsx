@@ -17,8 +17,8 @@ export default function JobUsageBar({
       label="RAM"
       value={formatMemoryUsage(usage, serverHardware)}
       percent={memoryUsagePercent(usage, serverHardware)}
-      fillClass="bg-amber-400"
-      valueClass="text-amber-300"
+      fillClass="bg-accent-amber"
+      valueClass="text-accent-amber"
     />
   );
 }

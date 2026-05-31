@@ -160,6 +160,13 @@ impl SynforgeService {
         lifecycle
             .abort_unfinished_jobs("daemon restarted before job completed")
             .await?;
+        // Marking unfinished DB rows Failed isn't enough: worker containers
+        // outlive a daemon crash and their names are deterministic, so a
+        // retry of the same job would collide on create_container. Reap any
+        // leftover worker containers before accepting new work.
+        if let Err(error) = worker_launcher.reap_orphan_worker_containers().await {
+            warn!(error = %error, "failed to reap orphaned worker containers at startup");
+        }
 
         let package_store = PackageSyncStore::new(
             config.clone(),

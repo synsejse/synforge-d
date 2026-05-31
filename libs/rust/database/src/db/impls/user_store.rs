@@ -10,6 +10,14 @@ impl UserStore for DieselStore {
         user::list_users(self).await
     }
 
+    async fn list_users_paginated(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> anyhow::Result<Vec<UserSummary>> {
+        user::list_users_paginated(self, limit, offset).await
+    }
+
     async fn get_user(&self, user_id: Uuid) -> anyhow::Result<Option<UserSummary>> {
         user::get_user(self, user_id).await
     }

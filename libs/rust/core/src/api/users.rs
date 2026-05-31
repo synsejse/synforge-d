@@ -15,6 +15,7 @@ pub struct UserResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct UserListResponse {
     pub users: Vec<UserResponse>,
+    pub page: super::PageInfo,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

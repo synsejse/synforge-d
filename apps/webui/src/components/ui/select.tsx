@@ -60,7 +60,7 @@ export default function Select({
         <SelectPrimitive.Content
           className={cn(
             "relative z-50 min-w-[8rem] overflow-hidden border-4 border-white bg-black",
-            "shadow-[6px_6px_0_rgba(255,255,255,0.3)]",
+            "shadow-card-md",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
             "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
             "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"

@@ -4,6 +4,7 @@ use anyhow::Context;
 use futures_util::StreamExt;
 use synforge_core::{
     config::DaemonConfig,
+    constants::DEFAULT_WORKER_WAIT_GRACE_SECONDS,
     model::{WorkerJobPayload, WorkerResult},
 };
 use tracing::{info, warn};
@@ -11,7 +12,7 @@ use uuid::Uuid;
 
 use super::DockerWorkerLauncher;
 use crate::{
-    container::worker_container_body,
+    container::{WORKER_CONTAINER_NAME_PREFIX, worker_container_body, worker_container_name},
     resources::{job_descriptor, worker_resource_limits},
 };
 
@@ -44,7 +45,7 @@ impl DockerWorkerLauncher {
             "worker session created"
         );
 
-        let container_name = format!("synforge-worker-{}", payload.job_id);
+        let container_name = worker_container_name(payload.job_id);
         let worker_jobs_root = config.worker_jobs_root();
         info!(
             job_id = %payload.job_id,
@@ -105,25 +106,54 @@ impl DockerWorkerLauncher {
             "worker container started"
         );
 
+        // Bound the wait strictly longer than the worker's own build
+        // timeout so a self-timing-out worker reports back first; past the
+        // bound we assume the worker hung or never connected and force-kill
+        // it. Without this the queue runner's concurrency permit (held for
+        // the duration of run_job) would be pinned forever and the
+        // container leaked.
+        let wait_timeout = Duration::from_secs(
+            payload
+                .timeout_seconds
+                .saturating_add(DEFAULT_WORKER_WAIT_GRACE_SECONDS),
+        );
         info!(
             job_id = %payload.job_id,
             container_id = %container_id,
+            wait_timeout_seconds = wait_timeout.as_secs(),
             "waiting for worker container exit"
         );
-        let mut wait = self.docker.wait_container(
-            &container_id,
-            None::<bollard::query_parameters::WaitContainerOptions>,
-        );
-        while let Some(next) = wait.next().await {
-            if let Err(error) = next {
-                warn!(
-                    job_id = %payload.job_id,
-                    container_id = %container_id,
-                    error = %error,
-                    "worker container wait stream returned error; continuing to uploaded result check"
-                );
-                break;
+        let wait_outcome = tokio::time::timeout(wait_timeout, async {
+            let mut wait = self.docker.wait_container(
+                &container_id,
+                None::<bollard::query_parameters::WaitContainerOptions>,
+            );
+            while let Some(next) = wait.next().await {
+                if let Err(error) = next {
+                    warn!(
+                        job_id = %payload.job_id,
+                        container_id = %container_id,
+                        error = %error,
+                        "worker container wait stream returned error; continuing to uploaded result check"
+                    );
+                    break;
+                }
             }
+        })
+        .await;
+        if wait_outcome.is_err() {
+            warn!(
+                job_id = %payload.job_id,
+                container_id = %container_id,
+                wait_timeout_seconds = wait_timeout.as_secs(),
+                "worker container exceeded wait timeout; force-removing and failing job"
+            );
+            self.force_remove_container(&container_id).await;
+            anyhow::bail!(
+                "worker {} exceeded wait timeout of {}s",
+                payload.job_id,
+                wait_timeout.as_secs()
+            );
         }
         info!(
             job_id = %payload.job_id,
@@ -262,6 +292,88 @@ impl DockerWorkerLauncher {
         }
         if let Some(error) = first_error {
             return Err(error);
+        }
+        Ok(())
+    }
+
+    /// Best-effort force-remove of a single container by id. A 404 (already
+    /// gone, e.g. via `auto_remove`) is treated as success; other errors are
+    /// logged but not propagated, since callers use this on a path that is
+    /// already failing the job.
+    async fn force_remove_container(&self, container_id: &str) {
+        match self
+            .docker
+            .remove_container(
+                container_id,
+                Some(
+                    bollard::query_parameters::RemoveContainerOptionsBuilder::default()
+                        .force(true)
+                        .build(),
+                ),
+            )
+            .await
+        {
+            Ok(()) => {}
+            Err(bollard::errors::Error::DockerResponseServerError {
+                status_code: 404, ..
+            }) => {}
+            Err(error) => {
+                warn!(
+                    container_id = %container_id,
+                    error = %error,
+                    "failed to force-remove worker container"
+                );
+            }
+        }
+    }
+
+    /// Reap orphaned worker containers left behind by a daemon crash.
+    /// Container names are deterministic (`synforge-worker-{job_id}`), so a
+    /// retried job collides on `create_container` (name in use) unless these
+    /// are removed first. Enumerates by the shared name prefix and
+    /// force-removes each. Best-effort: individual removals that fail are
+    /// logged and skipped so one stuck container can't block startup.
+    pub async fn reap_orphan_worker_containers(&self) -> anyhow::Result<()> {
+        let mut filters = std::collections::HashMap::new();
+        filters.insert("name", vec![WORKER_CONTAINER_NAME_PREFIX]);
+        let containers = self
+            .docker
+            .list_containers(Some(
+                bollard::query_parameters::ListContainersOptionsBuilder::default()
+                    .all(true)
+                    .filters(&filters)
+                    .build(),
+            ))
+            .await
+            .context("failed to list worker containers for orphan reap")?;
+
+        let mut removed = 0_u64;
+        for container in containers {
+            // The name filter is a substring match; require a real
+            // `/synforge-worker-` segment so we never touch unrelated
+            // containers that merely contain the substring.
+            let is_worker = container.names.as_ref().is_some_and(|names| {
+                names.iter().any(|name| {
+                    name.trim_start_matches('/')
+                        .starts_with(WORKER_CONTAINER_NAME_PREFIX)
+                })
+            });
+            if !is_worker {
+                continue;
+            }
+            let Some(container_id) = container.id else {
+                continue;
+            };
+            info!(
+                container_id = %container_id,
+                container_names = ?container.names,
+                "removing orphaned worker container at startup"
+            );
+            self.force_remove_container(&container_id).await;
+            removed += 1;
+        }
+        if removed > 0 {
+            info!(removed, "removed orphaned worker containers");
         }
         Ok(())
     }

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "@tanstack/react-router";
+import ModalFrame, { ModalTitle } from "../ui/modal-frame";
 
 interface ShortcutGroup {
   label: string;
@@ -81,12 +82,8 @@ export function KeyboardShortcutsProvider({ children }: { children: ReactNode })
         return;
       }
 
-      // Close overlay
-      if (event.key === "Escape" && overlayOpen) {
-        event.preventDefault();
-        setOverlayOpen(false);
-        return;
-      }
+      // Escape-to-close is owned by the Radix dialog while the overlay is
+      // open (it traps focus and restores it on close).
 
       // / focuses search
       if (event.key === "/" && !pendingPrefix) {
@@ -124,9 +121,10 @@ export function KeyboardShortcutsProvider({ children }: { children: ReactNode })
   return (
     <>
       {children}
-      {overlayOpen ? (
-        <ShortcutsOverlay onClose={() => setOverlayOpen(false)} />
-      ) : null}
+      <ShortcutsOverlay
+        open={overlayOpen}
+        onClose={() => setOverlayOpen(false)}
+      />
     </>
   );
 }
@@ -163,44 +161,49 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
   },
 ];
 
-function ShortcutsOverlay({ onClose }: { onClose: () => void }) {
+function ShortcutsOverlay({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Keyboard shortcuts"
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/85 p-4"
-      onClick={onClose}
+    <ModalFrame
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      zIndex={90}
+      overlayClassName="flex items-center justify-center bg-black/85 p-4"
+      className="max-w-2xl border-4 border-accent-lime bg-black p-6 shadow-[8px_8px_0_rgba(191,255,0,0.25)]"
     >
-      <div
-        className="relative w-full max-w-2xl border-4 border-accent-lime bg-black p-6 shadow-[8px_8px_0_rgba(191,255,0,0.25)]"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="mb-5 flex items-baseline justify-between gap-4 border-b-2 border-edge pb-3">
+      <div className="mb-5 flex items-baseline justify-between gap-4 border-b-2 border-edge pb-3">
+        <ModalTitle asChild>
           <h2 className="text-xl font-bold text-white">Keyboard shortcuts</h2>
-          <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-soft">
-            press <Chord parts={["?"]} /> to close
-          </span>
-        </div>
-        <div className="grid gap-6 sm:grid-cols-3">
-          {SHORTCUT_GROUPS.map((group) => (
-            <div key={group.label}>
-              <h3 className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-accent-lime">
-                {group.label}
-              </h3>
-              <dl className="mt-3 space-y-2">
-                {group.rows.map((row, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-3">
-                    <dt>{row.keys}</dt>
-                    <dd className="text-xs text-soft">{row.description}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          ))}
-        </div>
+        </ModalTitle>
+        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-soft">
+          press <Chord parts={["?"]} /> to close
+        </span>
       </div>
-    </div>
+      <div className="grid gap-6 sm:grid-cols-3">
+        {SHORTCUT_GROUPS.map((group) => (
+          <div key={group.label}>
+            <h3 className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-accent-lime">
+              {group.label}
+            </h3>
+            <dl className="mt-3 space-y-2">
+              {group.rows.map((row, idx) => (
+                <div key={idx} className="flex items-center justify-between gap-3">
+                  <dt>{row.keys}</dt>
+                  <dd className="text-xs text-soft">{row.description}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ))}
+      </div>
+    </ModalFrame>
   );
 }
 

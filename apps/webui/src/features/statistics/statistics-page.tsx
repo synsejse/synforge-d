@@ -61,7 +61,7 @@ function Statistics() {
 
   if (isPending) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-6">
         <PageHeader
           title="Statistics"
           description="Dedicated operational metrics for system throughput, sync health, and cache behavior."
@@ -92,7 +92,7 @@ function Statistics() {
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title="Statistics"
         description="Dedicated operational metrics for system throughput, sync health, and cache behavior."

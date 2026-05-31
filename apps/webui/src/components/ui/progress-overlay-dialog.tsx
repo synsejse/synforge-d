@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Button from "./button";
+import ModalFrame, { ModalTitle } from "./modal-frame";
 
 interface ProgressOverlayDialogProps {
   open: boolean;
@@ -42,60 +43,61 @@ export default function ProgressOverlayDialog({
   closeDisabled = false,
   closeLabel = "Close",
 }: ProgressOverlayDialogProps) {
-  if (!open) {
-    return null;
-  }
-
   const normalizedProgress = Math.max(0, Math.min(100, progress));
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 p-6">
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="w-full max-w-xl border-4 border-edge-strong bg-black shadow-[8px_8px_0_rgba(255,255,255,0.18)]"
-      >
-        {/* Header band — coloured by tone, mirrors the page-header
-            accent vocabulary used elsewhere in the app. */}
-        <div className="border-b-2 border-edge-strong bg-surface-alt px-5 py-3">
+    <ModalFrame
+      open={open}
+      // Non-dismissable by design: Escape / outside-click can't close it, but
+      // focus is still trapped inside while a refresh-all run is in flight.
+      onOpenChange={() => undefined}
+      dismissable={false}
+      zIndex={80}
+      overlayClassName="flex items-center justify-center bg-black/85 p-6"
+      className="max-w-xl border-4 border-edge-strong bg-black shadow-card-lg"
+    >
+      {/* Header band — coloured by tone, mirrors the page-header
+          accent vocabulary used elsewhere in the app. */}
+      <div className="border-b-2 border-edge-strong bg-surface-alt px-5 py-3">
+        <ModalTitle asChild>
           <h3
             className={`font-mono text-xs font-bold uppercase tracking-[0.22em] ${TITLE_TONE[tone]}`}
           >
             {title}
           </h3>
-        </div>
-
-        <div className="px-5 py-5">
-          {summary !== undefined ? (
-            <div className="mb-3 font-mono text-2xl font-black uppercase tracking-tight text-white">
-              {summary}
-            </div>
-          ) : null}
-
-          <div className="h-3 w-full border-2 border-edge-strong bg-black">
-            <div
-              className={`h-full transition-[width] duration-300 ${BAR_TONE[tone]}`}
-              style={{ width: `${normalizedProgress}%` }}
-            />
-          </div>
-
-          {children !== undefined ? (
-            <div className="mt-5">{children}</div>
-          ) : null}
-        </div>
-
-        <div className="flex justify-end border-t-2 border-edge-strong bg-surface-alt px-5 py-3">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={onClose}
-            disabled={closeDisabled}
-          >
-            {closeLabel}
-          </Button>
-        </div>
+        </ModalTitle>
       </div>
-    </div>
+
+      <div className="px-5 py-5">
+        {summary !== undefined ? (
+          <div className="mb-3 font-mono text-2xl font-black uppercase tracking-tight text-white">
+            {summary}
+          </div>
+        ) : null}
+
+        <div className="h-3 w-full border-2 border-edge-strong bg-black">
+          <div
+            className={`h-full transition-[width] duration-300 ${BAR_TONE[tone]}`}
+            style={{ width: `${normalizedProgress}%` }}
+          />
+        </div>
+
+        {children !== undefined ? (
+          <div className="mt-5">{children}</div>
+        ) : null}
+      </div>
+
+      <div className="flex justify-end border-t-2 border-edge-strong bg-surface-alt px-5 py-3">
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={onClose}
+          disabled={closeDisabled}
+        >
+          {closeLabel}
+        </Button>
+      </div>
+    </ModalFrame>
   );
 }

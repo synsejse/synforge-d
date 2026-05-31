@@ -65,6 +65,11 @@ pub trait JobStore: Send + Sync {
         &self,
     ) -> anyhow::Result<Vec<(String, String, BuildFailureBackoffState)>>;
 
+    /// Finalize a job. Compare-and-set on status: only transitions a job
+    /// that is still `Pending`/`Running`. Returns `true` if this call
+    /// performed the finalization, `false` if the job had already been
+    /// finalized by a racing writer (kill vs. in-flight run completion),
+    /// in which case nothing was written.
     async fn finish_job(
         &self,
         job_id: Uuid,
@@ -73,7 +78,7 @@ pub trait JobStore: Send + Sync {
         artifacts: &[BuildArtifact],
         published_files: &[PublishedRepoFile],
         artifact_signatures: &[ArtifactSignature],
-    ) -> anyhow::Result<()>;
+    ) -> anyhow::Result<bool>;
 
     async fn upsert_build_log(&self, job_id: Uuid, file: &str) -> anyhow::Result<()>;
     async fn list_build_logs_for_job(&self, job_id: Uuid) -> anyhow::Result<Vec<BuildLogRecord>>;
@@ -124,6 +129,18 @@ pub trait JobStore: Send + Sync {
     ) -> anyhow::Result<Vec<BuildJobResponse>>;
 
     async fn get_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>>;
+
+    /// Count artifacts attached to a single job (for paginated listing).
+    async fn count_job_artifacts(&self, job_id: Uuid) -> anyhow::Result<u64>;
+
+    /// List a page of artifacts attached to a single job, ordered by file
+    /// name, applying `limit`/`offset`.
+    async fn list_job_artifacts(
+        &self,
+        job_id: Uuid,
+        limit: usize,
+        offset: usize,
+    ) -> anyhow::Result<Vec<BuildArtifact>>;
     /// Soft-delete a finished job: drops artifacts, logs, signatures and
     /// published-file rows, sets `deleted_at = now()` on the build_jobs
     /// row. Returns the prior artifact list so the caller can clean up

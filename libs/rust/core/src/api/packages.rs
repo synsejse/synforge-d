@@ -82,6 +82,7 @@ pub struct BrowseRepositoryResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct MockChrootListResponse {
     pub chroots: Vec<String>,
+    pub page: super::PageInfo,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, ToSchema)]

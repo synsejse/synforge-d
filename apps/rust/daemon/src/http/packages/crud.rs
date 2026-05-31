@@ -3,7 +3,7 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use synforge_core::api::{
-    CreatePackageRequest, PackageListQuery, PackageListResponse, PackageResponse, PaginationQuery,
+    CreatePackageRequest, PackageListQuery, PackageListResponse, PackageResponse,
     UpdatePackageRequest,
 };
 
@@ -37,7 +37,7 @@ pub(crate) async fn list_packages(
     request_body = CreatePackageRequest,
     security(("session_auth" = [])),
     responses(
-        (status = 200, description = "Create package", body = PackageResponse),
+        (status = 201, description = "Create package", body = PackageResponse),
         (status = 400, body = synforge_core::api::ApiError),
         (status = 401, body = synforge_core::api::ApiError),
         (status = 409, body = synforge_core::api::ApiError)
@@ -46,8 +46,9 @@ pub(crate) async fn list_packages(
 pub(crate) async fn create_package(
     State(state): State<AppState>,
     Json(request): Json<CreatePackageRequest>,
-) -> Result<Json<PackageResponse>, AppError> {
-    Ok(Json(state.service.create_package(request).await?))
+) -> Result<(StatusCode, Json<PackageResponse>), AppError> {
+    let response = state.service.create_package(request).await?;
+    Ok((StatusCode::CREATED, Json(response)))
 }
 
 #[utoipa::path(
@@ -55,8 +56,7 @@ pub(crate) async fn create_package(
     path = "/api/v1/packages/{name}",
     tag = "Packages",
     params(
-        ("name" = String, Path, description = "Package name"),
-        PaginationQuery
+        ("name" = String, Path, description = "Package name")
     ),
     security(("session_auth" = [])),
     responses(

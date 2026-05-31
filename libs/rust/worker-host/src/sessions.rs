@@ -148,9 +148,6 @@ impl WorkerSessionBroker {
             hasher.update(&buffer[..read]);
             size_bytes += read as u64;
         }
-        if let Some(parent) = stored_path.parent() {
-            tokio::fs::create_dir_all(parent).await?;
-        }
         let artifact = BuildArtifact {
             id: artifact_id,
             package_name,

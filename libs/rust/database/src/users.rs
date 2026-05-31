@@ -22,6 +22,14 @@ impl PostgresUserStore {
         self.store.list_users().await
     }
 
+    pub async fn list_users_paginated(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> anyhow::Result<Vec<UserSummary>> {
+        self.store.list_users_paginated(limit, offset).await
+    }
+
     pub async fn get_user(&self, user_id: Uuid) -> anyhow::Result<Option<UserSummary>> {
         self.store.get_user(user_id).await
     }

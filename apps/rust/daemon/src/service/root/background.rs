@@ -4,6 +4,7 @@ use tokio::sync::{Semaphore, mpsc, watch};
 use tracing::{error, info, warn};
 
 use crate::service::SynforgeService;
+use crate::service::loop_backoff::LoopBackoff;
 use synforge_worker_host::QueuedBuild;
 
 impl SynforgeService {
@@ -78,17 +79,29 @@ impl SynforgeService {
             "starting poller"
         );
         self.task_tracker.spawn(async move {
-            let mut ticker = tokio::time::interval(std::time::Duration::from_secs(
-                service.config.poller_tick_seconds,
-            ));
+            let tick = std::time::Duration::from_secs(service.config.poller_tick_seconds);
+            let mut ticker = tokio::time::interval(tick);
+            let mut backoff = LoopBackoff::new(tick);
             loop {
                 tokio::select! {
                     _ = shutdown_rx.changed() => {
                         break;
                     }
                     _ = ticker.tick() => {
-                        if let Err(error) = service.poll_once().await {
-                            warn!("polling failed: {}", error);
+                        match service.poll_once().await {
+                            Ok(()) => backoff.reset(),
+                            Err(error) => {
+                                warn!("polling failed: {}", error);
+                                // A persistent DB/registry outage would
+                                // otherwise spin this loop on every tick;
+                                // sleep an escalating, capped extra delay so
+                                // failures don't become a tight log-spam loop.
+                                let delay = backoff.next_delay();
+                                tokio::select! {
+                                    _ = shutdown_rx.changed() => break,
+                                    _ = tokio::time::sleep(delay) => {}
+                                }
+                            }
                         }
                     }
                 }

@@ -67,7 +67,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-full items-center justify-center px-3 py-6 sm:px-6 sm:py-12">
-      <div className="w-full max-w-md border-4 border-white bg-black p-4 shadow-[6px_6px_0_rgba(255,255,255,0.25)] sm:p-8">
+      <div className="w-full max-w-md border-4 border-white bg-black p-4 shadow-card-md sm:p-8">
         <div className="mb-8">
           <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-accent-lime">
             Synforge

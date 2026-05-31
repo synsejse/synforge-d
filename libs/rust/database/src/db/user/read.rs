@@ -16,6 +16,22 @@ pub(in crate::db) async fn list_users(store: &DieselStore) -> anyhow::Result<Vec
     build_user_summaries(&mut conn, rows).await
 }
 
+pub(in crate::db) async fn list_users_paginated(
+    store: &DieselStore,
+    limit: usize,
+    offset: usize,
+) -> anyhow::Result<Vec<UserSummary>> {
+    let mut conn = store.get_connection().await?;
+    let rows = users::table
+        .order(users::handle.asc())
+        .limit(limit as i64)
+        .offset(offset as i64)
+        .select(UserRecord::as_select())
+        .load(&mut conn)
+        .await?;
+    build_user_summaries(&mut conn, rows).await
+}
+
 pub(in crate::db) async fn get_user(
     store: &DieselStore,
     user_id: Uuid,

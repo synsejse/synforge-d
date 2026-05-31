@@ -17,3 +17,13 @@ pub const DEFAULT_WEBUI_MAX_REQUEST_BODY_BYTES: usize = 8 * 1024 * 1024;
 pub const DEFAULT_WORKER_SOCKET_TIMEOUT_SECONDS: u64 = 30;
 pub const DEFAULT_WORKER_HEARTBEAT_INTERVAL_SECONDS: u64 = 10;
 pub const DEFAULT_WORKER_WORKSPACE_ROOT: &str = "/tmp/synforge/jobs";
+
+/// Grace margin added on top of a job's internal build timeout
+/// (`WorkerJobPayload::timeout_seconds`) to bound the daemon-side
+/// container-wait. The daemon must wait strictly longer than the worker's
+/// own build timeout so a worker that times out itself reports back before
+/// the daemon force-kills it; this margin covers worker startup, result
+/// upload, and clock skew. Past this bound the daemon kills/removes the
+/// container and fails the job so the queue permit is released rather than
+/// leaked forever on a hung or never-connecting worker.
+pub const DEFAULT_WORKER_WAIT_GRACE_SECONDS: u64 = 600;

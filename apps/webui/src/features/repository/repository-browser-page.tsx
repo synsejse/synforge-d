@@ -98,7 +98,7 @@ function RepositoryBrowser() {
   const repoFiles = inventory?.repo_files ?? [];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title="Repository Control"
         description="Published packages, builds, and files."

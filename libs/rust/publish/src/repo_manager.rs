@@ -98,7 +98,10 @@ impl FileRepoManager {
             if !seen_paths.insert(path.clone()) {
                 continue;
             }
-            affected_targets.insert(target_repo_dir_from_mock_chroot(config, &artifact.mock_chroot)?);
+            affected_targets.insert(target_repo_dir_from_mock_chroot(
+                config,
+                &artifact.mock_chroot,
+            )?);
             if tokio::fs::try_exists(&destination).await? {
                 tokio::fs::remove_file(&destination)
                     .await
@@ -188,7 +191,6 @@ impl FileRepoManager {
         }
         Ok(())
     }
-
 }
 
 fn build_repo_build_dir(
@@ -197,11 +199,13 @@ fn build_repo_build_dir(
     job_id: Uuid,
     artifact: &BuildArtifact,
 ) -> anyhow::Result<std::path::PathBuf> {
-    Ok(target_repo_dir_from_mock_chroot(config, &artifact.mock_chroot)?
-        .join("packages")
-        .join(&package.name)
-        .join("builds")
-        .join(job_id.to_string()))
+    Ok(
+        target_repo_dir_from_mock_chroot(config, &artifact.mock_chroot)?
+            .join("packages")
+            .join(&package.name)
+            .join("builds")
+            .join(job_id.to_string()),
+    )
 }
 
 async fn regenerate_target_metadata(repo_dir: &Path) -> anyhow::Result<()> {
@@ -273,15 +277,13 @@ pub(crate) async fn discover_repo_targets(repo_root: &Path) -> anyhow::Result<Ve
                 continue;
             }
             let release_path = release_entry.path();
-            let relative_path = release_path
-                .strip_prefix(repo_root)
-                .with_context(|| {
-                    format!(
-                        "failed to resolve repository target path {} under {}",
-                        release_path.display(),
-                        repo_root.display()
-                    )
-                })?;
+            let relative_path = release_path.strip_prefix(repo_root).with_context(|| {
+                format!(
+                    "failed to resolve repository target path {} under {}",
+                    release_path.display(),
+                    repo_root.display()
+                )
+            })?;
             let target = RepoTarget::from_repo_relative_path(relative_path).ok_or_else(|| {
                 anyhow::anyhow!(
                     "repository target path {} does not match target layout",
@@ -295,7 +297,10 @@ pub(crate) async fn discover_repo_targets(repo_root: &Path) -> anyhow::Result<Ve
     Ok(targets)
 }
 
-async fn refresh_target_repo_after_removal(repo_root: &Path, target_repo_dir: &Path) -> anyhow::Result<()> {
+async fn refresh_target_repo_after_removal(
+    repo_root: &Path,
+    target_repo_dir: &Path,
+) -> anyhow::Result<()> {
     if target_repo_has_published_files(target_repo_dir).await? {
         regenerate_target_metadata(target_repo_dir).await
     } else {
@@ -338,8 +343,7 @@ fn target_repo_dir_from_mock_chroot(
     mock_chroot: &str,
 ) -> anyhow::Result<std::path::PathBuf> {
     let target = RepoTarget::from_mock_chroot(mock_chroot)
-        .ok_or_else(|| anyhow::anyhow!("invalid mock chroot {}", mock_chroot))
-        ?;
+        .ok_or_else(|| anyhow::anyhow!("invalid mock chroot {}", mock_chroot))?;
     Ok(config.runtime_paths().repo_target_dir(&target))
 }
 

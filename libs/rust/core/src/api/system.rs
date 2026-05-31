@@ -117,6 +117,7 @@ pub struct SyncScheduleResponse {
     /// Server clock when the schedule was computed; lets the UI tick
     /// down the countdown without drifting against the server.
     pub computed_at: String,
+    pub page: super::PageInfo,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, IntoParams, ToSchema)]
@@ -124,6 +125,9 @@ pub struct SyncScheduleQuery {
     /// Maximum number of entries to return. Defaults to 20, capped at 100.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limit: Option<usize>,
+    /// Number of entries to skip before returning results. Defaults to 0.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub offset: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
@@ -153,8 +157,8 @@ pub struct TimeSeriesQuery {
 /// Unknown values fall back to 24h so the frontend can't poison the daemon.
 pub fn resolve_time_range(range: Option<&str>) -> (&'static str, u64, i64, &'static str) {
     match range.unwrap_or("24h") {
-        "7d" => ("hour", 3_600, 7 * 24 * 3600, "7d"),    // 168 hourly points
+        "7d" => ("hour", 3_600, 7 * 24 * 3600, "7d"), // 168 hourly points
         "30d" => ("day", 86_400, 30 * 24 * 3600, "30d"), // 30 daily points
-        _ => ("hour", 3_600, 24 * 3600, "24h"),          // 24 hourly points
+        _ => ("hour", 3_600, 24 * 3600, "24h"),       // 24 hourly points
     }
 }

@@ -112,39 +112,21 @@ fn decode_basic_credentials(encoded: &str) -> Result<(String, String), AppError>
 
 fn required_api_permission(method: &Method, path: &str) -> UserPermission {
     let path = path.strip_prefix("/api/v1").unwrap_or(path);
+    // User management is privileged even for reads.
     if path.starts_with("/users") {
         return UserPermission::Write;
     }
     match (method, path) {
+        // Privileged reads: these GETs expose sensitive material (full
+        // effective config, exported signing key) and require Write.
         (&Method::GET, "/config/effective") | (&Method::GET, "/signing/export") => {
             UserPermission::Write
         }
-        (&Method::POST, "/packages")
-        | (&Method::POST, "/packages/refresh-all")
-        | (&Method::POST, "/repositories/browse")
-        | (&Method::POST, "/jobs/prune-failed")
-        | (&Method::POST, "/config/runtime") => UserPermission::Write,
-        (&Method::POST, path) if path.starts_with("/jobs/") && path.ends_with("/kill") => {
-            UserPermission::Write
-        }
-        (&Method::POST, path) if path.starts_with("/jobs/") && path.ends_with("/retry") => {
-            UserPermission::Write
-        }
-        (&Method::POST, path) if path.starts_with("/signing/") => UserPermission::Write,
-        (&Method::POST, path) if path.ends_with("/rebuild") || path.ends_with("/refresh") => {
-            UserPermission::Write
-        }
-        (&Method::PUT, path) if path.starts_with("/packages/") => UserPermission::Write,
-        (&Method::PUT, path) if path.starts_with("/users/") => UserPermission::Write,
-        (&Method::DELETE, path)
-            if path.starts_with("/packages/")
-                || path.starts_with("/jobs/")
-                || path.starts_with("/users/")
-                || path.starts_with("/signing/") =>
-        {
-            UserPermission::Write
-        }
-        _ => UserPermission::Read,
+        // Safe reads.
+        (&Method::GET | &Method::HEAD, _) => UserPermission::Read,
+        // Fail closed: every mutating method requires Write, including any
+        // route not explicitly enumerated above.
+        _ => UserPermission::Write,
     }
 }
 

@@ -13,6 +13,7 @@ pub struct BuildJobResponse {
 pub struct JobArtifactListResponse {
     pub job_id: uuid::Uuid,
     pub artifacts: Vec<BuildArtifact>,
+    pub page: super::PageInfo,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
@@ -44,6 +45,7 @@ pub struct JobResourceUsageSample {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct JobResourceUsageListResponse {
     pub samples: Vec<JobResourceUsageSample>,
+    pub page: super::PageInfo,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

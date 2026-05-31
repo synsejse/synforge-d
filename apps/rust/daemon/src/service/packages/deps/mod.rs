@@ -200,9 +200,7 @@ impl DaemonPackageDeps {
         self.git.get_package(package_name).await
     }
 
-    pub(super) async fn load_package_definitions(
-        &self,
-    ) -> anyhow::Result<Vec<PackageDefinition>> {
+    pub(super) async fn load_package_definitions(&self) -> anyhow::Result<Vec<PackageDefinition>> {
         self.git.list_definitions().await
     }
 
@@ -227,16 +225,11 @@ impl DaemonPackageDeps {
 
 #[async_trait]
 impl RefreshAllProgressStore for DaemonPackageDeps {
-    async fn load_refresh_all_packages_progress(
-        &self,
-    ) -> Option<RefreshAllPackagesProgressView> {
+    async fn load_refresh_all_packages_progress(&self) -> Option<RefreshAllPackagesProgressView> {
         self.progress.load().await
     }
 
-    async fn save_refresh_all_packages_progress(
-        &self,
-        progress: RefreshAllPackagesProgressView,
-    ) {
+    async fn save_refresh_all_packages_progress(&self, progress: RefreshAllPackagesProgressView) {
         self.progress.save(progress).await;
     }
 }

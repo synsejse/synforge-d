@@ -78,7 +78,7 @@ impl JobStore for DieselStore {
         artifacts: &[BuildArtifact],
         published_files: &[PublishedRepoFile],
         artifact_signatures: &[ArtifactSignature],
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<bool> {
         job::finish_job(
             self,
             job_id,
@@ -177,6 +177,19 @@ impl JobStore for DieselStore {
 
     async fn get_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>> {
         job::get_job(self, job_id).await
+    }
+
+    async fn count_job_artifacts(&self, job_id: Uuid) -> anyhow::Result<u64> {
+        job::count_job_artifacts(self, job_id).await
+    }
+
+    async fn list_job_artifacts(
+        &self,
+        job_id: Uuid,
+        limit: usize,
+        offset: usize,
+    ) -> anyhow::Result<Vec<BuildArtifact>> {
+        job::list_job_artifacts(self, job_id, limit, offset).await
     }
 
     async fn delete_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>> {

@@ -21,6 +21,7 @@ authors = ["synse"]
 [workspace.dependencies]
 anyhow = "1.0.102"
 argon2 = "0.5.3"
+async-stream = "0.3.6"
 async-trait = "0.1.89"
 axum = { version = "0.8.9", features = ["macros"] }
 axum-helmet = "1.0.1"

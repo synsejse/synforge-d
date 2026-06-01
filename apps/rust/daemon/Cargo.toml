@@ -15,11 +15,13 @@ path = "src/bin/openapi-export.rs"
 
 [dependencies]
 anyhow.workspace = true
+async-stream.workspace = true
 async-trait.workspace = true
 axum.workspace = true
 axum-helmet.workspace = true
 base64.workspace = true
 delegate.workspace = true
+futures-util.workspace = true
 helmet-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true

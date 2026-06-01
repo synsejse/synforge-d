@@ -20,9 +20,7 @@ pub use self::jobs::{
     JobResourceUsageSample, PackageBuildHistoryResponse, PackageBuildInventoryEntry,
     PruneJobsResponse,
 };
-pub use self::logs::{
-    LogChunkQuery, LogChunkResponse, LogManifestResponse, LogMetaResponse, LogSource, LogSourceType,
-};
+pub use self::logs::{LogManifestResponse, LogSource, LogSourceType};
 pub use self::packages::{
     BrowseRepositoryRequest, BrowseRepositoryResponse, CreatePackageRequest,
     MockChrootListResponse, PackageActionDisposition, PackageActionResponse,

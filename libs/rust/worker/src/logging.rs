@@ -73,9 +73,10 @@ impl BuildLogger {
         })
     }
 
-    /// Write a plain text section header to the primary log.
+    /// Write a section header to the primary log. Uses the GitHub-style group
+    /// marker so the WebUI can fold sections.
     pub(crate) async fn section(&self, title: impl AsRef<str>) -> anyhow::Result<()> {
-        let message = format!("\n== {} ==\n", title.as_ref());
+        let message = format!("\n##[group] {}\n", title.as_ref());
         self.primary.write(message.as_bytes()).await?;
         self.stream_to_transport("worker.log", message.as_bytes())
             .await?;

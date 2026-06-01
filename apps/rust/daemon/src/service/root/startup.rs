@@ -23,8 +23,8 @@ use synforge_state::{
     MockChrootCache, RefreshAllPackagesProgressState, RuntimeCache, SigningReconcileProgressState,
 };
 use synforge_worker_host::{
-    BuildRunner, BuildService, DockerWorkerLauncher, JobLifecycle, WorkerSessionBroker,
-    start_worker_listener,
+    BuildRunner, BuildService, DockerWorkerLauncher, JobLifecycle, LogBroadcaster,
+    WorkerSessionBroker, start_worker_listener,
 };
 
 #[derive(Clone)]
@@ -40,6 +40,7 @@ pub(crate) struct SynforgeStartupComponents {
     sessions: WorkerSessionBroker,
     lifecycle: Arc<JobLifecycle>,
     runtime_cache: RuntimeCache,
+    log_broadcaster: LogBroadcaster,
 }
 
 #[async_trait]
@@ -110,6 +111,7 @@ impl SynforgeService {
         ));
         let worker_launcher =
             Arc::new(DockerWorkerLauncher::new(sessions.clone(), lifecycle.clone()).await?);
+        let log_broadcaster = LogBroadcaster::new();
         Self::new_with_components(SynforgeStartupComponents {
             config,
             store,
@@ -118,6 +120,7 @@ impl SynforgeService {
             sessions,
             lifecycle,
             runtime_cache,
+            log_broadcaster,
         })
         .await
     }
@@ -133,6 +136,7 @@ impl SynforgeService {
             sessions,
             lifecycle,
             runtime_cache,
+            log_broadcaster,
         } = components;
         config
             .validate()
@@ -196,6 +200,7 @@ impl SynforgeService {
             runner,
             lifecycle,
             sessions,
+            log_broadcaster,
             worker_launcher,
             task_tracker,
             queue_tx,
@@ -210,6 +215,7 @@ impl SynforgeService {
             DEFAULT_DAEMON_WORKER_LISTEN_ADDR.to_string(),
             service.store.clone(),
             service.sessions.clone(),
+            service.log_broadcaster.clone(),
             service.task_tracker.clone(),
             shutdown_rx.clone(),
         );

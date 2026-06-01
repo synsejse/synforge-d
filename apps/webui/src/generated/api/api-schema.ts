@@ -228,30 +228,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/jobs/{id}/logs/{source}/chunks": {
+    "/api/v1/jobs/{id}/logs/stream": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["get_job_log_chunk_by_source"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/jobs/{id}/logs/{source}/meta": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_job_log_meta_by_source"];
+        get: operations["stream_job_logs"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1152,48 +1136,29 @@ export interface components {
         JobResourceUsageSample: {
             collected_at: string;
             container_id: string;
+            /**
+             * Format: double
+             * @description Live CPU utilization as a percentage of a single core (e.g. `150.0`
+             *     means ~1.5 cores busy). Computed from the delta between consecutive
+             *     samples; `0.0` on the first sample for a container.
+             */
+            cpu_percent: number;
             /** Format: uuid */
             job_id: string;
             /** Format: int64 */
             memory_limit_bytes: number;
             /** Format: int64 */
             memory_usage_bytes: number;
-        };
-        LogChunkQuery: {
-            /** Format: int64 */
-            cursor?: number | null;
             /**
-             * @description Maximum bytes to read in this chunk. Defaults to 65536 (64 KiB) and is
-             *     clamped server-side to the range 1024..=524288 (1 KiB..=512 KiB).
+             * Format: int32
+             * @description Number of CPUs visible to the container, used to scale `cpu_percent`.
              */
-            limit?: number | null;
-            /** Format: int64 */
-            offset?: number | null;
-        };
-        LogChunkResponse: {
-            complete: boolean;
-            contents: string;
-            /** Format: int64 */
-            cursor: number;
-            /** Format: uuid */
-            job_id: string;
-            source: string;
-            /** Format: int64 */
-            start_line: number;
+            online_cpus: number;
         };
         LogManifestResponse: {
             /** Format: uuid */
             job_id: string;
             sources: components["schemas"]["LogSource"][];
-        };
-        LogMetaResponse: {
-            /** Format: int64 */
-            file_size: number;
-            /** Format: uuid */
-            job_id: string;
-            /** Format: int64 */
-            max_cursor: number;
-            source: string;
         };
         LogSource: {
             file: string;
@@ -2231,91 +2196,25 @@ export interface operations {
             };
         };
     };
-    get_job_log_chunk_by_source: {
-        parameters: {
-            query?: {
-                /** @description Current byte cursor */
-                cursor?: number;
-                /** @description Relative byte offset from the cursor */
-                offset?: number;
-                /** @description Maximum bytes to read (default 65536; clamped server-side to 1024..=524288) */
-                limit?: number;
-            };
-            header?: never;
-            path: {
-                /** @description Job identifier */
-                id: string;
-                /** @description Log source path */
-                source: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Read a log chunk */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LogChunkResponse"];
-                };
-            };
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    get_job_log_meta_by_source: {
+    stream_job_logs: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 /** @description Job identifier */
                 id: string;
-                /** @description Log source path */
-                source: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Get log file metadata */
+            /** @description Server-sent event stream of job logs. Emits a `manifest` event with the available sources, `append` events carrying log text, and a final `complete` event. Each connection replays the full log from the start, then tails live output until the build ends. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LogMetaResponse"];
-                };
-            };
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiError"];
+                    "text/event-stream": unknown;
                 };
             };
             401: {

@@ -5,6 +5,7 @@ mod container;
 mod hardware;
 mod job_lifecycle;
 mod job_usage;
+mod log_broadcaster;
 mod mock_chroots;
 mod resources;
 mod service;
@@ -25,6 +26,7 @@ pub use hardware::HostHardwareService;
 pub use job_lifecycle::JobLifecycle;
 pub use job_usage::JobUsageService;
 pub use launcher::{DockerWorkerLauncher, WorkerJobTracker};
+pub use log_broadcaster::{LogBroadcaster, LogEvent};
 pub use mock_chroots::MockChrootService;
 pub use service::{
     ActiveTargetBuildReader, BuildJobReader, BuildJobWriter, BuildQueue, BuildService,

@@ -317,6 +317,8 @@ export default function JobDetail({ jobId }: Props) {
         <LiveUsageStrip
           memoryValue={formatMemoryUsage(latestUsage, serverHardware)}
           memoryPercent={memoryUsagePercent(latestUsage, serverHardware)}
+          cpuValue={formatCpuUsage(latestUsage)}
+          cpuPercent={cpuUsagePercent(latestUsage)}
         />
       ) : null}
 
@@ -356,7 +358,7 @@ export default function JobDetail({ jobId }: Props) {
             <Suspense
               fallback={<LoadingBlock label="Loading logs…" lines={3} />}
             >
-              <TabbedLogViewer jobId={jobId} isLive={isLive} />
+              <TabbedLogViewer jobId={jobId} />
             </Suspense>
           ) : null}
           {activeTab === "artifacts" ? (
@@ -390,34 +392,68 @@ export default function JobDetail({ jobId }: Props) {
 function LiveUsageStrip({
   memoryValue,
   memoryPercent,
+  cpuValue,
+  cpuPercent,
 }: {
   memoryValue: string;
   memoryPercent: number;
+  cpuValue: string;
+  cpuPercent: number;
 }) {
-  const hasSample = memoryValue !== "-";
   return (
     <section
       aria-label="Live resource usage"
-      className="flex flex-wrap items-center gap-x-5 gap-y-2 border-2 border-accent-lime bg-black px-4 py-3 sm:px-5"
+      className="flex flex-col gap-3 border-2 border-accent-lime bg-black px-4 py-3 sm:flex-row sm:items-center sm:gap-x-6 sm:px-5"
     >
       <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-accent-lime">
-        Live · Memory
+        Live
       </span>
-      <span className="font-mono text-sm font-bold text-white">
-        {memoryValue}
+      <LiveUsageMetric
+        label="Memory"
+        value={memoryValue}
+        percent={memoryPercent}
+        fillClass="bg-accent-amber"
+      />
+      <LiveUsageMetric
+        label="CPU"
+        value={cpuValue}
+        percent={cpuPercent}
+        fillClass="bg-accent-cyan"
+      />
+    </section>
+  );
+}
+
+function LiveUsageMetric({
+  label,
+  value,
+  percent,
+  fillClass,
+}: {
+  label: string;
+  value: string;
+  percent: number;
+  fillClass: string;
+}) {
+  const hasSample = value !== "-";
+  return (
+    <div className="flex flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
+        {label}
       </span>
+      <span className="font-mono text-sm font-bold text-white">{value}</span>
       <div className="flex min-w-[140px] flex-1 items-center gap-2">
         <div className="h-2 flex-1 border border-edge-strong bg-black">
           <div
-            className="h-full bg-accent-lime transition-all duration-500"
-            style={{ width: `${hasSample ? memoryPercent : 0}%` }}
+            className={`h-full transition-all duration-500 ${fillClass}`}
+            style={{ width: `${hasSample ? percent : 0}%` }}
           />
         </div>
         <span className="font-mono text-xs text-soft">
-          {hasSample ? `${memoryPercent.toFixed(1)}%` : "—"}
+          {hasSample ? `${percent.toFixed(1)}%` : "—"}
         </span>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -475,5 +511,16 @@ function memoryUsagePercent(
   const capacityBytes = resolveMemoryCapacityBytes(sample, hardware);
   if (!capacityBytes || capacityBytes <= 0) return 0;
   return clampPercent((sample.memory_usage_bytes / capacityBytes) * 100);
+}
+
+function formatCpuUsage(sample?: JobResourceUsageSample | null): string {
+  if (!sample) return "-";
+  return `${Math.round(sample.cpu_percent)}% CPU`;
+}
+
+function cpuUsagePercent(sample?: JobResourceUsageSample | null): number {
+  if (!sample) return 0;
+  const cores = sample.online_cpus > 0 ? sample.online_cpus : 1;
+  return clampPercent((sample.cpu_percent / (cores * 100)) * 100);
 }
 

@@ -13,14 +13,34 @@ export default function JobUsageBar({
   usage,
 }: JobUsageBarProps) {
   return (
-    <UsageBarRow
-      label="RAM"
-      value={formatMemoryUsage(usage, serverHardware)}
-      percent={memoryUsagePercent(usage, serverHardware)}
-      fillClass="bg-accent-amber"
-      valueClass="text-accent-amber"
-    />
+    <div className="space-y-3">
+      <UsageBarRow
+        label="RAM"
+        value={formatMemoryUsage(usage, serverHardware)}
+        percent={memoryUsagePercent(usage, serverHardware)}
+        fillClass="bg-accent-amber"
+        valueClass="text-accent-amber"
+      />
+      <UsageBarRow
+        label="CPU"
+        value={formatCpuUsage(usage)}
+        percent={cpuUsagePercent(usage)}
+        fillClass="bg-accent-cyan"
+        valueClass="text-accent-cyan"
+      />
+    </div>
   );
+}
+
+function formatCpuUsage(sample: JobResourceUsageSample | null): string {
+  if (!sample) return "-";
+  return `${Math.round(sample.cpu_percent)}% CPU`;
+}
+
+function cpuUsagePercent(sample: JobResourceUsageSample | null): number {
+  if (!sample) return 0;
+  const cores = sample.online_cpus > 0 ? sample.online_cpus : 1;
+  return clampPercent((sample.cpu_percent / (cores * 100)) * 100);
 }
 
 function formatMemory(bytes: number) {

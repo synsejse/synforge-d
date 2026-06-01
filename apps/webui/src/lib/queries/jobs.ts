@@ -55,9 +55,4 @@ export const jobsQueries = {
       queryKey: ["jobs", "usage", id] as const,
       queryFn: () => api.getJobUsage(id),
     }),
-  logManifest: (id: string) =>
-    queryOptions({
-      queryKey: ["jobs", "log-manifest", id] as const,
-      queryFn: () => api.getJobLogManifest(id),
-    }),
 };

@@ -1,16 +1,23 @@
-use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use uuid::Uuid;
 
 use super::SynforgeService;
-use anyhow::Context;
 use synforge_core::{
-    api::{LogChunkResponse, LogManifestResponse, LogMetaResponse, LogSource, LogSourceType},
+    api::{LogManifestResponse, LogSource, LogSourceType},
     error::SynforgeError,
+    model::BuildStatus,
 };
 use synforge_database::JobStore;
+use synforge_worker_host::LogBroadcaster;
 
 impl SynforgeService {
-    async fn resolve_job_log_path(
+    /// Live log broadcaster handle used by the SSE streaming endpoint.
+    pub fn log_broadcaster(&self) -> LogBroadcaster {
+        self.log_broadcaster.clone()
+    }
+
+    /// Resolve the on-disk path for a job's log source, erroring with
+    /// `NotFound` if the source is unknown or the file is missing.
+    pub async fn resolve_job_log_path(
         &self,
         job_id: Uuid,
         source: &str,
@@ -34,77 +41,17 @@ impl SynforgeService {
         )))
     }
 
-    pub async fn get_job_log_chunk(
-        &self,
-        job_id: Uuid,
-        source: String,
-        cursor: Option<u64>,
-        offset: Option<i64>,
-        limit: Option<usize>,
-    ) -> anyhow::Result<LogChunkResponse> {
-        let path = self.resolve_job_log_path(job_id, &source).await?;
-
-        let mut file = tokio::fs::File::open(&path)
-            .await
-            .with_context(|| format!("failed to open {}", path.display()))?;
-
-        let file_size = file.metadata().await?.len();
-        let max_len = limit.unwrap_or(64 * 1024).clamp(1024, 512 * 1024) as u64;
-        let start = ((cursor.unwrap_or(0).min(file_size) as i128) + offset.unwrap_or(0) as i128)
-            .clamp(0, file_size as i128) as u64;
-        let read_len = max_len.min(file_size.saturating_sub(start));
-
-        if read_len == 0 {
-            return Ok(LogChunkResponse {
-                job_id,
-                source,
-                contents: String::new(),
-                start_line: count_lines_before(&path, start).await?,
-                cursor: start,
-                complete: true,
-            });
-        }
-
-        file.seek(std::io::SeekFrom::Start(start)).await?;
-        let mut buffer = vec![0u8; read_len as usize];
-        let bytes_read = file.read(&mut buffer).await?;
-        buffer.truncate(bytes_read);
-
-        // Find UTF-8 safe boundary to avoid splitting multi-byte characters
-        let safe_len = find_utf8_boundary(&buffer);
-        buffer.truncate(safe_len);
-
-        let contents = String::from_utf8_lossy(&buffer).into_owned();
-        let start_line = count_lines_before(&path, start).await?;
-        let new_cursor = start + safe_len as u64;
-        let complete = new_cursor >= file_size;
-
-        Ok(LogChunkResponse {
-            job_id,
-            source,
-            contents,
-            start_line,
-            cursor: new_cursor,
-            complete,
-        })
-    }
-
-    pub async fn get_job_log_meta(
-        &self,
-        job_id: Uuid,
-        source: String,
-    ) -> anyhow::Result<LogMetaResponse> {
-        let path = self.resolve_job_log_path(job_id, &source).await?;
-        let file_size = tokio::fs::metadata(&path)
-            .await
-            .with_context(|| format!("failed to stat {}", path.display()))?
-            .len();
-        Ok(LogMetaResponse {
-            job_id,
-            source,
-            file_size,
-            max_cursor: file_size,
-        })
+    /// True when the job exists and has reached a terminal status (no more log
+    /// output will be produced). Errors with `NotFound` if the job is unknown.
+    pub async fn job_is_terminal(&self, job_id: Uuid) -> anyhow::Result<bool> {
+        let job =
+            self.store.get_job(job_id).await?.ok_or_else(|| {
+                anyhow::anyhow!(SynforgeError::NotFound(format!("job {}", job_id)))
+            })?;
+        Ok(matches!(
+            job.job.status,
+            BuildStatus::Succeeded | BuildStatus::Failed | BuildStatus::TimedOut
+        ))
     }
 
     pub async fn get_job_log_manifest(&self, job_id: Uuid) -> anyhow::Result<LogManifestResponse> {
@@ -126,15 +73,15 @@ impl SynforgeService {
     }
 }
 
-fn find_utf8_boundary(buffer: &[u8]) -> usize {
+/// Find the largest prefix length of `buffer` that ends on a UTF-8 character
+/// boundary, trimming only a trailing incomplete code point. Invalid bytes in
+/// the interior are preserved and handled by lossy decoding downstream.
+pub(crate) fn find_utf8_boundary(buffer: &[u8]) -> usize {
     let len = buffer.len();
     if len == 0 {
         return 0;
     }
 
-    // Inspect at most the last UTF-8 scalar width window and trim only trailing
-    // incomplete code points. Invalid bytes inside the chunk are preserved and
-    // handled by lossy decoding.
     for start in (len.saturating_sub(4)..len).rev() {
         match std::str::from_utf8(&buffer[start..]) {
             Ok(_) => return len,
@@ -144,34 +91,4 @@ fn find_utf8_boundary(buffer: &[u8]) -> usize {
     }
 
     len
-}
-
-async fn count_lines_before(path: &std::path::Path, end_offset: u64) -> anyhow::Result<u64> {
-    if end_offset == 0 {
-        return Ok(1);
-    }
-
-    let mut file = tokio::fs::File::open(path)
-        .await
-        .with_context(|| format!("failed to open {}", path.display()))?;
-    file.seek(std::io::SeekFrom::Start(0)).await?;
-
-    let mut remaining = end_offset;
-    let mut buffer = vec![0_u8; 64 * 1024];
-    let mut line_count = 0_u64;
-
-    while remaining > 0 {
-        let read_len = remaining.min(buffer.len() as u64) as usize;
-        let bytes_read = file.read(&mut buffer[..read_len]).await?;
-        if bytes_read == 0 {
-            break;
-        }
-        line_count += buffer[..bytes_read]
-            .iter()
-            .filter(|byte| **byte == b'\n')
-            .count() as u64;
-        remaining = remaining.saturating_sub(bytes_read as u64);
-    }
-
-    Ok(line_count + 1)
 }

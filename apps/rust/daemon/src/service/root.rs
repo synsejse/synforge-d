@@ -14,7 +14,8 @@ use synforge_state::{
     MockChrootCache, RefreshAllPackagesProgressState, RuntimeCache, SigningReconcileProgressState,
 };
 use synforge_worker_host::{
-    BuildRunner, BuildService, DockerWorkerLauncher, JobLifecycle, QueuedBuild, WorkerSessionBroker,
+    BuildRunner, BuildService, DockerWorkerLauncher, JobLifecycle, LogBroadcaster, QueuedBuild,
+    WorkerSessionBroker,
 };
 use tokio::sync::{Mutex, mpsc, watch};
 use tokio_util::task::TaskTracker;
@@ -30,6 +31,7 @@ pub struct SynforgeService {
     pub(super) runner: BuildRunner,
     pub(super) lifecycle: Arc<JobLifecycle>,
     pub(super) sessions: WorkerSessionBroker,
+    pub(super) log_broadcaster: LogBroadcaster,
     pub(super) worker_launcher: Arc<DockerWorkerLauncher>,
     pub(super) task_tracker: TaskTracker,
     pub(super) queue_tx: mpsc::Sender<QueuedBuild>,

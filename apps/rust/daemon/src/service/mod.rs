@@ -14,4 +14,5 @@ mod sync;
 mod users;
 
 pub(crate) use bootstrap::apply_startup_runtime_overrides;
+pub(crate) use logs::find_utf8_boundary;
 pub use root::SynforgeService;

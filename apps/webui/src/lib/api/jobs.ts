@@ -6,21 +6,11 @@ import type {
   JobArtifactMetaResponse,
   JobResourceUsageListResponse,
   JobResourceUsageResponse,
-  LogChunkResponse,
-  LogManifestResponse,
-  LogMetaResponse,
   PruneJobsResponse,
   TimeRange,
   TimeSeriesResponse,
 } from "../types";
 import { downloadStream, request } from "./client";
-
-interface GetJobLogChunkOptions {
-  cursor?: number;
-  offset?: number;
-  limit?: number;
-  source: string;
-}
 
 interface ListJobsOptions {
   limit?: number;
@@ -108,53 +98,15 @@ export function getJobArtifactMeta(
   );
 }
 
-export function getJobLogManifest(id: string): Promise<LogManifestResponse> {
-  return request("GET", `/api/v1/jobs/${encodeURIComponent(id)}/logs`);
-}
-
-export function getJobLogMeta(id: string, source: string): Promise<LogMetaResponse> {
-  return request(
-    "GET",
-    `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(source)}/meta`,
-  );
-}
-
-export function getJobLogChunk(
-  id: string,
-  options: GetJobLogChunkOptions,
-): Promise<LogChunkResponse> {
-  const params = new URLSearchParams({
-    limit: String(options.limit ?? 65536),
-  });
-  if (options.cursor !== undefined) params.set("cursor", String(options.cursor));
-  if (options.offset !== undefined) params.set("offset", String(options.offset));
-  return request(
-    "GET",
-    `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(options.source)}/chunks?${params.toString()}`,
-  );
-}
-
-export async function downloadJobLog(id: string, source: string): Promise<void> {
-  const path = `/api/v1/jobs/${encodeURIComponent(id)}/logs/${encodeURIComponent(source)}/chunks`;
-  await downloadStream(path);
-
-  let fullLog = "";
-  let cursor = 0;
-  let complete = false;
-
-  while (!complete) {
-    const chunk = await getJobLogChunk(id, {
-      cursor,
-      limit: 1024 * 1024,
-      source,
-    });
-    fullLog += chunk.contents;
-    cursor = chunk.cursor;
-    complete = chunk.complete;
-  }
-
-  const blob = new Blob([fullLog], { type: "text/plain;charset=utf-8" });
-  triggerDownload(blob, source);
+/**
+ * Saves already-buffered log text (collected from the SSE stream) to a file.
+ * The chunk/meta byte-range endpoints were removed in favour of the streaming
+ * log API, so downloads are produced client-side from the in-memory buffer.
+ */
+export function downloadLogText(text: string, source: string): void {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const filename = source.split("/").pop() || source;
+  triggerDownload(blob, filename);
 }
 
 export function deleteJob(id: string): Promise<void> {

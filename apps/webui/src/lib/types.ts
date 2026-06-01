@@ -59,8 +59,6 @@ export type RepoTargetSummary = ApiSchema["RepoTargetSummary"];
 export type RepoSummaryResponse = ApiSchema["RepoSummaryResponse"];
 export type RepoSetupInfoResponse = ApiSchema["RepoSetupInfoResponse"];
 
-export type LogChunkResponse = ApiSchema["LogChunkResponse"];
-export type LogMetaResponse = ApiSchema["LogMetaResponse"];
 export type LogSourceType = ApiSchema["LogSourceType"];
 export type LogSource = ApiSchema["LogSource"];
 export type LogManifestResponse = ApiSchema["LogManifestResponse"];

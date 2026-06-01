@@ -14,12 +14,13 @@ use tokio_util::codec::{Framed, LengthDelimitedCodec};
 use tokio_util::task::TaskTracker;
 use tracing::{error, warn};
 
-use crate::WorkerSessionBroker;
+use crate::{LogBroadcaster, WorkerSessionBroker};
 
 pub fn start_worker_listener(
     listen_addr: String,
     store: DieselStore,
     sessions: WorkerSessionBroker,
+    log_broadcaster: LogBroadcaster,
     task_tracker: TaskTracker,
     mut shutdown_rx: watch::Receiver<bool>,
 ) {
@@ -41,9 +42,12 @@ pub fn start_worker_listener(
                     Ok((stream, peer)) => {
                         let store = store.clone();
                         let sessions = sessions.clone();
+                        let log_broadcaster = log_broadcaster.clone();
                         let task_tracker = task_tracker.clone();
                         task_tracker.spawn(async move {
-                            if let Err(error) = handle_connection(stream, store, sessions).await {
+                            if let Err(error) =
+                                handle_connection(stream, store, sessions, log_broadcaster).await
+                            {
                                 warn!("worker socket {} failed: {}", peer, error);
                             }
                         });
@@ -59,6 +63,7 @@ async fn handle_connection(
     stream: TcpStream,
     store: DieselStore,
     sessions: WorkerSessionBroker,
+    log_broadcaster: LogBroadcaster,
 ) -> anyhow::Result<()> {
     let mut framed = Framed::new(stream, LengthDelimitedCodec::new());
     let hello = read_message(&mut framed).await?;
@@ -76,8 +81,23 @@ async fn handle_connection(
     )
     .await?;
 
+    // Always notify SSE subscribers when this worker session ends, regardless
+    // of whether the loop returns Ok (result received / stream closed) or an
+    // error bubbles up via `?`.
+    let result = run_message_loop(&mut framed, &store, &sessions, &log_broadcaster, job_id).await;
+    log_broadcaster.publish_complete(job_id);
+    result
+}
+
+async fn run_message_loop(
+    framed: &mut Framed<TcpStream, LengthDelimitedCodec>,
+    store: &DieselStore,
+    sessions: &WorkerSessionBroker,
+    log_broadcaster: &LogBroadcaster,
+    job_id: uuid::Uuid,
+) -> anyhow::Result<()> {
     let mut current_artifact: Option<ActiveArtifactUpload> = None;
-    let mut log_files: HashMap<String, tokio::fs::File> = HashMap::new();
+    let mut log_files: HashMap<String, LogFileState> = HashMap::new();
     while let Some(frame) = framed.next().await {
         let frame = frame?;
         let message: WorkerWireMessage = decode_worker_wire_message(frame.as_ref())?;
@@ -96,7 +116,10 @@ async fn handle_connection(
                         .open(&upload_path)
                         .await
                         .with_context(|| format!("failed to open {}", upload_path.display()))?;
-                    log_files.insert(path.clone(), file);
+                    // Seed the offset from the file's current size so end_offset
+                    // matches what the SSE backfill reads off disk.
+                    let size = file.metadata().await.map(|meta| meta.len()).unwrap_or(0);
+                    log_files.insert(path.clone(), LogFileState { file, size });
                     true
                 };
                 if created {
@@ -108,11 +131,15 @@ async fn handle_connection(
                             format!("failed to register log source {} for job {}", path, job_id)
                         })?;
                 }
-                let file = log_files
+                let state = log_files
                     .get_mut(&path)
                     .ok_or_else(|| anyhow::anyhow!("log file handle disappeared for {}", path))?;
-                file.write_all(&bytes).await?;
-                file.flush().await?;
+                state.file.write_all(&bytes).await?;
+                state.file.flush().await?;
+                state.size += bytes.len() as u64;
+                // Publish only after the bytes are durable on disk so any
+                // racing SSE backfill that reads the same file sees them too.
+                log_broadcaster.publish_chunk(job_id, &path, bytes, state.size);
             }
             WorkerWireMessage::ArtifactStart {
                 artifact_id,
@@ -159,7 +186,7 @@ async fn handle_connection(
             }
             WorkerWireMessage::Result { result } => {
                 sessions.complete(job_id, result).await?;
-                write_message(&mut framed, &WorkerWireMessage::ResultAck).await?;
+                write_message(framed, &WorkerWireMessage::ResultAck).await?;
                 return Ok(());
             }
             WorkerWireMessage::Heartbeat => {}
@@ -202,4 +229,11 @@ struct ActiveArtifactUpload {
     storage_path: String,
     kind: ArtifactKind,
     handle: tokio::fs::File,
+}
+
+/// Tracks an open per-source log file plus its running on-disk byte length so
+/// each published chunk carries the post-append `end_offset`.
+struct LogFileState {
+    file: tokio::fs::File,
+    size: u64,
 }

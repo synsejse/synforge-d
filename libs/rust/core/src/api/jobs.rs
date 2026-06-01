@@ -33,22 +33,28 @@ pub struct PruneJobsResponse {
     pub deleted_jobs: Vec<BuildJobResponse>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct JobResourceUsageSample {
     pub job_id: uuid::Uuid,
     pub container_id: String,
     pub memory_usage_bytes: u64,
     pub memory_limit_bytes: u64,
+    /// Live CPU utilization as a percentage of a single core (e.g. `150.0`
+    /// means ~1.5 cores busy). Computed from the delta between consecutive
+    /// samples; `0.0` on the first sample for a container.
+    pub cpu_percent: f64,
+    /// Number of CPUs visible to the container, used to scale `cpu_percent`.
+    pub online_cpus: u32,
     pub collected_at: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct JobResourceUsageListResponse {
     pub samples: Vec<JobResourceUsageSample>,
     pub page: super::PageInfo,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct JobResourceUsageResponse {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sample: Option<JobResourceUsageSample>,

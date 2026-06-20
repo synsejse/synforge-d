@@ -32,8 +32,8 @@ export default function BuildRunRow({ entry, last = false }: BuildRunRowProps) {
     <Link
       to="/jobs/view"
       search={{ id: entry.job.id }}
-      className={`group flex items-center gap-3.5 border-l border-transparent px-[18px] py-[13px] transition-colors hover:border-l-edge-strong hover:bg-[#0c0c0d] sm:gap-3.5 ${
-        last ? "" : "border-b border-[#161618]"
+      className={`group flex items-center gap-3.5 border-l border-l-transparent px-[18px] py-[13px] transition-colors hover:border-l-edge-strong hover:bg-[#0c0c0d] sm:gap-3.5 ${
+        last ? "" : "border-b border-b-[#161618]"
       }`}
     >
       <span className="shrink-0 truncate font-mono text-[13px] font-bold leading-none text-white group-hover:text-accent-lime sm:w-[118px]">

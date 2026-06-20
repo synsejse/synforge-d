@@ -102,7 +102,7 @@ export default function SystemNoticeBar() {
             type="button"
             onClick={() => dismiss(notice.id)}
             aria-label="Dismiss notice"
-            className="shrink-0 border-2 border-edge-strong bg-black px-1.5 py-0.5 text-soft transition-colors hover:border-white hover:text-white"
+            className="shrink-0 border border-edge bg-black px-1.5 py-0.5 text-soft transition-colors hover:border-white hover:text-white"
           >
             <FaIcon icon={faXmark} className="text-[11px]" />
           </button>

@@ -123,7 +123,6 @@ function RepositoryBrowser() {
             label="Targets"
             value={summary?.target_count ?? 0}
             detail="Active build targets"
-            variant="accent"
             icon={<FaIcon icon={faBullseye} />}
           />
           <MetricCard
@@ -174,7 +173,7 @@ function RepositoryBrowser() {
                 value={packageInput}
                 onChange={(e) => setPackageInput(e.target.value)}
                 placeholder="Filter by package name"
-                className="w-full border-2 border-edge-strong bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
+                className="w-full border border-edge bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
               />
             </label>
             <label className="block">
@@ -186,7 +185,7 @@ function RepositoryBrowser() {
                 value={targetInput}
                 onChange={(e) => setTargetInput(e.target.value)}
                 placeholder="Filter by target"
-                className="w-full border-2 border-edge-strong bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
+                className="w-full border border-edge bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
               />
             </label>
             <label className="block">
@@ -212,7 +211,7 @@ function RepositoryBrowser() {
       </form>
 
       <section className="space-y-3">
-        <div className="flex items-baseline justify-between gap-4 border-b-2 border-edge-strong pb-2">
+        <div className="flex items-baseline justify-between gap-4 border-b border-edge pb-2">
           <h2 className="text-base font-semibold text-white">Published files</h2>
           {!inventoryLoading && repoFiles.length > 0 ? (
             <span className="font-mono text-xs uppercase tracking-[0.18em] text-soft">

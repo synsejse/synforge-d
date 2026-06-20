@@ -232,7 +232,7 @@ export default function UserModals({
             This removes the account, its permissions, and its tracked repo
             download metrics. This action cannot be undone.
           </p>
-          <div className="border-2 border-edge-strong bg-surface-alt p-4">
+          <div className="border border-edge bg-surface-alt p-4">
             <div className="font-mono font-semibold uppercase text-white">
               {modal.user.user.display_name}
             </div>

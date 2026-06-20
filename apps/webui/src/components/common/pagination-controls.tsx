@@ -21,7 +21,7 @@ interface PaginationControlsProps {
   className?: string;
 }
 
-const DEFAULT_WRAPPER = "border-2 border-edge-strong bg-black px-4 py-3";
+const DEFAULT_WRAPPER = "border border-edge bg-black px-4 py-3";
 
 export default function PaginationControls({
   offset,

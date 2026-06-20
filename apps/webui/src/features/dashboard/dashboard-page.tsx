@@ -1,14 +1,17 @@
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { dashboardQueries, statisticsQueries } from "../../lib/queries";
+import { dashboardQueries, jobsQueries } from "../../lib/queries";
 import { formatBytes } from "../../lib/bytes";
+import type { JobResourceUsageSample } from "../../lib/types";
 import ErrorMessage from "../../components/common/error-message";
 import { usePageVisible } from "../../components/common/page-visibility-provider";
 import FaIcon from "../../components/ui/fa-icon";
 import LoadingBlock from "../../components/ui/loading-block";
 import MetricCard from "../../components/ui/metric-card";
 import PageHeader from "../../components/ui/page-header";
-import MiniJobRow from "./mini-job-row";
+import BuildRunRow from "./build-run-row";
+import InFlightCard from "./in-flight-card";
 import SyncScheduleStrip from "./sync-schedule-strip";
 import {
   faBoxesStacked,
@@ -19,6 +22,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 const DASHBOARD_REFRESH_INTERVAL_MS = 10_000;
+const USAGE_REFRESH_INTERVAL_MS = 4_000;
 
 function Dashboard() {
   const visible = usePageVisible();
@@ -26,16 +30,28 @@ function Dashboard() {
     ...dashboardQueries.overview(),
     refetchInterval: visible ? DASHBOARD_REFRESH_INTERVAL_MS : false,
   });
-  const timeseriesQuery = useQuery({
-    ...statisticsQueries.timeseries("24h"),
-    refetchInterval: visible ? 60_000 : false,
+  const liveJobs = data?.liveJobs ?? [];
+  const hasRunning = liveJobs.some((j) => j.job.status === "running");
+
+  // Live CPU/MEM samples for the in-flight panel — only polled while builds
+  // are actually running and the tab is visible. Queued jobs have no
+  // container yet, so there is nothing to sample.
+  const usageQuery = useQuery({
+    ...jobsQueries.usageList(),
+    enabled: hasRunning,
+    refetchInterval: visible && hasRunning ? USAGE_REFRESH_INTERVAL_MS : false,
   });
-  const jobsSparkline = (timeseriesQuery.data?.jobs.points ?? []).map(
-    (p) => p.succeeded + p.failed,
+  const usageByJob = new Map<string, JobResourceUsageSample>(
+    (usageQuery.data?.samples ?? []).map((s) => [s.job_id, s]),
   );
-  const syncSparkline = (timeseriesQuery.data?.sync.points ?? []).map(
-    (p) => p.succeeded + p.failed,
-  );
+
+  // Ticks the in-flight elapsed counters once a second while a build runs.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!visible || !hasRunning) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [visible, hasRunning]);
 
   if (error) {
     return (
@@ -47,16 +63,19 @@ function Dashboard() {
 
   const loading = isPending;
   const jobs = data?.jobs ?? [];
-  const liveJobs = data?.liveJobs ?? [];
   const queued = liveJobs.filter((j) => j.job.status === "pending").length;
-  const building = liveJobs.filter((j) => j.job.status === "running").length;
+  // Only running jobs are truly "in flight" — they have a container, so live
+  // CPU/MEM samples and a log stream. Queued jobs have none of that yet; they
+  // are represented by the pipeline's QUEUED count instead.
+  const inFlightJobs = liveJobs.filter((j) => j.job.status === "running");
+  const building = inFlightJobs.length;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
         description="High-signal snapshot of package state, active builds, and execution history."
-        color="cyan"
+        color="lime"
         actions={[
           { to: "/packages", label: "Packages", icon: faBoxesStacked },
           { to: "/statistics", label: "Statistics", icon: faChartLine },
@@ -73,22 +92,19 @@ function Dashboard() {
             value={data?.packageCount ?? 0}
             detail="Registered sources"
             icon={<FaIcon icon={faBoxesStacked} />}
-            sparkline={syncSparkline.length > 0 ? syncSparkline : null}
           />
           <MetricCard
             label="Enabled"
             value={data?.enabledPackageCount ?? 0}
             detail="Actively buildable"
-            variant="accent"
             icon={<FaIcon icon={faCircleCheck} />}
           />
           <MetricCard
             label="Active jobs"
             value={data?.activeJobCount ?? 0}
             detail="Pending or running"
-            variant="terminal"
+            live={(data?.activeJobCount ?? 0) > 0}
             icon={<FaIcon icon={faRocket} />}
-            sparkline={jobsSparkline.length > 0 ? jobsSparkline : null}
           />
           <MetricCard
             label="Stored"
@@ -99,36 +115,42 @@ function Dashboard() {
         </section>
       )}
 
-      <section className="border-2 border-edge-strong bg-black shadow-card-sm">
-        <div className="flex items-baseline justify-between gap-4 border-b-2 border-edge-strong app-section-band px-5 py-4">
-          <h2 className="text-xl font-bold text-white">Latest build runs</h2>
+      <section className="border border-edge bg-black">
+        <div className="flex items-center justify-between gap-4 border-b border-edge px-[18px] py-[15px]">
+          <h2 className="font-mono text-[13px] font-bold uppercase tracking-[0.06em] text-white">
+            Latest build runs
+          </h2>
           <Link
             to="/jobs"
-            className="font-mono text-sm font-semibold text-accent-lime transition-all duration-100 ease-linear hover:underline"
+            className="font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-accent-lime transition-all duration-100 ease-linear hover:underline"
           >
             View All →
           </Link>
         </div>
 
-        <div className="p-5">
-          {loading ? (
+        {loading ? (
+          <div className="p-[18px]">
             <LoadingBlock label="Loading recent builds…" lines={3} />
-          ) : jobs.length === 0 ? (
-            <div className="flex min-h-[200px] items-center justify-center border-2 border-dashed border-edge bg-surface-alt/30 px-6 py-8">
-              <div className="text-center">
-                <div className="font-mono text-sm text-soft">
-                  No jobs have run yet.
-                </div>
+          </div>
+        ) : jobs.length === 0 ? (
+          <div className="p-[18px]">
+            <div className="flex min-h-[160px] items-center justify-center border border-dashed border-edge px-6 py-8">
+              <div className="font-mono text-sm text-[#52525b]">
+                No jobs have run yet.
               </div>
             </div>
-          ) : (
-            <div className="space-y-2">
-              {jobs.map((entry) => (
-                <MiniJobRow key={entry.job.id} entry={entry} />
-              ))}
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div>
+            {jobs.map((entry, i) => (
+              <BuildRunRow
+                key={entry.job.id}
+                entry={entry}
+                last={i === jobs.length - 1}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
       {!loading && (
@@ -141,38 +163,51 @@ function Dashboard() {
 
       <SyncScheduleStrip />
 
-      <section className="border-2 border-success bg-black shadow-card-sm">
-        <div className="flex items-baseline justify-between gap-4 border-b-2 border-success bg-black px-5 py-4">
-          <div className="flex items-center gap-2">
+      <section className="border border-edge bg-black">
+        <div className="flex items-center justify-between gap-4 border-b border-edge bg-black px-[18px] py-[15px]">
+          <div className="flex items-center gap-2.5">
             <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping bg-success opacity-75" />
-              <span className="relative inline-flex h-2 w-2 bg-success" />
+              {building > 0 ? (
+                <span className="absolute inline-flex h-full w-full animate-ping bg-accent-lime opacity-75" />
+              ) : null}
+              <span
+                className={`relative inline-flex h-2 w-2 ${building > 0 ? "bg-accent-lime" : "bg-soft"}`}
+              />
             </span>
-            <h2 className="text-xl font-bold text-white">Builds in flight</h2>
+            <h2 className="font-mono text-[13px] font-bold uppercase tracking-[0.06em] text-white">
+              Builds in flight
+            </h2>
           </div>
           {!loading && (
-            <span className="font-mono text-xs uppercase tracking-[0.18em] text-soft">
-              {liveJobs.length} active
+            <span
+              className={`font-mono text-[10px] font-bold uppercase tracking-[0.16em] ${building > 0 ? "text-accent-lime" : "text-soft"}`}
+            >
+              {building} active
             </span>
           )}
         </div>
-        <div className="p-5">
-          {loading ? (
+        {loading ? (
+          <div className="p-[18px]">
             <LoadingBlock label="Loading active builds…" lines={2} />
-          ) : liveJobs.length === 0 ? (
-            <div className="flex min-h-[140px] items-center justify-center border-2 border-dashed border-edge bg-surface-alt/30 px-6 py-8">
-              <div className="font-mono text-sm text-soft">
-                Nothing is building right now.
-              </div>
+          </div>
+        ) : inFlightJobs.length === 0 ? (
+          <div className="p-2">
+            <div className="flex items-center justify-center border border-dashed border-edge px-5 py-[60px] font-mono text-[13px] text-[#52525b]">
+              Nothing is building right now.
             </div>
-          ) : (
-            <div className="space-y-2">
-              {liveJobs.map((entry) => (
-                <MiniJobRow key={entry.job.id} entry={entry} />
-              ))}
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="space-y-4 p-2">
+            {inFlightJobs.map((entry) => (
+              <InFlightCard
+                key={entry.job.id}
+                entry={entry}
+                usage={usageByJob.get(entry.job.id) ?? null}
+                now={now}
+              />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
@@ -189,48 +224,37 @@ interface PipelineStripProps {
 }
 
 /**
- * ASCII-style flow:  [QUEUED] N ──→ [BUILDING] N ──→ [DONE] view all →
- * The arrows are mono Unicode glyphs, the stages are boxed with sharp
- * borders. On md:+ this lives on a single line; below md it stacks to
- * three rows with vertical connectors.
+ * ASCII-style flow:  [ QUEUED ] ─→ [ BUILDING ] ─→ RECENT DONE  view all →
+ * One neutral container; each stage stacks a bracketed mono label over a
+ * big tabular count. The building lane carries the brand accent. Arrows are
+ * mono glyphs between stages on sm:+; below sm the stages stack.
  */
 function PipelineStrip({ queued, building, recentDone }: PipelineStripProps) {
   return (
     <section
       aria-label="Build pipeline"
-      className="border-2 border-edge-strong bg-black px-4 py-3 sm:px-5"
+      className="grid grid-cols-1 border border-edge bg-black sm:grid-cols-[1fr_auto_1fr_auto_1.4fr]"
     >
-      <div className="flex flex-col items-stretch gap-3 md:flex-row md:items-center md:gap-4">
-        <PipelineStage
-          label="Queued"
-          count={queued}
-          tone={queued > 0 ? "orange" : "muted"}
-        />
-        <PipelineConnector />
-        <PipelineStage
-          label="Building"
-          count={building}
-          tone={building > 0 ? "lime" : "muted"}
-          live={building > 0}
-        />
-        <PipelineConnector />
-        <Link
-          to="/jobs"
-          className="group flex flex-1 items-center justify-between border-2 border-edge bg-surface-alt/40 px-4 py-3 transition-colors hover:border-success hover:bg-surface-alt"
-        >
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
-              Recent done
-            </span>
-            <span className="font-display text-2xl font-black tabular-nums text-white">
-              {recentDone}
-            </span>
+      <PipelineStage label="Queued" count={queued} />
+      <PipelineArrow />
+      <PipelineStage label="Building" count={building} accent />
+      <PipelineArrow />
+      <Link
+        to="/jobs"
+        className="group flex items-center justify-between gap-4 border-t border-edge px-5 py-[18px] transition-colors hover:bg-surface-hover sm:border-t-0"
+      >
+        <div>
+          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-soft">
+            Recent done
           </div>
-          <span className="font-mono text-xs uppercase tracking-[0.18em] text-soft transition-colors group-hover:text-success">
-            view all →
-          </span>
-        </Link>
-      </div>
+          <div className="mt-3.5 font-mono text-3xl font-extrabold leading-none tabular-nums text-white">
+            {recentDone}
+          </div>
+        </div>
+        <span className="font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-soft transition-colors group-hover:text-accent-lime">
+          View all →
+        </span>
+      </Link>
     </section>
   );
 }
@@ -238,50 +262,38 @@ function PipelineStrip({ queued, building, recentDone }: PipelineStripProps) {
 function PipelineStage({
   label,
   count,
-  tone,
-  live = false,
+  accent = false,
 }: {
   label: string;
   count: number;
-  tone: "orange" | "lime" | "muted";
-  live?: boolean;
+  accent?: boolean;
 }) {
-  const toneClasses =
-    tone === "orange"
-      ? "border-accent-orange text-accent-orange"
-      : tone === "lime"
-        ? "border-accent-lime text-accent-lime"
-        : "border-edge-strong text-soft";
+  const live = accent && count > 0;
   return (
     <div
-      className={`flex flex-1 items-center justify-between border-2 bg-black px-4 py-3 ${toneClasses}`}
+      className={`px-5 py-[18px] ${accent ? "border-t border-edge sm:border-x sm:border-t-0 sm:border-[#161618]" : ""}`}
     >
-      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em]">
+      <div
+        className={`font-mono text-[10px] font-bold uppercase tracking-[0.2em] ${live ? "text-accent-lime" : "text-soft"}`}
+      >
         [ {label} ]
-      </span>
-      <span className="flex items-center gap-2">
-        {live ? (
-          <span
-            aria-hidden="true"
-            className="inline-block h-2 w-2 animate-pulse bg-accent-lime"
-          />
-        ) : null}
-        <span className="font-display text-2xl font-black tabular-nums">
-          {count}
-        </span>
-      </span>
+      </div>
+      <div
+        className={`mt-3.5 font-mono text-3xl font-extrabold leading-none tabular-nums ${live ? "text-accent-lime" : "text-white"}`}
+      >
+        {count}
+      </div>
     </div>
   );
 }
 
-function PipelineConnector() {
+function PipelineArrow() {
   return (
     <span
       aria-hidden="true"
-      className="flex shrink-0 items-center justify-center font-mono text-soft md:text-base"
+      className="hidden items-center justify-center px-1.5 font-mono text-lg text-edge-strong sm:flex"
     >
-      <span className="hidden md:inline">──→</span>
-      <span className="md:hidden">↓</span>
+      →
     </span>
   );
 }

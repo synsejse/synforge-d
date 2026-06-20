@@ -42,7 +42,7 @@ export default function RatioBar({
     return (
       <div
         className={cn(
-          "border-2 border-edge-strong bg-surface-alt p-4 font-mono text-xs uppercase tracking-[0.15em] text-soft",
+          "border border-edge bg-surface-alt p-4 font-mono text-xs uppercase tracking-[0.15em] text-soft",
           className,
         )}
       >
@@ -59,7 +59,7 @@ export default function RatioBar({
         </div>
       ) : null}
       <div
-        className="flex h-6 w-full overflow-hidden border-2 border-edge-strong"
+        className="flex h-6 w-full overflow-hidden border border-edge"
         role="img"
         aria-label={segments
           .map((s) => `${s.label} ${s.value} of ${total}`)

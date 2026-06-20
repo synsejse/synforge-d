@@ -16,7 +16,7 @@ export default function LoadingBlock({ label, lines = 3 }: Props) {
     <div
       role="status"
       aria-live="polite"
-      className="border-2 border-edge-strong bg-black p-6"
+      className="border border-edge bg-black p-6"
     >
       <div className="flex flex-wrap items-center gap-3">
         <span className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-white">
@@ -38,7 +38,7 @@ export default function LoadingBlock({ label, lines = 3 }: Props) {
           {Array.from({ length: lines }).map((_, index) => (
             <div
               key={index}
-              className="h-4 animate-pulse border-2 border-edge-strong bg-surface-alt"
+              className="h-4 animate-pulse border border-edge bg-surface-alt"
               style={{ width: `${Math.max(38, 100 - index * 12)}%` }}
             />
           ))}

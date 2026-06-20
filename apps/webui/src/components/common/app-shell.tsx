@@ -435,7 +435,7 @@ function SidebarFooter({
           >
             <div
               aria-hidden="true"
-              className="flex h-9 w-9 items-center justify-center border-2 border-edge-strong bg-black font-mono text-sm font-extrabold uppercase text-white"
+              className="flex h-9 w-9 items-center justify-center border border-edge bg-black font-mono text-sm font-extrabold uppercase text-white"
             >
               {userInitial}
             </div>
@@ -462,7 +462,7 @@ function SidebarFooter({
         <div className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-soft">
           Session
         </div>
-        <div className="mt-2 flex items-center gap-3 border-2 border-edge bg-black px-3 py-2.5">
+        <div className="mt-2 flex items-center gap-3 border border-edge bg-black px-3 py-2.5">
           <div
             aria-hidden="true"
             className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-accent-lime bg-black font-mono text-sm font-extrabold uppercase text-accent-lime"

@@ -82,7 +82,7 @@ function RefreshAllStats({
   operation: RefreshAllPackagesProgressView;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-px border-2 border-edge-strong bg-edge-strong">
+    <div className="grid grid-cols-2 gap-px border border-edge bg-edge-strong">
       <div className="space-y-2 bg-black px-4 py-3">
         <div className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-soft">
           Packages
@@ -401,7 +401,7 @@ function PackageList() {
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               placeholder="Filter by name or description"
-              className="w-full border-2 border-edge-strong bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
+              className="w-full border border-edge bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
             />
           </label>
           <label className="block">
@@ -422,7 +422,7 @@ function PackageList() {
       </FilterBar>
 
       {!loading && packages.length > 0 ? (
-        <div className="flex items-center justify-between gap-3 border-2 border-edge-strong bg-surface-alt px-4 py-2 font-mono text-xs uppercase tracking-[0.15em]">
+        <div className="flex items-center justify-between gap-3 border border-edge bg-surface-alt px-4 py-2 font-mono text-xs uppercase tracking-[0.15em]">
           <label className="flex items-center gap-3 text-muted hover:text-white">
             <input
               type="checkbox"
@@ -457,7 +457,7 @@ function PackageList() {
       {loading ? (
         <LoadingBlock label="Loading packages…" lines={4} />
       ) : packages.length === 0 ? (
-        <div className="border-2 border-edge-strong bg-black p-12 text-center">
+        <div className="border border-edge bg-black p-12 text-center">
           <p className="font-mono text-sm font-bold uppercase tracking-[0.3em] text-soft">
             NO_PACKAGES_CONFIGURED
           </p>

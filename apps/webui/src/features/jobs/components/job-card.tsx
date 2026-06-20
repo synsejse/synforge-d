@@ -59,8 +59,8 @@ export default function JobCard({
     <article
       className={`relative bg-black transition-colors ${
         live
-          ? "synforge-row-live border-2 border-edge-strong"
-          : "border-2 border-edge-strong"
+          ? "synforge-row-live border border-edge"
+          : "border border-edge"
       } ${isDeleted ? "opacity-60" : ""}`}
     >
       <span
@@ -82,13 +82,13 @@ export default function JobCard({
             <StatusPill status={entry.job.status} />
             {isDeleted ? (
               <span
-                className="border-2 border-edge-strong bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-soft"
+                className="border border-edge bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-soft"
                 title="This job's artifacts and logs were pruned. The row is kept so historical statistics still see it."
               >
                 Deleted
               </span>
             ) : null}
-            <span className="border-2 border-edge-strong bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-soft">
+            <span className="border border-edge bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-soft">
               {entry.job.mock_chroot}
             </span>
           </div>
@@ -130,7 +130,7 @@ export default function JobCard({
               to="/jobs/view"
               search={{ id: entry.job.id }}
               aria-label={`Open job ${entry.job.id}`}
-              className="inline-flex h-8 w-8 items-center justify-center border-2 border-edge-strong bg-transparent text-strong transition-colors hover:border-muted hover:bg-surface-hover hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime"
+              className="inline-flex h-8 w-8 items-center justify-center border border-edge bg-transparent text-strong transition-colors hover:border-muted hover:bg-surface-hover hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime"
             >
               <FaIcon icon={faFolderOpen} />
             </Link>
@@ -168,7 +168,7 @@ export default function JobCard({
 
       {/* Live usage substrip — only when actively running and we have a sample */}
       {mode === "active" && live && usage ? (
-        <div className="border-t-2 border-edge bg-surface-alt/40 px-4 py-3 sm:px-5">
+        <div className="border-t border-edge bg-surface-alt/40 px-4 py-3 sm:px-5">
           <JobUsageBar usage={usage} serverHardware={serverHardware} />
         </div>
       ) : null}

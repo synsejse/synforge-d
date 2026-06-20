@@ -41,18 +41,18 @@ export function SpecPickerDialog({
           {browsing ? "Browsing…" : "Load repository files"}
         </Button>
         {browseError ? (
-          <div className="border-2 border-edge-strong bg-black px-4 py-3 text-sm text-strong">
+          <div className="border border-edge bg-black px-4 py-3 text-sm text-strong">
             {browseError}
           </div>
         ) : null}
-        <div className="max-h-[50vh] overflow-auto border-2 border-edge-strong bg-black">
+        <div className="max-h-[50vh] overflow-auto border border-edge bg-black">
           {selectableFiles.length > 0 ? (
             selectableFiles.map((file) => (
               <button
                 key={file}
                 type="button"
                 onClick={() => onSelectSpec(file)}
-                className={`block w-full break-all border-b-2 border-edge px-4 py-2 text-left font-mono text-sm transition last:border-b-0 ${
+                className={`block w-full break-all border-b border-edge px-4 py-2 text-left font-mono text-sm transition last:border-b-0 ${
                   specPath === file
                     ? "bg-surface-alt text-white"
                     : "bg-black text-muted hover:bg-surface-alt"
@@ -91,7 +91,7 @@ export function ChrootPickerDialog({
       subtitle="Select one or more build targets."
       onClose={onClose}
     >
-      <div className="max-h-[50vh] overflow-y-auto border-2 border-edge-strong bg-black">
+      <div className="max-h-[50vh] overflow-y-auto border border-edge bg-black">
         <div className="divide-y divide-edge">
           {availableChroots.map((chroot) => (
             <label

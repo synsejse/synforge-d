@@ -55,7 +55,7 @@ export default function PageHeader({
   const stickyClasses = sticky ? "sticky top-0 z-10 bg-black" : "";
 
   return (
-    <section className={`border-b-2 border-edge-strong pb-4 ${stickyClasses}`}>
+    <section className={`border-b border-edge pb-4 ${stickyClasses}`}>
       <div className="flex items-stretch gap-4">
         <span
           aria-hidden="true"

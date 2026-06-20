@@ -182,7 +182,7 @@ export default function TabbedLogViewer({ jobId }: Props) {
 
   if (status === "connecting" && sources.length === 0) {
     return (
-      <div className="border-2 border-edge-strong bg-black px-5 py-8">
+      <div className="border border-edge bg-black px-5 py-8">
         <EmptyState>Connecting to log stream…</EmptyState>
       </div>
     );
@@ -190,9 +190,9 @@ export default function TabbedLogViewer({ jobId }: Props) {
 
   return (
     <div className="space-y-0">
-      <div className="border-2 border-edge-strong border-b-0 bg-surface-alt">
+      <div className="border border-edge border-b-0 bg-surface-alt">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div className="min-w-0 overflow-x-auto border-b-2 border-edge-strong md:border-b-0">
+          <div className="min-w-0 overflow-x-auto border-b border-edge md:border-b-0">
             <div className="flex min-w-max">
               {sources.map((source) => {
                 const shortLabel = source.split("/").pop() || source;
@@ -226,7 +226,7 @@ export default function TabbedLogViewer({ jobId }: Props) {
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Filter lines…"
                 aria-label="Filter log lines"
-                className="w-full border-2 border-edge-strong bg-black py-1.5 pl-8 pr-8 font-mono text-xs text-white placeholder:text-soft outline-none focus:border-accent-lime"
+                className="w-full border border-edge bg-black py-1.5 pl-8 pr-8 font-mono text-xs text-white placeholder:text-soft outline-none focus:border-accent-lime"
               />
               {searchQuery ? (
                 <button
@@ -257,7 +257,7 @@ export default function TabbedLogViewer({ jobId }: Props) {
         </div>
       </div>
 
-      <div className="border-2 border-edge-strong bg-black">
+      <div className="border border-edge bg-black">
         {logLines.length === 0 ? (
           <div className="px-5 py-8">
             <EmptyState>No log content available yet.</EmptyState>
@@ -322,7 +322,7 @@ function JumpToLive({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-2 border-2 border-edge-strong bg-accent-lime px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.15em] text-black shadow-brutal-sm transition hover:translate-y-px"
+      className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-2 border border-edge bg-accent-lime px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.15em] text-black shadow-brutal-sm transition hover:translate-y-px"
     >
       <FaIcon icon={faChevronDown} />
       Jump to live

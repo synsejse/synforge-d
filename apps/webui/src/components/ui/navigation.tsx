@@ -114,11 +114,19 @@ function NavLink({ item, onNavigate, rail }: NavLinkProps) {
   return <InternalNavLink item={item} onNavigate={onNavigate} rail={rail} />;
 }
 
+// Widths live on the base so they're always reserved (no layout shift when
+// a row becomes active): a 1px frame on three sides + a 3px left rail. The
+// COLOR defaults live in `linkInactive`, never in the base — TanStack Router
+// concatenates the base className ahead of active/inactive props, so any
+// color class left on the base would conflict (and win by stylesheet order)
+// with the active state. Hover only lifts the background; the selected row
+// gains the dark chip, neutral frame, and amber rail.
 const linkBase =
-  "group relative flex w-full items-center gap-3 border-l-[3px] border-transparent bg-transparent text-strong transition-colors hover:bg-surface-hover hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime";
+  "group relative flex w-full items-center gap-3 border-y border-r border-l-[3px] transition-colors hover:bg-[#101012] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime";
 const linkExpanded = "px-3 py-2";
 const linkRail = "lg:px-0 lg:py-2.5 lg:justify-center";
-const linkActive = "border-accent-lime bg-surface-hover text-white";
+const linkInactive = "border-transparent bg-transparent";
+const linkActive = "border-edge border-l-accent-lime bg-[#101012]";
 
 function InternalNavLink({ item, onNavigate, rail }: NavLinkProps) {
   const link = (
@@ -127,10 +135,8 @@ function InternalNavLink({ item, onNavigate, rail }: NavLinkProps) {
       onClick={onNavigate}
       activeOptions={{ exact: item.href === "/" }}
       className={cn(linkBase, linkExpanded, rail && linkRail)}
-      activeProps={{
-        "aria-current": "page",
-        className: cn(linkBase, linkExpanded, rail && linkRail, linkActive),
-      }}
+      activeProps={{ "aria-current": "page", className: linkActive }}
+      inactiveProps={{ className: linkInactive }}
     >
       {({ isActive }) => <NavLinkBody item={item} rail={rail} isActive={isActive} />}
     </Link>
@@ -152,7 +158,7 @@ function ExternalNavLink({ item, onNavigate, rail }: NavLinkProps) {
       target="_blank"
       rel="noopener noreferrer"
       onClick={onNavigate}
-      className={cn(linkBase, linkExpanded, rail && linkRail)}
+      className={cn(linkBase, linkExpanded, rail && linkRail, linkInactive)}
     >
       <NavLinkBody item={item} rail={rail} isActive={false} external />
     </a>
@@ -183,9 +189,7 @@ function NavLinkBody({
       <span
         className={cn(
           "flex h-8 w-8 shrink-0 items-center justify-center text-base transition-colors",
-          isActive
-            ? "text-accent-lime"
-            : "text-white group-hover:text-accent-lime",
+          isActive ? "text-accent-lime" : "text-soft",
         )}
         aria-hidden="true"
       >
@@ -195,7 +199,7 @@ function NavLinkBody({
         <span
           className={cn(
             "flex items-center gap-1.5 font-display text-sm font-bold uppercase tracking-wide",
-            isActive ? "text-white" : "text-strong",
+            isActive ? "text-white" : "text-[#e4e4e7] group-hover:text-white",
           )}
         >
           <span className="truncate">{item.label}</span>
@@ -240,18 +244,18 @@ function NavBadge({
 }) {
   const toneClass =
     tone === "orange"
-      ? "border-accent-orange text-accent-orange"
+      ? "border-accent-orange bg-accent-orange text-black"
       : tone === "lime"
-        ? "border-accent-lime text-accent-lime"
-        : "border-edge-strong text-soft";
+        ? "border-accent-lime bg-accent-lime text-black"
+        : "border-edge-strong bg-black text-soft";
   return (
     <span
       className={cn(
         // inline-flex + leading-none + items-center keeps the digit
-        // optically centered inside the bordered chip; tracking is
+        // optically centered inside the filled chip; tracking is
         // dropped because letter-spacing pads only the right side and
         // shoves single-character badges off-center.
-        "ml-auto inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center border bg-black px-1 font-mono text-[10px] font-bold leading-none",
+        "ml-auto inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center border px-1 font-mono text-[10px] font-extrabold leading-none",
         toneClass,
       )}
     >

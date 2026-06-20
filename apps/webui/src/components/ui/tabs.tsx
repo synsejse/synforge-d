@@ -67,7 +67,7 @@ export default function Tabs<TValue extends string>({
         role="tablist"
         aria-label={ariaLabel}
         onKeyDown={handleKeyDown}
-        className="flex flex-wrap items-stretch border-2 border-edge-strong border-b-0 bg-surface-alt"
+        className="flex flex-wrap items-stretch border border-edge border-b-0 bg-surface-alt"
       >
         {items.map((item, idx) => {
           const isActive = item.value === value;
@@ -99,7 +99,7 @@ export default function Tabs<TValue extends string>({
                     "ml-2 inline-block min-w-[1.5rem] px-1 py-0.5 text-[10px] tracking-[0.12em]",
                     isActive
                       ? "border-2 border-accent-lime text-accent-lime"
-                      : "border-2 border-edge-strong text-soft",
+                      : "border border-edge text-soft",
                   )}
                 >
                   {item.count}
@@ -113,7 +113,7 @@ export default function Tabs<TValue extends string>({
         role="tabpanel"
         id={tabPanelId(baseId, value)}
         aria-labelledby={tabButtonId(baseId, value)}
-        className="border-2 border-edge-strong bg-black p-4 sm:p-5"
+        className="border border-edge bg-black p-4 sm:p-5"
       >
         {children}
       </div>

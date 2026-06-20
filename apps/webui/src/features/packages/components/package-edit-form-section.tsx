@@ -77,7 +77,7 @@ export default function PackageEditFormSection({
       >
         {/* Always-visible essentials — Git URL, spec, chroots, enabled.
             Most package edits touch these and these only. */}
-        <section className="space-y-5 border-2 border-edge-strong bg-black p-4 sm:p-6">
+        <section className="space-y-5 border border-edge bg-black p-4 sm:p-6">
           <TextField
             label="Git repository URL"
             value={form.repoUrl}
@@ -106,7 +106,7 @@ export default function PackageEditFormSection({
               value={form.specPath}
               onChange={(event) => onFormChange({ specPath: event.target.value })}
               placeholder="path/to/package.spec"
-              className="w-full border-2 border-edge-strong bg-black px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-accent-lime"
+              className="w-full border border-edge bg-black px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-accent-lime"
               required
             />
           </FieldGroup>

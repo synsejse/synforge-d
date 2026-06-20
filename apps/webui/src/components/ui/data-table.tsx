@@ -47,7 +47,7 @@ interface DataTableProps<T> {
 }
 
 const TH_CLASS =
-  "sticky top-0 z-10 bg-surface-alt px-4 py-3 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft border-b-2 border-edge-strong";
+  "sticky top-0 z-10 bg-surface-alt px-4 py-3 text-left font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft border-b border-edge";
 
 const TD_CLASS = "px-4 py-3 align-middle";
 
@@ -103,7 +103,7 @@ export default function DataTable<T>({
           <article
             key={`m-${rowKey(row)}`}
             className={cn(
-              "border-2 border-edge-strong bg-black p-4",
+              "border border-edge bg-black p-4",
               rowClassName?.(row),
             )}
           >
@@ -136,7 +136,7 @@ export default function DataTable<T>({
 
       {/* Desktop table — no horizontal scroll. Cells wrap via break-all on
           long content; columns size to their natural max. */}
-      <div className="hidden border-2 border-edge-strong md:block">
+      <div className="hidden border border-edge md:block">
         <table className="w-full table-auto">
           <thead>
             <tr>

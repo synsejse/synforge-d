@@ -116,7 +116,7 @@ function Statistics() {
         </div>
 
         <div className="grid gap-6 xl:grid-cols-2">
-          <article className="border-2 border-edge-strong bg-black p-5">
+          <article className="border border-edge bg-black p-5">
             <div className="mb-3 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent-cyan">
               <FaIcon icon={faRotate} />
               Sync operations
@@ -128,7 +128,7 @@ function Statistics() {
             />
           </article>
 
-          <article className="border-2 border-edge-strong bg-black p-5">
+          <article className="border border-edge bg-black p-5">
             <div className="mb-3 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent-lime">
               <FaIcon icon={faChartLine} />
               Build jobs
@@ -144,7 +144,7 @@ function Statistics() {
 
       {/* Ratio visualizations — point-in-time distributions */}
       <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        <article className="border-2 border-edge-strong bg-black p-5">
+        <article className="border border-edge bg-black p-5">
           <h3 className="text-sm font-semibold text-white">
             Sync outcomes (24h)
           </h3>
@@ -166,7 +166,7 @@ function Statistics() {
           </div>
         </article>
 
-        <article className="border-2 border-edge-strong bg-black p-5">
+        <article className="border border-edge bg-black p-5">
           <h3 className="text-sm font-semibold text-white">
             Mock chroot cache
           </h3>
@@ -193,7 +193,7 @@ function Statistics() {
           </div>
         </article>
 
-        <article className="border-2 border-edge-strong bg-black p-5">
+        <article className="border border-edge bg-black p-5">
           <h3 className="text-sm font-semibold text-white">
             Git mirror health
           </h3>

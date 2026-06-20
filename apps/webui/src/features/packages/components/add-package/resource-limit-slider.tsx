@@ -24,7 +24,7 @@ export default function ResourceLimitSlider({
   value,
 }: ResourceLimitSliderProps) {
   return (
-    <div className="border-2 border-edge-strong bg-surface-alt p-4 lg:col-span-2">
+    <div className="border border-edge bg-surface-alt p-4 lg:col-span-2">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
           {label}
@@ -39,7 +39,7 @@ export default function ResourceLimitSlider({
         </label>
       </div>
       <div
-        className={`mt-4 border-2 border-edge px-3 py-4 transition ${
+        className={`mt-4 border border-edge px-3 py-4 transition ${
           enabled ? "bg-black" : "bg-surface-hover/60 opacity-70"
         }`}
       >

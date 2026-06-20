@@ -349,8 +349,8 @@ input[type="number"]:focus::-webkit-inner-spin-button {
   /* Standard section card (border-2, bg-surface, padded). For hero/header
      containers use .app-section-hero (border-4, bigger padding). */
   .app-section {
-    border-width: 2px;
-    border-color: var(--theme-border-strong);
+    border-width: 1px;
+    border-color: var(--theme-border);
     background-color: var(--theme-surface);
     padding: 1.25rem;
   }
@@ -358,8 +358,8 @@ input[type="number"]:focus::-webkit-inner-spin-button {
     .app-section { padding: 1.5rem; }
   }
   .app-section-hero {
-    border-width: 4px;
-    border-color: var(--theme-border-strong);
+    border-width: 1px;
+    border-color: var(--theme-border);
     background-color: var(--theme-surface);
     padding: 1.5rem;
   }

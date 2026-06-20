@@ -31,7 +31,7 @@ export default function Select({
     >
       <SelectPrimitive.Trigger
         className={cn(
-          "inline-flex w-full items-center justify-between gap-2 border-2 border-edge-strong bg-black px-4 py-2.5 font-mono text-sm text-white transition-colors",
+          "inline-flex w-full items-center justify-between gap-2 border border-edge bg-black px-4 py-2.5 font-mono text-sm text-white transition-colors",
           "hover:border-muted hover:bg-surface-hover",
           "focus:outline-none focus:ring-2 focus:ring-accent-lime focus:ring-offset-2 focus:ring-offset-black",
           "disabled:cursor-not-allowed disabled:opacity-40",

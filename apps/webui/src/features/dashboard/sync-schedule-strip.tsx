@@ -95,7 +95,7 @@ function ScheduleTimeline({
   now: number;
 }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto pb-3">
       <ul className="flex min-w-max items-stretch gap-0">
         {items.map((item) => (
           <ScheduleCard

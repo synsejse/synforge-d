@@ -163,10 +163,10 @@ function Dashboard() {
           <div className="flex items-center gap-2.5">
             <span className="relative flex h-2 w-2">
               {liveJobs.length > 0 ? (
-                <span className="absolute inline-flex h-full w-full animate-ping bg-success opacity-75" />
+                <span className="absolute inline-flex h-full w-full animate-ping bg-accent-lime opacity-75" />
               ) : null}
               <span
-                className={`relative inline-flex h-2 w-2 ${liveJobs.length > 0 ? "bg-success" : "bg-soft"}`}
+                className={`relative inline-flex h-2 w-2 ${liveJobs.length > 0 ? "bg-accent-lime" : "bg-soft"}`}
               />
             </span>
             <h2 className="font-mono text-[13px] font-bold uppercase tracking-[0.06em] text-white">

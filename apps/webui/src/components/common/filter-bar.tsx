@@ -35,7 +35,7 @@ export default function FilterBar({
 
   return (
     <div
-      className={`border-2 border-white bg-black ${className}`.trim()}
+      className={`border border-edge-strong bg-black ${className}`.trim()}
     >
       <div className="flex items-center justify-between gap-3 border-b-2 border-edge-strong bg-surface-alt px-4 py-3 md:hidden">
         <button

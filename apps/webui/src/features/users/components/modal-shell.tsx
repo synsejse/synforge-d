@@ -18,7 +18,7 @@ export function UserModalShell({ title, children, onClose }: UserModalShellProps
         if (!open) onClose();
       }}
       overlayClassName="flex items-center justify-center px-4 py-8"
-      className="max-w-xl border-4 border-white bg-black p-6 shadow-card-md"
+      className="max-w-xl border border-edge-strong bg-black p-6 shadow-card-md"
     >
       <div className="mb-5 border-b-2 border-edge pb-4">
         <ModalTitle asChild>

@@ -45,7 +45,7 @@ export default function Navigation({
 
   return (
     <nav
-      className="border-y-4 border-edge-strong lg:flex-1 lg:border-y-0 lg:overflow-auto"
+      className="border-y border-edge lg:flex-1 lg:border-y-0 lg:overflow-auto"
       aria-label="Primary navigation"
     >
       <div
@@ -80,7 +80,7 @@ function NavSection({ group, rail, onNavigate, withDivider }: NavSectionProps) {
     <div
       className={cn(
         withDivider && "mt-2 pt-2 lg:mt-3 lg:pt-3",
-        withDivider && "border-t-2 border-edge",
+        withDivider && "border-t border-edge",
       )}
     >
       {!rail ? (

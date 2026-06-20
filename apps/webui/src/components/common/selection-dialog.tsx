@@ -23,7 +23,7 @@ export default function SelectionDialog({
       }}
       zIndex={60}
       overlayClassName="overflow-y-auto px-4 py-8"
-      className="top-8 max-h-[calc(100dvh-4rem)] max-w-3xl translate-y-0 overflow-y-auto border-4 border-white bg-black shadow-card-md"
+      className="top-8 max-h-[calc(100dvh-4rem)] max-w-3xl translate-y-0 overflow-y-auto border border-edge-strong bg-black shadow-card-md"
     >
       <div className="flex items-start justify-between gap-4 border-b-2 border-edge px-6 py-5">
         <div>

@@ -186,7 +186,7 @@ export default function AddPackageModal({
         if (!open) onClose();
       }}
       overlayClassName="flex items-center justify-center overflow-hidden overscroll-none bg-black/70 px-4 py-6"
-      className="flex max-h-[calc(100dvh-3rem)] max-w-3xl flex-col border-4 border-white bg-black shadow-card-md"
+      className="flex max-h-[calc(100dvh-3rem)] max-w-3xl flex-col border border-edge-strong bg-black shadow-card-md"
     >
       <div className="border-b-2 border-edge px-6 py-5">
         <ModalTitle asChild>

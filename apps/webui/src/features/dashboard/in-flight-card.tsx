@@ -42,7 +42,7 @@ export default function InFlightCard({ entry, usage, now }: InFlightCardProps) {
           {job.mock_chroot}
         </span>
         <span className="font-mono text-[10px] font-semibold uppercase leading-none tracking-[0.08em] text-accent-lime">
-          {job.status === "pending" ? "Queued" : "Running"}
+          Running
         </span>
         <span className="ml-auto font-mono text-[11px] font-semibold leading-none tabular-nums text-soft">
           {elapsed}

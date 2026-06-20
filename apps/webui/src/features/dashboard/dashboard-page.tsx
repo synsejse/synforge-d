@@ -31,26 +31,27 @@ function Dashboard() {
     refetchInterval: visible ? DASHBOARD_REFRESH_INTERVAL_MS : false,
   });
   const liveJobs = data?.liveJobs ?? [];
-  const hasLive = liveJobs.length > 0;
+  const hasRunning = liveJobs.some((j) => j.job.status === "running");
 
   // Live CPU/MEM samples for the in-flight panel — only polled while builds
-  // are actually running and the tab is visible.
+  // are actually running and the tab is visible. Queued jobs have no
+  // container yet, so there is nothing to sample.
   const usageQuery = useQuery({
     ...jobsQueries.usageList(),
-    enabled: hasLive,
-    refetchInterval: visible && hasLive ? USAGE_REFRESH_INTERVAL_MS : false,
+    enabled: hasRunning,
+    refetchInterval: visible && hasRunning ? USAGE_REFRESH_INTERVAL_MS : false,
   });
   const usageByJob = new Map<string, JobResourceUsageSample>(
     (usageQuery.data?.samples ?? []).map((s) => [s.job_id, s]),
   );
 
-  // Ticks the in-flight elapsed counters once a second while visible.
+  // Ticks the in-flight elapsed counters once a second while a build runs.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!visible || !hasLive) return;
+    if (!visible || !hasRunning) return;
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
-  }, [visible, hasLive]);
+  }, [visible, hasRunning]);
 
   if (error) {
     return (
@@ -63,7 +64,11 @@ function Dashboard() {
   const loading = isPending;
   const jobs = data?.jobs ?? [];
   const queued = liveJobs.filter((j) => j.job.status === "pending").length;
-  const building = liveJobs.filter((j) => j.job.status === "running").length;
+  // Only running jobs are truly "in flight" — they have a container, so live
+  // CPU/MEM samples and a log stream. Queued jobs have none of that yet; they
+  // are represented by the pipeline's QUEUED count instead.
+  const inFlightJobs = liveJobs.filter((j) => j.job.status === "running");
+  const building = inFlightJobs.length;
 
   return (
     <div className="space-y-6">
@@ -162,11 +167,11 @@ function Dashboard() {
         <div className="flex items-center justify-between gap-4 border-b border-edge bg-black px-[18px] py-[15px]">
           <div className="flex items-center gap-2.5">
             <span className="relative flex h-2 w-2">
-              {liveJobs.length > 0 ? (
+              {building > 0 ? (
                 <span className="absolute inline-flex h-full w-full animate-ping bg-accent-lime opacity-75" />
               ) : null}
               <span
-                className={`relative inline-flex h-2 w-2 ${liveJobs.length > 0 ? "bg-accent-lime" : "bg-soft"}`}
+                className={`relative inline-flex h-2 w-2 ${building > 0 ? "bg-accent-lime" : "bg-soft"}`}
               />
             </span>
             <h2 className="font-mono text-[13px] font-bold uppercase tracking-[0.06em] text-white">
@@ -175,9 +180,9 @@ function Dashboard() {
           </div>
           {!loading && (
             <span
-              className={`font-mono text-[10px] font-bold uppercase tracking-[0.16em] ${liveJobs.length > 0 ? "text-accent-lime" : "text-soft"}`}
+              className={`font-mono text-[10px] font-bold uppercase tracking-[0.16em] ${building > 0 ? "text-accent-lime" : "text-soft"}`}
             >
-              {liveJobs.length} active
+              {building} active
             </span>
           )}
         </div>
@@ -185,7 +190,7 @@ function Dashboard() {
           <div className="p-[18px]">
             <LoadingBlock label="Loading active builds…" lines={2} />
           </div>
-        ) : liveJobs.length === 0 ? (
+        ) : inFlightJobs.length === 0 ? (
           <div className="p-2">
             <div className="flex items-center justify-center border border-dashed border-edge px-5 py-[60px] font-mono text-[13px] text-[#52525b]">
               Nothing is building right now.
@@ -193,7 +198,7 @@ function Dashboard() {
           </div>
         ) : (
           <div className="space-y-4 p-2">
-            {liveJobs.map((entry) => (
+            {inFlightJobs.map((entry) => (
               <InFlightCard
                 key={entry.job.id}
                 entry={entry}

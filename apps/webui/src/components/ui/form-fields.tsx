@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 const inputClass =
-  "w-full border-2 border-edge-strong bg-surface-alt px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-accent-lime";
+  "w-full border border-edge bg-surface-alt px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-accent-lime";
 
 const inputErrorClass =
   "w-full border-2 border-error bg-surface-alt px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-error";
@@ -159,7 +159,7 @@ export function ToggleField({
 }: ToggleFieldProps) {
   return (
     <label
-      className={`flex items-start justify-between gap-3 border-2 border-edge-strong bg-surface-alt px-4 py-3 ${className}`}
+      className={`flex items-start justify-between gap-3 border border-edge bg-surface-alt px-4 py-3 ${className}`}
     >
       <span className="min-w-0">
         <span className="block font-mono text-xs font-bold uppercase tracking-[0.1em] text-white">
@@ -194,7 +194,7 @@ export function FieldGroup({
   className = "",
 }: FieldGroupProps) {
   return (
-    <div className={`border-2 border-edge-strong bg-surface-alt p-4 ${className}`}>
+    <div className={`border border-edge bg-surface-alt p-4 ${className}`}>
       <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:justify-between">
         <div className="min-w-0">
           <span className="block font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
@@ -217,7 +217,7 @@ interface DisplayBoxProps {
 
 export function DisplayBox({ children }: DisplayBoxProps) {
   return (
-    <div className="border-2 border-edge-strong bg-black px-4 py-3 font-mono text-sm text-strong break-all">
+    <div className="border border-edge bg-black px-4 py-3 font-mono text-sm text-strong break-all">
       {children}
     </div>
   );

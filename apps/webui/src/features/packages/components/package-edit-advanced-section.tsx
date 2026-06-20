@@ -144,7 +144,7 @@ export default function PackageEditAdvancedSection({
               checked={form.ccache_enabled}
               onChange={(checked) => onFormChange({ ccache_enabled: checked })}
             />
-            <label className="flex h-full flex-col justify-between gap-2 border-2 border-edge-strong bg-surface-alt px-4 py-3">
+            <label className="flex h-full flex-col justify-between gap-2 border border-edge bg-surface-alt px-4 py-3">
               <span className="block font-mono text-xs font-bold uppercase tracking-[0.1em] text-white">
                 ccache size (MB)
               </span>
@@ -156,7 +156,7 @@ export default function PackageEditAdvancedSection({
                 onChange={(event) =>
                   onFormChange({ ccacheMaxSizeMb: event.target.value })
                 }
-                className="w-full border-2 border-edge-strong bg-black px-3 py-2 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
+                className="w-full border border-edge bg-black px-3 py-2 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
               />
             </label>
           </div>

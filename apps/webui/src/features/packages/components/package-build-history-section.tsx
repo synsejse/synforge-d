@@ -39,7 +39,7 @@ export default function PackageBuildHistorySection({
 }: PackageBuildHistorySectionProps) {
   const loading = buildsLoading && !buildsLoaded;
   const showDeletedToggle = (
-    <label className="inline-flex cursor-pointer items-center gap-2 border-2 border-edge-strong bg-black px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-soft transition-colors hover:border-accent-lime hover:text-strong">
+    <label className="inline-flex cursor-pointer items-center gap-2 border border-edge bg-black px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-soft transition-colors hover:border-accent-lime hover:text-strong">
       <input
         type="checkbox"
         className="h-4 w-4 cursor-pointer accent-accent-lime"

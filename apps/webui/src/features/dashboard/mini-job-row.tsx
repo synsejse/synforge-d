@@ -34,24 +34,24 @@ export default function MiniJobRow({ entry }: MiniJobRowProps) {
       search={{ id: entry.job.id }}
       className={`group relative block bg-black transition-colors hover:bg-surface-alt ${
         isLive
-          ? "synforge-row-live border-2 border-edge-strong"
-          : "border-2 border-edge"
+          ? "synforge-row-live border border-edge-strong"
+          : "border border-edge"
       }`}
     >
       <span
         aria-hidden="true"
-        className="absolute inset-y-0 left-0 w-1"
+        className="absolute inset-y-0 left-0 w-[3px]"
         style={{ background: accent }}
       />
       <div className="flex flex-col gap-2 pl-4 pr-3 py-2.5 sm:pl-5 sm:pr-4 md:flex-row md:items-center md:gap-4">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
-          <span className="font-display font-bold text-white transition-colors group-hover:text-accent-lime">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <span className="font-display shrink-0 font-bold text-white transition-colors group-hover:text-accent-lime">
             {entry.job.package_name}
           </span>
-          <span className="border-2 border-edge-strong bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-soft">
+          <span className="shrink-0 border border-edge bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-soft">
             {entry.job.mock_chroot}
           </span>
-          <span className="break-all font-mono text-xs text-soft">
+          <span className="min-w-0 flex-1 truncate font-mono text-xs text-soft">
             {entry.job.revision || "—"}
           </span>
         </div>

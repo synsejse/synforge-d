@@ -55,7 +55,7 @@ export default function PackageCard({
 
   return (
     <article
-      className={`relative bg-black transition-colors ${selected ? "border-2 border-accent-lime" : "border-2 border-edge-strong"}`}
+      className={`relative bg-black transition-colors ${selected ? "border-2 border-accent-lime" : "border border-edge"}`}
     >
       {/* Per-package accent rail — deterministic hue from the name. */}
       <span
@@ -163,7 +163,7 @@ export default function PackageCard({
 
       {/* Targets strip — flat list, only when there are targets */}
       {targets.length > 0 ? (
-        <ul className="flex flex-wrap gap-x-5 gap-y-2 border-t-2 border-edge bg-surface-alt/40 px-4 py-2.5 sm:px-5">
+        <ul className="flex flex-wrap gap-x-5 gap-y-2 border-t border-edge bg-surface-alt/40 px-4 py-2.5 sm:px-5">
           {targets.map((target) => (
             <li key={target.mock_chroot} className="min-w-0">
               <TargetChip target={target} />

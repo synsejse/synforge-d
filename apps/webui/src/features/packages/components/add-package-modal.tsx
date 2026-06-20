@@ -188,7 +188,7 @@ export default function AddPackageModal({
       overlayClassName="flex items-center justify-center overflow-hidden overscroll-none bg-black/70 px-4 py-6"
       className="flex max-h-[calc(100dvh-3rem)] max-w-3xl flex-col border border-edge-strong bg-black shadow-card-md"
     >
-      <div className="border-b-2 border-edge px-6 py-5">
+      <div className="border-b border-edge px-6 py-5">
         <ModalTitle asChild>
           <h2 className="text-2xl font-bold text-white">Add package</h2>
         </ModalTitle>
@@ -253,7 +253,7 @@ export default function AddPackageModal({
           />
 
           {error && (
-             <div className="border-2 border-edge-strong bg-black px-4 py-3 text-sm text-strong">
+             <div className="border border-edge bg-black px-4 py-3 text-sm text-strong">
               {error}
             </div>
           )}

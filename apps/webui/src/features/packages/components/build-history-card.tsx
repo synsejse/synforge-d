@@ -50,8 +50,8 @@ export default function BuildHistoryCard({
     <article
       className={`relative bg-black transition-colors ${
         live
-          ? "synforge-row-live border-2 border-edge-strong"
-          : "border-2 border-edge-strong"
+          ? "synforge-row-live border border-edge"
+          : "border border-edge"
       } ${isDeleted ? "opacity-60" : ""}`}
     >
       <span
@@ -73,7 +73,7 @@ export default function BuildHistoryCard({
             <StatusPill status={job.status} />
             {isDeleted ? (
               <span
-                className="border-2 border-edge-strong bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-soft"
+                className="border border-edge bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-soft"
                 title="Build artifacts and logs were pruned. Row kept for statistics."
               >
                 Deleted
@@ -115,7 +115,7 @@ export default function BuildHistoryCard({
               to="/jobs/view"
               search={{ id: job.id }}
               aria-label={`Open job ${job.id}`}
-              className="inline-flex h-8 w-8 items-center justify-center border-2 border-edge-strong bg-transparent text-strong transition-colors hover:border-muted hover:bg-surface-hover hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime"
+              className="inline-flex h-8 w-8 items-center justify-center border border-edge bg-transparent text-strong transition-colors hover:border-muted hover:bg-surface-hover hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime"
             >
               <FaIcon icon={faFolderOpen} />
             </Link>

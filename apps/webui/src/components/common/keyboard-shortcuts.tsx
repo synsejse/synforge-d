@@ -178,7 +178,7 @@ function ShortcutsOverlay({
       overlayClassName="flex items-center justify-center bg-black/85 p-4"
       className="max-w-2xl border-4 border-accent-lime bg-black p-6 shadow-[8px_8px_0_rgba(191,255,0,0.25)]"
     >
-      <div className="mb-5 flex items-baseline justify-between gap-4 border-b-2 border-edge pb-3">
+      <div className="mb-5 flex items-baseline justify-between gap-4 border-b border-edge pb-3">
         <ModalTitle asChild>
           <h2 className="text-xl font-bold text-white">Keyboard shortcuts</h2>
         </ModalTitle>

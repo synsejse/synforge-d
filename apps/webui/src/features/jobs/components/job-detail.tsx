@@ -196,7 +196,7 @@ export default function JobDetail({ jobId }: Props) {
         ]}
       />
 
-      <header className="sticky -top-3 z-20 -mx-3 min-w-0 border-b-2 border-edge-strong bg-black/95 px-3 pb-4 pt-3 backdrop-blur-sm sm:-top-5 sm:-mx-5 sm:px-5 lg:-top-8 lg:-mx-8 lg:px-8">
+      <header className="sticky -top-3 z-20 -mx-3 min-w-0 border-b border-edge bg-black/95 px-3 pb-4 pt-3 backdrop-blur-sm sm:-top-5 sm:-mx-5 sm:px-5 lg:-top-8 lg:-mx-8 lg:px-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-3">
@@ -204,7 +204,7 @@ export default function JobDetail({ jobId }: Props) {
                 {job.status}
               </Badge>
               {isDeleted ? (
-                <span className="border-2 border-edge-strong bg-black px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
+                <span className="border border-edge bg-black px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
                   Deleted
                 </span>
               ) : null}
@@ -323,7 +323,7 @@ export default function JobDetail({ jobId }: Props) {
       ) : null}
 
       {isDeleted ? (
-        <section className="border-2 border-edge-strong bg-surface-alt px-4 py-3 sm:px-5">
+        <section className="border border-edge bg-surface-alt px-4 py-3 sm:px-5">
           <p className="font-mono text-xs text-soft">
             <span className="font-bold uppercase tracking-[0.22em] text-strong">
               Deleted

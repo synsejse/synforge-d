@@ -25,9 +25,9 @@ export default function PackageStatusStrip({ pkg }: Props) {
   return (
     <section
       aria-label="Package status"
-      className="border-2 border-edge-strong bg-black"
+      className="border border-edge bg-black"
     >
-      <div className="flex flex-wrap items-start gap-x-6 gap-y-3 border-b-2 border-edge px-4 py-3 sm:px-5">
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-3 border-b border-edge px-4 py-3 sm:px-5">
         <div className="self-center">
           <StatusPill status={enabled ? "enabled" : "disabled"} />
         </div>

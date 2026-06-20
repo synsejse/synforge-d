@@ -47,7 +47,7 @@ export default function RepoFileCard({
   const kindChip = KIND_CHIP[file.kind] ?? "border-edge-strong text-soft";
 
   return (
-    <article className="relative border-2 border-edge-strong bg-black transition-colors">
+    <article className="relative border border-edge bg-black transition-colors">
       <span
         aria-hidden="true"
         className="absolute inset-y-0 left-0 w-1"
@@ -72,12 +72,12 @@ export default function RepoFileCard({
               {signing.label}
             </Badge>
             {showPackageContext ? (
-              <span className="border-2 border-edge-strong bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-soft">
+              <span className="border border-edge bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-soft">
                 {file.package_name}
               </span>
             ) : null}
             {showPackageContext && file.mock_chroot ? (
-              <span className="border-2 border-edge bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-soft">
+              <span className="border border-edge bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-soft">
                 {file.mock_chroot}
               </span>
             ) : null}
@@ -120,7 +120,7 @@ export default function RepoFileCard({
               href={`/repo/${file.path}`}
               download
               aria-label={`Download ${fileName}`}
-              className="inline-flex h-8 w-8 items-center justify-center border-2 border-edge-strong bg-transparent text-strong transition-colors hover:border-accent-lime hover:bg-surface-hover hover:text-accent-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime"
+              className="inline-flex h-8 w-8 items-center justify-center border border-edge bg-transparent text-strong transition-colors hover:border-accent-lime hover:bg-surface-hover hover:text-accent-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime"
             >
               <FaIcon icon={faDownload} />
             </a>

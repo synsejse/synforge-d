@@ -185,7 +185,7 @@ function NavLinkBody({
           "flex h-8 w-8 shrink-0 items-center justify-center text-base transition-colors",
           isActive
             ? "text-accent-lime"
-            : "text-white group-hover:text-accent-lime",
+            : "text-soft group-hover:text-accent-lime",
         )}
         aria-hidden="true"
       >
@@ -240,18 +240,18 @@ function NavBadge({
 }) {
   const toneClass =
     tone === "orange"
-      ? "border-accent-orange text-accent-orange"
+      ? "border-accent-orange bg-accent-orange text-black"
       : tone === "lime"
-        ? "border-accent-lime text-accent-lime"
-        : "border-edge-strong text-soft";
+        ? "border-accent-lime bg-accent-lime text-black"
+        : "border-edge-strong bg-black text-soft";
   return (
     <span
       className={cn(
         // inline-flex + leading-none + items-center keeps the digit
-        // optically centered inside the bordered chip; tracking is
+        // optically centered inside the filled chip; tracking is
         // dropped because letter-spacing pads only the right side and
         // shoves single-character badges off-center.
-        "ml-auto inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center border bg-black px-1 font-mono text-[10px] font-bold leading-none",
+        "ml-auto inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center border px-1 font-mono text-[10px] font-extrabold leading-none",
         toneClass,
       )}
     >

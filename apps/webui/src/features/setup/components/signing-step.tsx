@@ -29,7 +29,7 @@ export default function SigningStep({
 
   return (
     <div className="space-y-4">
-      <section className="border-2 border-edge-strong bg-black p-5">
+      <section className="border border-edge bg-black p-5">
         <h2 className="text-lg font-bold text-white">Signing</h2>
         <p className="mt-3 text-sm leading-6 text-muted">
           Configure repository signing before initialization. You can keep signing

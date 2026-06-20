@@ -54,11 +54,11 @@ export default function ProgressOverlayDialog({
       dismissable={false}
       zIndex={80}
       overlayClassName="flex items-center justify-center bg-black/85 p-6"
-      className="max-w-xl border-4 border-edge-strong bg-black shadow-card-lg"
+      className="max-w-xl border border-edge bg-black shadow-card-lg"
     >
       {/* Header band — coloured by tone, mirrors the page-header
           accent vocabulary used elsewhere in the app. */}
-      <div className="border-b-2 border-edge-strong bg-surface-alt px-5 py-3">
+      <div className="border-b border-edge bg-surface-alt px-5 py-3">
         <ModalTitle asChild>
           <h3
             className={`font-mono text-xs font-bold uppercase tracking-[0.22em] ${TITLE_TONE[tone]}`}
@@ -75,7 +75,7 @@ export default function ProgressOverlayDialog({
           </div>
         ) : null}
 
-        <div className="h-3 w-full border-2 border-edge-strong bg-black">
+        <div className="h-3 w-full border border-edge bg-black">
           <div
             className={`h-full transition-[width] duration-300 ${BAR_TONE[tone]}`}
             style={{ width: `${normalizedProgress}%` }}
@@ -87,7 +87,7 @@ export default function ProgressOverlayDialog({
         ) : null}
       </div>
 
-      <div className="flex justify-end border-t-2 border-edge-strong bg-surface-alt px-5 py-3">
+      <div className="flex justify-end border-t border-edge bg-surface-alt px-5 py-3">
         <Button
           type="button"
           variant="secondary"

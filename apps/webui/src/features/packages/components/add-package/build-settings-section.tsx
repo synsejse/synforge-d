@@ -75,7 +75,7 @@ export default function BuildSettingsSection({
   return (
     <>
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="border-2 border-edge-strong bg-surface-alt p-4 lg:col-span-2">
+        <div className="border border-edge bg-surface-alt p-4 lg:col-span-2">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <span className="block font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
@@ -88,12 +88,12 @@ export default function BuildSettingsSection({
             <button
               type="button"
               onClick={onChooseChroots}
-              className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt"
+              className="border border-edge bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt"
             >
               Choose chroots
             </button>
           </div>
-          <div className="mt-4 border-2 border-edge-strong bg-surface-alt px-4 py-3 font-mono text-sm text-strong">
+          <div className="mt-4 border border-edge bg-surface-alt px-4 py-3 font-mono text-sm text-strong">
             {chrootsLoading ? (
               <MockTargetCheckIndicator label="Checking mock targets…" />
             ) : mockChroots.length > 0 ? (
@@ -169,7 +169,7 @@ export default function BuildSettingsSection({
           placeholder={
             "KEY=value\nMESON_ARGS=-Dgallium-drivers=swrast\nRUSTFLAGS=-C debuginfo=1"
           }
-          className="w-full border-2 border-edge-strong bg-surface-alt px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-accent-lime"
+          className="w-full border border-edge bg-surface-alt px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-accent-lime"
         />
         <span className="mt-2 block text-xs text-soft">
           One `KEY=value` entry per line. Applied to SRPM creation and mock
@@ -177,7 +177,7 @@ export default function BuildSettingsSection({
         </span>
       </label>
 
-      <div className="border-2 border-edge-strong bg-surface-alt p-4">
+      <div className="border border-edge bg-surface-alt p-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
@@ -191,7 +191,7 @@ export default function BuildSettingsSection({
             type="button"
             onClick={onChooseSpec}
             disabled={browsing}
-            className="border-2 border-edge-strong bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt disabled:opacity-60"
+            className="border border-edge bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt disabled:opacity-60"
           >
             <FaIcon icon={faMagnifyingGlass} className="mr-2" />
             Browse repository
@@ -204,7 +204,7 @@ export default function BuildSettingsSection({
           onChange={(event) => setSpecPath(event.target.value)}
           placeholder="path/to/package.spec"
           required
-          className="mt-4 w-full border-2 border-edge-strong bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
+          className="mt-4 w-full border border-edge bg-black px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
         />
       </div>
     </>
@@ -233,7 +233,7 @@ function NumberField({
         step="1"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full border-2 border-edge-strong bg-surface-alt px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime"
+        className="w-full border border-edge bg-surface-alt px-4 py-3 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime"
         required
       />
     </label>

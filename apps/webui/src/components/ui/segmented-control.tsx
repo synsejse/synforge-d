@@ -59,7 +59,7 @@ export default function SegmentedControl<TValue extends string>({
       role="group"
       aria-label={ariaLabel}
       className={cn(
-        "border-2 border-edge-strong",
+        "border border-edge",
         fullWidth ? "flex w-full" : "inline-flex",
         className,
       )}

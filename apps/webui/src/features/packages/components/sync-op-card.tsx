@@ -20,7 +20,7 @@ export default function SyncOpCard({ op }: SyncOpCardProps) {
   const accent = STATUS_RAIL[op.status] ?? "var(--theme-text-soft)";
 
   return (
-    <article className="relative border-2 border-edge-strong bg-black">
+    <article className="relative border border-edge bg-black">
       <span
         aria-hidden="true"
         className="absolute inset-y-0 left-0 w-1"

@@ -262,7 +262,7 @@ function Signing() {
       {/* Status strip — flat horizontal row of key facts */}
       <section
         aria-label="Signing status"
-        className="flex flex-wrap items-start gap-x-6 gap-y-3 border-2 border-edge-strong bg-black px-4 py-3 sm:px-5"
+        className="flex flex-wrap items-start gap-x-6 gap-y-3 border border-edge bg-black px-4 py-3 sm:px-5"
       >
         <div className="self-center">
           <StatusPill status={enabled ? "enabled" : "disabled"} />
@@ -296,7 +296,7 @@ function Signing() {
       </section>
 
       {/* Action toolbar — one flat row, no nested headings */}
-      <section className="border-2 border-edge-strong bg-black">
+      <section className="border border-edge bg-black">
         <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-5">
           <Button
             type="button"
@@ -386,17 +386,17 @@ function Signing() {
 
         {/* Context hints — only when an action is locked */}
         {!enabled && !status.key_present ? (
-          <p className="border-t-2 border-edge px-4 py-2 font-mono text-[11px] text-soft sm:px-5">
+          <p className="border-t border-edge px-4 py-2 font-mono text-[11px] text-soft sm:px-5">
             Generate or import a key before enabling signing.
           </p>
         ) : null}
         {enabled ? (
-          <p className="border-t-2 border-edge px-4 py-2 font-mono text-[11px] text-soft sm:px-5">
+          <p className="border-t border-edge px-4 py-2 font-mono text-[11px] text-soft sm:px-5">
             Disable signing before generating, importing, or deleting the key.
           </p>
         ) : null}
         {!status.can_export_private_key ? (
-          <p className="border-t-2 border-edge px-4 py-2 font-mono text-[11px] text-soft sm:px-5">
+          <p className="border-t border-edge px-4 py-2 font-mono text-[11px] text-soft sm:px-5">
             Private key export is restricted to the bootstrap admin. Public
             key filename is fixed to <code>gpg.key</code>.
           </p>

@@ -29,7 +29,7 @@ export function ResourceLimitCard({
   onSliderChange,
 }: ResourceLimitCardProps) {
   return (
-    <div className="border-2 border-edge bg-surface-alt/40 p-4">
+    <div className="border border-edge bg-surface-alt/40 p-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <span className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted">
           {label}

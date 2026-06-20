@@ -35,7 +35,7 @@ export default function Dialog({
             "shadow-card-lg"
           )}
         >
-          <div className="border-b-2 border-edge-strong bg-surface px-6 py-5">
+          <div className="border-b border-edge bg-surface px-6 py-5">
             <DialogPrimitive.Title className="font-display text-2xl font-bold uppercase tracking-tight text-white">
               {title}
             </DialogPrimitive.Title>

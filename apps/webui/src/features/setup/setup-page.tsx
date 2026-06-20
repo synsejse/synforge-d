@@ -169,7 +169,7 @@ export default function SetupPage() {
   return (
     <div className="flex min-h-full items-start justify-center px-3 py-3 sm:px-6 sm:py-6 lg:items-center lg:py-12">
       <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden border border-edge-strong bg-black shadow-card-md sm:max-h-[calc(100dvh-3rem)] lg:max-h-[calc(100dvh-6rem)] xl:max-w-3xl">
-        <header className="mb-6 shrink-0 border-b-2 border-edge px-4 pb-5 pt-5 sm:mb-8 sm:px-8 sm:pb-6 sm:pt-8">
+        <header className="mb-6 shrink-0 border-b border-edge px-4 pb-5 pt-5 sm:mb-8 sm:px-8 sm:pb-6 sm:pt-8">
           <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-accent-lime">
             Synforge
           </p>

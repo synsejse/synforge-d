@@ -37,7 +37,7 @@ export default function FilterBar({
     <div
       className={`border border-edge-strong bg-black ${className}`.trim()}
     >
-      <div className="flex items-center justify-between gap-3 border-b-2 border-edge-strong bg-surface-alt px-4 py-3 md:hidden">
+      <div className="flex items-center justify-between gap-3 border-b border-edge bg-surface-alt px-4 py-3 md:hidden">
         <button
           type="button"
           onClick={() => setMobileOpen((open) => !open)}
@@ -69,7 +69,7 @@ export default function FilterBar({
         {children}
 
         {(showClear || trailing) ? (
-          <div className="mt-4 flex flex-wrap items-center justify-end gap-3 border-t-2 border-edge pt-4">
+          <div className="mt-4 flex flex-wrap items-center justify-end gap-3 border-t border-edge pt-4">
             {showClear ? (
               <Button
                 variant="ghost"

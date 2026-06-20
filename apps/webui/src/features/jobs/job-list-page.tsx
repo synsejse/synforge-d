@@ -242,7 +242,7 @@ function JobList() {
         actions={[{ to: "/", label: "Overview", icon: faChartLine }]}
       />
 
-      <div className="border-4 border-edge-strong bg-black shadow-card-sm">
+      <div className="border border-edge bg-black shadow-card-sm">
         <div className="border-b-4 border-edge-strong app-section-band px-6 py-4">
           <div className="flex flex-wrap items-center gap-4">
             <SegmentedControl<JobViewMode>
@@ -279,7 +279,7 @@ function JobList() {
                 soft-deleted jobs are pruned of artifacts/logs but kept
                 so statistics still see them; surface them on demand. */}
             {filters.mode === "history" && (
-              <label className="inline-flex cursor-pointer items-center gap-2 border-2 border-edge-strong bg-black px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-soft transition-colors hover:border-accent-lime hover:text-strong">
+              <label className="inline-flex cursor-pointer items-center gap-2 border border-edge bg-black px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-soft transition-colors hover:border-accent-lime hover:text-strong">
                 <input
                   type="checkbox"
                   className="h-4 w-4 cursor-pointer accent-accent-lime"
@@ -321,7 +321,7 @@ function JobList() {
                 onChange={(e) => setPackageInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && applyTextFilters()}
                 placeholder="Filter by package..."
-                className="w-full border-2 border-edge-strong bg-black px-4 py-2.5 font-mono text-sm text-white transition focus:border-accent-lime focus:outline-none focus:ring-2 focus:ring-accent-lime focus:ring-offset-2 focus:ring-offset-black"
+                className="w-full border border-edge bg-black px-4 py-2.5 font-mono text-sm text-white transition focus:border-accent-lime focus:outline-none focus:ring-2 focus:ring-accent-lime focus:ring-offset-2 focus:ring-offset-black"
               />
             </div>
             <div>
@@ -334,7 +334,7 @@ function JobList() {
                 onChange={(e) => setTargetInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && applyTextFilters()}
                 placeholder="Filter by target..."
-                className="w-full border-2 border-edge-strong bg-black px-4 py-2.5 font-mono text-sm text-white transition focus:border-accent-lime focus:outline-none focus:ring-2 focus:ring-accent-lime focus:ring-offset-2 focus:ring-offset-black"
+                className="w-full border border-edge bg-black px-4 py-2.5 font-mono text-sm text-white transition focus:border-accent-lime focus:outline-none focus:ring-2 focus:ring-accent-lime focus:ring-offset-2 focus:ring-offset-black"
               />
             </div>
             <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-end">

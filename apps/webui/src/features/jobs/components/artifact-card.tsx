@@ -43,7 +43,7 @@ export default function ArtifactCard({ jobId, artifact }: ArtifactCardProps) {
   const downloadUrl = `${API_BASE}/api/v1/jobs/${encodeURIComponent(jobId)}/artifacts/${encodeArtifactPath(artifact.file)}/content`;
 
   return (
-    <article className="relative border-2 border-edge-strong bg-black transition-colors">
+    <article className="relative border border-edge bg-black transition-colors">
       <span
         aria-hidden="true"
         className="absolute inset-y-0 left-0 w-1"
@@ -101,7 +101,7 @@ export default function ArtifactCard({ jobId, artifact }: ArtifactCardProps) {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`Download ${fileName}`}
-              className="inline-flex h-8 w-8 items-center justify-center border-2 border-edge-strong bg-transparent text-strong transition-colors hover:border-accent-lime hover:bg-surface-hover hover:text-accent-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime"
+              className="inline-flex h-8 w-8 items-center justify-center border border-edge bg-transparent text-strong transition-colors hover:border-accent-lime hover:bg-surface-hover hover:text-accent-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime"
             >
               <FaIcon icon={faDownload} />
             </a>

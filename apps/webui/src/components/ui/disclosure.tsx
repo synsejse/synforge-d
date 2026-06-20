@@ -67,7 +67,7 @@ export function Disclosure({
     <AccordionPrimitive.Item
       value={value}
       className={cn(
-        "border-2 border-edge-strong bg-black",
+        "border border-edge bg-black",
         className,
       )}
     >

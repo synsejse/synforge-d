@@ -33,7 +33,7 @@ export default function Tooltip({
             align={align}
             sideOffset={6}
             className={cn(
-              "z-50 border-2 border-edge-strong bg-black px-3 py-1.5 font-mono text-xs uppercase tracking-[0.12em] text-white shadow-card-sm",
+              "z-50 border border-edge bg-black px-3 py-1.5 font-mono text-xs uppercase tracking-[0.12em] text-white shadow-card-sm",
               "data-[state=delayed-open]:animate-in data-[state=closed]:animate-out",
               "data-[state=closed]:fade-out-0 data-[state=delayed-open]:fade-in-0",
               "data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1",

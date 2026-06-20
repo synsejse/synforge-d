@@ -42,17 +42,19 @@ export default function SyncScheduleStrip() {
   }, [visible]);
 
   return (
-    <section className="border-2 border-edge-strong bg-black shadow-card-sm">
-      <div className="flex items-baseline justify-between gap-4 border-b-2 border-edge-strong app-section-band px-5 py-4">
-        <div className="flex items-center gap-2">
-          <FaIcon icon={faClock} className="text-soft" />
-          <h2 className="text-xl font-bold text-white">Up next</h2>
+    <section className="border border-edge bg-black">
+      <div className="flex items-center justify-between gap-4 border-b border-edge px-[18px] py-[15px]">
+        <div className="flex items-center gap-2.5">
+          <FaIcon icon={faClock} className="text-[11px] text-soft" />
+          <h2 className="font-mono text-[13px] font-bold uppercase tracking-[0.06em] text-white">
+            Up next
+          </h2>
         </div>
-        <span className="font-mono text-xs uppercase tracking-[0.18em] text-soft">
+        <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-soft">
           Sync schedule
         </span>
       </div>
-      <div className="p-5">
+      <div className="p-[18px]">
         {isPending ? (
           <LoadingBlock label="Loading schedule…" lines={0} />
         ) : error || !data ? (
@@ -139,7 +141,7 @@ function ScheduleSlot({
     />
   );
   const halfSpacer = <div style={{ height: HALF_SLOT }} />;
-  const tick = <Tick blocked={blocked} overdue={overdue} />;
+  const tick = <Tick blocked={blocked} />;
 
   return (
     <li className="flex w-32 flex-shrink-0 flex-col items-center sm:w-36">
@@ -162,12 +164,8 @@ function ScheduleSlot({
   );
 }
 
-function Tick({ blocked, overdue }: { blocked: boolean; overdue: boolean }) {
-  const fillClass = blocked
-    ? "bg-accent-orange"
-    : overdue
-      ? "bg-accent-lime"
-      : "bg-success";
+function Tick({ blocked }: { blocked: boolean }) {
+  const fillClass = blocked ? "bg-accent-orange" : "bg-accent-lime";
   // Square tick with a 2px black halo so the connector line visibly
   // terminates AT the tick rather than embedding into it.
   return (
@@ -188,11 +186,7 @@ function ScheduleCard({
 }) {
   const overdue = remainingSec <= 0;
   const blocked = item.blocked_by_backoff;
-  const borderClass = blocked
-    ? "border-accent-orange"
-    : overdue
-      ? "border-accent-lime"
-      : "border-edge-strong";
+  const borderClass = blocked ? "border-accent-orange" : "border-edge";
   const timeClass = blocked
     ? "text-accent-orange"
     : overdue
@@ -203,7 +197,7 @@ function ScheduleCard({
     <Link
       to="/packages/view"
       search={{ name: item.package_name }}
-      className={`group flex w-full flex-col justify-between border-2 ${borderClass} bg-surface-alt/60 px-2 py-1.5 transition-colors hover:bg-surface-alt`}
+      className={`group flex w-full flex-col justify-between border ${borderClass} bg-surface-alt/60 px-2 py-1.5 transition-colors hover:bg-surface-alt`}
       style={{ height: CARD_HEIGHT }}
       title={`${item.package_name} · ${item.mock_chroot}`}
     >

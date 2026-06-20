@@ -130,7 +130,7 @@ export default function ToastProvider({ children }: { children: ReactNode }) {
                 </div>
                 <ToastPrimitive.Close
                   aria-label="Close"
-                  className="shrink-0 border-2 border-edge-strong bg-black px-2 py-1 font-mono text-xs uppercase tracking-[0.15em] text-muted transition hover:border-white hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime"
+                  className="shrink-0 border border-edge bg-black px-2 py-1 font-mono text-xs uppercase tracking-[0.15em] text-muted transition hover:border-white hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime"
                 >
                   ×
                 </ToastPrimitive.Close>

@@ -20,7 +20,7 @@ export function UserModalShell({ title, children, onClose }: UserModalShellProps
       overlayClassName="flex items-center justify-center px-4 py-8"
       className="max-w-xl border border-edge-strong bg-black p-6 shadow-card-md"
     >
-      <div className="mb-5 border-b-2 border-edge pb-4">
+      <div className="mb-5 border-b border-edge pb-4">
         <ModalTitle asChild>
           <h2 className="text-2xl font-bold text-white">{title}</h2>
         </ModalTitle>

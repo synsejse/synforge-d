@@ -27,10 +27,10 @@ export default function UserDirectory({
   onDelete,
 }: UserDirectoryProps) {
   return (
-    <section className="overflow-hidden border-2 border-edge-strong bg-black">
-      <div className="border-b-2 border-edge bg-surface-alt px-6 py-5">
+    <section className="overflow-hidden border border-edge bg-black">
+      <div className="border-b border-edge bg-surface-alt px-6 py-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center border-2 border-edge-strong bg-black text-white">
+          <div className="flex h-10 w-10 items-center justify-center border border-edge bg-black text-white">
             <FaIcon icon={faUsers} />
           </div>
           <div>
@@ -53,7 +53,7 @@ export default function UserDirectory({
                     <h3 className="text-lg font-semibold text-white">
                       {entry.user.display_name}
                     </h3>
-                    <span className="border-2 border-edge-strong bg-surface-alt px-2.5 py-1 text-xs uppercase tracking-[0.18em] text-muted">
+                    <span className="border border-edge bg-surface-alt px-2.5 py-1 text-xs uppercase tracking-[0.18em] text-muted">
                       {entry.user.active ? "active" : "disabled"}
                     </span>
                     {isCurrentUser ? (
@@ -103,12 +103,12 @@ export default function UserDirectory({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-4 border-t-2 border-edge pt-4">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-edge pt-4">
                 <div className="flex flex-wrap gap-2">
                   {entry.user.permissions.map((permission) => (
                     <span
                       key={`${entry.user.id}:${permission}`}
-                      className="border-2 border-edge-strong bg-surface-alt px-3 py-1 text-xs uppercase tracking-[0.18em] text-muted"
+                      className="border border-edge bg-surface-alt px-3 py-1 text-xs uppercase tracking-[0.18em] text-muted"
                     >
                       {permission}
                     </span>

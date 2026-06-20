@@ -100,7 +100,7 @@ function RepositorySetup() {
 
       {/* Repo File — accented frame only, no double wrapper */}
       <section className="border-2 border-accent-lime bg-black">
-        <div className="flex items-center gap-3 border-b-2 border-edge bg-surface-alt px-4 py-3">
+        <div className="flex items-center gap-3 border-b border-edge bg-surface-alt px-4 py-3">
           <div className="min-w-0 flex-1 truncate font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent-lime">
             /etc/yum.repos.d/synforge.repo
           </div>
@@ -142,7 +142,7 @@ function RepositorySetup() {
             })}
           </pre>
         </div>
-        <p className="border-t-2 border-edge bg-black px-4 py-3 text-xs text-soft">
+        <p className="border-t border-edge bg-black px-4 py-3 text-xs text-soft">
           Replace{" "}
           <span className="font-mono text-accent-lime">&lt;password&gt;</span>{" "}
           with the account password (or any user with the{" "}
@@ -152,7 +152,7 @@ function RepositorySetup() {
       </section>
 
       <section className="border-2 border-success bg-black">
-        <div className="flex items-center gap-3 border-b-2 border-edge bg-surface-alt px-4 py-3">
+        <div className="flex items-center gap-3 border-b border-edge bg-surface-alt px-4 py-3">
           <div className="min-w-0 flex-1 truncate font-mono text-xs font-bold uppercase tracking-[0.18em] text-success">
             usage
           </div>

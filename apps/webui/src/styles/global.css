@@ -4,39 +4,45 @@
 @import "tailwindcss";
 
 :root {
-  /* Brutalist Dark Theme — single source */
+  /* Terminal Control Dark Theme — single source.
+     Surfaces sit on a near-black body; cards lift slightly so they read
+     against it without bright frames. */
   --theme-body: #0a0a0a;
   --theme-text: #e4e4e7;
   --theme-surface: #000000;
   --theme-surface-alt: #09090b;
-  --theme-surface-hover: #18181b;
+  --theme-surface-hover: #161618;
   --theme-border: #27272a;
   --theme-border-strong: #3f3f46;
   --theme-text-strong: #ffffff;
   --theme-text-muted: #a1a1aa;
   --theme-text-soft: #8b8b95;
   --theme-selection: rgba(255, 255, 255, 0.2);
-  --theme-grid-line: rgba(255, 255, 255, 0.035);
+  --theme-grid-line: rgba(255, 255, 255, 0.03);
   --theme-header-divider: rgba(255, 255, 255, 0.08);
 
-  /* Brutalist Accents */
-  --theme-accent-lime: #BFFF00;
+  /* Accents. The signature accent is amber/gold (#FFB627). It is still
+     exposed under the historical `accent-lime` name so the ~140 existing
+     consumers recolor without a churny rename; new code should prefer the
+     semantic `accent` alias below. */
+  --theme-accent: #FFB627;
+  --theme-accent-lime: #FFB627;
   --theme-accent-orange: #FF6B00;
-  --theme-accent-amber: #FBBF24;
-  --theme-accent-cyan: #22d3ee;
+  --theme-accent-amber: #FFB627;
+  --theme-accent-cyan: #22D3EE;
   --theme-accent-violet: #c084fc;
   --theme-terminal-green: #00FF41;
   --theme-error-red: #FF3333;
 
-  /* Sharp Shadows (no blur) — actual values used by components */
-  /* Greyish white so the offset is visible on dark, red, lime, and
-     white buttons alike. Black-on-black was invisible on bg-error. */
-  --shadow-brutal-sm: 2px 2px 0 rgba(255, 255, 255, 0.28);
-  --shadow-brutal-md: 4px 4px 0 rgba(255, 255, 255, 0.32);
-  --shadow-brutal-lg: 6px 6px 0 rgba(255, 255, 255, 0.36);
-  --shadow-card-sm: 4px 4px 0 rgba(255, 255, 255, 0.1);
-  --shadow-card-md: 6px 6px 0 rgba(255, 255, 255, 0.2);
-  --shadow-card-lg: 8px 8px 0 rgba(255, 255, 255, 0.3);
+  /* Sharp offset shadows (no blur). Kept subtle — the terminal-control
+     look is mostly flat with a faint hard offset on lifted controls/cards,
+     not the heavy brutalist drop shadow. */
+  --shadow-brutal-sm: 2px 2px 0 rgba(255, 255, 255, 0.2);
+  --shadow-brutal-md: 2px 2px 0 rgba(255, 255, 255, 0.22);
+  --shadow-brutal-lg: 3px 3px 0 rgba(255, 255, 255, 0.25);
+  --shadow-card-sm: 2px 2px 0 rgba(255, 255, 255, 0.05);
+  --shadow-card-md: 3px 3px 0 rgba(255, 255, 255, 0.07);
+  --shadow-card-lg: 4px 4px 0 rgba(255, 255, 255, 0.09);
 }
 
 /* Tailwind v4: expose tokens as semantic utilities (bg-surface, text-muted, shadow-brutal-sm, etc.) */
@@ -57,6 +63,7 @@
   --color-soft: var(--theme-text-soft);
 
   /* Accents — bg/text/border-accent-* */
+  --color-accent: var(--theme-accent);
   --color-accent-lime: var(--theme-accent-lime);
   --color-accent-orange: var(--theme-accent-orange);
   --color-accent-amber: var(--theme-accent-amber);
@@ -123,11 +130,11 @@ h1, h2, h3,
   color: var(--theme-text-strong);
 }
 
-/* Brutalist Scrollbar */
+/* Terminal scrollbar — muted grey thumb, not a bright accent rail. */
 :root {
   --sb-track-color: #0a0a0a;
-  --sb-thumb-color: #BFFF00;
-  --sb-size: 14px;
+  --sb-thumb-color: #3f3f46;
+  --sb-size: 12px;
 }
 
 *::-webkit-scrollbar {
@@ -146,11 +153,11 @@ h1, h2, h3,
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: #d8ff72;
+  background: #52525b;
 }
 
 *::-webkit-scrollbar-thumb:active {
-  background: #fff;
+  background: #71717a;
 }
 
 *::-webkit-scrollbar-corner {
@@ -238,7 +245,7 @@ select:focus-visible {
    applied via class. */
 @keyframes synforge-row-live-pulse {
   0%, 100% { box-shadow: inset 4px 0 0 var(--theme-accent-lime); }
-  50%      { box-shadow: inset 4px 0 0 var(--theme-accent-lime), inset 0 0 0 9999px rgba(191, 255, 0, 0.04); }
+  50%      { box-shadow: inset 4px 0 0 var(--theme-accent-lime), inset 0 0 0 9999px rgba(255, 182, 39, 0.05); }
 }
 .synforge-row-live {
   animation: synforge-row-live-pulse 2.4s ease-in-out infinite;
@@ -320,9 +327,9 @@ input[type="number"]::-webkit-inner-spin-button {
     /* Center divider line */
     linear-gradient(var(--theme-border-strong), var(--theme-border-strong)) center / 55% 1px no-repeat,
     /* Up triangle */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 8'%3E%3Cpolygon points='5,1 9,7 1,7' fill='%23BFFF00'/%3E%3C/svg%3E") center calc(50% - 0.42rem) / 8px 6px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 8'%3E%3Cpolygon points='5,1 9,7 1,7' fill='%23FFB627'/%3E%3C/svg%3E") center calc(50% - 0.42rem) / 8px 6px no-repeat,
     /* Down triangle */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 8'%3E%3Cpolygon points='1,1 9,1 5,7' fill='%23BFFF00'/%3E%3C/svg%3E") center calc(50% + 0.42rem) / 8px 6px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 8'%3E%3Cpolygon points='1,1 9,1 5,7' fill='%23FFB627'/%3E%3C/svg%3E") center calc(50% + 0.42rem) / 8px 6px no-repeat,
     #000;
 }
 
@@ -382,8 +389,8 @@ html .app-chrome {
       rgba(255, 255, 255, 0.01) 20.5%,
       transparent 20.5%,
       transparent 60%,
-      rgba(191, 255, 0, 0.015) 60%,
-      rgba(191, 255, 0, 0.015) 60.5%,
+      rgba(255, 182, 39, 0.015) 60%,
+      rgba(255, 182, 39, 0.015) 60.5%,
       transparent 60.5%
     ),
     /* Base gradient - subtle depth */
@@ -402,8 +409,8 @@ html .app-chrome {
     linear-gradient(var(--theme-grid-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--theme-grid-line) 1px, transparent 1px),
     /* Secondary grid - larger cells with accent */
-    linear-gradient(rgba(191, 255, 0, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(191, 255, 0, 0.02) 1px, transparent 1px);
+    linear-gradient(rgba(255, 182, 39, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 182, 39, 0.02) 1px, transparent 1px);
   background-size:
     24px 24px,
     24px 24px,

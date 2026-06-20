@@ -171,7 +171,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <SystemNoticeBar />
     <div className="box-border min-h-full w-full max-w-full px-2 py-2 sm:px-3 sm:py-3 lg:h-screen lg:overflow-hidden lg:px-5 lg:py-5">
       <div className={`grid min-h-full min-w-0 gap-3 lg:h-full ${gridCols}`}>
-        <aside className="flex min-w-0 flex-col border-4 border-white app-section-band-vertical p-0 shadow-card-md lg:min-h-0">
+        <aside className="flex min-w-0 flex-col border border-edge-strong app-section-band-vertical p-0 lg:min-h-0">
           <SidebarHeader
             isRail={isRail}
             mobileNavOpen={mobileNavOpen}
@@ -214,7 +214,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <main
           id="main-content"
           tabIndex={-1}
-          className="min-h-0 min-w-0 overflow-x-auto overflow-y-auto border-4 border-white bg-black p-3 shadow-card-md sm:p-5 lg:p-8"
+          className="min-h-0 min-w-0 overflow-x-auto overflow-y-auto border border-edge-strong bg-black p-3 sm:p-5 lg:p-8"
         >
           <div className="mx-auto min-w-0 max-w-[96rem]">{children}</div>
         </main>
@@ -240,7 +240,7 @@ function SidebarHeader({
   return (
     <div
       className={cn(
-        "border-b-4 border-edge-strong bg-black",
+        "border-b border-edge bg-black",
         isRail ? "px-2 py-3 lg:px-2" : "px-4 py-4 sm:px-5 sm:py-5 lg:px-4 lg:py-4",
       )}
     >
@@ -335,7 +335,7 @@ function SidebarSystemTick({
 
   if (isRail) {
     return (
-      <div className="hidden lg:block border-t-2 border-edge bg-black">
+      <div className="hidden lg:block border-t border-edge bg-black">
         <Tooltip
           content={
             <div className="flex flex-col gap-0.5">
@@ -369,7 +369,7 @@ function SidebarSystemTick({
   }
 
   return (
-    <div className="border-t-2 border-edge bg-black px-3 py-2">
+    <div className="border-t border-edge bg-black px-3 py-2">
       <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.18em]">
         <div className="flex items-center gap-2">
           <span
@@ -416,7 +416,7 @@ function SidebarFooter({
 }: SidebarFooterProps) {
   if (isRail) {
     return (
-      <div className="border-t-4 border-edge-strong bg-black lg:mt-auto">
+      <div className="border-t border-edge-strong bg-black lg:mt-auto">
         <div className="hidden lg:flex flex-col items-center gap-2 px-2 py-3">
           <Tooltip
             content={
@@ -457,7 +457,7 @@ function SidebarFooter({
   }
 
   return (
-    <div className="border-t-4 border-edge-strong bg-black lg:mt-auto">
+    <div className="border-t border-edge-strong bg-black lg:mt-auto">
       <div className="px-3 py-3 sm:px-4 sm:py-4">
         <div className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-soft">
           Session

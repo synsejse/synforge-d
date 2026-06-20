@@ -1,14 +1,17 @@
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { dashboardQueries } from "../../lib/queries";
+import { dashboardQueries, jobsQueries } from "../../lib/queries";
 import { formatBytes } from "../../lib/bytes";
+import type { JobResourceUsageSample } from "../../lib/types";
 import ErrorMessage from "../../components/common/error-message";
 import { usePageVisible } from "../../components/common/page-visibility-provider";
 import FaIcon from "../../components/ui/fa-icon";
 import LoadingBlock from "../../components/ui/loading-block";
 import MetricCard from "../../components/ui/metric-card";
 import PageHeader from "../../components/ui/page-header";
-import MiniJobRow from "./mini-job-row";
+import BuildRunRow from "./build-run-row";
+import InFlightCard from "./in-flight-card";
 import SyncScheduleStrip from "./sync-schedule-strip";
 import {
   faBoxesStacked,
@@ -19,6 +22,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 const DASHBOARD_REFRESH_INTERVAL_MS = 10_000;
+const USAGE_REFRESH_INTERVAL_MS = 4_000;
 
 function Dashboard() {
   const visible = usePageVisible();
@@ -26,6 +30,27 @@ function Dashboard() {
     ...dashboardQueries.overview(),
     refetchInterval: visible ? DASHBOARD_REFRESH_INTERVAL_MS : false,
   });
+  const liveJobs = data?.liveJobs ?? [];
+  const hasLive = liveJobs.length > 0;
+
+  // Live CPU/MEM samples for the in-flight panel — only polled while builds
+  // are actually running and the tab is visible.
+  const usageQuery = useQuery({
+    ...jobsQueries.usageList(),
+    enabled: hasLive,
+    refetchInterval: visible && hasLive ? USAGE_REFRESH_INTERVAL_MS : false,
+  });
+  const usageByJob = new Map<string, JobResourceUsageSample>(
+    (usageQuery.data?.samples ?? []).map((s) => [s.job_id, s]),
+  );
+
+  // Ticks the in-flight elapsed counters once a second while visible.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!visible || !hasLive) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [visible, hasLive]);
 
   if (error) {
     return (
@@ -37,7 +62,6 @@ function Dashboard() {
 
   const loading = isPending;
   const jobs = data?.jobs ?? [];
-  const liveJobs = data?.liveJobs ?? [];
   const queued = liveJobs.filter((j) => j.job.status === "pending").length;
   const building = liveJobs.filter((j) => j.job.status === "running").length;
 
@@ -99,25 +123,29 @@ function Dashboard() {
           </Link>
         </div>
 
-        <div className="p-[18px]">
-          {loading ? (
+        {loading ? (
+          <div className="p-[18px]">
             <LoadingBlock label="Loading recent builds…" lines={3} />
-          ) : jobs.length === 0 ? (
-            <div className="flex min-h-[200px] items-center justify-center border-2 border-dashed border-edge bg-surface-alt/30 px-6 py-8">
-              <div className="text-center">
-                <div className="font-mono text-sm text-soft">
-                  No jobs have run yet.
-                </div>
+          </div>
+        ) : jobs.length === 0 ? (
+          <div className="p-[18px]">
+            <div className="flex min-h-[160px] items-center justify-center border border-dashed border-edge px-6 py-8">
+              <div className="font-mono text-sm text-[#52525b]">
+                No jobs have run yet.
               </div>
             </div>
-          ) : (
-            <div className="space-y-2">
-              {jobs.map((entry) => (
-                <MiniJobRow key={entry.job.id} entry={entry} />
-              ))}
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div>
+            {jobs.map((entry, i) => (
+              <BuildRunRow
+                key={entry.job.id}
+                entry={entry}
+                last={i === jobs.length - 1}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
       {!loading && (
@@ -153,23 +181,28 @@ function Dashboard() {
             </span>
           )}
         </div>
-        <div className="p-[18px]">
-          {loading ? (
+        {loading ? (
+          <div className="p-[18px]">
             <LoadingBlock label="Loading active builds…" lines={2} />
-          ) : liveJobs.length === 0 ? (
-            <div className="flex min-h-[140px] items-center justify-center border-2 border-dashed border-edge bg-surface-alt/30 px-6 py-8">
-              <div className="font-mono text-sm text-soft">
-                Nothing is building right now.
-              </div>
+          </div>
+        ) : liveJobs.length === 0 ? (
+          <div className="p-2">
+            <div className="flex items-center justify-center border border-dashed border-edge px-5 py-[60px] font-mono text-[13px] text-[#52525b]">
+              Nothing is building right now.
             </div>
-          ) : (
-            <div className="space-y-2">
-              {liveJobs.map((entry) => (
-                <MiniJobRow key={entry.job.id} entry={entry} />
-              ))}
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="space-y-4 p-2">
+            {liveJobs.map((entry) => (
+              <InFlightCard
+                key={entry.job.id}
+                entry={entry}
+                usage={usageByJob.get(entry.job.id) ?? null}
+                now={now}
+              />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

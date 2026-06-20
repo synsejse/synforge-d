@@ -80,12 +80,11 @@ export default function SyncScheduleStrip() {
   );
 }
 
-const CARD_HEIGHT = 64;
-const CONNECTOR_HEIGHT = 14;
-const TICK_SIZE = 10;
-const HALF_SLOT = CARD_HEIGHT + CONNECTOR_HEIGHT;
-const SLOT_HEIGHT = HALF_SLOT * 2 + TICK_SIZE;
-
+/**
+ * Linear schedule timeline — a single left-to-right row of fixed-width
+ * cards, each trailed by a marker + connector segment on a shared baseline
+ * (matching the design comp). Scrolls horizontally when it overflows.
+ */
 function ScheduleTimeline({
   items,
   computedAt,
@@ -96,84 +95,17 @@ function ScheduleTimeline({
   now: number;
 }) {
   return (
-    <div className="overflow-x-auto pb-3 pt-1">
-      <div className="relative min-w-max">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute left-0 right-0 h-px bg-edge-strong"
-          style={{ top: SLOT_HEIGHT / 2 }}
-        />
-        <ul
-          className="relative flex items-stretch gap-3 px-1"
-          style={{ height: SLOT_HEIGHT }}
-        >
-          {items.map((item, i) => (
-            <ScheduleSlot
-              key={`${item.package_name}:${item.mock_chroot}`}
-              item={item}
-              above={i % 2 === 0}
-              remainingSec={computeRemaining(item, computedAt, now)}
-            />
-          ))}
-        </ul>
-      </div>
+    <div className="overflow-x-auto">
+      <ul className="flex min-w-max items-stretch gap-0">
+        {items.map((item) => (
+          <ScheduleCard
+            key={`${item.package_name}:${item.mock_chroot}`}
+            item={item}
+            remainingSec={computeRemaining(item, computedAt, now)}
+          />
+        ))}
+      </ul>
     </div>
-  );
-}
-
-function ScheduleSlot({
-  item,
-  above,
-  remainingSec,
-}: {
-  item: ScheduleItem;
-  above: boolean;
-  remainingSec: number;
-}) {
-  const overdue = remainingSec <= 0;
-  const blocked = item.blocked_by_backoff;
-  const card = <ScheduleCard item={item} remainingSec={remainingSec} />;
-  const connector = (
-    <div
-      aria-hidden="true"
-      className="w-px bg-edge-strong"
-      style={{ height: CONNECTOR_HEIGHT }}
-    />
-  );
-  const halfSpacer = <div style={{ height: HALF_SLOT }} />;
-  const tick = <Tick blocked={blocked} />;
-
-  return (
-    <li className="flex w-32 flex-shrink-0 flex-col items-center sm:w-36">
-      {above ? (
-        <>
-          {card}
-          {connector}
-          {tick}
-          {halfSpacer}
-        </>
-      ) : (
-        <>
-          {halfSpacer}
-          {tick}
-          {connector}
-          {card}
-        </>
-      )}
-    </li>
-  );
-}
-
-function Tick({ blocked }: { blocked: boolean }) {
-  const fillClass = blocked ? "bg-accent-orange" : "bg-accent-lime";
-  // Square tick with a 2px black halo so the connector line visibly
-  // terminates AT the tick rather than embedding into it.
-  return (
-    <div
-      aria-hidden="true"
-      className={`relative z-10 ring-2 ring-black ${fillClass}`}
-      style={{ width: TICK_SIZE, height: TICK_SIZE }}
-    />
   );
 }
 
@@ -186,40 +118,46 @@ function ScheduleCard({
 }) {
   const overdue = remainingSec <= 0;
   const blocked = item.blocked_by_backoff;
-  const borderClass = blocked ? "border-accent-orange" : "border-edge";
-  const timeClass = blocked
+  const markerClass = blocked ? "bg-accent-orange" : "bg-accent-lime";
+  const etaClass = blocked
     ? "text-accent-orange"
     : overdue
       ? "text-accent-lime"
-      : "text-strong";
+      : "text-accent-lime";
+  const eta = overdue
+    ? blocked
+      ? "blocked"
+      : "due now"
+    : `in ${formatRemaining(remainingSec)}`;
 
   return (
-    <Link
-      to="/packages/view"
-      search={{ name: item.package_name }}
-      className={`group flex w-full flex-col justify-between border ${borderClass} bg-surface-alt/60 px-2 py-1.5 transition-colors hover:bg-surface-alt`}
-      style={{ height: CARD_HEIGHT }}
-      title={`${item.package_name} · ${item.mock_chroot}`}
-    >
-      <div className="truncate font-display text-xs font-bold uppercase text-white group-hover:text-accent-lime">
-        {item.package_name}
-      </div>
-      <div className="truncate font-mono text-[9px] uppercase tracking-[0.16em] text-soft">
-        {item.mock_chroot}
-      </div>
-      <div
-        className={`flex items-center gap-1 font-mono text-xs font-bold tabular-nums ${timeClass}`}
+    <li className="flex w-[148px] shrink-0 flex-col items-start">
+      <Link
+        to="/packages/view"
+        search={{ name: item.package_name }}
+        className="group block w-[140px] border border-edge bg-surface-alt px-[11px] py-[9px] transition-colors hover:border-edge-strong"
+        title={`${item.package_name} · ${item.mock_chroot}`}
       >
-        {blocked ? (
-          <FaIcon icon={faTriangleExclamation} className="text-[0.7em]" />
-        ) : null}
-        {overdue
-          ? blocked
-            ? "blocked"
-            : "due now"
-          : `in ${formatRemaining(remainingSec)}`}
+        <div className="truncate font-mono text-[11px] font-bold leading-none text-white group-hover:text-accent-lime">
+          {item.package_name}
+        </div>
+        <div className="mt-1.5 truncate font-mono text-[9px] leading-none text-[#6b6b73]">
+          {item.mock_chroot}
+        </div>
+        <div
+          className={`mt-2 flex items-center gap-1 font-mono text-[10px] font-semibold leading-none tabular-nums ${etaClass}`}
+        >
+          {blocked ? (
+            <FaIcon icon={faTriangleExclamation} className="text-[0.7em]" />
+          ) : null}
+          {eta}
+        </div>
+      </Link>
+      <div className="mt-2.5 flex w-[140px] items-center">
+        <span aria-hidden="true" className={`h-2 w-2 shrink-0 ${markerClass}`} />
+        <span aria-hidden="true" className="h-px flex-1 bg-edge" />
       </div>
-    </Link>
+    </li>
   );
 }
 

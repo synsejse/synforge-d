@@ -20,7 +20,12 @@ interface ChartRow {
 }
 
 const BAR_HEIGHT = 150;
-const MAX_LABELS = 12;
+// Cap how many bars we draw so a fine-grained window (e.g. 7d bucketed
+// hourly → ~168 points) stays legible instead of collapsing into hairlines.
+// When there are more buckets than this we merge adjacent ones, summing
+// their counts. Labels are thinned separately so they never overlap.
+const MAX_BARS = 48;
+const MAX_LABELS = 8;
 
 /**
  * Stacked bar chart for succeeded/failed event counts over time — one bar
@@ -63,9 +68,23 @@ export default function TimeSeriesChart({
     );
   }
 
-  const max = Math.max(1, ...rows.map((r) => r.succeeded + r.failed));
-  const step = Math.max(1, Math.ceil(rows.length / MAX_LABELS));
-  const labels = rows.filter((_, i) => i % step === 0).map((r) => r.label);
+  // Merge adjacent buckets down to MAX_BARS so dense windows stay readable.
+  const groupSize = Math.max(1, Math.ceil(rows.length / MAX_BARS));
+  const bars =
+    groupSize === 1
+      ? rows
+      : Array.from({ length: Math.ceil(rows.length / groupSize) }, (_, g) => {
+          const slice = rows.slice(g * groupSize, g * groupSize + groupSize);
+          return {
+            label: slice[0].label,
+            succeeded: slice.reduce((s, r) => s + r.succeeded, 0),
+            failed: slice.reduce((s, r) => s + r.failed, 0),
+          };
+        });
+
+  const max = Math.max(1, ...bars.map((r) => r.succeeded + r.failed));
+  const step = Math.max(1, Math.ceil(bars.length / MAX_LABELS));
+  const labels = bars.filter((_, i) => i % step === 0).map((r) => r.label);
 
   return (
     <div>
@@ -73,7 +92,7 @@ export default function TimeSeriesChart({
         className="flex items-end gap-[3px] border-b border-l border-edge px-0.5"
         style={{ height: BAR_HEIGHT }}
       >
-        {rows.map((r, i) => (
+        {bars.map((r, i) => (
           <div
             key={i}
             className="flex h-full flex-1 flex-col justify-end"

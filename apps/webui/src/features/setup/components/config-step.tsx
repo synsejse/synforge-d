@@ -20,7 +20,7 @@ export default function ConfigStep({
             key={section.label}
             className="xl:col-span-2 border border-edge bg-black p-5"
           >
-            <h2 className="text-lg font-bold text-white">{section.label}</h2>
+            <h2 className="font-mono text-[13px] font-bold uppercase tracking-[0.06em] text-white">{section.label}</h2>
             <div className="mt-4 grid gap-4 xl:grid-cols-2">
               {section.fields.map((field) => (
                 <label key={field.key} className="block">

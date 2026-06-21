@@ -109,7 +109,7 @@ export default function LoginPage() {
             />
           </label>
           {error ? (
-            <p className="border-2 border-error bg-black px-3 py-2 text-sm text-strong">
+            <p className="border border-error bg-black px-3 py-2 text-sm text-strong">
               {error}
             </p>
           ) : null}

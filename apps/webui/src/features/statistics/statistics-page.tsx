@@ -107,8 +107,8 @@ function Statistics() {
       <section className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-lg font-bold text-white">Activity over time</h2>
-            <p className="mt-1 text-xs text-soft">
+            <h2 className="font-mono text-sm font-bold text-white">Activity over time</h2>
+            <p className="font-body mt-1.5 text-xs text-[#71717a]">
               Stacked succeeded vs failed counts. Switch the window to zoom out.
             </p>
           </div>

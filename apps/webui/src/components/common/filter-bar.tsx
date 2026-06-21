@@ -48,7 +48,7 @@ export default function FilterBar({
           <FaIcon icon={faFilter} />
           Filters
           {activeCount > 0 ? (
-            <span className="border-2 border-accent-lime bg-black px-2 py-0.5 text-[10px] text-accent-lime">
+            <span className="border border-accent-lime bg-black px-2 py-0.5 text-[10px] text-accent-lime">
               {activeCount}
             </span>
           ) : null}

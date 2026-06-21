@@ -16,7 +16,7 @@ function PackageView() {
   const { name } = Route.useSearch();
   if (!name) {
     return (
-      <div className="border-2 border-error bg-black px-4 py-3 font-mono text-sm text-error">
+      <div className="border border-error bg-black px-4 py-3 font-mono text-sm text-error">
         Invalid package name
       </div>
     );

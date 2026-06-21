@@ -403,21 +403,21 @@ function LiveUsageStrip({
   return (
     <section
       aria-label="Live resource usage"
-      className="flex flex-col gap-3 border-2 border-accent-lime bg-black px-4 py-3 sm:flex-row sm:items-center sm:gap-x-6 sm:px-5"
+      className="flex flex-col gap-3 border border-accent-lime bg-black px-4 py-3 sm:flex-row sm:items-center sm:gap-x-6 sm:px-5"
     >
       <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-accent-lime">
         Live
       </span>
       <LiveUsageMetric
-        label="Memory"
-        value={memoryValue}
-        percent={memoryPercent}
-        fillClass="bg-accent-amber"
-      />
-      <LiveUsageMetric
         label="CPU"
         value={cpuValue}
         percent={cpuPercent}
+        fillClass="bg-accent-lime"
+      />
+      <LiveUsageMetric
+        label="Memory"
+        value={memoryValue}
+        percent={memoryPercent}
         fillClass="bg-accent-cyan"
       />
     </section>

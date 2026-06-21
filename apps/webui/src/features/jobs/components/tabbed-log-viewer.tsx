@@ -203,7 +203,7 @@ export default function TabbedLogViewer({ jobId }: Props) {
                     title={source}
                     className={`shrink-0 whitespace-nowrap px-3 py-3 font-mono text-xs font-bold uppercase tracking-[0.15em] transition sm:px-5 ${
                       activeSource === source
-                        ? "border-b-4 border-success bg-black text-success"
+                        ? "border-b border-success bg-black text-success"
                         : "text-soft hover:bg-black/50 hover:text-muted"
                     }`}
                   >

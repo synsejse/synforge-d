@@ -80,7 +80,7 @@ export default function SegmentedControl<TValue extends string>({
               "disabled:pointer-events-none disabled:opacity-40",
               sizeClasses[size],
               fullWidth ? "flex-1" : "",
-              idx > 0 ? "border-l-2 border-edge-strong" : "",
+              idx > 0 ? "border-l border-edge-strong" : "",
               isActive
                 ? toneActiveClasses[tone]
                 : "bg-black text-muted hover:text-white",

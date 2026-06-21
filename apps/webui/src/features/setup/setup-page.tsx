@@ -159,7 +159,7 @@ export default function SetupPage() {
   if (statusQuery.error || schemaQuery.error) {
     return (
       <div className="flex min-h-full items-center justify-center px-3 py-12">
-        <p className="border-2 border-error bg-black px-4 py-3 font-mono text-sm text-strong">
+        <p className="border border-error bg-black px-4 py-3 font-mono text-sm text-strong">
           Failed to load daemon configuration.
         </p>
       </div>
@@ -226,7 +226,7 @@ export default function SetupPage() {
           ) : null}
 
           {error ? (
-            <p className="mt-4 border-2 border-error bg-black px-3 py-2 text-sm text-strong">
+            <p className="mt-4 border border-error bg-black px-3 py-2 text-sm text-strong">
               {error}
             </p>
           ) : null}

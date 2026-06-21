@@ -30,7 +30,7 @@ export default function SigningStep({
   return (
     <div className="space-y-4">
       <section className="border border-edge bg-black p-5">
-        <h2 className="text-lg font-bold text-white">Signing</h2>
+        <h2 className="font-mono text-[13px] font-bold uppercase tracking-[0.06em] text-white">Signing</h2>
         <p className="mt-3 text-sm leading-6 text-muted">
           Configure repository signing before initialization. You can keep signing
           disabled, generate a managed key, or import an existing key file.

@@ -28,7 +28,7 @@ export default function EmptyState({
   className,
   hint,
 }: Props) {
-  const wrapperClass = `relative border-2 border-dashed border-edge-strong bg-black p-8 text-center font-mono text-sm text-muted ${className ?? ""}`;
+  const wrapperClass = `relative border border-dashed border-edge-strong bg-black p-8 text-center font-mono text-sm text-muted ${className ?? ""}`;
 
   const hasStructuredContent = Boolean(
     title || description || icon || action || hint,
@@ -81,19 +81,19 @@ function CornerBrackets() {
     <>
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute left-2 top-2 h-3 w-3 border-l-2 border-t-2 border-accent-lime/60"
+        className="pointer-events-none absolute left-2 top-2 h-3 w-3 border-l border-t-2 border-accent-lime/60"
       />
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute right-2 top-2 h-3 w-3 border-r-2 border-t-2 border-accent-lime/60"
+        className="pointer-events-none absolute right-2 top-2 h-3 w-3 border-r border-t-2 border-accent-lime/60"
       />
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-2 left-2 h-3 w-3 border-b-2 border-l-2 border-accent-lime/60"
+        className="pointer-events-none absolute bottom-2 left-2 h-3 w-3 border-b border-l-2 border-accent-lime/60"
       />
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-2 right-2 h-3 w-3 border-b-2 border-r-2 border-accent-lime/60"
+        className="pointer-events-none absolute bottom-2 right-2 h-3 w-3 border-b border-r-2 border-accent-lime/60"
       />
     </>
   );

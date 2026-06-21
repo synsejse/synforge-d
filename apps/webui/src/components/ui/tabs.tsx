@@ -86,9 +86,9 @@ export default function Tabs<TValue extends string>({
                 "shrink-0 whitespace-nowrap px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.16em] transition-colors",
                 "focus-visible:outline-none focus-visible:relative focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-accent-lime focus-visible:ring-offset-2 focus-visible:ring-offset-black",
                 "disabled:pointer-events-none disabled:opacity-40",
-                idx > 0 ? "border-l-2 border-edge-strong" : "",
+                idx > 0 ? "border-l border-edge-strong" : "",
                 isActive
-                  ? "bg-black text-accent-lime border-b-2 border-accent-lime -mb-[2px]"
+                  ? "bg-black text-accent-lime border-b border-accent-lime -mb-[2px]"
                   : "bg-surface-alt text-soft hover:bg-black hover:text-white",
               )}
             >
@@ -98,7 +98,7 @@ export default function Tabs<TValue extends string>({
                   className={cn(
                     "ml-2 inline-block min-w-[1.5rem] px-1 py-0.5 text-[10px] tracking-[0.12em]",
                     isActive
-                      ? "border-2 border-accent-lime text-accent-lime"
+                      ? "border border-accent-lime text-accent-lime"
                       : "border border-edge text-soft",
                   )}
                 >

@@ -22,7 +22,7 @@ export function UserModalShell({ title, children, onClose }: UserModalShellProps
     >
       <div className="mb-5 border-b border-edge pb-4">
         <ModalTitle asChild>
-          <h2 className="text-2xl font-bold text-white">{title}</h2>
+          <h2 className="font-mono text-lg font-bold uppercase tracking-[0.04em] text-white">{title}</h2>
         </ModalTitle>
       </div>
       {children}

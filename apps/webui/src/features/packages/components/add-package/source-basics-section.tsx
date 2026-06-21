@@ -181,7 +181,7 @@ function CcacheCompatibilityNotice({ chroots }: { chroots: string[] }) {
 
   if (incompatible.length === 0) {
     return (
-      <p className="border-l-2 border-edge-strong px-3 py-2 font-mono text-xs text-soft">
+      <p className="border-l border-edge-strong px-3 py-2 font-mono text-xs text-soft">
         ccache only works with{" "}
         <span className="text-strong">{supportedList}</span>. Builds for any
         other arch will fail or silently bypass the cache.
@@ -190,7 +190,7 @@ function CcacheCompatibilityNotice({ chroots }: { chroots: string[] }) {
   }
 
   return (
-    <div className="border-2 border-accent-orange bg-black px-3 py-2">
+    <div className="border border-accent-orange bg-black px-3 py-2">
       <p className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-accent-orange">
         ccache incompatible with selected targets
       </p>

@@ -77,7 +77,7 @@ export default function Select({
                   "relative flex cursor-pointer select-none items-center px-4 py-2.5 font-mono text-sm text-muted outline-none transition-colors",
                   "hover:bg-accent-lime hover:text-black",
                   "focus:bg-accent-lime focus:text-black",
-                  "data-[state=checked]:bg-success data-[state=checked]:text-black data-[state=checked]:font-bold"
+                  "data-[state=checked]:bg-accent-lime data-[state=checked]:text-black data-[state=checked]:font-bold"
                 )}
               >
                 <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>

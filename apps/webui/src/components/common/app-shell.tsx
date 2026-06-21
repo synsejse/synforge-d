@@ -214,7 +214,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <main
           id="main-content"
           tabIndex={-1}
-          className="min-h-0 min-w-0 overflow-x-auto overflow-y-auto border border-edge-strong bg-black p-3 sm:p-5 lg:p-8"
+          className="min-h-0 min-w-0 overflow-x-auto overflow-y-auto border border-edge-strong bg-black p-3 [scrollbar-gutter:stable] sm:p-5 lg:p-8"
         >
           <div className="mx-auto min-w-0 max-w-[96rem]">{children}</div>
         </main>

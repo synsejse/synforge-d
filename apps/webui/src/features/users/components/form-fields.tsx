@@ -28,7 +28,7 @@ export function PermissionGroup({ permissions, onToggle }: PermissionGroupProps)
               type="button"
               onClick={() => onToggle(permission)}
               aria-pressed={enabled}
-              className={`border-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.12em] transition duration-100 ease-linear ${
+              className={`border px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.12em] transition duration-100 ease-linear ${
                 enabled
                   ? "border-accent-lime bg-surface-alt text-accent-lime"
                   : "border-edge-strong bg-black text-muted hover:border-white hover:bg-surface-alt"

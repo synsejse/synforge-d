@@ -252,7 +252,7 @@ function SidebarHeader({
       >
         <div
           aria-hidden="true"
-          className="flex h-10 w-10 shrink-0 items-center justify-center border border-accent-lime bg-black shadow-brutal-sm"
+          className="flex h-10 w-10 shrink-0 items-center justify-center border border-accent-lime bg-black"
         >
           <BrandMark className="h-6 w-6" />
         </div>

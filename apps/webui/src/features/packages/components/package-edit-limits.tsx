@@ -57,7 +57,7 @@ export function ResourceLimitCard({
           onChange={(event) => onSliderChange(Number(event.target.value))}
           disabled={!enabled}
           aria-label={label}
-          className="h-2 w-full cursor-pointer appearance-none bg-edge-strong accent-accent-lime disabled:cursor-not-allowed [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-black [&::-moz-range-thumb]:bg-accent-lime [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-black [&::-webkit-slider-thumb]:bg-accent-lime"
+          className="h-2 w-full cursor-pointer appearance-none bg-edge-strong accent-accent-lime disabled:cursor-not-allowed [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-black [&::-moz-range-thumb]:bg-accent-lime [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-black [&::-webkit-slider-thumb]:bg-accent-lime"
         />
         <div className="mt-2 flex items-center justify-between gap-3 font-mono text-xs font-bold uppercase tracking-[0.12em]">
           <span className="text-accent-lime">

@@ -50,7 +50,7 @@ export default function EmptyState({
         <FaIcon icon={icon} className="mb-4 text-3xl text-soft" />
       ) : null}
       {title ? (
-        <div className="font-display text-base font-bold uppercase tracking-[0.15em] text-white">
+        <div className="font-mono text-[13px] font-bold uppercase tracking-[0.06em] text-white">
           {title}
         </div>
       ) : null}

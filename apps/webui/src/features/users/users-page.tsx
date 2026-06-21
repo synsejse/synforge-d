@@ -232,8 +232,8 @@ function Users() {
     <div className="space-y-6">
       <PageHeader
         title="Users"
-        description="Manage operator accounts, credentials, repository access, and download usage from one screen."
-        color="white"
+        description="Operator accounts, credentials, repository access, and download usage."
+        color="lime"
         actions={[
           {
             onClick: openCreateModal,

@@ -28,7 +28,6 @@ import Select from "../../components/ui/select";
 import PageHeader from "../../components/ui/page-header";
 import ProgressOverlayDialog from "../../components/ui/progress-overlay-dialog";
 import PaginationControls from "../../components/common/pagination-controls";
-import FilterBar from "../../components/common/filter-bar";
 import SelectionActionBar from "../../components/common/selection-action-bar";
 
 const PAGE_SIZE = 50;
@@ -295,10 +294,6 @@ function PackageList() {
     selection.clear();
   }
 
-  function applyFilters() {
-    setSearch(searchInput);
-  }
-
   if (listQuery.error) {
     return (
       <ErrorMessage
@@ -370,44 +365,24 @@ function PackageList() {
         ]}
       />
 
-      <FilterBar
-        activeCount={
-          (search ? 1 : 0) + (enabledFilter !== "all" ? 1 : 0)
-        }
-        onClear={() => {
-          setSearchInput("");
-          setSearch("");
-          setEnabledFilter("all");
-        }}
-        trailing={
-          <Button
-            variant="secondary"
-            size="md"
-            className="w-full xl:w-auto"
-            onClick={applyFilters}
-          >
-            Apply Filters
-          </Button>
-        }
-      >
-        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
-          <label className="block">
-            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
-              Search
-            </span>
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              placeholder="Filter by name or description"
-              className="w-full border border-edge bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
-              Status
-            </span>
+      <div className="grid items-end gap-4 border border-edge bg-black p-[18px] sm:grid-cols-[minmax(0,1fr)_200px]">
+        <label className="block">
+          <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-soft">
+            Search
+          </span>
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Filter by name or description"
+            className="mt-2.5 w-full border border-edge bg-black px-3 py-2.5 font-mono text-[13px] text-white outline-none transition-colors focus:border-accent-lime"
+          />
+        </label>
+        <label className="block">
+          <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-soft">
+            Status
+          </span>
+          <div className="mt-2.5">
             <Select
               value={enabledFilter}
               onValueChange={(val) => setEnabledFilter(val as EnabledFilter)}
@@ -417,13 +392,13 @@ function PackageList() {
                 { value: "false", label: "Disabled" },
               ]}
             />
-          </label>
-        </div>
-      </FilterBar>
+          </div>
+        </label>
+      </div>
 
       {!loading && packages.length > 0 ? (
-        <div className="flex items-center justify-between gap-3 border border-edge bg-surface-alt px-4 py-2 font-mono text-xs uppercase tracking-[0.15em]">
-          <label className="flex items-center gap-3 text-muted hover:text-white">
+        <div className="flex items-center justify-between gap-3 border border-edge bg-[#09090b] px-4 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-soft">
+          <label className="flex items-center gap-2.5 hover:text-white">
             <input
               type="checkbox"
               checked={selection.allSelected(

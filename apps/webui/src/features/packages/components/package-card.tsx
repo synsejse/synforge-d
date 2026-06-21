@@ -3,7 +3,9 @@ import {
   faRotate,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { formatDurationSeconds } from "../../../lib/datetime";
 import type {
   PackageResponse,
@@ -11,7 +13,6 @@ import type {
 } from "../../../lib/types";
 import Button from "../../../components/ui/button";
 import FaIcon from "../../../components/ui/fa-icon";
-import MetaPair from "../../../components/ui/meta-pair";
 import StatusPill from "../../../components/ui/status-pill";
 import Tooltip from "../../../components/ui/tooltip";
 import {
@@ -19,7 +20,6 @@ import {
   summarizePackageStatus,
   targetStatus,
 } from "./package-state";
-import { packageAccent } from "./package-accent";
 
 interface PackageCardProps {
   entry: PackageResponse;
@@ -32,6 +32,26 @@ interface PackageCardProps {
   selected?: boolean;
   onToggleSelected?: (name: string, value: boolean) => void;
 }
+
+const STATUS_RAIL: Record<string, string> = {
+  enabled: "var(--theme-terminal-green)",
+  succeeded: "var(--theme-terminal-green)",
+  running: "var(--theme-accent-lime)",
+  pending: "var(--theme-accent-orange)",
+  failed: "var(--theme-error-red)",
+  timed_out: "var(--theme-error-red)",
+  disabled: "var(--theme-text-soft)",
+};
+
+const STATUS_DOTS: Record<string, string> = {
+  pending: "bg-accent-orange",
+  running: "bg-accent-lime",
+  succeeded: "bg-success",
+  failed: "bg-error",
+  timed_out: "bg-error",
+  enabled: "bg-success",
+  disabled: "bg-soft",
+};
 
 export default function PackageCard({
   entry,
@@ -50,20 +70,17 @@ export default function PackageCard({
   const lastRevision = entry.state.last_revision || null;
   const targets = entry.state.targets ?? [];
   const version = `${entry.package.version}-${entry.package.release}`;
-
-  const accent = packageAccent(entry.package.name);
+  const rail = STATUS_RAIL[status] ?? "var(--theme-terminal-green)";
 
   return (
-    <article
-      className={`relative bg-black transition-colors ${selected ? "border-2 border-accent-lime" : "border border-edge"}`}
-    >
-      {/* Per-package accent rail — deterministic hue from the name. */}
+    <article className="sf-row relative border border-edge bg-black py-4 pl-[22px] pr-[18px] transition-colors hover:border-edge-strong hover:bg-[#0c0c0d]">
       <span
         aria-hidden="true"
-        className="absolute inset-y-0 left-0 w-1"
-        style={{ background: accent }}
+        className="absolute inset-y-0 left-0 w-[2px]"
+        style={{ background: rail }}
       />
-      <div className="flex flex-col gap-3 pl-4 pr-4 py-3 sm:pl-6 sm:pr-5 sm:py-4 lg:flex-row lg:items-start lg:gap-4">
+
+      <div className="flex flex-wrap items-center gap-3">
         {selectable ? (
           <input
             type="checkbox"
@@ -72,123 +89,117 @@ export default function PackageCard({
               onToggleSelected?.(entry.package.name, event.target.checked)
             }
             aria-label={`Select package ${entry.package.name}`}
-            className="mt-1 shrink-0"
+            className="shrink-0"
           />
         ) : null}
-
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <Link
-              to="/packages/view"
-              search={{ name: entry.package.name }}
-              className="break-all font-mono text-base font-bold uppercase text-white transition-colors hover:text-accent-lime sm:text-lg"
-            >
-              {entry.package.name}
-            </Link>
-            <StatusPill status={status} />
-            {backoffTargets.length > 0 ? (
-              <Tooltip
-                content={summarizeBackoffTargets(backoffTargets)}
-                side="top"
-              >
-                <span className="border-2 border-accent-orange bg-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-accent-orange">
-                  Backoff {backoffTargets.length}
-                </span>
-              </Tooltip>
-            ) : null}
-          </div>
-
-          <div className="mt-2 flex flex-wrap items-start gap-x-6 gap-y-2 font-mono text-xs">
-            <MetaPair label="Version">
-              <span className="text-strong">{version}</span>
-            </MetaPair>
-            <MetaPair label="Revision">
-              {lastRevision ? (
-                <span className="break-all text-strong">
-                  {compactRevision(lastRevision)}
-                </span>
-              ) : (
-                <span className="text-soft">none yet</span>
-              )}
-            </MetaPair>
-            <MetaPair label="Targets">
-              <span className="text-strong">{targets.length}</span>
-            </MetaPair>
-          </div>
-
-          {description ? (
-            <p className="mt-2 line-clamp-1 text-xs text-soft">
-              {description}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="flex shrink-0 gap-1">
-          <Tooltip content="Refresh sources" side="top">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => onRefresh(entry.package.name)}
-              aria-label={`Refresh package ${entry.package.name}`}
-              disabled={refreshDisabled || refreshing}
-              loading={refreshing}
-            >
-              {refreshing ? null : <FaIcon icon={faRotate} />}
-            </Button>
+        <Link
+          to="/packages/view"
+          search={{ name: entry.package.name }}
+          className="break-all font-mono text-[15px] font-bold uppercase tracking-[0.02em] text-white transition-colors hover:text-accent-lime"
+        >
+          {entry.package.name}
+        </Link>
+        <StatusPill status={status} />
+        {backoffTargets.length > 0 ? (
+          <Tooltip content={summarizeBackoffTargets(backoffTargets)} side="top">
+            <span className="border border-accent-orange bg-black px-2 py-[5px] font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.1em] text-accent-orange">
+              Backoff {backoffTargets.length}
+            </span>
           </Tooltip>
-          <Tooltip content="Rebuild package" side="top">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => onRebuild(entry.package.name)}
-              aria-label={`Rebuild package ${entry.package.name}`}
-              className="hover:border-accent-lime hover:text-accent-lime"
-            >
-              <FaIcon icon={faHammer} />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Delete package" side="top">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => onDelete(entry.package.name)}
-              aria-label={`Delete package ${entry.package.name}`}
-              className="hover:border-error hover:text-error"
-            >
-              <FaIcon icon={faTrash} />
-            </Button>
-          </Tooltip>
+        ) : null}
+
+        <div className="ml-auto flex gap-1.5">
+          <IconButton
+            icon={faRotate}
+            label={`Refresh package ${entry.package.name}`}
+            tooltip="Refresh sources"
+            onClick={() => onRefresh(entry.package.name)}
+            disabled={refreshDisabled || refreshing}
+            loading={refreshing}
+          />
+          <IconButton
+            icon={faHammer}
+            label={`Rebuild package ${entry.package.name}`}
+            tooltip="Rebuild package"
+            onClick={() => onRebuild(entry.package.name)}
+          />
+          <IconButton
+            icon={faTrash}
+            label={`Delete package ${entry.package.name}`}
+            tooltip="Delete package"
+            onClick={() => onDelete(entry.package.name)}
+            danger
+          />
         </div>
       </div>
 
-      {/* Targets strip — flat list, only when there are targets */}
+      <div className="mt-3.5 grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_90px] sm:gap-[18px]">
+        <Meta label="Version">
+          <span className="break-all text-muted">{version}</span>
+        </Meta>
+        <Meta label="Revision">
+          {lastRevision ? (
+            <span className="break-all text-[#52525b]">
+              {compactRevision(lastRevision)}
+            </span>
+          ) : (
+            <span className="text-[#52525b]">none yet</span>
+          )}
+        </Meta>
+        <Meta label="Targets">
+          <span className="text-base font-bold text-strong">{targets.length}</span>
+        </Meta>
+      </div>
+
+      {description ? (
+        <p className="font-body mt-3 line-clamp-2 text-xs text-[#71717a]">
+          {description}
+        </p>
+      ) : null}
+
       {targets.length > 0 ? (
-        <ul className="flex flex-wrap gap-x-5 gap-y-2 border-t border-edge bg-surface-alt/40 px-4 py-2.5 sm:px-5">
+        <div className="mt-3.5 flex flex-wrap gap-2.5 border-t border-[#161618] pt-3.5">
           {targets.map((target) => (
-            <li key={target.mock_chroot} className="min-w-0">
-              <TargetChip target={target} />
-            </li>
+            <TargetChip key={target.mock_chroot} target={target} />
           ))}
-        </ul>
+        </div>
       ) : null}
     </article>
+  );
+}
+
+function Meta({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <div className="font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.18em] text-[#6b6b73]">
+        {label}
+      </div>
+      <div className="mt-[7px] font-mono text-xs leading-[1.3]">{children}</div>
+    </div>
   );
 }
 
 function TargetChip({ target }: { target: PackageTargetState }) {
   const status = targetStatus(target);
   const backoff = target.backoff_remaining_seconds ?? 0;
+  const dot = STATUS_DOTS[status] ?? "bg-muted";
   return (
-    <div className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px]">
-      <span className="break-all text-white">{target.mock_chroot}</span>
-      <StatusDot status={status} />
-      <span className="break-all text-soft">
+    <div className="inline-flex items-center gap-2 border border-edge px-2.5 py-1.5">
+      <span className="font-mono text-[10px] font-semibold leading-none text-muted">
+        {target.mock_chroot}
+      </span>
+      <span
+        title={status}
+        aria-label={`status ${status}`}
+        className={`h-1.5 w-1.5 shrink-0 ${dot}`}
+      />
+      <span className="font-mono text-[10px] leading-none text-[#52525b]">
         {target.last_revision
           ? compactRevision(target.last_revision)
           : "no revision yet"}
       </span>
       {backoff > 0 ? (
-        <span className="border border-accent-orange px-1.5 py-0.5 text-[10px] uppercase tracking-[0.14em] text-accent-orange">
+        <span className="border border-accent-orange px-1.5 py-0.5 font-mono text-[9px] uppercase leading-none tracking-[0.1em] text-accent-orange">
           backoff {formatDurationSeconds(backoff)}
         </span>
       ) : null}
@@ -196,24 +207,41 @@ function TargetChip({ target }: { target: PackageTargetState }) {
   );
 }
 
-const STATUS_DOTS: Record<string, string> = {
-  pending: "bg-accent-orange",
-  running: "bg-accent-lime",
-  succeeded: "bg-success",
-  failed: "bg-error",
-  timed_out: "bg-error",
-  enabled: "bg-success",
-  disabled: "bg-soft",
-};
-
-function StatusDot({ status }: { status: string }) {
-  const dot = STATUS_DOTS[status] ?? "bg-muted";
+function IconButton({
+  icon,
+  label,
+  tooltip,
+  onClick,
+  disabled,
+  loading,
+  danger,
+}: {
+  icon: IconDefinition;
+  label: string;
+  tooltip: string;
+  onClick: () => void;
+  disabled?: boolean;
+  loading?: boolean;
+  danger?: boolean;
+}) {
   return (
-    <span
-      title={status}
-      aria-label={`status ${status}`}
-      className={`inline-block h-2 w-2 ${dot}`}
-    />
+    <Tooltip content={tooltip} side="top">
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={onClick}
+        disabled={disabled}
+        loading={loading}
+        aria-label={label}
+        className={`h-[30px] w-[30px] border-edge text-soft ${
+          danger
+            ? "hover:border-error hover:text-error"
+            : "hover:border-accent-lime hover:text-accent-lime"
+        }`}
+      >
+        {loading ? null : <FaIcon icon={icon} className="text-[13px]" />}
+      </Button>
+    </Tooltip>
   );
 }
 

@@ -22,54 +22,27 @@ import FaIcon from "./fa-icon";
 export const buttonVariants = cva(
   [
     "inline-flex items-center justify-center gap-2 border font-mono font-bold uppercase leading-none",
-    "transition-[color,background-color,border-color,box-shadow,transform] duration-100 ease-linear",
+    "transition-[color,background-color,border-color,filter] duration-100 ease-linear",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime focus-visible:ring-offset-2 focus-visible:ring-offset-black",
     "disabled:pointer-events-none disabled:opacity-40",
   ].join(" "),
   {
     variants: {
       variant: {
-        // All variants share the same shadow + lift vocabulary: -2px
-        // translate, 6px hard offset, white-ish shadow that reads
-        // against any button colour on the dark page background.
-        primary: [
-          "bg-accent-lime text-black border-accent-lime shadow-brutal-sm",
-          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
-          "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
-        ].join(" "),
-        secondary: [
-          "bg-white text-black border-white shadow-brutal-sm",
-          "hover:bg-strong hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
-          "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
-        ].join(" "),
-        ghost: [
-          "bg-transparent text-strong border-edge-strong shadow-brutal-sm",
-          "hover:border-muted hover:bg-surface-hover hover:text-white",
-          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
-          "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
-        ].join(" "),
-        subtle: [
-          "bg-transparent text-soft border-transparent shadow-brutal-sm",
-          "hover:bg-surface-hover hover:text-white",
-          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
-          "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
-        ].join(" "),
-        danger: [
-          "bg-error text-white border-error shadow-brutal-sm",
-          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
-          "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
-        ].join(" "),
-        warning: [
-          "bg-accent-orange text-black border-accent-orange shadow-brutal-sm",
-          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
-          "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
-        ].join(" "),
-        terminal: [
-          "bg-black text-success border-success font-mono shadow-brutal-sm",
-          "hover:bg-success hover:text-black",
-          "hover:shadow-brutal-lg hover:-translate-x-0.5 hover:-translate-y-0.5",
-          "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
-        ].join(" "),
+        // Flat — no offset shadow, no hover lift. Hover is a colour-only
+        // shift (filled variants brighten; outline variants change
+        // border/background).
+        primary: "bg-accent-lime text-black border-accent-lime hover:brightness-110",
+        secondary: "bg-white text-black border-white hover:bg-strong",
+        ghost:
+          "bg-transparent text-strong border-edge-strong hover:border-muted hover:bg-surface-hover hover:text-white",
+        subtle:
+          "bg-transparent text-soft border-transparent hover:bg-surface-hover hover:text-white",
+        danger: "bg-error text-white border-error hover:brightness-110",
+        warning:
+          "bg-accent-orange text-black border-accent-orange hover:brightness-110",
+        terminal:
+          "bg-black text-success border-success hover:bg-success hover:text-black",
       },
       // Compact, terminal-style sizing — mono uppercase from the base, with
       // 1px borders. Font sizes track the design comp (~11px standard).
@@ -98,14 +71,6 @@ export const buttonVariants = cva(
     compoundVariants: [
       // Bigger gap for larger sizes when icon + text are combined.
       { size: "lg", className: "gap-3" },
-      // Icon-only buttons sit in tight per-row toolbars where the
-      // offset shadow + lift becomes noise. Drop the brutal shadow
-      // and the hover-translate; keep colour/border hover only.
-      {
-        size: ["icon-sm", "icon", "icon-lg"],
-        className:
-          "shadow-none hover:shadow-none hover:translate-x-0 hover:translate-y-0 active:shadow-none",
-      },
     ],
     defaultVariants: {
       variant: "ghost",

@@ -322,7 +322,7 @@ function JumpToLive({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-2 border border-edge bg-accent-lime px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.15em] text-black shadow-brutal-sm transition hover:translate-y-px"
+      className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-2 border border-accent-lime bg-accent-lime px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.15em] text-black transition-[filter] hover:brightness-110"
     >
       <FaIcon icon={faChevronDown} />
       Jump to live
@@ -440,7 +440,7 @@ function GroupedLogView({
         className="max-h-[78vh] overflow-auto bg-black font-mono text-[13px] leading-6"
         style={{ height: viewportHeight }}
       >
-        <div style={{ minWidth: "max-content" }}>
+        <div className="py-3" style={{ minWidth: "max-content" }}>
           {sections.map((section) => {
             if (section.title === null) {
               return section.lines.map((line, offset) => (
@@ -550,7 +550,7 @@ function VirtualizedAnsiLines({
       <div
         ref={viewportRef}
         onScroll={onScroll}
-        className="max-h-[78vh] overflow-auto bg-black font-mono text-[13px] leading-6"
+        className="max-h-[78vh] overflow-auto bg-black pt-3 font-mono text-[13px] leading-6"
         style={{ height: viewportHeight }}
       >
         <div

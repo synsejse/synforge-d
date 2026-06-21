@@ -1,4 +1,4 @@
-import { useEffect, useState, type SyntheticEvent } from "react";
+import { useEffect, useState } from "react";
 import { useDebounce } from "../../lib/hooks/use-debounce";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
@@ -12,15 +12,12 @@ import {
 import { repositoryQueries } from "../../lib/queries";
 import { formatBytes } from "../../lib/bytes";
 import ErrorMessage from "../../components/common/error-message";
-import EmptyState from "../../components/ui/empty-state";
 import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
-import Button from "../../components/ui/button";
 import SegmentedControl from "../../components/ui/segmented-control";
 import MetricCard from "../../components/ui/metric-card";
 import PageHeader from "../../components/ui/page-header";
 import PaginationControls from "../../components/common/pagination-controls";
-import FilterBar from "../../components/common/filter-bar";
 import RepoFileCard from "./components/repo-file-card";
 
 const PAGE_SIZE = 50;
@@ -69,15 +66,6 @@ function RepositoryBrowser() {
     }),
   );
 
-  function handleApply(event: SyntheticEvent) {
-    event.preventDefault();
-    setFilters({
-      offset: 0,
-      packageFilter: packageInput,
-      targetFilter: targetInput,
-    });
-  }
-
   const loadError = summaryQuery.error ?? inventoryQuery.error;
   if (loadError) {
     return (
@@ -102,7 +90,7 @@ function RepositoryBrowser() {
       <PageHeader
         title="Repository Control"
         description="Published packages, builds, and files."
-        color="green"
+        color="lime"
         actions={[
           { to: "/packages", label: "Packages", icon: faBoxesStacked },
           { to: "/repository/use", label: "Add Repo", icon: faPlus, variant: "primary" },
@@ -140,81 +128,59 @@ function RepositoryBrowser() {
         </div>
       )}
 
-      <form onSubmit={handleApply}>
-        <FilterBar
-          activeCount={
-            (filters.packageFilter ? 1 : 0) +
-            (filters.targetFilter ? 1 : 0) +
-            (filters.kindFilter !== "all" ? 1 : 0)
-          }
-          onClear={() => {
-            setPackageInput("");
-            setTargetInput("");
-            setFilters({
-              offset: 0,
-              packageFilter: "",
-              targetFilter: "",
-              kindFilter: "all",
-            });
-          }}
-          trailing={
-            <Button type="submit" variant="secondary" size="md">
-              Apply Filters
-            </Button>
-          }
-        >
-          <div className="grid gap-4 md:grid-cols-3">
-            <label className="block">
-              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
-                Package
-              </span>
-              <input
-                type="text"
-                value={packageInput}
-                onChange={(e) => setPackageInput(e.target.value)}
-                placeholder="Filter by package name"
-                className="w-full border border-edge bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
-                Target
-              </span>
-              <input
-                type="text"
-                value={targetInput}
-                onChange={(e) => setTargetInput(e.target.value)}
-                placeholder="Filter by target"
-                className="w-full border border-edge bg-black px-4 py-2.5 font-mono text-sm text-white outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-2 block font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
-                Kind
-              </span>
-              <SegmentedControl<KindFilter>
-                value={filters.kindFilter}
-                onChange={(val) => setFilters({ kindFilter: val, offset: 0 })}
-                ariaLabel="Filter by file kind"
-                size="md"
-                fullWidth
-                items={[
-                  { value: "all", label: "All" },
-                  { value: "rpm", label: "RPM" },
-                  { value: "srpm", label: "SRPM" },
-                  { value: "log", label: "Logs" },
-                ]}
-              />
-            </label>
+      <div className="flex flex-wrap items-end gap-4 border border-edge bg-black p-[18px]">
+        <label className="block min-w-[180px] flex-1">
+          <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-soft">
+            Package
+          </span>
+          <input
+            type="text"
+            value={packageInput}
+            onChange={(e) => setPackageInput(e.target.value)}
+            placeholder="Filter by package name"
+            className="mt-2.5 w-full border border-edge bg-black px-3 py-2.5 font-mono text-xs text-white outline-none transition-colors focus:border-accent-lime"
+          />
+        </label>
+        <label className="block min-w-[180px] flex-1">
+          <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-soft">
+            Target
+          </span>
+          <input
+            type="text"
+            value={targetInput}
+            onChange={(e) => setTargetInput(e.target.value)}
+            placeholder="Filter by target"
+            className="mt-2.5 w-full border border-edge bg-black px-3 py-2.5 font-mono text-xs text-white outline-none transition-colors focus:border-accent-lime"
+          />
+        </label>
+        <div>
+          <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-soft">
+            Kind
+          </span>
+          <div className="mt-2.5">
+            <SegmentedControl<KindFilter>
+              value={filters.kindFilter}
+              onChange={(val) => setFilters({ kindFilter: val, offset: 0 })}
+              ariaLabel="Filter by file kind"
+              size="md"
+              items={[
+                { value: "all", label: "All" },
+                { value: "rpm", label: "RPM" },
+                { value: "srpm", label: "SRPM" },
+                { value: "log", label: "Logs" },
+              ]}
+            />
           </div>
-        </FilterBar>
-      </form>
+        </div>
+      </div>
 
       <section className="space-y-3">
-        <div className="flex items-baseline justify-between gap-4 border-b border-edge pb-2">
-          <h2 className="text-base font-semibold text-white">Published files</h2>
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="font-mono text-[13px] font-bold uppercase tracking-[0.04em] text-white">
+            Published files
+          </h2>
           {!inventoryLoading && repoFiles.length > 0 ? (
-            <span className="font-mono text-xs uppercase tracking-[0.18em] text-soft">
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6b6b73]">
               {repoFiles.length} shown
             </span>
           ) : null}
@@ -223,10 +189,9 @@ function RepositoryBrowser() {
         {inventoryLoading ? (
           <LoadingBlock label="Loading published files…" lines={4} />
         ) : repoFiles.length === 0 ? (
-          <EmptyState
-            title="No files match"
-            description="No files match the current filters."
-          />
+          <div className="border border-dashed border-edge px-5 py-14 text-center font-mono text-[13px] text-[#52525b]">
+            No files match this kind filter.
+          </div>
         ) : (
           <div className="space-y-3">
             {repoFiles.map((file) => (

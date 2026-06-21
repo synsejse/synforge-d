@@ -254,7 +254,7 @@ function Signing() {
 
       {error ? <ErrorMessage message={error} /> : null}
       {message ? (
-        <div className="border-2 border-success bg-black px-4 py-3 text-sm text-strong">
+        <div className="border border-success bg-black px-4 py-3 text-sm text-strong">
           {message}
         </div>
       ) : null}
@@ -300,7 +300,7 @@ function Signing() {
         <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-5">
           <Button
             type="button"
-            variant={enabled ? "secondary" : "primary"}
+            variant={enabled ? "ghost" : "primary"}
             size="sm"
             onClick={handleToggleSigning}
             loading={toggleMutation.isPending}

@@ -101,7 +101,7 @@ export default function ToastProvider({ children }: { children: ReactNode }) {
                 if (!open) removeEntry(entry.id);
               }}
               className={cn(
-                "border-2 bg-black p-4 shadow-card-md",
+                "border border-edge-strong bg-black p-4",
                 "data-[state=open]:animate-in data-[state=closed]:animate-out",
                 "data-[state=closed]:fade-out-80",
                 "data-[state=open]:slide-in-from-right-full",

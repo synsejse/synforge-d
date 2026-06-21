@@ -36,7 +36,7 @@ export default function Dialog({
           )}
         >
           <div className="border-b border-edge bg-surface px-6 py-5">
-            <DialogPrimitive.Title className="font-display text-2xl font-bold uppercase tracking-tight text-white">
+            <DialogPrimitive.Title className="font-mono text-lg font-bold uppercase tracking-[0.04em] text-white">
               {title}
             </DialogPrimitive.Title>
             {description && (

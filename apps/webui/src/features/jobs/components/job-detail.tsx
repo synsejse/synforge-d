@@ -15,7 +15,7 @@ import { useToast } from "../../../components/common/toast-provider";
 import { useServerHardware } from "../../../components/common/server-hardware-provider";
 import LoadingBlock from "../../../components/ui/loading-block";
 import FaIcon from "../../../components/ui/fa-icon";
-import Badge from "../../../components/ui/badge";
+import StatusPill from "../../../components/ui/status-pill";
 import Button from "../../../components/ui/button";
 import Breadcrumbs from "../../../components/ui/breadcrumbs";
 import MetaPair from "../../../components/ui/meta-pair";
@@ -200,9 +200,7 @@ export default function JobDetail({ jobId }: Props) {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-3">
-              <Badge variant={getStatusVariant(job.status)} pulse={isLive}>
-                {job.status}
-              </Badge>
+              <StatusPill status={job.status} />
               {isDeleted ? (
                 <span className="border border-edge bg-black px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
                   Deleted
@@ -455,14 +453,6 @@ function LiveUsageMetric({
       </div>
     </div>
   );
-}
-
-function getStatusVariant(status: string) {
-  if (status === "succeeded") return "success" as const;
-  if (status === "failed" || status === "timed_out") return "error" as const;
-  if (status === "running") return "lime" as const;
-  if (status === "pending") return "warning" as const;
-  return "default" as const;
 }
 
 function formatMemory(bytes: number): string {

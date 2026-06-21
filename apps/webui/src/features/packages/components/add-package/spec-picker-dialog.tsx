@@ -32,7 +32,7 @@ export default function SpecPickerDialog({
           type="button"
           onClick={onBrowse}
           disabled={browsing}
-          className="border border-edge bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-white hover:bg-surface-alt disabled:opacity-60"
+          className="border border-edge bg-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-muted transition duration-100 ease-linear hover:border-white hover:bg-surface-alt disabled:opacity-60"
         >
           <FaIcon icon={faMagnifyingGlass} className="mr-2" />
           {browsing ? "Loading repository files…" : "Load repository files"}

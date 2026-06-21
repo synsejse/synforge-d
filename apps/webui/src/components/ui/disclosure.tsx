@@ -74,18 +74,18 @@ export function Disclosure({
       <AccordionPrimitive.Header className="flex">
         <AccordionPrimitive.Trigger
           className={cn(
-            "group flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors",
-            "hover:bg-surface-alt",
+            "group flex w-full items-center justify-between gap-3 px-[18px] py-[15px] text-left transition-colors",
+            "hover:bg-surface-hover",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime focus-visible:ring-offset-2 focus-visible:ring-offset-black",
-            "data-[state=open]:border-b-2 data-[state=open]:border-edge-strong",
+            "data-[state=open]:border-b data-[state=open]:border-[#161618]",
           )}
         >
           <div className="min-w-0 flex-1">
-            <div className="font-mono text-sm font-bold uppercase tracking-[0.18em] text-white">
+            <div className="font-mono text-[13px] font-bold uppercase tracking-[0.06em] text-white">
               {title}
             </div>
             {description ? (
-              <p className="mt-1 font-mono text-xs text-muted">
+              <p className="mt-1.5 font-mono text-[10px] text-[#6b6b73]">
                 {description}
               </p>
             ) : null}
@@ -97,7 +97,7 @@ export function Disclosure({
           ) : null}
           <FaIcon
             icon={faChevronDown}
-            className="shrink-0 text-muted transition-transform duration-200 group-data-[state=open]:rotate-180"
+            className="shrink-0 text-[11px] text-[#52525b] transition-transform duration-200 group-data-[state=open]:rotate-180"
           />
         </AccordionPrimitive.Trigger>
       </AccordionPrimitive.Header>
@@ -108,7 +108,7 @@ export function Disclosure({
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         )}
       >
-        <div className="px-5 py-4">{children}</div>
+        <div className="p-[18px]">{children}</div>
       </AccordionPrimitive.Content>
     </AccordionPrimitive.Item>
   );

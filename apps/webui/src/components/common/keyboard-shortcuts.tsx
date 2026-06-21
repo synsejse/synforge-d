@@ -176,7 +176,7 @@ function ShortcutsOverlay({
       }}
       zIndex={90}
       overlayClassName="flex items-center justify-center bg-black/85 p-4"
-      className="max-w-2xl border border-accent-lime bg-black p-6 shadow-[8px_8px_0_rgba(191,255,0,0.25)]"
+      className="max-w-2xl border border-edge-strong bg-black p-6"
     >
       <div className="mb-5 flex items-baseline justify-between gap-4 border-b border-edge pb-3">
         <ModalTitle asChild>
@@ -212,7 +212,7 @@ function Chord({ parts }: { parts: string[] }) {
     <span className="inline-flex items-center gap-1 font-mono text-[11px]">
       {parts.map((part, idx) => (
         <span key={idx} className="contents">
-          <kbd className="border border-edge-strong bg-surface-alt px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wide text-strong shadow-[1px_1px_0_rgba(255,255,255,0.15)]">
+          <kbd className="border border-edge-strong bg-surface-alt px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wide text-strong">
             {part}
           </kbd>
           {idx < parts.length - 1 ? (

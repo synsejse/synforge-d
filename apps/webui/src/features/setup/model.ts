@@ -19,7 +19,7 @@ export const STEP_DESCRIPTIONS: Record<Step, string> = {
 };
 
 export const inputClass =
-  "w-full border-2 border-edge-strong bg-black px-4 py-3 font-mono text-sm text-strong outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime";
+  "w-full border border-edge-strong bg-black px-4 py-3 font-mono text-sm text-strong outline-none transition duration-100 ease-linear focus:border-accent-lime focus:ring-2 focus:ring-accent-lime";
 
 export const labelTitleClass =
   "mb-2 block font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted";

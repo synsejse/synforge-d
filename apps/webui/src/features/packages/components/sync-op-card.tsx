@@ -49,7 +49,7 @@ export default function SyncOpCard({ op }: SyncOpCardProps) {
         </div>
 
         {op.error_message ? (
-          <div className="border-l-2 border-error bg-error/5 px-3 py-2 font-mono text-[11px] text-error">
+          <div className="border-l border-error bg-error/5 px-3 py-2 font-mono text-[11px] text-error">
             {op.error_message}
           </div>
         ) : null}

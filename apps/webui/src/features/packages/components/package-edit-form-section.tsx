@@ -154,7 +154,7 @@ export default function PackageEditFormSection({
         <div
           role="region"
           aria-label="Unsaved changes"
-          className="sticky bottom-0 z-30 -mx-3 mt-4 border-t-4 border-accent-lime bg-black/95 px-4 py-3 backdrop-blur-sm sm:-mx-5 lg:-mx-8"
+          className="sticky bottom-0 z-30 -mx-3 mt-4 border-t border-accent-lime bg-black/95 px-4 py-3 backdrop-blur-sm sm:-mx-5 lg:-mx-8"
         >
           <div className="mx-auto flex max-w-[96rem] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">

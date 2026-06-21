@@ -99,7 +99,7 @@ function RepositorySetup() {
       />
 
       {/* Repo File — accented frame only, no double wrapper */}
-      <section className="border-2 border-accent-lime bg-black">
+      <section className="border border-accent-lime bg-black">
         <div className="flex items-center gap-3 border-b border-edge bg-surface-alt px-4 py-3">
           <div className="min-w-0 flex-1 truncate font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent-lime">
             /etc/yum.repos.d/synforge.repo
@@ -151,7 +151,7 @@ function RepositorySetup() {
         </p>
       </section>
 
-      <section className="border-2 border-success bg-black">
+      <section className="border border-success bg-black">
         <div className="flex items-center gap-3 border-b border-edge bg-surface-alt px-4 py-3">
           <div className="min-w-0 flex-1 truncate font-mono text-xs font-bold uppercase tracking-[0.18em] text-success">
             usage

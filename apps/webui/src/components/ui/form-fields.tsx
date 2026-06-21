@@ -4,7 +4,7 @@ const inputClass =
   "w-full border border-edge bg-surface-alt px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-accent-lime";
 
 const inputErrorClass =
-  "w-full border-2 border-error bg-surface-alt px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-error";
+  "w-full border border-error bg-surface-alt px-4 py-3 font-mono text-sm text-white placeholder:text-soft outline-none transition duration-100 ease-linear focus:border-error";
 
 export function FieldError({ message }: { message?: string }) {
   if (!message) return null;

@@ -28,7 +28,7 @@ export default function SelectionDialog({
       <div className="flex items-start justify-between gap-4 border-b border-edge px-6 py-5">
         <div>
           <ModalTitle asChild>
-            <h3 className="text-xl font-bold text-white">{title}</h3>
+            <h3 className="font-mono text-lg font-bold uppercase tracking-[0.04em] text-white">{title}</h3>
           </ModalTitle>
           <ModalDescription asChild>
             <p className="mt-2 text-sm text-muted">{subtitle}</p>

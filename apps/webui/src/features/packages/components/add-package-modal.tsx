@@ -190,7 +190,7 @@ export default function AddPackageModal({
     >
       <div className="border-b border-edge px-6 py-5">
         <ModalTitle asChild>
-          <h2 className="text-2xl font-bold text-white">Add package</h2>
+          <h2 className="font-mono text-lg font-bold uppercase tracking-[0.04em] text-white">Add package</h2>
         </ModalTitle>
       </div>
 

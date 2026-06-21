@@ -55,7 +55,7 @@ export default function UserDirectory({
             <div className="flex flex-wrap items-center gap-3">
               <div
                 aria-hidden="true"
-                className="flex h-[38px] w-[38px] shrink-0 items-center justify-center border-2 border-edge bg-black font-mono text-[15px] font-extrabold text-muted"
+                className="flex h-[38px] w-[38px] shrink-0 items-center justify-center border border-edge bg-black font-mono text-[15px] font-extrabold text-muted"
               >
                 {initial}
               </div>

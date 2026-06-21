@@ -32,11 +32,11 @@ export default function SelectionActionBar({
     <div
       role="region"
       aria-label="Bulk actions"
-      className="sticky bottom-0 z-30 -mx-3 mt-6 border-t-4 border-accent-lime bg-black px-4 py-3 shadow-card-md sm:-mx-5 lg:-mx-8"
+      className="sticky bottom-0 z-30 -mx-3 mt-6 border-t border-accent-lime bg-black px-4 py-3 shadow-card-md sm:-mx-5 lg:-mx-8"
     >
       <div className="mx-auto flex max-w-[96rem] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <span className="border-2 border-accent-lime bg-black px-3 py-1 font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent-lime">
+          <span className="border border-accent-lime bg-black px-3 py-1 font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent-lime">
             {count}
           </span>
           <span className="font-mono text-sm uppercase tracking-[0.12em] text-strong">

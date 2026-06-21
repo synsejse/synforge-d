@@ -27,7 +27,7 @@ export default class ErrorBoundary extends Component<Props, State> {
       <div
         role="alert"
         aria-live="assertive"
-        className="border-2 border-error bg-black p-6"
+        className="border border-error bg-black p-6"
       >
         <div className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-error">
           Page error

@@ -252,7 +252,7 @@ function SidebarHeader({
       >
         <div
           aria-hidden="true"
-          className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-accent-lime bg-black shadow-brutal-sm"
+          className="flex h-10 w-10 shrink-0 items-center justify-center border border-accent-lime bg-black shadow-brutal-sm"
         >
           <BrandMark className="h-6 w-6" />
         </div>
@@ -465,7 +465,7 @@ function SidebarFooter({
         <div className="mt-2 flex items-center gap-3 border border-edge bg-black px-3 py-2.5">
           <div
             aria-hidden="true"
-            className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-accent-lime bg-black font-mono text-sm font-extrabold uppercase text-accent-lime"
+            className="flex h-9 w-9 shrink-0 items-center justify-center border border-accent-lime bg-black font-mono text-sm font-extrabold uppercase text-accent-lime"
           >
             {userInitial}
           </div>

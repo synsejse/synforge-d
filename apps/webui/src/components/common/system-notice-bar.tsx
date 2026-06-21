@@ -75,7 +75,7 @@ export default function SystemNoticeBar() {
     <div
       role="status"
       aria-live="polite"
-      className="border-b-2 border-accent-orange bg-black"
+      className="border-b border-accent-orange bg-black"
     >
       {visible.map((notice) => (
         <div

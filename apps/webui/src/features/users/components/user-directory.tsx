@@ -4,6 +4,7 @@ import {
   faTrash,
   faUsers,
 } from "@fortawesome/free-solid-svg-icons";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { formatBytes } from "../../../lib/bytes";
 import { formatDateTime } from "../../../lib/datetime";
 import type { UserResponse } from "../../../lib/types";
@@ -27,123 +28,162 @@ export default function UserDirectory({
   onDelete,
 }: UserDirectoryProps) {
   return (
-    <section className="overflow-hidden border border-edge bg-black">
-      <div className="border-b border-edge bg-surface-alt px-6 py-5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center border border-edge bg-black text-white">
-            <FaIcon icon={faUsers} />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-white">User directory</h2>
-            <p className="mt-1 text-sm text-soft">
-              Handles, permissions, and repository traffic at a glance.
-            </p>
-          </div>
+    <div className="space-y-3">
+      <div className="flex items-center gap-3 border border-edge bg-[#09090b] px-[18px] py-4">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center border border-edge text-soft">
+          <FaIcon icon={faUsers} className="text-[15px]" />
+        </div>
+        <div>
+          <h2 className="font-mono text-[13px] font-bold tracking-[0.04em] text-white">
+            User directory
+          </h2>
+          <p className="font-body mt-1.5 text-xs text-[#71717a]">
+            Handles, permissions, and repository traffic at a glance.
+          </p>
         </div>
       </div>
 
-      <div className="divide-y divide-edge">
-        {users.map((entry) => {
-          const isCurrentUser = currentUserId === entry.user.id;
-          return (
-            <article key={entry.user.id} className="flex flex-col gap-5 bg-black px-6 py-5">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="text-lg font-semibold text-white">
-                      {entry.user.display_name}
-                    </h3>
-                    <span className="border border-edge bg-surface-alt px-2.5 py-1 text-xs uppercase tracking-[0.18em] text-muted">
-                      {entry.user.active ? "active" : "disabled"}
+      {users.map((entry) => {
+        const isCurrentUser = currentUserId === entry.user.id;
+        const initial =
+          entry.user.display_name.trim().charAt(0).toUpperCase() || "?";
+        return (
+          <article
+            key={entry.user.id}
+            className="sf-row border border-edge bg-black px-[18px] py-4 transition-colors hover:border-edge-strong hover:bg-[#0c0c0d]"
+          >
+            <div className="flex flex-wrap items-center gap-3">
+              <div
+                aria-hidden="true"
+                className="flex h-[38px] w-[38px] shrink-0 items-center justify-center border-2 border-edge bg-black font-mono text-[15px] font-extrabold text-muted"
+              >
+                {initial}
+              </div>
+              <div className="leading-tight">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="font-mono text-[15px] font-bold text-white">
+                    {entry.user.display_name}
+                  </span>
+                  <span className="border border-edge px-[7px] py-[3px] font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.08em] text-[#71717a]">
+                    {entry.user.active ? "Active" : "Disabled"}
+                  </span>
+                  {isCurrentUser ? (
+                    <span className="border border-accent-lime px-[7px] py-[3px] font-mono text-[9px] font-bold uppercase leading-none tracking-[0.08em] text-accent-lime">
+                      Current
                     </span>
-                    {isCurrentUser ? (
-                      <span className="border-2 border-accent-lime bg-surface-alt px-2.5 py-1 text-xs uppercase tracking-[0.18em] text-accent-lime">
-                        current
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="mt-2 font-mono text-sm text-muted">
-                    @{entry.user.handle}
-                  </div>
+                  ) : null}
                 </div>
-
-                <div className="flex shrink-0 justify-end gap-1">
-                  <Tooltip content="Edit user" side="top">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => onEdit(entry)}
-                      aria-label={`Edit user ${entry.user.handle}`}
-                    >
-                      <FaIcon icon={faPen} />
-                    </Button>
-                  </Tooltip>
-                  <Tooltip content="Set password" side="top">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => onPassword(entry)}
-                      aria-label={`Set password for ${entry.user.handle}`}
-                    >
-                      <FaIcon icon={faKey} />
-                    </Button>
-                  </Tooltip>
-                  <Tooltip content="Delete user" side="top">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => onDelete(entry)}
-                      disabled={isCurrentUser}
-                      aria-label={`Delete user ${entry.user.handle}`}
-                      className="hover:border-error hover:text-error"
-                    >
-                      <FaIcon icon={faTrash} />
-                    </Button>
-                  </Tooltip>
+                <div className="mt-1.5 font-mono text-xs text-[#8b8b95]">
+                  @{entry.user.handle}
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-edge pt-4">
-                <div className="flex flex-wrap gap-2">
-                  {entry.user.permissions.map((permission) => (
-                    <span
-                      key={`${entry.user.id}:${permission}`}
-                      className="border border-edge bg-surface-alt px-3 py-1 text-xs uppercase tracking-[0.18em] text-muted"
-                    >
-                      {permission}
-                    </span>
-                  ))}
-                </div>
-                <dl className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted">
-                  <CompactMetric
-                    label="Repo Usage"
-                    value={formatBytes(entry.metrics.downloaded_bytes)}
-                  />
-                  <CompactMetric
-                    label="Created"
-                    value={formatDateTime(entry.user.created_at)}
-                  />
-                  <CompactMetric
-                    label="Updated"
-                    value={formatDateTime(entry.user.updated_at)}
-                  />
-                </dl>
+              <div className="ml-auto flex gap-1.5">
+                <IconButton
+                  icon={faPen}
+                  label={`Edit user ${entry.user.handle}`}
+                  tooltip="Edit user"
+                  onClick={() => onEdit(entry)}
+                />
+                <IconButton
+                  icon={faKey}
+                  label={`Set password for ${entry.user.handle}`}
+                  tooltip="Set password"
+                  onClick={() => onPassword(entry)}
+                />
+                <IconButton
+                  icon={faTrash}
+                  label={`Delete user ${entry.user.handle}`}
+                  tooltip="Delete user"
+                  onClick={() => onDelete(entry)}
+                  disabled={isCurrentUser}
+                  danger
+                />
               </div>
-            </article>
-          );
-        })}
-      </div>
-    </section>
+            </div>
+
+            <div className="mt-3.5 flex flex-wrap items-center gap-6 border-t border-[#161618] pt-3.5">
+              <div className="flex flex-wrap gap-1.5">
+                {entry.user.permissions.map((permission) => (
+                  <span
+                    key={`${entry.user.id}:${permission}`}
+                    className="border border-edge px-[9px] py-[5px] font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.08em] text-muted"
+                  >
+                    {permission}
+                  </span>
+                ))}
+              </div>
+              <div className="ml-auto flex flex-wrap gap-6">
+                <Metric
+                  label="Repo usage"
+                  value={formatBytes(entry.metrics.downloaded_bytes)}
+                  strong
+                />
+                <Metric label="Created" value={formatDateTime(entry.user.created_at)} />
+                <Metric label="Updated" value={formatDateTime(entry.user.updated_at)} />
+              </div>
+            </div>
+          </article>
+        );
+      })}
+    </div>
   );
 }
 
-function CompactMetric({ label, value }: { label: string; value: string }) {
+function Metric({
+  label,
+  value,
+  strong,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+}) {
   return (
-    <div className="flex items-center gap-2 leading-none">
-      <dt className="self-center font-mono text-[10px] uppercase tracking-[0.18em] text-soft">
-        {label}
-      </dt>
-      <dd className="self-center font-mono text-sm font-medium text-strong">{value}</dd>
+    <div>
+      <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-[#6b6b73]">
+        {label}{" "}
+      </span>
+      <span
+        className={`font-mono text-[11px] ${strong ? "font-bold text-strong" : "font-medium text-[#8b8b95]"}`}
+      >
+        {value}
+      </span>
     </div>
+  );
+}
+
+function IconButton({
+  icon,
+  label,
+  tooltip,
+  onClick,
+  disabled,
+  danger,
+}: {
+  icon: IconDefinition;
+  label: string;
+  tooltip: string;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <Tooltip content={tooltip} side="top">
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={onClick}
+        disabled={disabled}
+        aria-label={label}
+        className={`h-[30px] w-[30px] border-edge text-soft ${
+          danger
+            ? "hover:border-error hover:text-error"
+            : "hover:border-accent-lime hover:text-accent-lime"
+        }`}
+      >
+        <FaIcon icon={icon} className="text-[13px]" />
+      </Button>
+    </Tooltip>
   );
 }

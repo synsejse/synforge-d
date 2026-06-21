@@ -138,7 +138,7 @@ function Settings() {
                 title={section.label}
                 description={trailingCount || undefined}
               >
-                <div className="grid gap-6 xl:grid-cols-2">
+                <div className="grid gap-x-5 gap-y-6 md:grid-cols-2">
                   {runtimeFields.map((field) => (
                     <ConfigFieldInput
                       key={field.key}
@@ -209,7 +209,7 @@ function ConfigFieldInput({
               type="button"
               onClick={() => onChange(defaultStr)}
               aria-label={`Reset ${field.label} to default`}
-              className="inline-flex items-center gap-1 border border-edge bg-black px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.15em] text-soft transition hover:border-white hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime"
+              className="inline-flex items-center gap-1 border border-edge bg-black px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.15em] text-soft transition hover:border-edge-strong hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime"
             >
               <FaIcon icon={faRotateLeft} className="text-[0.85em]" />
               Reset

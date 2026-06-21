@@ -1,161 +1,122 @@
 import { useMemo } from "react";
-import {
-  Area,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  AreaChart,
-} from "recharts";
 import type { TimeSeriesPoint, TimeSeriesResponse } from "../../lib/types";
 import LoadingBlock from "./loading-block";
 
 interface Props {
   data: TimeSeriesResponse | undefined;
   isLoading?: boolean;
-  height?: number;
   /** Hex / var() colour for the "succeeded" stack. */
   succeededColor?: string;
   /** Hex / var() colour for the "failed" stack. */
   failedColor?: string;
-  /** Optional message rendered when there are no events at all in the window. */
+  /** Message rendered when there are no events at all in the window. */
   emptyLabel?: string;
 }
 
 interface ChartRow {
-  ts: number;
   label: string;
   succeeded: number;
   failed: number;
 }
 
+const BAR_HEIGHT = 150;
+const MAX_LABELS = 12;
+
 /**
- * Stacked area chart for succeeded/failed event counts over time. Built
- * on recharts. Brutalist palette: solid fills, no gradients, sharp grid.
+ * Stacked bar chart for succeeded/failed event counts over time — one bar
+ * per bucket, failed stacked above succeeded, on a bottom/left axis frame.
+ * Pure CSS bars (no chart lib) to match the design comp's terminal look.
  */
 export default function TimeSeriesChart({
   data,
   isLoading = false,
-  height = 240,
-  succeededColor = "var(--theme-terminal-green)",
-  failedColor = "var(--theme-error-red)",
+  succeededColor = "#1FA463",
+  failedColor = "#E0383B",
   emptyLabel = "No activity in this window.",
 }: Props) {
   const range = data?.range ?? "24h";
 
   const rows = useMemo<ChartRow[]>(() => {
     if (!data) return [];
-    return data.points.map((point: TimeSeriesPoint) => {
-      const ts = Date.parse(point.timestamp);
-      return {
-        ts,
-        label: formatBucketLabel(ts, range),
-        succeeded: point.succeeded,
-        failed: point.failed,
-      };
-    });
+    return data.points.map((point: TimeSeriesPoint) => ({
+      label: formatBucketLabel(Date.parse(point.timestamp), range),
+      succeeded: point.succeeded,
+      failed: point.failed,
+    }));
   }, [data, range]);
 
-  const totalEvents = rows.reduce((sum, r) => sum + r.succeeded + r.failed, 0);
+  const total = rows.reduce((sum, r) => sum + r.succeeded + r.failed, 0);
 
   if (isLoading) {
     return (
-      <div style={{ height }}>
+      <div className="flex-1" style={{ minHeight: BAR_HEIGHT }}>
         <LoadingBlock label="Loading chart…" lines={0} />
       </div>
     );
   }
 
-  if (!data || rows.length === 0 || totalEvents === 0) {
+  if (!data || rows.length === 0 || total === 0) {
     return (
-      <div
-        className="flex items-center justify-center border-2 border-dashed border-edge-strong bg-surface-alt p-8 font-mono text-xs uppercase tracking-[0.18em] text-soft"
-        style={{ height }}
-      >
+      <div className="flex min-h-[180px] flex-1 items-center justify-center border border-dashed border-edge px-5 py-8 text-center font-mono text-[11px] uppercase tracking-[0.06em] text-[#52525b]">
         {emptyLabel}
       </div>
     );
   }
 
+  const max = Math.max(1, ...rows.map((r) => r.succeeded + r.failed));
+  const step = Math.max(1, Math.ceil(rows.length / MAX_LABELS));
+  const labels = rows.filter((_, i) => i % step === 0).map((r) => r.label);
+
   return (
-    <div style={{ width: "100%", height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart
-          data={rows}
-          margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-        >
-          <CartesianGrid
-            stroke="var(--theme-border)"
-            strokeDasharray="2 4"
-            vertical={false}
-          />
-          <XAxis
-            dataKey="label"
-            stroke="var(--theme-text-soft)"
-            tick={{ fontSize: 10, fontFamily: "Fira Code, monospace" }}
-            tickLine={false}
-            axisLine={{ stroke: "var(--theme-border-strong)" }}
-            minTickGap={28}
-          />
-          <YAxis
-            stroke="var(--theme-text-soft)"
-            tick={{ fontSize: 10, fontFamily: "Fira Code, monospace" }}
-            tickLine={false}
-            axisLine={{ stroke: "var(--theme-border-strong)" }}
-            allowDecimals={false}
-            width={32}
-          />
-          <Tooltip
-            cursor={{ fill: "rgba(255, 255, 255, 0.04)" }}
-            contentStyle={{
-              backgroundColor: "var(--theme-surface)",
-              border: "2px solid var(--theme-border-strong)",
-              borderRadius: 0,
-              fontFamily: "Fira Code, monospace",
-              fontSize: 12,
-              padding: "0.5rem 0.75rem",
-            }}
-            labelStyle={{
-              color: "var(--theme-text-strong)",
-              textTransform: "uppercase",
-              letterSpacing: "0.12em",
-              fontWeight: 700,
-              marginBottom: 4,
-            }}
-            itemStyle={{ color: "var(--theme-text-muted)" }}
-          />
-          <Legend
-            wrapperStyle={{
-              fontFamily: "Fira Code, monospace",
-              fontSize: 11,
-              textTransform: "uppercase",
-              letterSpacing: "0.12em",
-              color: "var(--theme-text-muted)",
-            }}
-            iconType="square"
-          />
-          <Area
-            type="stepAfter"
-            dataKey="succeeded"
-            stackId="status"
-            stroke={succeededColor}
-            fill={succeededColor}
-            fillOpacity={0.55}
-            isAnimationActive={false}
-          />
-          <Area
-            type="stepAfter"
-            dataKey="failed"
-            stackId="status"
-            stroke={failedColor}
-            fill={failedColor}
-            fillOpacity={0.7}
-            isAnimationActive={false}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+    <div>
+      <div
+        className="flex items-end gap-[3px] border-b border-l border-edge px-0.5"
+        style={{ height: BAR_HEIGHT }}
+      >
+        {rows.map((r, i) => (
+          <div
+            key={i}
+            className="flex h-full flex-1 flex-col justify-end"
+            title={`${r.label} — ${r.succeeded} succeeded, ${r.failed} failed`}
+          >
+            {r.failed > 0 ? (
+              <div
+                style={{
+                  height: `${(r.failed / max) * 100}%`,
+                  minHeight: 2,
+                  background: failedColor,
+                }}
+              />
+            ) : null}
+            {r.succeeded > 0 ? (
+              <div
+                style={{
+                  height: `${(r.succeeded / max) * 100}%`,
+                  minHeight: 2,
+                  background: succeededColor,
+                }}
+              />
+            ) : null}
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-2 flex justify-between font-mono text-[9px] leading-none text-[#52525b]">
+        {labels.map((label, i) => (
+          <span key={i}>{label}</span>
+        ))}
+      </div>
+
+      <div className="mt-3.5 flex justify-center gap-[18px] font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.08em] text-soft">
+        <span className="flex items-center gap-1.5">
+          <span className="h-[9px] w-[9px]" style={{ background: failedColor }} />
+          Failed
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-[9px] w-[9px]" style={{ background: succeededColor }} />
+          Succeeded
+        </span>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import type {
   BuildJobResponse,
   JobResourceUsageSample,
-  ServerHardwareResponse,
 } from "../../../lib/types";
 import EmptyState from "../../../components/ui/empty-state";
 import type { JobViewMode } from "../types";
@@ -12,8 +11,8 @@ interface JobListTableProps {
   killingJobId: string | null;
   mode: JobViewMode;
   onDelete: (job: BuildJobResponse) => void;
+  onRetry: (job: BuildJobResponse) => void;
   onKill: (job: BuildJobResponse) => void;
-  serverHardware: ServerHardwareResponse | null;
   usageByJob: Record<string, JobResourceUsageSample>;
 }
 
@@ -22,27 +21,20 @@ export default function JobListTable({
   killingJobId,
   mode,
   onDelete,
+  onRetry,
   onKill,
-  serverHardware,
   usageByJob,
 }: JobListTableProps) {
   if (jobs.length === 0) {
     return (
-      <div className="p-4">
-        <EmptyState
-          title={mode === "active" ? "No active jobs" : "No jobs found"}
-          description={
-            mode === "active"
-              ? "Nothing is currently pending or running."
-              : "Adjust filters or queue new builds to see results here."
-          }
-        />
+      <div className="border border-dashed border-edge px-5 py-[60px] text-center font-mono text-[13px] text-[#52525b]">
+        {mode === "active" ? "No active jobs." : "No jobs found."}
       </div>
     );
   }
 
   return (
-    <div className="space-y-3 p-4">
+    <div className="flex flex-col gap-3">
       {jobs.map((entry) => (
         <JobCard
           key={entry.job.id}
@@ -50,8 +42,8 @@ export default function JobListTable({
           mode={mode}
           killing={killingJobId === entry.job.id}
           usage={usageByJob[entry.job.id] ?? null}
-          serverHardware={serverHardware}
           onKill={onKill}
+          onRetry={onRetry}
           onDelete={onDelete}
         />
       ))}

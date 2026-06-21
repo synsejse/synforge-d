@@ -52,7 +52,7 @@ export default function InFlightCard({ entry, usage, now }: InFlightCardProps) {
       <div className="mt-3 grid grid-cols-2 gap-4">
         <Meter
           label="CPU"
-          value={usage ? `${Math.round(usage.cpu_percent)}%` : "—"}
+          value={usage ? `${Math.round(cpuPct)}%` : "—"}
           valueClass="text-accent-lime"
           fillClass="bg-accent-lime"
           pct={cpuPct}

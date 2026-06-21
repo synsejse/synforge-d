@@ -2,11 +2,7 @@ import { useEffect, useState } from "react";
 import { useDebounce } from "../../lib/hooks/use-debounce";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import {
-  faChartLine,
-  faFilter,
-  faTrash,
-} from "@fortawesome/free-solid-svg-icons";
+import { faBars, faTrash } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import { jobsQueries } from "../../lib/queries";
 import type { BuildJobResponse } from "../../lib/types";
@@ -22,10 +18,8 @@ import JobListTable from "./components/job-list-table";
 import ErrorMessage from "../../components/common/error-message";
 import { useDialogs } from "../../components/common/dialogs-provider";
 import { useToast } from "../../components/common/toast-provider";
-import { useServerHardware } from "../../components/common/server-hardware-provider";
 import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
-import Button from "../../components/ui/button";
 import SegmentedControl from "../../components/ui/segmented-control";
 import Select from "../../components/ui/select";
 import PageHeader from "../../components/ui/page-header";
@@ -38,7 +32,6 @@ function JobList() {
   const queryClient = useQueryClient();
   const { confirm } = useDialogs();
   const toast = useToast();
-  const serverHardware = useServerHardware();
   const navigate = route.useNavigate();
   const search = route.useSearch();
   const filters = {
@@ -133,6 +126,16 @@ function JobList() {
       ),
   });
 
+  const retryMutation = useMutation({
+    mutationFn: (jobId: string) => api.retryJob(jobId),
+    onSuccess: invalidateJobs,
+    onError: (error) =>
+      toast.error(
+        "Retry failed",
+        error instanceof Error ? error.message : "Failed to retry job",
+      ),
+  });
+
   async function handleDelete(job: BuildJobResponse) {
     const ok = await confirm({
       title: "Delete job?",
@@ -159,6 +162,16 @@ function JobList() {
     pruneMutation.mutate();
   }
 
+  async function handleRetry(job: BuildJobResponse) {
+    const ok = await confirm({
+      title: "Retry build?",
+      message: `${job.job.package_name} / ${job.job.mock_chroot} will be rebuilt.`,
+      confirmLabel: "Retry",
+    });
+    if (!ok) return;
+    retryMutation.mutate(job.job.id);
+  }
+
   async function handleKill(job: BuildJobResponse) {
     const ok = await confirm({
       title: "Kill active job?",
@@ -177,30 +190,6 @@ function JobList() {
   function setFilter(filter: "all" | HistoryBuildStatus) {
     setFilters({ filter, offset: 0 });
   }
-
-  function applyTextFilters() {
-    setFilters({
-      packageFilter: packageInput,
-      targetFilter: targetInput,
-      offset: 0,
-    });
-  }
-
-  function clearAllFilters() {
-    setPackageInput("");
-    setTargetInput("");
-    setFilters({
-      filter: "all",
-      packageFilter: "",
-      targetFilter: "",
-      offset: 0,
-    });
-  }
-
-  const activeFilterCount =
-    (filters.filter !== "all" ? 1 : 0) +
-    (filters.packageFilter ? 1 : 0) +
-    (filters.targetFilter ? 1 : 0);
 
   function setOffset(offset: number) {
     setFilters({ offset });
@@ -229,8 +218,10 @@ function JobList() {
     (entry) => entry.job.status === "failed" || entry.job.status === "timed_out",
   ).length;
 
+  const resultCount = data?.page.total ?? jobs.length;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title={filters.mode === "active" ? "Active Builds" : "Build Timeline"}
         description={
@@ -239,152 +230,149 @@ function JobList() {
             : "Finished job history across all packages and targets."
         }
         color="orange"
-        actions={[{ to: "/", label: "Overview", icon: faChartLine }]}
+        actions={[{ to: "/", label: "Overview", icon: faBars }]}
       />
 
-      <div className="border border-edge bg-black shadow-card-sm">
-        <div className="border-b-4 border-edge-strong app-section-band px-6 py-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <SegmentedControl<JobViewMode>
-              value={filters.mode}
-              onChange={setMode}
-              ariaLabel="Job view mode"
-              size="lg"
-              items={[
-                { value: "history", label: "History", tone: "lime" },
-                { value: "active", label: "Active", tone: "success" },
+      {/* Control bar */}
+      <div className="flex flex-wrap items-center gap-2.5 border border-edge bg-black p-4">
+        <SegmentedControl<JobViewMode>
+          value={filters.mode}
+          onChange={setMode}
+          ariaLabel="Job view mode"
+          size="md"
+          items={[
+            { value: "history", label: "History", tone: "lime" },
+            { value: "active", label: "Active", tone: "lime" },
+          ]}
+        />
+
+        {filters.mode === "history" && (
+          <div className="w-full sm:w-[190px]">
+            <Select
+              options={[
+                { value: "all", label: "All Statuses" },
+                ...Object.entries(HISTORY_BUILD_STATUS_LABELS).map(
+                  ([value, label]) => ({ value, label }),
+                ),
               ]}
+              value={filters.filter}
+              onValueChange={(val) =>
+                setFilter(isHistoryBuildStatus(val) ? val : "all")
+              }
+              placeholder="Filter status..."
             />
-
-
-            {filters.mode === "history" && (
-              <div className="w-full sm:flex-1 sm:min-w-[200px] sm:max-w-xs">
-                <Select
-                  options={[
-                    { value: "all", label: "All Statuses" },
-                    ...Object.entries(HISTORY_BUILD_STATUS_LABELS).map(
-                      ([value, label]) => ({ value, label }),
-                    ),
-                  ]}
-                  value={filters.filter}
-                  onValueChange={(val) =>
-                    setFilter(isHistoryBuildStatus(val) ? val : "all")
-                  }
-                  placeholder="Filter status..."
-                />
-              </div>
-            )}
-
-            {/* Show-deleted toggle (history only). Off by default —
-                soft-deleted jobs are pruned of artifacts/logs but kept
-                so statistics still see them; surface them on demand. */}
-            {filters.mode === "history" && (
-              <label className="inline-flex cursor-pointer items-center gap-2 border border-edge bg-black px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-soft transition-colors hover:border-accent-lime hover:text-strong">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 cursor-pointer accent-accent-lime"
-                  checked={filters.includeDeleted}
-                  onChange={(e) =>
-                    setFilters({
-                      includeDeleted: e.target.checked || undefined,
-                      offset: 0,
-                    })
-                  }
-                />
-                Show deleted
-              </label>
-            )}
-
-            {filters.mode === "history" && (
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={handlePruneFailed}
-                disabled={pruneMutation.isPending || failedJobsCount === 0}
-              >
-                <FaIcon icon={faTrash} />
-                Prune Failed
-              </Button>
-            )}
           </div>
-        </div>
-
-        <div className="border-b-4 border-edge-strong bg-black px-6 py-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-wider text-soft">
-                Package
-              </label>
-              <input
-                type="text"
-                value={packageInput}
-                onChange={(e) => setPackageInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && applyTextFilters()}
-                placeholder="Filter by package..."
-                className="w-full border border-edge bg-black px-4 py-2.5 font-mono text-sm text-white transition focus:border-accent-lime focus:outline-none focus:ring-2 focus:ring-accent-lime focus:ring-offset-2 focus:ring-offset-black"
-              />
-            </div>
-            <div>
-              <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-wider text-soft">
-                Target
-              </label>
-              <input
-                type="text"
-                value={targetInput}
-                onChange={(e) => setTargetInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && applyTextFilters()}
-                placeholder="Filter by target..."
-                className="w-full border border-edge bg-black px-4 py-2.5 font-mono text-sm text-white transition focus:border-accent-lime focus:outline-none focus:ring-2 focus:ring-accent-lime focus:ring-offset-2 focus:ring-offset-black"
-              />
-            </div>
-            <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-end">
-              <Button variant="primary" className="w-full sm:flex-1" onClick={applyTextFilters}>
-                <FaIcon icon={faFilter} />
-                Apply Filters
-              </Button>
-              {activeFilterCount > 0 ? (
-                <Button
-                  variant="ghost"
-                  className="w-full sm:w-auto"
-                  onClick={clearAllFilters}
-                  aria-label="Clear all filters"
-                  title="Clear all filters"
-                >
-                  Clear ({activeFilterCount})
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="p-6">
-            <LoadingBlock label="Loading jobs…" lines={4} />
-          </div>
-        ) : (
-          <JobListTable
-            jobs={jobs}
-            killingJobId={killingJobId}
-            mode={filters.mode}
-            onDelete={(job) => void handleDelete(job)}
-            onKill={(job) => void handleKill(job)}
-            serverHardware={serverHardware}
-            usageByJob={usageByJob}
-          />
         )}
 
-        {data && jobs.length > 0 && (
-          <PaginationControls
-            offset={filters.offset}
-            pageSize={PAGE_SIZE}
-            count={jobs.length}
-            hasMore={data.page.has_more}
-            total={data.page.total}
-            isFetching={jobsQuery.isFetching}
-            onOffsetChange={setOffset}
-          />
+        {filters.mode === "history" && (
+          <div className="flex flex-wrap items-center gap-2.5 sm:ml-auto">
+            {/* Show-deleted toggle. Off by default — soft-deleted jobs are
+                pruned of artifacts/logs but kept so statistics still see
+                them; surface them on demand. */}
+            <label className="inline-flex cursor-pointer items-center gap-2 border border-edge bg-black px-3 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-soft transition-colors hover:text-strong">
+              <input
+                type="checkbox"
+                checked={filters.includeDeleted}
+                onChange={(e) =>
+                  setFilters({
+                    includeDeleted: e.target.checked || undefined,
+                    offset: 0,
+                  })
+                }
+              />
+              Show deleted
+            </label>
+
+            <button
+              type="button"
+              onClick={handlePruneFailed}
+              disabled={pruneMutation.isPending || failedJobsCount === 0}
+              className="inline-flex items-center gap-2 border border-error bg-error/10 px-3 py-2 font-mono text-[11px] font-bold uppercase tracking-[0.06em] text-error transition-colors hover:bg-error/20 disabled:pointer-events-none disabled:opacity-40"
+            >
+              <FaIcon icon={faTrash} className="text-[12px]" />
+              Prune Failed
+            </button>
+          </div>
         )}
       </div>
+
+      {/* Filters (history only) */}
+      {filters.mode === "history" && (
+        <div className="grid gap-3.5 sm:grid-cols-2">
+          <FilterBox
+            label="Package"
+            value={packageInput}
+            onChange={setPackageInput}
+            placeholder="Filter by package ..."
+          />
+          <FilterBox
+            label="Target"
+            value={targetInput}
+            onChange={setTargetInput}
+            placeholder="Filter by target ..."
+          />
+        </div>
+      )}
+
+      {/* Result count */}
+      {!loading && filters.mode === "history" && (
+        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6b6b73]">
+          {resultCount} {resultCount === 1 ? "result" : "results"}
+        </div>
+      )}
+
+      {loading ? (
+        <LoadingBlock label="Loading jobs…" lines={4} />
+      ) : (
+        <JobListTable
+          jobs={jobs}
+          killingJobId={killingJobId}
+          mode={filters.mode}
+          onDelete={(job) => void handleDelete(job)}
+          onRetry={(job) => void handleRetry(job)}
+          onKill={(job) => void handleKill(job)}
+          usageByJob={usageByJob}
+        />
+      )}
+
+      {data && jobs.length > 0 && (
+        <PaginationControls
+          offset={filters.offset}
+          pageSize={PAGE_SIZE}
+          count={jobs.length}
+          hasMore={data.page.has_more}
+          total={data.page.total}
+          isFetching={jobsQuery.isFetching}
+          onOffsetChange={setOffset}
+        />
+      )}
+    </div>
+  );
+}
+
+function FilterBox({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div className="border border-edge bg-black px-4 py-3.5">
+      <div className="font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-soft">
+        {label}
+      </div>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="mt-2.5 w-full border border-edge bg-black px-3 py-2.5 font-mono text-xs text-white outline-none transition-colors focus:border-accent-lime"
+      />
     </div>
   );
 }

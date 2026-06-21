@@ -20,7 +20,7 @@ export default function BrandMark({ className, title }: BrandMarkProps) {
         fillRule="evenodd"
         clipRule="evenodd"
         d="M12 19 H46 L58 24 L46 27 H39 V39 L51 41 V47 H13 V41 L25 39 V27 H12 Z M34 21 h4 v3.4 h-4 Z"
-        fill="#BFFF00"
+        fill="#FFB627"
       />
       <path
         d="M45 6 L47.3 10 L51 11.5 L47.3 13 L45 17 L42.7 13 L39 11.5 L42.7 10 Z"

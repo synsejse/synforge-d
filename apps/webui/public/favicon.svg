@@ -23,15 +23,15 @@
           fill="#ffffff" opacity="0.9"/>
   </g>
 
-  <!-- Anvil in the hero lime accent. -->
+  <!-- Anvil in the hero amber accent. -->
   <path d="M12 19 H46 L58 24 L46 27 H39 V39 L51 41 V47 H13 V41 L25 39 V27 H12 Z"
-        fill="#BFFF00"/>
+        fill="#FFB627"/>
 
   <!-- Hardy hole punched through the face (negative space). -->
   <rect x="34" y="21" width="4" height="3.4" fill="#0a0a0a"/>
 
   <!-- Hot ember struck off the face. -->
   <path d="M45 6 L47.3 10 L51 11.5 L47.3 13 L45 17 L42.7 13 L39 11.5 L42.7 10 Z" fill="#FF6B00"/>
-  <!-- Secondary spark, lime. -->
-  <path d="M21 11 L22.4 13 L21 15 L19.6 13 Z" fill="#BFFF00"/>
+  <!-- Secondary spark, amber. -->
+  <path d="M21 11 L22.4 13 L21 15 L19.6 13 Z" fill="#FFB627"/>
 </svg>

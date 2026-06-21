@@ -23,8 +23,8 @@ export default function StatusPill({ status }: Props) {
   };
 
   return (
-    <span className={`inline-flex items-center gap-2 border-2 px-3 py-1 font-mono text-xs font-bold uppercase tracking-[0.1em] ${classes[status] || "border-edge-strong bg-black text-strong"}`}>
-      <span className={`h-2 w-2 ${dots[status] || "bg-muted"}`}></span>
+    <span className={`inline-flex items-center gap-1.5 border px-2 py-[5px] font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.1em] ${classes[status] || "border-edge-strong bg-black text-strong"}`}>
+      <span className={`h-[5px] w-[5px] ${dots[status] || "bg-muted"}`}></span>
       {status}
     </span>
   );

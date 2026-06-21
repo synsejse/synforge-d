@@ -128,7 +128,7 @@ function Statistics() {
             />
           </article>
 
-          <article className="border border-edge bg-black p-5">
+          <article className="flex flex-col border border-edge bg-black p-5">
             <div className="mb-3 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent-lime">
               <FaIcon icon={faChartLine} />
               Build jobs
@@ -154,12 +154,12 @@ function Statistics() {
                 {
                   label: "Succeeded",
                   value: data.syncMetrics.succeeded_24h,
-                  color: "var(--theme-terminal-green)",
+                  color: "#1FA463",
                 },
                 {
                   label: "Failed",
                   value: data.syncMetrics.failed_24h,
-                  color: "var(--theme-error-red)",
+                  color: "#E0383B",
                 },
               ]}
             />
@@ -181,12 +181,12 @@ function Statistics() {
                 {
                   label: "Miss",
                   value: chrootCache.miss_count,
-                  color: "var(--theme-accent-orange)",
+                  color: "#FF6B00",
                 },
                 {
                   label: "Stale served",
                   value: chrootCache.stale_served_count,
-                  color: "var(--theme-accent-cyan)",
+                  color: "#22D3EE",
                 },
               ]}
             />
@@ -203,12 +203,12 @@ function Statistics() {
                 {
                   label: "Healthy",
                   value: healthyMirrors,
-                  color: "var(--theme-terminal-green)",
+                  color: "#1FA463",
                 },
                 {
                   label: "Stale",
                   value: mirrorCache.stale_mirrors,
-                  color: "var(--theme-accent-orange)",
+                  color: "#FF6B00",
                 },
               ]}
             />

@@ -59,7 +59,7 @@ export default function RatioBar({
         </div>
       ) : null}
       <div
-        className="flex h-6 w-full overflow-hidden border border-edge"
+        className="flex h-[18px] w-full overflow-hidden border border-edge"
         role="img"
         aria-label={segments
           .map((s) => `${s.label} ${s.value} of ${total}`)
@@ -81,26 +81,26 @@ export default function RatioBar({
         })}
       </div>
       {showLegend ? (
-        <div className="flex flex-wrap gap-x-4 gap-y-2 font-mono text-xs">
+        <div className="flex flex-wrap gap-x-4 gap-y-2 font-mono text-[10px] font-semibold">
           {segments.map((seg, idx) => {
             const percent = total > 0 ? (Math.max(0, seg.value) / total) * 100 : 0;
             return (
               <div
                 key={`legend-${seg.label}-${idx}`}
-                className="flex items-center gap-2"
+                className="flex items-center gap-1.5"
               >
                 <span
-                  className="inline-block h-3 w-3 border border-black"
+                  className="inline-block h-[9px] w-[9px]"
                   style={{
                     backgroundColor:
                       seg.color ?? DEFAULT_PALETTE[idx % DEFAULT_PALETTE.length],
                   }}
                   aria-hidden="true"
                 />
-                <span className="uppercase tracking-[0.12em] text-muted">
+                <span className="uppercase tracking-[0.08em] text-soft">
                   {seg.label}
                 </span>
-                <span className="font-bold text-white tabular-nums">
+                <span className="font-bold text-strong tabular-nums">
                   {seg.value}
                 </span>
                 <span className="text-soft tabular-nums">

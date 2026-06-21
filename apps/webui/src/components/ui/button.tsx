@@ -21,7 +21,7 @@ import FaIcon from "./fa-icon";
  */
 export const buttonVariants = cva(
   [
-    "inline-flex items-center justify-center gap-2 border-2 font-medium",
+    "inline-flex items-center justify-center gap-2 border font-mono font-bold uppercase leading-none",
     "transition-[color,background-color,border-color,box-shadow,transform] duration-100 ease-linear",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime focus-visible:ring-offset-2 focus-visible:ring-offset-black",
     "disabled:pointer-events-none disabled:opacity-40",
@@ -71,13 +71,13 @@ export const buttonVariants = cva(
           "active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm",
         ].join(" "),
       },
+      // Compact, terminal-style sizing — mono uppercase from the base, with
+      // 1px borders. Font sizes track the design comp (~11px standard).
       size: {
-        xs: "px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] gap-1",
-        sm: "px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em]",
-        // md matches form-input height (px-4 py-2.5 text-sm = ~44px) so a
-        // submit button in a filter row aligns with its sibling textboxes.
-        md: "px-4 py-2.5 text-sm font-semibold",
-        lg: "px-5 py-3 text-base font-bold",
+        xs: "px-2 py-1 text-[10px] tracking-[0.1em] gap-1.5",
+        sm: "px-3 py-2 text-[11px] tracking-[0.08em]",
+        md: "px-3.5 py-2.5 text-[11px] tracking-[0.08em]",
+        lg: "px-5 py-3 text-xs font-extrabold tracking-[0.06em]",
         "icon-sm": "h-8 w-8 p-0",
         icon: "h-9 w-9 p-0",
         "icon-lg": "h-11 w-11 p-0",

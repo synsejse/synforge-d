@@ -1,8 +1,7 @@
 //! Postgres-backed account service.
 
-use argon2::password_hash::{Error as PasswordHashError, PasswordHash, SaltString};
+use argon2::password_hash::{Error as PasswordHashError, PasswordHash, Salt, SaltString};
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
-use rand_core::OsRng;
 use synforge_core::{
     api::{
         ChangePasswordRequest, CreateUserRequest, UpdateUserRequest, UserListResponse,
@@ -259,7 +258,11 @@ impl AccountService {
 }
 
 fn hash_password(password: &str) -> anyhow::Result<String> {
-    let salt = SaltString::generate(&mut OsRng);
+    let mut salt_bytes = [0_u8; Salt::RECOMMENDED_LENGTH];
+    getrandom::fill(&mut salt_bytes)
+        .map_err(|error| anyhow::anyhow!("failed to generate password salt: {error}"))?;
+    let salt =
+        SaltString::encode_b64(&salt_bytes).map_err(|error| anyhow::anyhow!(error.to_string()))?;
     Argon2::default()
         .hash_password(password.as_bytes(), &salt)
         .map(|hash| hash.to_string())

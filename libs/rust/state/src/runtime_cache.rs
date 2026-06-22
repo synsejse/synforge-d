@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use base64::Engine;
-use rand_core::{OsRng, RngCore};
 use redis::{AsyncCommands, aio::ConnectionManager};
 use serde::{Deserialize, Serialize};
 use synforge_core::{api::JobResourceUsageSample, config::DaemonConfig, model::now_utc};
@@ -193,6 +192,6 @@ impl RuntimeCache {
 
 fn generate_session_token() -> String {
     let mut bytes = [0_u8; 32];
-    OsRng.fill_bytes(&mut bytes);
+    getrandom::fill(&mut bytes).expect("OS RNG failure generating session token");
     base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
 }

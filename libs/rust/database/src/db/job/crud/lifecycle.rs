@@ -1,4 +1,4 @@
-use diesel_async::{AsyncConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::{AsyncConnection, RunQueryDsl};
 
 use super::super::*;
 
@@ -67,45 +67,42 @@ pub(in crate::db) async fn reset_job_for_retry(
     let revision = revision.to_string();
     let now = now_utc();
     let mut conn = store.get_connection().await?;
-    conn.transaction::<(), anyhow::Error, _>(|conn| {
-        async move {
-            diesel::delete(
-                published_repo_files::table.filter(
-                    published_repo_files::artifact_id.eq_any(
-                        build_artifacts::table
-                            .filter(build_artifacts::job_id.eq(job_id))
-                            .select(build_artifacts::id),
-                    ),
+    conn.transaction::<(), anyhow::Error, _>(async |conn| {
+        diesel::delete(
+            published_repo_files::table.filter(
+                published_repo_files::artifact_id.eq_any(
+                    build_artifacts::table
+                        .filter(build_artifacts::job_id.eq(job_id))
+                        .select(build_artifacts::id),
                 ),
-            )
+            ),
+        )
+        .execute(conn)
+        .await?;
+
+        diesel::delete(build_artifacts::table.filter(build_artifacts::job_id.eq(job_id)))
             .execute(conn)
             .await?;
 
-            diesel::delete(build_artifacts::table.filter(build_artifacts::job_id.eq(job_id)))
-                .execute(conn)
-                .await?;
+        diesel::delete(build_logs::table.filter(build_logs::job_id.eq(job_id)))
+            .execute(conn)
+            .await?;
 
-            diesel::delete(build_logs::table.filter(build_logs::job_id.eq(job_id)))
-                .execute(conn)
-                .await?;
-
-            diesel::update(build_jobs::table.find(job_id))
-                .set((
-                    build_jobs::trigger.eq(trigger),
-                    build_jobs::revision.eq(revision.as_str()),
-                    build_jobs::status.eq(BuildStatus::Pending),
-                    build_jobs::worker_container_id.eq::<Option<&str>>(None),
-                    build_jobs::updated_at.eq(now),
-                    build_jobs::started_at.eq::<Option<OffsetDateTime>>(None),
-                    build_jobs::finished_at.eq::<Option<OffsetDateTime>>(None),
-                    build_jobs::signed_at.eq::<Option<OffsetDateTime>>(None),
-                    build_jobs::error_message.eq::<Option<&str>>(None),
-                ))
-                .execute(conn)
-                .await?;
-            Ok(())
-        }
-        .scope_boxed()
+        diesel::update(build_jobs::table.find(job_id))
+            .set((
+                build_jobs::trigger.eq(trigger),
+                build_jobs::revision.eq(revision.as_str()),
+                build_jobs::status.eq(BuildStatus::Pending),
+                build_jobs::worker_container_id.eq::<Option<&str>>(None),
+                build_jobs::updated_at.eq(now),
+                build_jobs::started_at.eq::<Option<OffsetDateTime>>(None),
+                build_jobs::finished_at.eq::<Option<OffsetDateTime>>(None),
+                build_jobs::signed_at.eq::<Option<OffsetDateTime>>(None),
+                build_jobs::error_message.eq::<Option<&str>>(None),
+            ))
+            .execute(conn)
+            .await?;
+        Ok(())
     })
     .await?;
     Ok(())
@@ -126,30 +123,30 @@ pub(in crate::db) async fn finish_job(
     let artifact_signatures = artifact_signatures.to_vec();
     let mut conn = store.get_connection().await?;
     let finalized = conn
-        .transaction::<bool, diesel::result::Error, _>(|conn| {
-            async move {
-                let now = now_utc();
+        .transaction::<bool, diesel::result::Error, _>(async |conn| {
+            let now = now_utc();
 
-                // Stamp signed_at if the job actually went through signing —
-                // i.e. at least one artifact_signature is recorded with a
-                // non-Skipped status. NULL otherwise (signing disabled or
-                // no signable artifacts).
-                let signed_at = if artifact_signatures
-                    .iter()
-                    .any(|sig| sig.status != ArtifactSigningStatus::Skipped)
-                {
-                    Some(now)
-                } else {
-                    None
-                };
+            // Stamp signed_at if the job actually went through signing —
+            // i.e. at least one artifact_signature is recorded with a
+            // non-Skipped status. NULL otherwise (signing disabled or
+            // no signable artifacts).
+            let signed_at = if artifact_signatures
+                .iter()
+                .any(|sig| sig.status != ArtifactSigningStatus::Skipped)
+            {
+                Some(now)
+            } else {
+                None
+            };
 
-                // Compare-and-set: only the first finisher (kill path vs.
-                // the in-flight run_job finalizer) transitions the job out
-                // of an active state. Anyone arriving after the row has
-                // already left Pending/Running matches 0 rows and bails,
-                // making the second finish a no-op that won't double-write
-                // artifacts or clobber the recorded outcome / backoff.
-                let updated = diesel::update(build_jobs::table.find(job_id).filter(
+            // Compare-and-set: only the first finisher (kill path vs.
+            // the in-flight run_job finalizer) transitions the job out
+            // of an active state. Anyone arriving after the row has
+            // already left Pending/Running matches 0 rows and bails,
+            // making the second finish a no-op that won't double-write
+            // artifacts or clobber the recorded outcome / backoff.
+            let updated =
+                diesel::update(build_jobs::table.find(job_id).filter(
                     build_jobs::status.eq_any([BuildStatus::Pending, BuildStatus::Running]),
                 ))
                 .set((
@@ -161,88 +158,86 @@ pub(in crate::db) async fn finish_job(
                 ))
                 .execute(conn)
                 .await?;
-                if updated == 0 {
-                    return Ok(false);
-                }
+            if updated == 0 {
+                return Ok(false);
+            }
 
-                let job_row = build_jobs::table
-                    .find(job_id)
-                    .select(JobRecord::as_select())
-                    .first(conn)
-                    .await?;
+            let job_row = build_jobs::table
+                .find(job_id)
+                .select(JobRecord::as_select())
+                .first(conn)
+                .await?;
 
-                diesel::delete(build_artifacts::table.filter(build_artifacts::job_id.eq(job_id)))
-                    .execute(conn)
-                    .await?;
-
-                if !artifacts.is_empty() {
-                    let rows = artifacts
-                        .iter()
-                        .map(|artifact| NewArtifactRecord {
-                            id: artifact.id,
-                            job_id,
-                            package_name: job_row.package_name.clone(),
-                            mock_chroot: job_row.mock_chroot.clone(),
-                            file: artifact.file.to_string_lossy().to_string(),
-                            sha256: artifact.sha256.clone(),
-                            size_bytes: artifact.size_bytes as i64,
-                            kind: artifact.kind,
-                        })
-                        .collect::<Vec<_>>();
-                    diesel::insert_into(build_artifacts::table)
-                        .values(&rows)
-                        .execute(conn)
-                        .await?;
-                }
-
-                if !artifact_signatures.is_empty() {
-                    let rows = artifact_signatures
-                        .iter()
-                        .map(|signature| NewArtifactSignatureRecord {
-                            artifact_id: signature.artifact_id,
-                            status: signature.status,
-                            signed_at: signature.signed_at,
-                            key_id: signature.key_id.clone(),
-                            fingerprint: signature.fingerprint.clone(),
-                            error_message: signature.error_message.clone(),
-                            updated_at: now,
-                        })
-                        .collect::<Vec<_>>();
-                    diesel::insert_into(artifact_signatures::table)
-                        .values(&rows)
-                        .execute(conn)
-                        .await?;
-                }
-
-                diesel::delete(
-                    published_repo_files::table.filter(
-                        published_repo_files::artifact_id.eq_any(
-                            build_artifacts::table
-                                .filter(build_artifacts::job_id.eq(job_id))
-                                .select(build_artifacts::id),
-                        ),
-                    ),
-                )
+            diesel::delete(build_artifacts::table.filter(build_artifacts::job_id.eq(job_id)))
                 .execute(conn)
                 .await?;
 
-                if !published_files.is_empty() {
-                    let rows = published_files
-                        .iter()
-                        .map(|file| NewPublishedRepoFileRecord {
-                            artifact_id: file.artifact_id,
-                            published_at: file.published_at,
-                        })
-                        .collect::<Vec<_>>();
-                    diesel::insert_into(published_repo_files::table)
-                        .values(&rows)
-                        .execute(conn)
-                        .await?;
-                }
-
-                Ok(true)
+            if !artifacts.is_empty() {
+                let rows = artifacts
+                    .iter()
+                    .map(|artifact| NewArtifactRecord {
+                        id: artifact.id,
+                        job_id,
+                        package_name: job_row.package_name.clone(),
+                        mock_chroot: job_row.mock_chroot.clone(),
+                        file: artifact.file.to_string_lossy().to_string(),
+                        sha256: artifact.sha256.clone(),
+                        size_bytes: artifact.size_bytes as i64,
+                        kind: artifact.kind,
+                    })
+                    .collect::<Vec<_>>();
+                diesel::insert_into(build_artifacts::table)
+                    .values(&rows)
+                    .execute(conn)
+                    .await?;
             }
-            .scope_boxed()
+
+            if !artifact_signatures.is_empty() {
+                let rows = artifact_signatures
+                    .iter()
+                    .map(|signature| NewArtifactSignatureRecord {
+                        artifact_id: signature.artifact_id,
+                        status: signature.status,
+                        signed_at: signature.signed_at,
+                        key_id: signature.key_id.clone(),
+                        fingerprint: signature.fingerprint.clone(),
+                        error_message: signature.error_message.clone(),
+                        updated_at: now,
+                    })
+                    .collect::<Vec<_>>();
+                diesel::insert_into(artifact_signatures::table)
+                    .values(&rows)
+                    .execute(conn)
+                    .await?;
+            }
+
+            diesel::delete(
+                published_repo_files::table.filter(
+                    published_repo_files::artifact_id.eq_any(
+                        build_artifacts::table
+                            .filter(build_artifacts::job_id.eq(job_id))
+                            .select(build_artifacts::id),
+                    ),
+                ),
+            )
+            .execute(conn)
+            .await?;
+
+            if !published_files.is_empty() {
+                let rows = published_files
+                    .iter()
+                    .map(|file| NewPublishedRepoFileRecord {
+                        artifact_id: file.artifact_id,
+                        published_at: file.published_at,
+                    })
+                    .collect::<Vec<_>>();
+                diesel::insert_into(published_repo_files::table)
+                    .values(&rows)
+                    .execute(conn)
+                    .await?;
+            }
+
+            Ok(true)
         })
         .await?;
     Ok(finalized)

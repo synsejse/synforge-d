@@ -15,7 +15,9 @@
     "prebuild": "sh -c 'if [ -f src/generated/api/openapi.json ]; then npm run generate:types:fromfile; else echo \"Skipping OpenAPI type regeneration: src/generated/api/openapi.json missing\"; fi'",
     "generate:types:fromfile": "openapi-typescript src/generated/api/openapi.json -o src/generated/api/api-schema.ts",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@fontsource/fira-code": "^5.2.7",
@@ -46,9 +48,15 @@
     "zod": "^4.4.1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@vitejs/plugin-react": "^5.2.0",
+    "eslint": "^10.5.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.6.0",
     "openapi-typescript": "^7.13.0",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.61.1",
     "vite": "^7.3.2"
   }
 }

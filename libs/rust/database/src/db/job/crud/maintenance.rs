@@ -29,8 +29,7 @@ pub(in crate::db) async fn soft_delete_job(
         .first(&mut conn)
         .await
         .optional()?;
-    let artifacts =
-        helpers::load_artifacts_map_for_rows(&mut conn, row.as_ref().into_iter()).await?;
+    let artifacts = helpers::load_artifacts_map_for_rows(&mut conn, row.as_ref()).await?;
     let Some(row) = row else {
         return Ok(None);
     };

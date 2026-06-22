@@ -2,7 +2,6 @@ import type {
   BuildJobResponse,
   JobResourceUsageSample,
 } from "../../../lib/types";
-import EmptyState from "../../../components/ui/empty-state";
 import type { JobViewMode } from "../types";
 import JobCard from "./job-card";
 

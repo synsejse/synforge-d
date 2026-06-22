@@ -33,8 +33,7 @@ pub(in crate::db) async fn get_job(
         .first(&mut conn)
         .await
         .optional()?;
-    let artifacts =
-        helpers::load_artifacts_map_for_rows(&mut conn, row.as_ref().into_iter()).await?;
+    let artifacts = helpers::load_artifacts_map_for_rows(&mut conn, row.as_ref()).await?;
     row.map(|row| build_job_response_from_row(row, &artifacts))
         .transpose()
 }

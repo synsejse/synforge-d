@@ -86,7 +86,7 @@ async fn load_metrics_map(
         .await?;
     let mut map = HashMap::<Uuid, UserRepoMetrics>::new();
     for row in rows {
-        map.insert(row.user_id.clone(), user_metrics_from_record(row)?);
+        map.insert(row.user_id, user_metrics_from_record(row)?);
     }
     Ok(map)
 }

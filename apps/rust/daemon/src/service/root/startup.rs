@@ -65,7 +65,7 @@ impl SynforgeService {
         let outcome = self.run_health_check().await;
         let cached = outcome
             .as_ref()
-            .map(|()| ())
+            .map(|_| ())
             .map_err(|error| error.to_string());
         *cache = Some((Instant::now(), cached));
         outcome

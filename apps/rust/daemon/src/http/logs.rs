@@ -143,14 +143,11 @@ pub(super) async fn stream_job_logs(
                     // The chunk may straddle the backfill boundary. Re-read the
                     // [seen, end_offset) window from disk so the boundary lands
                     // on a UTF-8 codepoint and no bytes are dropped or doubled.
-                    match backfill_source(&service, id, &source, seen).await {
-                        Ok(events) => {
-                            for (event, new_offset) in events {
-                                offsets.insert(source.clone(), new_offset);
-                                yield Ok(event);
-                            }
+                    if let Ok(events) = backfill_source(&service, id, &source, seen).await {
+                        for (event, new_offset) in events {
+                            offsets.insert(source.clone(), new_offset);
+                            yield Ok(event);
                         }
-                        Err(_) => {}
                     }
                 }
                 Ok(LogEvent::Complete) => {
@@ -167,14 +164,11 @@ pub(super) async fn stream_job_logs(
                     // gaps, then keep listening.
                     for source in sources.clone() {
                         let seen = offsets.get(&source).copied().unwrap_or(0);
-                        match backfill_source(&service, id, &source, seen).await {
-                            Ok(events) => {
-                                for (event, new_offset) in events {
-                                    offsets.insert(source.clone(), new_offset);
-                                    yield Ok(event);
-                                }
+                        if let Ok(events) = backfill_source(&service, id, &source, seen).await {
+                            for (event, new_offset) in events {
+                                offsets.insert(source.clone(), new_offset);
+                                yield Ok(event);
                             }
-                            Err(_) => {}
                         }
                     }
                 }

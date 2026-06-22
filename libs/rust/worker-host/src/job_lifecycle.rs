@@ -248,6 +248,7 @@ impl JobLifecycle {
     /// Best-effort removal of both per-job on-disk trees:
     ///   - `{runtime}/state/jobs/{job_id}/`  — daemon-visible artifacts/logs
     ///   - `{worker_jobs_root}/{job_id}/`    — worker-side bind-mounted copy
+    ///
     /// Called when a job is soft-deleted or pruned. NotFound is fine
     /// (already gone). Other I/O errors are logged but not propagated:
     /// the DB soft-delete already succeeded, so leaking an orphan

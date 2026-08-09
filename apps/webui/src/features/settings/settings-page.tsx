@@ -14,6 +14,7 @@ import Button from "../../components/ui/button";
 import PageHeader from "../../components/ui/page-header";
 import Tooltip from "../../components/ui/tooltip";
 import { DisclosureGroup, Disclosure } from "../../components/ui/disclosure";
+import useUnsavedChangesWarning from "../../components/common/use-unsaved-changes-warning";
 
 function Settings() {
   const configQuery = useQuery(configQueries.effective());
@@ -49,15 +50,7 @@ function Settings() {
     (field) => values[field.key] !== pristineValues[field.key],
   );
 
-  useEffect(() => {
-    if (!isDirty) return;
-    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = true;
-    };
-    window.addEventListener("beforeunload", warnBeforeUnload);
-    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
-  }, [isDirty]);
+  useUnsavedChangesWarning(isDirty);
 
   const saveMutation = useMutation({
     mutationFn: () => {

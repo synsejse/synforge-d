@@ -10,6 +10,7 @@ import { useToast } from "../../../components/common/toast-context";
 import { useServerHardware } from "../../../components/common/server-hardware-provider";
 import LoadingBlock from "../../../components/ui/loading-block";
 import Breadcrumbs from "../../../components/ui/breadcrumbs";
+import useUnsavedChangesWarning from "../../../components/common/use-unsaved-changes-warning";
 import PackageEditFormSection from "./package-edit-form-section";
 import type { PackageEditFormState } from "./package-edit-form-state";
 import {
@@ -68,6 +69,10 @@ export default function PackageDetail({ packageName }: Props) {
   const [showChrootPicker, setShowChrootPicker] = useState(false);
   const [browseFiles, setBrowseFiles] = useState<string[]>([]);
   const [browseError, setBrowseError] = useState<string | null>(null);
+  const configurationDirty =
+    pristine != null && JSON.stringify(form) !== JSON.stringify(pristine);
+
+  useUnsavedChangesWarning(configurationDirty);
 
   useEffect(() => {
     if (!formInitialized && packageQuery.data) {
@@ -292,9 +297,6 @@ export default function PackageDetail({ packageName }: Props) {
 
   const buildsTotal = buildsQuery.data?.page.total ?? null;
   const repoFilesTotal = repoFilesQuery.data?.page.total ?? null;
-  const configurationDirty =
-    pristine != null && JSON.stringify(form) !== JSON.stringify(pristine);
-
   return (
     <div className="min-w-0 space-y-6">
       <Breadcrumbs

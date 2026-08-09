@@ -1,48 +1,42 @@
 use synforge_core::{
-    api::{PackageActionResponse, PackageActionTargetResult, RebuildRequest, RefreshRequest},
-    model::BuildTrigger,
+    api::{RebuildRequest, RefreshRequest, SyncEnqueueResponse},
+    sync::SyncTriggerType,
 };
 use tracing::info;
 
-use super::{SynforgeService, deps::log_action_response};
+use super::SynforgeService;
 
 impl SynforgeService {
     pub async fn trigger_refresh(
         &self,
         package_name: &str,
         _request: RefreshRequest,
-    ) -> anyhow::Result<PackageActionResponse> {
-        info!(package_name, trigger = ?BuildTrigger::ManualRefresh, "manual refresh requested");
-        let response = self
-            .build_service
-            .trigger_package_action(
-                &self.package_deps(),
-                package_name,
-                BuildTrigger::ManualRefresh,
-                false,
-            )
-            .await?;
-        log_action_response(package_name, BuildTrigger::ManualRefresh, &response.results);
-        Ok(response)
+    ) -> anyhow::Result<SyncEnqueueResponse> {
+        info!(package_name, "manual refresh requested");
+        self.enqueue_package_sync(
+            package_name,
+            SyncTriggerType::ManualRefresh,
+            None,
+            None,
+            None,
+        )
+        .await
     }
 
     pub async fn trigger_rebuild(
         &self,
         package_name: &str,
         _request: RebuildRequest,
-    ) -> anyhow::Result<PackageActionResponse> {
-        info!(package_name, trigger = ?BuildTrigger::ManualRebuild, "manual rebuild requested");
-        let response = self
-            .build_service
-            .trigger_package_action(
-                &self.package_deps(),
-                package_name,
-                BuildTrigger::ManualRebuild,
-                true,
-            )
-            .await?;
-        log_action_response(package_name, BuildTrigger::ManualRebuild, &response.results);
-        Ok(response)
+    ) -> anyhow::Result<SyncEnqueueResponse> {
+        info!(package_name, "manual rebuild requested");
+        self.enqueue_package_sync(
+            package_name,
+            SyncTriggerType::ManualRebuild,
+            None,
+            None,
+            None,
+        )
+        .await
     }
 
     pub async fn trigger_target_refresh(
@@ -50,31 +44,16 @@ impl SynforgeService {
         package_name: &str,
         mock_chroot: &str,
         _request: RefreshRequest,
-    ) -> anyhow::Result<PackageActionTargetResult> {
-        info!(
+    ) -> anyhow::Result<SyncEnqueueResponse> {
+        info!(package_name, mock_chroot, "manual target refresh requested");
+        self.enqueue_package_sync(
             package_name,
-            mock_chroot,
-            trigger = ?BuildTrigger::ManualRefresh,
-            "manual target refresh requested"
-        );
-        let result = self
-            .build_service
-            .trigger_target_action(
-                &self.package_deps(),
-                package_name,
-                mock_chroot,
-                BuildTrigger::ManualRefresh,
-                false,
-            )
-            .await?;
-        info!(
-            package_name,
-            mock_chroot,
-            trigger = ?BuildTrigger::ManualRefresh,
-            disposition = ?result.disposition,
-            "manual target refresh scheduled"
-        );
-        Ok(result)
+            SyncTriggerType::ManualRefresh,
+            Some(mock_chroot.to_string()),
+            None,
+            None,
+        )
+        .await
     }
 
     pub async fn trigger_target_rebuild(
@@ -82,30 +61,15 @@ impl SynforgeService {
         package_name: &str,
         mock_chroot: &str,
         _request: RebuildRequest,
-    ) -> anyhow::Result<PackageActionTargetResult> {
-        info!(
+    ) -> anyhow::Result<SyncEnqueueResponse> {
+        info!(package_name, mock_chroot, "manual target rebuild requested");
+        self.enqueue_package_sync(
             package_name,
-            mock_chroot,
-            trigger = ?BuildTrigger::ManualRebuild,
-            "manual target rebuild requested"
-        );
-        let result = self
-            .build_service
-            .trigger_target_action(
-                &self.package_deps(),
-                package_name,
-                mock_chroot,
-                BuildTrigger::ManualRebuild,
-                true,
-            )
-            .await?;
-        info!(
-            package_name,
-            mock_chroot,
-            trigger = ?BuildTrigger::ManualRebuild,
-            disposition = ?result.disposition,
-            "manual target rebuild scheduled"
-        );
-        Ok(result)
+            SyncTriggerType::ManualRebuild,
+            Some(mock_chroot.to_string()),
+            None,
+            None,
+        )
+        .await
     }
 }

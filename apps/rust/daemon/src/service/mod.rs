@@ -11,6 +11,7 @@ mod repo;
 mod root;
 mod runtime_cleanup;
 mod sync;
+mod sync_queue;
 mod users;
 
 pub(crate) use bootstrap::apply_startup_runtime_overrides;

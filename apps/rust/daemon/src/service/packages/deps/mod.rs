@@ -6,10 +6,9 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use synforge_core::{
     api::{
-        BrowseRepositoryResponse, BuildJobResponse, PackageActionTargetResult, PackageResponse,
-        RefreshAllPackagesProgressView,
+        BrowseRepositoryResponse, BuildJobResponse, PackageResponse, RefreshAllPackagesProgressView,
     },
-    model::{BuildJob, BuildTrigger, PublishedRepoFile},
+    model::{BuildJob, PublishedRepoFile},
     package::PackageDefinition,
 };
 use synforge_database::{DieselStore, JobStore, PackageStore, RepoStore};
@@ -19,7 +18,6 @@ use synforge_worker_host::{
     BuildQueue, BuildService, JobLifecycle, QueuedBuildRequest, WorkerBuildQueue,
 };
 use time::OffsetDateTime;
-use tracing::info;
 use uuid::Uuid;
 
 use crate::service::SynforgeService;
@@ -245,29 +243,4 @@ impl SynforgeService {
             progress: self.refresh_all_packages_progress.clone(),
         }
     }
-}
-
-pub(super) fn log_action_response(
-    package_name: &str,
-    trigger: BuildTrigger,
-    results: &[PackageActionTargetResult],
-) {
-    let mut queued = 0_usize;
-    let mut skipped = 0_usize;
-    let mut blocked = 0_usize;
-    for result in results {
-        match result.disposition {
-            synforge_core::api::PackageActionDisposition::Queued => queued += 1,
-            synforge_core::api::PackageActionDisposition::Skipped => skipped += 1,
-            synforge_core::api::PackageActionDisposition::Blocked => blocked += 1,
-        }
-    }
-    info!(
-        package_name,
-        trigger = ?trigger,
-        queued_targets = queued,
-        skipped_targets = skipped,
-        blocked_targets = blocked,
-        "manual package action scheduled"
-    );
 }

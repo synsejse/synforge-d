@@ -5,6 +5,7 @@ use tracing::{error, info, warn};
 
 use crate::service::SynforgeService;
 use crate::service::loop_backoff::LoopBackoff;
+use synforge_database::SyncStore;
 use synforge_worker_host::QueuedBuild;
 
 impl SynforgeService {
@@ -21,6 +22,16 @@ impl SynforgeService {
             .await
         {
             error!("failed to abort unfinished jobs during shutdown: {}", error);
+        }
+        if let Err(error) = self
+            .store
+            .interrupt_running_sync_runs("daemon shutdown requested")
+            .await
+        {
+            error!(
+                "failed to interrupt active sync runs during shutdown: {}",
+                error
+            );
         }
         self.task_tracker.wait().await;
     }

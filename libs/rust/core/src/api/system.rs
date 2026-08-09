@@ -32,6 +32,14 @@ pub struct SyncOperationListResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct SyncEnqueueResponse {
+    pub operation: SyncOperation,
+    /// False when this request was deduplicated onto an already active run
+    /// for the same package.
+    pub created: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct SyncMetricsResponse {
     pub succeeded_24h: usize,
     pub failed_24h: usize,

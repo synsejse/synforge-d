@@ -33,6 +33,7 @@ pub struct SynforgeService {
     pub(super) worker_launcher: Arc<DockerWorkerLauncher>,
     pub(super) task_tracker: TaskTracker,
     pub(super) queue_tx: mpsc::Sender<QueuedBuild>,
+    pub(super) sync_queue_tx: mpsc::Sender<uuid::Uuid>,
     pub(super) shutdown_tx: watch::Sender<bool>,
     pub(super) runtime_cache: RuntimeCache,
     pub(super) mock_chroot_cache: MockChrootCache,

@@ -14,7 +14,7 @@ use synforge_core::{
     constants::DEFAULT_DAEMON_WORKER_LISTEN_ADDR,
     model::{WorkerJobPayload, WorkerResult},
 };
-use synforge_database::DieselStore;
+use synforge_database::{DieselStore, SyncStore};
 use synforge_git_sync::{
     PackageSyncStore, RuntimeGitRegistryAdapter, SyncStatusTracker, WorkerParseRunner,
 };
@@ -50,7 +50,9 @@ impl WorkerParseRunner for DaemonWorkerParseRunner {
         payload: &WorkerJobPayload,
         config: &DaemonConfig,
     ) -> anyhow::Result<WorkerResult> {
-        self.launcher.run_job(payload, config).await
+        let result = self.launcher.run_job(payload, config).await;
+        self.launcher.cleanup_session(payload.job_id);
+        result
     }
 }
 
@@ -164,6 +166,12 @@ impl SynforgeService {
         lifecycle
             .abort_unfinished_jobs("daemon restarted before job completed")
             .await?;
+        let interrupted_syncs = store
+            .interrupt_running_sync_runs("daemon restarted before sync completed")
+            .await?;
+        if interrupted_syncs > 0 {
+            warn!(interrupted_syncs, "marked unfinished sync runs interrupted");
+        }
         // Marking unfinished DB rows Failed isn't enough: worker containers
         // outlive a daemon crash and their names are deterministic, so a
         // retry of the same job would collide on create_container. Reap any
@@ -188,6 +196,7 @@ impl SynforgeService {
         let build_service = BuildService::default();
 
         let (queue_tx, queue_rx) = mpsc::channel(config.queue_buffer_size);
+        let (sync_queue_tx, sync_queue_rx) = mpsc::channel(config.queue_buffer_size);
         let (shutdown_tx, shutdown_rx) = watch::channel(false);
         let task_tracker = TaskTracker::new();
         let service = Arc::new(Self {
@@ -202,6 +211,7 @@ impl SynforgeService {
             worker_launcher,
             task_tracker,
             queue_tx,
+            sync_queue_tx,
             shutdown_tx,
             runtime_cache,
             mock_chroot_cache: MockChrootCache::default(),
@@ -222,6 +232,8 @@ impl SynforgeService {
             "worker socket listener started"
         );
         service.start_queue_runner(queue_rx, shutdown_rx.clone());
+        service.start_sync_queue_runner(sync_queue_rx, shutdown_rx.clone());
+        service.recover_queued_sync_runs();
         service.start_poller(shutdown_rx.clone());
         service.start_job_usage_sampler(shutdown_rx.clone());
         service.start_runtime_cleanup_worker(shutdown_rx);

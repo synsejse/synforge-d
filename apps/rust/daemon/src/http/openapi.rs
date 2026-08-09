@@ -155,6 +155,7 @@ impl Modify for SecurityAddon {
             synforge_core::api::SyncOperationListQuery,
             synforge_core::api::PackageSyncOperationListQuery,
             synforge_core::api::SyncOperationListResponse,
+            synforge_core::api::SyncEnqueueResponse,
             synforge_core::api::SyncMetricsResponse,
             synforge_core::api::SyncScheduleEntry,
             synforge_core::api::SyncScheduleQuery,

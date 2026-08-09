@@ -174,7 +174,9 @@ impl SpecRevision {
 }
 
 pub fn parse_mock_chroot(value: &str) -> Option<BuildTarget> {
-    let value = value.trim();
+    if value != value.trim() {
+        return None;
+    }
     if !is_safe_path_segment(value) || value.ends_with(".cfg") {
         return None;
     }
@@ -268,5 +270,6 @@ mod tests {
         assert!(parse_mock_chroot("fedora-..-x86_64").is_none());
         assert!(parse_mock_chroot("fedora-42-..").is_none());
         assert!(parse_mock_chroot("fedora-42-x86_64:ro").is_none());
+        assert!(parse_mock_chroot(" fedora-42-x86_64").is_none());
     }
 }

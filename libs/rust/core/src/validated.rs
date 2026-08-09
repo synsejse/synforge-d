@@ -73,7 +73,6 @@ impl AuthToken {
 
 impl MockChroot {
     pub fn new(value: &str) -> Result<Self, SynforgeError> {
-        let value = value.trim();
         if parse_mock_chroot(value).is_none() {
             return Err(SynforgeError::Spec(format!(
                 "mock chroot {} is not a valid mock target name",

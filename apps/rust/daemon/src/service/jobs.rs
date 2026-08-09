@@ -1,10 +1,7 @@
 #[path = "jobs/ports.rs"]
 mod ports;
 
-use std::path::PathBuf;
-
-use anyhow::Context;
-
+use strict_path::{PathBoundary, StrictPath};
 use synforge_core::{
     api::{
         BuildJobListResponse, BuildJobResponse, JobArtifactListResponse, JobArtifactMetaResponse,
@@ -26,7 +23,7 @@ impl SynforgeService {
         &self,
         job_id: Uuid,
         relative_artifact_path: &str,
-    ) -> anyhow::Result<PathBuf> {
+    ) -> anyhow::Result<StrictPath> {
         let job = self
             .store
             .get_job(job_id)
@@ -40,33 +37,20 @@ impl SynforgeService {
                 anyhow::anyhow!(SynforgeError::NotFound(relative_artifact_path.to_string()))
             })?;
 
-        let path = self
-            .config
-            .runtime_paths()
-            .job_artifacts_dir(job_id)
-            .join(artifact.storage_path());
-        if !tokio::fs::try_exists(&path).await? {
+        let artifacts_root = self.config.runtime_paths().job_artifacts_dir(job_id);
+        if !tokio::fs::try_exists(&artifacts_root).await? {
             return Err(anyhow::anyhow!(SynforgeError::NotFound(
-                path.display().to_string()
+                artifacts_root.display().to_string()
             )));
         }
-
-        let artifacts_root =
-            tokio::fs::canonicalize(self.config.runtime_paths().job_artifacts_dir(job_id))
-                .await
-                .with_context(|| format!("failed to resolve job artifact root for {}", job_id))?;
-        let resolved_path = tokio::fs::canonicalize(&path)
-            .await
-            .with_context(|| format!("failed to resolve artifact path {}", path.display()))?;
-        if !resolved_path.starts_with(&artifacts_root) {
-            anyhow::bail!(
-                "resolved artifact path {} escapes job artifact root {}",
-                resolved_path.display(),
-                artifacts_root.display()
-            );
+        let boundary = PathBoundary::try_new(&artifacts_root)?;
+        let path = boundary.strict_join(artifact.storage_path()?)?;
+        if !tokio::fs::try_exists(path.interop_path()).await? {
+            return Err(anyhow::anyhow!(SynforgeError::NotFound(
+                path.strictpath_display().to_string()
+            )));
         }
-
-        Ok(resolved_path)
+        Ok(path)
     }
 
     pub async fn list_jobs(

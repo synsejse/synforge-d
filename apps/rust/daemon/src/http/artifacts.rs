@@ -1,5 +1,3 @@
-use std::path::{Component, PathBuf};
-
 use super::{AppError, AppState};
 use axum::Json;
 use axum::Router;
@@ -8,7 +6,7 @@ use axum::http::{HeaderValue, header};
 use axum::response::IntoResponse;
 use axum::routing::get;
 use synforge_core::api::{JobArtifactListResponse, JobArtifactMetaResponse, PaginationQuery};
-use synforge_core::error::SynforgeError;
+use synforge_core::{error::SynforgeError, package::is_safe_path_segment};
 use tokio_util::io::ReaderStream;
 use uuid::Uuid;
 
@@ -100,12 +98,15 @@ pub(super) async fn download_job_artifact(
         .service
         .resolve_job_artifact_path(id, &relative_artifact_path)
         .await?;
-    let file = tokio::fs::File::open(&artifact_path).await?;
+    let file = tokio::fs::File::open(artifact_path.interop_path()).await?;
     let file_name = artifact_path
-        .file_name()
+        .strictpath_file_name()
         .and_then(|value| value.to_str())
         .ok_or_else(|| {
-            anyhow::anyhow!("artifact path {} has no filename", artifact_path.display())
+            anyhow::anyhow!(
+                "artifact path {} has no filename",
+                artifact_path.strictpath_display()
+            )
         })?;
 
     let mut headers = axum::http::HeaderMap::new();
@@ -125,22 +126,10 @@ pub(super) async fn download_job_artifact(
 }
 
 fn normalize_artifact_path(path: &str) -> anyhow::Result<String> {
-    let trimmed = path.trim_start_matches('/');
-    let normalized = PathBuf::from(trimmed);
-    if normalized.as_os_str().is_empty() {
+    if !is_safe_path_segment(path) {
         return Err(anyhow::anyhow!(SynforgeError::BadRequest(
-            "artifact path must not be empty".to_string()
+            "artifact path must be a single safe filename".to_string()
         )));
     }
-
-    if normalized
-        .components()
-        .any(|component| !matches!(component, Component::Normal(_)))
-    {
-        return Err(anyhow::anyhow!(SynforgeError::BadRequest(
-            "artifact path contains invalid components".to_string()
-        )));
-    }
-
-    Ok(normalized.to_string_lossy().into_owned())
+    Ok(path.to_string())
 }

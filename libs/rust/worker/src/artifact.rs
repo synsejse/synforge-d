@@ -63,32 +63,6 @@ pub(crate) async fn collect_success_artifacts(
     Ok(artifacts)
 }
 
-fn classify_rpm_artifact(path: &Path) -> ArtifactKind {
-    let Some(filename) = path.file_name().and_then(|n| n.to_str()) else {
-        return ArtifactKind::Other;
-    };
-
-    if filename.ends_with(".src.rpm") {
-        ArtifactKind::Srpm
-    } else if filename.ends_with(".rpm") {
-        match rpm_name_component(filename) {
-            Some(name) if name.ends_with("-debuginfo") => ArtifactKind::Debuginfo,
-            Some(name) if name.ends_with("-debugsource") => ArtifactKind::Debugsource,
-            _ => ArtifactKind::Rpm,
-        }
-    } else {
-        ArtifactKind::Other
-    }
-}
-
-fn rpm_name_component(filename: &str) -> Option<&str> {
-    let nvra = filename.strip_suffix(".rpm")?;
-    let (name_version_release, _arch) = nvra.rsplit_once('.')?;
-    let (name_version, _release) = name_version_release.rsplit_once('-')?;
-    let (name, _version) = name_version.rsplit_once('-')?;
-    Some(name)
-}
-
 async fn build_artifact(
     package: &PackageDefinition,
     topdir: &Path,
@@ -110,7 +84,11 @@ async fn build_artifact(
         size_bytes += read as u64;
     }
     let sha256 = hex_encode(hasher.finalize());
-    let kind = classify_rpm_artifact(&path);
+    let kind = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .map(ArtifactKind::from_file_name)
+        .unwrap_or(ArtifactKind::Other);
     let artifact_root = topdir.parent().unwrap_or(topdir);
     Ok(BuildArtifact {
         id: Uuid::now_v7(),

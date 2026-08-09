@@ -5,6 +5,7 @@ use std::time::Duration;
 use dashmap::DashMap;
 use path_clean::PathClean;
 use sha2::Digest;
+use strict_path::{PathBoundary, StrictPath};
 use tokio::io::AsyncReadExt;
 use tokio::sync::{Mutex, Notify};
 use uuid::Uuid;
@@ -14,7 +15,8 @@ use synforge_core::{
         ArtifactKind, BuildArtifact, BuildStatus, WorkerAction, WorkerBuildResult,
         WorkerJobPayload, WorkerResult,
     },
-    package::parse_mock_chroot,
+    package::{is_safe_path_segment, parse_mock_chroot},
+    validated::PackageName,
 };
 
 #[derive(Clone)]
@@ -117,26 +119,41 @@ impl WorkerSessionBroker {
         self.state.iter().map(|entry| *entry.key()).collect()
     }
 
-    pub fn artifact_storage_path(&self, job_id: Uuid, relative_path: &str) -> PathBuf {
-        let sanitized = sanitize_relative_path(relative_path);
-        self.job_root(job_id).join("artifacts").join(sanitized)
+    pub fn artifact_storage_path(
+        &self,
+        job_id: Uuid,
+        file: &str,
+    ) -> anyhow::Result<(PathBuf, StrictPath)> {
+        let entry = self
+            .state
+            .get(&job_id)
+            .ok_or_else(|| anyhow::anyhow!("worker session {} not found", job_id))?;
+        let (_, mock_chroot) = build_metadata_from_payload(&entry.payload)?;
+        if !is_safe_path_segment(file) {
+            anyhow::bail!("artifact filename {file:?} must be a single safe path segment");
+        }
+
+        let file = PathBuf::from(file);
+        let relative_path = PathBuf::from(mock_chroot).join(&file);
+        let artifact_root = self.job_root(job_id).join("artifacts");
+        let boundary = PathBoundary::try_new(&artifact_root)?;
+        let storage_path = boundary.strict_join(relative_path)?;
+        Ok((file, storage_path))
     }
 
     pub async fn finalize_artifact_upload(
         &self,
         job_id: Uuid,
         artifact_id: Uuid,
-        file: &str,
-        storage_path: &str,
-        kind: ArtifactKind,
+        file: PathBuf,
+        storage_path: &StrictPath,
     ) -> anyhow::Result<BuildArtifact> {
         let entry = self
             .state
             .get(&job_id)
             .ok_or_else(|| anyhow::anyhow!("worker session {} not found", job_id))?;
         let (package_name, mock_chroot) = build_metadata_from_payload(&entry.payload)?;
-        let stored_path = self.artifact_storage_path(job_id, storage_path);
-        let mut stored_file = tokio::fs::File::open(&stored_path).await?;
+        let mut stored_file = tokio::fs::File::open(storage_path.interop_path()).await?;
         let mut hasher = sha2::Sha256::new();
         let mut size_bytes = 0_u64;
         let mut buffer = vec![0_u8; 64 * 1024];
@@ -152,18 +169,32 @@ impl WorkerSessionBroker {
             id: artifact_id,
             package_name,
             mock_chroot,
-            file: PathBuf::from(file),
+            kind: file
+                .to_str()
+                .map(ArtifactKind::from_file_name)
+                .unwrap_or(ArtifactKind::Other),
+            file,
             sha256: hasher
                 .finalize()
                 .iter()
                 .map(|byte| format!("{byte:02x}"))
                 .collect(),
             size_bytes,
-            kind,
             signing_status: None,
             signing_error_message: None,
         };
-        entry.artifacts.lock().await.push(artifact.clone());
+        let mut artifacts = entry.artifacts.lock().await;
+        if artifacts
+            .iter()
+            .any(|existing| existing.id == artifact.id || existing.file == artifact.file)
+        {
+            anyhow::bail!(
+                "duplicate artifact upload for id {} or file {}",
+                artifact.id,
+                artifact.file.display()
+            );
+        }
+        artifacts.push(artifact.clone());
         Ok(artifact)
     }
 
@@ -188,7 +219,9 @@ impl WorkerSessionBroker {
             .get(&job_id)
             .ok_or_else(|| anyhow::anyhow!("worker session {} not found", job_id))?;
         let artifacts = entry.artifacts.lock().await;
-        *entry.result.lock().await = Some(merge_result(result, &artifacts));
+        let result = merge_result(job_id, &entry.payload, result, &artifacts)?;
+        drop(artifacts);
+        *entry.result.lock().await = Some(result);
         entry.notify.notify_waiters();
         Ok(())
     }
@@ -255,6 +288,7 @@ impl WorkerSessionBroker {
 fn build_metadata_from_payload(payload: &WorkerJobPayload) -> anyhow::Result<(String, String)> {
     match &payload.action {
         WorkerAction::Build(build) => {
+            PackageName::new(&build.package.name)?;
             parse_mock_chroot(&build.mock_chroot)
                 .ok_or_else(|| anyhow::anyhow!("invalid mock chroot {}", build.mock_chroot))?;
             Ok((build.package.name.clone(), build.mock_chroot.clone()))
@@ -265,17 +299,35 @@ fn build_metadata_from_payload(payload: &WorkerJobPayload) -> anyhow::Result<(St
     }
 }
 
-fn merge_result(result: WorkerResult, artifacts: &[BuildArtifact]) -> WorkerResult {
-    match result {
-        WorkerResult::Parse(parse) => WorkerResult::Parse(parse),
-        WorkerResult::Build(build) => WorkerResult::Build(WorkerBuildResult {
-            artifacts: if build.artifacts.is_empty() {
-                artifacts.to_vec()
-            } else {
-                build.artifacts
-            },
-            ..build
-        }),
+fn merge_result(
+    job_id: Uuid,
+    payload: &WorkerJobPayload,
+    result: WorkerResult,
+    artifacts: &[BuildArtifact],
+) -> anyhow::Result<WorkerResult> {
+    match (&payload.action, result) {
+        (WorkerAction::Parse(_), WorkerResult::Parse(parse)) => Ok(WorkerResult::Parse(parse)),
+        (WorkerAction::Build(build), WorkerResult::Build(result)) => {
+            if !matches!(
+                result.status,
+                BuildStatus::Succeeded | BuildStatus::Failed | BuildStatus::TimedOut
+            ) {
+                anyhow::bail!("worker returned non-terminal build status")
+            }
+            Ok(WorkerResult::Build(WorkerBuildResult {
+                job_id,
+                package_name: build.package.name.clone(),
+                status: result.status,
+                artifacts: artifacts.to_vec(),
+                message: result.message,
+            }))
+        }
+        (WorkerAction::Parse(_), WorkerResult::Build(_)) => {
+            anyhow::bail!("build result received for parse worker session")
+        }
+        (WorkerAction::Build(_), WorkerResult::Parse(_)) => {
+            anyhow::bail!("parse result received for build worker session")
+        }
     }
 }
 
@@ -289,3 +341,7 @@ fn sanitize_relative_path(path: &str) -> PathBuf {
         })
         .collect()
 }
+
+#[cfg(test)]
+#[path = "sessions_tests.rs"]
+mod tests;

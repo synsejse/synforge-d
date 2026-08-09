@@ -4,46 +4,26 @@ use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::model::{ArtifactKind, WorkerJobPayload, WorkerResult};
+use crate::model::{WorkerJobPayload, WorkerResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum WorkerWireMessage {
-    Hello {
-        worker_id: String,
-    },
-    JobAssignment {
-        payload: Box<WorkerJobPayload>,
-    },
+    Hello { worker_id: String },
+    JobAssignment { payload: Box<WorkerJobPayload> },
     Heartbeat,
-    LogChunk {
-        path: String,
-        bytes: Vec<u8>,
-    },
-    ArtifactStart {
-        artifact_id: Uuid,
-        path: String,
-        storage_path: String,
-        kind: ArtifactKind,
-    },
-    ArtifactChunk {
-        bytes: Vec<u8>,
-    },
+    LogChunk { path: String, bytes: Vec<u8> },
+    ArtifactStart { artifact_id: Uuid, file: String },
+    ArtifactChunk { bytes: Vec<u8> },
     ArtifactComplete,
-    Result {
-        result: WorkerResult,
-    },
+    Result { result: WorkerResult },
     ResultAck,
-    Error {
-        message: String,
-    },
+    Error { message: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct ArtifactStartPayload {
     artifact_id: Uuid,
-    path: String,
-    storage_path: String,
-    kind: ArtifactKind,
+    file: String,
 }
 
 #[derive(Debug, Clone, Archive, RkyvSerialize, RkyvDeserialize, PartialEq, Eq)]
@@ -77,17 +57,10 @@ impl TryFrom<&WorkerWireMessage> for WorkerWireEnvelope {
                 path: path.clone(),
                 bytes: bytes.clone(),
             },
-            WorkerWireMessage::ArtifactStart {
-                artifact_id,
-                path,
-                storage_path,
-                kind,
-            } => Self::ArtifactStart {
+            WorkerWireMessage::ArtifactStart { artifact_id, file } => Self::ArtifactStart {
                 payload_json: serde_json::to_vec(&ArtifactStartPayload {
                     artifact_id: *artifact_id,
-                    path: path.clone(),
-                    storage_path: storage_path.clone(),
-                    kind: *kind,
+                    file: file.clone(),
                 })
                 .context("failed to serialize artifact start payload")?,
             },
@@ -126,9 +99,7 @@ impl TryFrom<WorkerWireEnvelope> for WorkerWireMessage {
                     .context("failed to decode artifact start payload")?;
                 Self::ArtifactStart {
                     artifact_id: payload.artifact_id,
-                    path: payload.path,
-                    storage_path: payload.storage_path,
-                    kind: payload.kind,
+                    file: payload.file,
                 }
             }
             WorkerWireEnvelope::ArtifactChunk { bytes } => Self::ArtifactChunk { bytes },
@@ -155,3 +126,7 @@ pub fn decode_worker_wire_message(bytes: &[u8]) -> anyhow::Result<WorkerWireMess
         .context("failed to deserialize worker wire envelope with rkyv")?;
     WorkerWireMessage::try_from(envelope)
 }
+
+#[cfg(test)]
+#[path = "worker_protocol_tests.rs"]
+mod tests;

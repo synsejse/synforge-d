@@ -25,6 +25,7 @@ futures-util.workspace = true
 helmet-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+strict-path.workspace = true
 time.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true

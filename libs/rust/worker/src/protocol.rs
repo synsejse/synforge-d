@@ -67,13 +67,11 @@ impl WorkerTransportHandle {
         artifact_root: &Path,
         artifact: &BuildArtifact,
     ) -> anyhow::Result<()> {
-        let path = artifact.file.to_string_lossy().to_string();
-        let storage_path = artifact.storage_path().to_string_lossy().to_string();
+        let file = artifact.file.to_string_lossy().to_string();
+        let storage_path = artifact.storage_path()?;
         self.send_message(WorkerWireMessage::ArtifactStart {
             artifact_id: artifact.id,
-            path,
-            storage_path: storage_path.clone(),
-            kind: artifact.kind,
+            file,
         })
         .await?;
         let file = tokio::fs::File::open(artifact_root.join(storage_path)).await?;

@@ -74,8 +74,19 @@ pub struct ArtifactSignature {
 }
 
 impl BuildArtifact {
-    pub fn storage_path(&self) -> PathBuf {
-        PathBuf::from(&self.mock_chroot).join(&self.file)
+    pub fn storage_path(&self) -> Result<PathBuf, crate::error::SynforgeError> {
+        crate::validated::MockChroot::new(&self.mock_chroot)?;
+        let file = self.file.to_str().ok_or_else(|| {
+            crate::error::SynforgeError::BadRequest(
+                "artifact filename must use valid UTF-8".to_string(),
+            )
+        })?;
+        if !crate::package::is_safe_path_segment(file) {
+            return Err(crate::error::SynforgeError::BadRequest(format!(
+                "artifact filename {file:?} must be a single safe path segment"
+            )));
+        }
+        Ok(PathBuf::from(&self.mock_chroot).join(file))
     }
 }
 
@@ -109,6 +120,31 @@ pub enum ArtifactKind {
     Debugsource,
     Log,
     Other,
+}
+
+impl ArtifactKind {
+    pub fn from_file_name(file_name: &str) -> Self {
+        if file_name.ends_with(".src.rpm") {
+            return Self::Srpm;
+        }
+        if !file_name.ends_with(".rpm") {
+            return Self::Other;
+        }
+
+        match rpm_name_component(file_name) {
+            Some(name) if name.ends_with("-debuginfo") => Self::Debuginfo,
+            Some(name) if name.ends_with("-debugsource") => Self::Debugsource,
+            _ => Self::Rpm,
+        }
+    }
+}
+
+fn rpm_name_component(filename: &str) -> Option<&str> {
+    let nvra = filename.strip_suffix(".rpm")?;
+    let (name_version_release, _arch) = nvra.rsplit_once('.')?;
+    let (name_version, _release) = name_version_release.rsplit_once('-')?;
+    let (name, _version) = name_version.rsplit_once('-')?;
+    Some(name)
 }
 
 #[derive(
@@ -341,3 +377,7 @@ pub fn env_map_to_vec(map: &BTreeMap<String, String>) -> Vec<(String, String)> {
         .map(|(key, value)| (key.clone(), value.clone()))
         .collect()
 }
+
+#[cfg(test)]
+#[path = "model_tests.rs"]
+mod tests;

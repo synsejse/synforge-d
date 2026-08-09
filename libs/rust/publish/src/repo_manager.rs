@@ -16,7 +16,7 @@ use tokio_stream::{StreamExt, wrappers::ReadDirStream};
 use tracing::{info, warn};
 use uuid::Uuid;
 
-use crate::RepoSigningManager;
+use crate::{RepoSigningManager, resolve_job_artifact_path};
 
 fn should_skip_artifact(artifact: &BuildArtifact, package: &PackageDefinition) -> bool {
     match artifact.kind {
@@ -82,10 +82,8 @@ impl FileRepoManager {
             tokio::fs::create_dir_all(&build_root)
                 .await
                 .with_context(|| format!("failed to create {}", build_root.display()))?;
-            let source_path = paths
-                .job_artifacts_dir(worker_result.job_id)
-                .join(artifact.storage_path());
-            if !tokio::fs::try_exists(&source_path).await? {
+            let source_path = resolve_job_artifact_path(config, worker_result.job_id, artifact)?;
+            if !tokio::fs::try_exists(source_path.interop_path()).await? {
                 anyhow::bail!(
                     "artifact {} is not available locally",
                     artifact.file.display()
@@ -113,15 +111,17 @@ impl FileRepoManager {
                     .await
                     .with_context(|| format!("failed to replace {}", destination.display()))?;
             }
-            if let Err(link_error) = tokio::fs::hard_link(&source_path, &destination).await {
-                tokio::fs::copy(&source_path, &destination)
+            if let Err(link_error) =
+                tokio::fs::hard_link(source_path.interop_path(), &destination).await
+            {
+                tokio::fs::copy(source_path.interop_path(), &destination)
                     .await
                     .map(|_| ())
                     .with_context(|| {
                         format!(
                             "failed to link ({}) or copy artifact {} to {}",
                             link_error,
-                            source_path.display(),
+                            source_path.strictpath_display(),
                             destination.display()
                         )
                     })?;

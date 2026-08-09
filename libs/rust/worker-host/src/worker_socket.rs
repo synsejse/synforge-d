@@ -2,9 +2,10 @@ use anyhow::Context;
 use bytes::Bytes;
 use futures_util::{SinkExt, StreamExt};
 use std::collections::HashMap;
-use synforge_core::{
-    model::ArtifactKind,
-    protocol::{WorkerWireMessage, decode_worker_wire_message, encode_worker_wire_message},
+use std::path::PathBuf;
+use strict_path::StrictPath;
+use synforge_core::protocol::{
+    WorkerWireMessage, decode_worker_wire_message, encode_worker_wire_message,
 };
 use synforge_database::{DieselStore, JobStore};
 use tokio::io::AsyncWriteExt;
@@ -141,25 +142,17 @@ async fn run_message_loop(
                 // racing SSE backfill that reads the same file sees them too.
                 log_broadcaster.publish_chunk(job_id, &path, bytes, state.size);
             }
-            WorkerWireMessage::ArtifactStart {
-                artifact_id,
-                path,
-                storage_path,
-                kind,
-            } => {
+            WorkerWireMessage::ArtifactStart { artifact_id, file } => {
                 if current_artifact.is_some() {
                     anyhow::bail!("artifact upload already in progress");
                 }
-                let upload_path = sessions.artifact_storage_path(job_id, &storage_path);
-                if let Some(parent) = upload_path.parent() {
-                    tokio::fs::create_dir_all(parent).await?;
-                }
-                let handle = tokio::fs::File::create(&upload_path).await?;
+                let (file, storage_path) = sessions.artifact_storage_path(job_id, &file)?;
+                storage_path.create_parent_dir_all()?;
+                let handle = tokio::fs::File::from_std(storage_path.create_file()?);
                 current_artifact = Some(ActiveArtifactUpload {
                     artifact_id,
-                    file: path,
+                    file,
                     storage_path,
-                    kind,
                     handle,
                 });
             }
@@ -178,9 +171,8 @@ async fn run_message_loop(
                     .finalize_artifact_upload(
                         job_id,
                         upload.artifact_id,
-                        &upload.file,
+                        upload.file,
                         &upload.storage_path,
-                        upload.kind,
                     )
                     .await?;
             }
@@ -225,9 +217,8 @@ async fn write_message(
 
 struct ActiveArtifactUpload {
     artifact_id: uuid::Uuid,
-    file: String,
-    storage_path: String,
-    kind: ArtifactKind,
+    file: PathBuf,
+    storage_path: StrictPath,
     handle: tokio::fs::File,
 }
 

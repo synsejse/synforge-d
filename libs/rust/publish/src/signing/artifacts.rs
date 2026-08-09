@@ -8,6 +8,7 @@ use synforge_core::{
 
 use super::RepoSigningManager;
 use super::commands::{recompute_artifact_metadata, run_rpm_addsign, run_rpm_delsign};
+use crate::resolve_job_artifact_path;
 
 impl RepoSigningManager {
     pub async fn sign_worker_artifacts_for_publication(
@@ -106,13 +107,21 @@ impl RepoSigningManager {
                 continue;
             }
 
-            let artifact_path = config
-                .runtime_paths()
-                .job_artifacts_dir(worker_result.job_id)
-                .join(artifact.storage_path());
-            let sign_result = run_rpm_addsign(&keyring_dir, key_id, artifact_path.as_path()).await;
+            let artifact_path =
+                match resolve_job_artifact_path(config, worker_result.job_id, artifact) {
+                    Ok(path) => path,
+                    Err(error) => {
+                        signatures.push(signature_failed(
+                            artifact.id,
+                            format!("invalid artifact storage path: {error}"),
+                        ));
+                        continue;
+                    }
+                };
+            let artifact_path_ref: &Path = artifact_path.interop_path().as_ref();
+            let sign_result = run_rpm_addsign(&keyring_dir, key_id, artifact_path_ref).await;
             match sign_result {
-                Ok(()) => match recompute_artifact_metadata(artifact_path.as_path()).await {
+                Ok(()) => match recompute_artifact_metadata(artifact_path_ref).await {
                     Ok((sha256, size_bytes)) => {
                         artifact.sha256 = sha256;
                         artifact.size_bytes = size_bytes;

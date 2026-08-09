@@ -3,6 +3,7 @@ use synforge_core::{
     error::SynforgeError,
     model::{BuildJob, BuildStatus, BuildTrigger, now_utc},
     package::{PackageDefinition, parse_mock_chroot},
+    validation::{PackageDefinitionValidator, Validator},
 };
 use synforge_git_sync::{
     PackageDefinitionMaterializer, PackageDefinitionWriter, PackageMaterializationOptions,
@@ -117,6 +118,7 @@ where
         + Send
         + Sync,
 {
+    PackageDefinitionValidator.validate(&package)?;
     let inspected = deps
         .inspect_source_tracked(
             &package.name,

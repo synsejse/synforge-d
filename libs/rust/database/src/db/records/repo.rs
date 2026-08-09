@@ -1,5 +1,5 @@
 use super::super::*;
-use synforge_core::package::RepoTarget;
+use synforge_core::{package::RepoTarget, validated::PackageName};
 
 #[derive(Insertable)]
 #[diesel(table_name = published_repo_files)]
@@ -98,6 +98,7 @@ pub fn build_published_repo_path(
     job_id: Uuid,
     artifact_path: &Path,
 ) -> anyhow::Result<PathBuf> {
+    PackageName::new(package_name)?;
     let target = RepoTarget::from_mock_chroot(mock_chroot)
         .ok_or_else(|| anyhow::anyhow!("invalid mock chroot {}", mock_chroot))?;
     let file_name = artifact_path.file_name().ok_or_else(|| {

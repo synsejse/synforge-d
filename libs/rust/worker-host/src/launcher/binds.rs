@@ -2,6 +2,7 @@ use super::DockerWorkerLauncher;
 use synforge_core::{
     config::DaemonConfig,
     model::{WorkerAction, WorkerJobPayload},
+    validated::{MockChroot, PackageName},
 };
 
 impl DockerWorkerLauncher {
@@ -12,6 +13,8 @@ impl DockerWorkerLauncher {
         let WorkerAction::Build(build) = &payload.action else {
             return Ok(None);
         };
+        PackageName::new(&build.package.name)?;
+        MockChroot::new(&build.mock_chroot)?;
 
         let host_jobs_root = config.worker_jobs_host_path().ok_or_else(|| {
             anyhow::anyhow!("SYNFORGE_WORKER_JOBS_PATH is required for build worker bind mounts")

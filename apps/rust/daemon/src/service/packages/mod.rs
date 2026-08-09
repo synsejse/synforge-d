@@ -9,6 +9,7 @@ use synforge_core::api::{
     RefreshAllPackagesProgressResponse, RefreshAllPackagesResponse, UpdatePackageRequest,
     build_page_info, normalize_pagination,
 };
+use synforge_core::validated::PackageName;
 use synforge_database::PackageStore;
 use synforge_git_sync::GitSyncService;
 use synforge_worker_host::MockChrootService;
@@ -132,6 +133,7 @@ impl SynforgeService {
     }
 
     pub async fn delete_package(&self, package_name: &str) -> anyhow::Result<()> {
+        PackageName::new(package_name)?;
         GitSyncService
             .delete_package(&self.package_deps(), package_name)
             .await?;

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Component, Path, PathBuf};
 
 use crate::{
     error::SynforgeError,
@@ -6,6 +6,7 @@ use crate::{
     package::{BuildEnvVar, PackageDefinition, SpecSource},
     validated::{MockChroot, PackageName, RepoUrl},
 };
+use path_clean::PathClean;
 
 pub trait Validator<T> {
     fn validate(&self, value: &T) -> Result<(), SynforgeError>;
@@ -51,8 +52,7 @@ pub fn validate_permissions(permissions: &[UserPermission]) -> anyhow::Result<()
 
 impl Validator<PackageDefinition> for PackageDefinitionValidator {
     fn validate(&self, value: &PackageDefinition) -> Result<(), SynforgeError> {
-        let package_name = PackageName::new(&value.name)?;
-        let _ = package_name.as_str();
+        PackageName::new(&value.name)?;
         if value.mock_chroots.is_empty() {
             return Err(SynforgeError::Spec(
                 "at least one mock chroot must be selected".to_string(),
@@ -126,6 +126,7 @@ impl Validator<PackageDefinition> for PackageDefinitionValidator {
                 "spec path must be relative to the git repository root".to_string(),
             ));
         }
+        validate_repository_relative_path(&value.spec_file, "spec path")?;
         SpecSourceValidator.validate(&value.source)?;
         Ok(())
     }
@@ -175,11 +176,55 @@ impl Validator<SpecSource> for SpecSourceValidator {
                 "spec path must be relative to the repository root".to_string(),
             ));
         }
+        validate_repository_relative_path(&spec_file, "spec path")?;
         if spec_file.extension().and_then(|part| part.to_str()) != Some("spec") {
             return Err(SynforgeError::Spec(
                 "spec path must point to a .spec file".to_string(),
             ));
         }
         Ok(())
+    }
+}
+
+fn validate_repository_relative_path(path: &Path, label: &str) -> Result<(), SynforgeError> {
+    if path.as_os_str().is_empty()
+        || path.is_absolute()
+        || path.clean() != path
+        || path
+            .components()
+            .any(|component| !matches!(component, Component::Normal(_)))
+    {
+        return Err(SynforgeError::Spec(format!(
+            "{label} must stay within the git repository root"
+        )));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::validate_repository_relative_path;
+
+    #[test]
+    fn repository_relative_path_accepts_nested_spec() {
+        assert!(validate_repository_relative_path(Path::new("rpm/package.spec"), "spec").is_ok());
+    }
+
+    #[test]
+    fn repository_relative_path_rejects_non_canonical_or_escaping_paths() {
+        for path in [
+            "",
+            "/tmp/package.spec",
+            "../package.spec",
+            "rpm/../../package.spec",
+            "./package.spec",
+        ] {
+            assert!(
+                validate_repository_relative_path(Path::new(path), "spec").is_err(),
+                "accepted {path:?}"
+            );
+        }
     }
 }

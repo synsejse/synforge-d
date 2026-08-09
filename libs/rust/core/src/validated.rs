@@ -1,8 +1,7 @@
 use crate::{
     error::SynforgeError,
-    package::{is_dns_label, parse_mock_chroot},
+    package::{is_dns_label, is_safe_path_segment, parse_mock_chroot},
 };
-use slug::slugify;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DnsLabel(String);
@@ -87,19 +86,33 @@ impl MockChroot {
 
 impl PackageName {
     pub fn new(value: &str) -> Result<Self, SynforgeError> {
-        let normalized = slugify(value);
-        if normalized.is_empty() {
-            return Err(SynforgeError::Spec(
-                "package name must not be empty".to_string(),
-            ));
+        if !is_safe_path_segment(value) {
+            return Err(SynforgeError::Spec(format!(
+                "package name {value:?} must be a single safe path segment"
+            )));
         }
-        DnsLabel::new(&normalized).map_err(|_| {
-            SynforgeError::Spec(format!("package name {} is not DNS-label safe", value))
-        })?;
-        Ok(Self(normalized))
+        Ok(Self(value.to_string()))
     }
 
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PackageName;
+
+    #[test]
+    fn package_name_preserves_alias_independent_of_rpm_name() {
+        let alias = PackageName::new("XYZ").expect("valid package alias");
+        assert_eq!(alias.as_str(), "XYZ");
+    }
+
+    #[test]
+    fn package_name_rejects_path_traversal() {
+        for value in ["../XYZ", "/XYZ", "nested/XYZ", "..", "XYZ:ro"] {
+            assert!(PackageName::new(value).is_err(), "accepted {value:?}");
+        }
     }
 }

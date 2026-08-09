@@ -2,6 +2,7 @@ use std::fmt;
 use std::path::{Component, Path, PathBuf};
 
 use idna::domain_to_ascii_strict;
+use sanitize_filename::{OptionsForCheck, is_sanitized_with_options};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -174,14 +175,17 @@ impl SpecRevision {
 
 pub fn parse_mock_chroot(value: &str) -> Option<BuildTarget> {
     let value = value.trim();
-    if value.is_empty() || value.ends_with(".cfg") {
+    if !is_safe_path_segment(value) || value.ends_with(".cfg") {
         return None;
     }
     let mut parts = value.rsplitn(3, '-');
     let arch = parts.next()?;
     let release = parts.next()?;
     let distribution = parts.next()?;
-    if distribution.is_empty() || release.is_empty() || arch.is_empty() {
+    if ![distribution, release, arch]
+        .into_iter()
+        .all(is_safe_path_segment)
+    {
         return None;
     }
     Some(BuildTarget {
@@ -189,6 +193,24 @@ pub fn parse_mock_chroot(value: &str) -> Option<BuildTarget> {
         release: release.to_string(),
         arch: arch.to_string(),
     })
+}
+
+pub fn is_safe_path_segment(value: &str) -> bool {
+    if value.is_empty()
+        || value != value.trim()
+        || !is_sanitized_with_options(
+            value,
+            OptionsForCheck {
+                windows: true,
+                truncate: true,
+            },
+        )
+    {
+        return false;
+    }
+
+    let mut components = Path::new(value).components();
+    matches!(components.next(), Some(Component::Normal(_))) && components.next().is_none()
 }
 
 impl fmt::Display for SpecRevision {
@@ -207,4 +229,44 @@ pub fn is_dns_label(value: &str) -> bool {
     };
 
     ascii == value && !ascii.contains('.') && ascii.len() <= 63
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{is_safe_path_segment, parse_mock_chroot};
+
+    #[test]
+    fn safe_path_segment_accepts_display_aliases() {
+        assert!(is_safe_path_segment("XYZ"));
+        assert!(is_safe_path_segment("My Package"));
+        assert!(is_safe_path_segment("package_name.v2"));
+    }
+
+    #[test]
+    fn safe_path_segment_rejects_escaping_or_bind_syntax() {
+        for value in [
+            "",
+            ".",
+            "..",
+            "../escape",
+            "/absolute",
+            "nested/path",
+            "nested\\path",
+            "bind:option",
+            " padded",
+            "padded ",
+        ] {
+            assert!(!is_safe_path_segment(value), "accepted {value:?}");
+        }
+    }
+
+    #[test]
+    fn mock_chroot_rejects_unsafe_path_components() {
+        assert!(parse_mock_chroot("fedora-42-x86_64").is_some());
+        assert!(parse_mock_chroot("../fedora-42-x86_64").is_none());
+        assert!(parse_mock_chroot("..-42-x86_64").is_none());
+        assert!(parse_mock_chroot("fedora-..-x86_64").is_none());
+        assert!(parse_mock_chroot("fedora-42-..").is_none());
+        assert!(parse_mock_chroot("fedora-42-x86_64:ro").is_none());
+    }
 }

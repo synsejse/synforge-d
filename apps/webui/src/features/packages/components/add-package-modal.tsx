@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState, type SyntheticEvent } from "react";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import {
+  faArrowLeft,
+  faArrowRight,
+  faPlus,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 import api from "../../../lib/api";
-import type { CreatePackageRequest, SpecSource } from "../../../lib/types";
 import Button from "../../../components/ui/button";
 import FaIcon from "../../../components/ui/fa-icon";
 import ModalFrame from "../../../components/ui/modal-frame";
@@ -10,43 +14,53 @@ import { useServerHardware } from "../../../components/common/server-hardware-pr
 import BuildSettingsSection from "./add-package/build-settings-section";
 import ChrootPickerDialog from "./add-package/chroot-picker-dialog";
 import {
-  encodeBuildEnv,
-  parseBuildEnv,
-  parseOptionalCpuLimit,
-  parseOptionalMegabytes,
-} from "./add-package/form-utils";
+  buildCreatePackageRequest,
+  INITIAL_ADD_PACKAGE_FORM,
+  type AddPackageFormState,
+} from "./add-package/form-state";
+import ReviewSection from "./add-package/review-section";
 import SourceBasicsSection from "./add-package/source-basics-section";
 import SpecPickerDialog from "./add-package/spec-picker-dialog";
+import TargetsSection from "./add-package/targets-section";
+import WizardSteps from "./add-package/wizard-steps";
+import {
+  ADD_PACKAGE_STEPS,
+  type AddPackageStep,
+} from "./add-package/wizard-step-data";
 
 interface AddPackageModalProps {
   onClose: () => void;
   onSuccess: () => void;
 }
 
+const STEP_COPY: Record<AddPackageStep, { title: string; description: string }> = {
+  source: {
+    title: "Choose the source",
+    description: "Name this package and select the spec tracked by its Git repository.",
+  },
+  targets: {
+    title: "Choose build targets",
+    description: "Select Mock chroots and decide what Synforge should publish.",
+  },
+  build: {
+    title: "Tune the build",
+    description: "Configure timeout and compiler caching; advanced limits are optional.",
+  },
+  review: {
+    title: "Review package",
+    description: "Confirm the source, targets, and build behavior before creating it.",
+  },
+};
+
 export default function AddPackageModal({
   onClose,
   onSuccess,
 }: AddPackageModalProps) {
   const serverHardware = useServerHardware();
-  const [name, setName] = useState("");
-  const [repoUrl, setRepoUrl] = useState("");
-  const [specPath, setSpecPath] = useState("");
-  const [enabled, setEnabled] = useState(true);
-  const [poll, setPoll] = useState(true);
-  const [publishSrpm, setPublishSrpm] = useState(true);
-  const [publishDebuginfo, setPublishDebuginfo] = useState(true);
-  const [networkAccess, setNetworkAccess] = useState(false);
-  const [mockChroots, setMockChroots] = useState<string[]>(["fedora-44-x86_64"]);
-  const [pollIntervalSeconds, setPollIntervalSeconds] = useState("900");
-  const [buildTimeoutSeconds, setBuildTimeoutSeconds] = useState("7200");
-  const [packageHistoryCount, setPackageHistoryCount] = useState("3");
-  const [cpuLimitCores, setCpuLimitCores] = useState("");
-  const [cpuLimitEnabled, setCpuLimitEnabled] = useState(false);
-  const [memoryLimitEnabled, setMemoryLimitEnabled] = useState(false);
-  const [memoryLimitMb, setMemoryLimitMb] = useState("1024");
-  const [ccacheEnabled, setCcacheEnabled] = useState(false);
-  const [ccacheMaxSizeMb, setCcacheMaxSizeMb] = useState("");
-  const [buildEnv, setBuildEnv] = useState(encodeBuildEnv([]));
+  const [form, setForm] = useState<AddPackageFormState>(
+    INITIAL_ADD_PACKAGE_FORM,
+  );
+  const [step, setStep] = useState<AddPackageStep>("source");
   const [browsing, setBrowsing] = useState(false);
   const [browseError, setBrowseError] = useState<string | null>(null);
   const [browseFiles, setBrowseFiles] = useState<string[]>([]);
@@ -61,54 +75,40 @@ export default function AddPackageModal({
     () => browseFiles.filter((file) => file.endsWith(".spec")),
     [browseFiles],
   );
-  const maxCpuCores = serverHardware?.cpu_cores ?? null;
-  const CPU_MIN_CORES = 1;
-  const cpuSliderMax = Math.max(CPU_MIN_CORES, maxCpuCores ?? 64);
-  const CPU_DEFAULT_CORES = Math.min(4, cpuSliderMax);
-  const cpuSliderValue = Math.min(
-    cpuSliderMax,
-    Math.max(CPU_MIN_CORES, Math.floor(Number(cpuLimitCores) || CPU_DEFAULT_CORES)),
+  const currentStepIndex = ADD_PACKAGE_STEPS.findIndex(
+    (entry) => entry.value === step,
   );
-  const MEMORY_MIN_MB = 256;
-  const MEMORY_STEP_MB = 256;
-  const memorySliderMax = Math.max(
-    MEMORY_MIN_MB,
-    serverHardware?.total_memory_mb
-      ? Math.floor(serverHardware.total_memory_mb / MEMORY_STEP_MB) * MEMORY_STEP_MB
-      : 32768,
-  );
-  const MEMORY_DEFAULT_MB = Math.min(1024, memorySliderMax);
-  const memorySliderValue = Math.min(
-    memorySliderMax,
-    Math.max(MEMORY_MIN_MB, Number(memoryLimitMb) || MEMORY_DEFAULT_MB),
-  );
+  const patchForm = (next: Partial<AddPackageFormState>) =>
+    setForm((current) => ({ ...current, ...next }));
 
   useEffect(() => {
     async function loadChroots() {
       try {
         const response = await api.listMockChroots();
         setAvailableChroots(response.chroots);
-        setMockChroots((current) => {
-          if (current.some((value) => response.chroots.includes(value))) {
-            return current.filter((value) => response.chroots.includes(value));
-          }
-          if (response.chroots.includes("fedora-44-x86_64")) {
-            return ["fedora-44-x86_64"];
-          }
-          return response.chroots.length > 0 ? [response.chroots[0]] : [];
-        });
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load mock chroots");
+        setForm((current) => ({
+          ...current,
+          mockChroots: chooseInitialChroots(
+            current.mockChroots,
+            response.chroots,
+          ),
+        }));
+      } catch (loadError) {
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Failed to load mock chroots",
+        );
       } finally {
         setChrootsLoading(false);
       }
     }
 
-    loadChroots();
+    void loadChroots();
   }, []);
 
   async function handleBrowse() {
-    const trimmedRepoUrl = repoUrl.trim();
+    const trimmedRepoUrl = form.repoUrl.trim();
     if (!trimmedRepoUrl) {
       setBrowseError("Repository URL is required before browsing.");
       return;
@@ -118,187 +118,256 @@ export default function AddPackageModal({
     try {
       const response = await api.browseRepository({ repo_url: trimmedRepoUrl });
       setBrowseFiles(response.files);
-      if (!specPath && response.spec_files.length > 0) {
-        setSpecPath(response.spec_files[0]);
+      if (!form.specPath && response.spec_files.length > 0) {
+        patchForm({ specPath: response.spec_files[0] });
       }
-    } catch (e) {
+    } catch (browseFailure) {
       setBrowseError(
-        e instanceof Error ? e.message : "Failed to browse repository",
+        browseFailure instanceof Error
+          ? browseFailure.message
+          : "Failed to browse repository",
       );
     } finally {
       setBrowsing(false);
     }
   }
 
+  function validate(nextStep: AddPackageStep): string | null {
+    if (nextStep === "source") {
+      if (!form.name.trim()) return "Package name is required.";
+      if (!form.repoUrl.trim()) return "Git repository URL is required.";
+      if (!form.specPath.trim()) return "Choose or enter a spec file path.";
+    }
+    if (nextStep === "targets" && form.mockChroots.length === 0) {
+      return "Select at least one Mock chroot.";
+    }
+    if (nextStep === "build") {
+      if (!isPositiveNumber(form.buildTimeoutSeconds)) {
+        return "Build timeout must be greater than zero.";
+      }
+      if (form.poll && !isPositiveNumber(form.pollIntervalSeconds)) {
+        return "Poll interval must be greater than zero.";
+      }
+      if (!isPositiveNumber(form.packageHistoryCount)) {
+        return "History count must be greater than zero.";
+      }
+      if (
+        form.ccacheEnabled &&
+        form.ccacheMaxSizeMb.trim() &&
+        !isPositiveNumber(form.ccacheMaxSizeMb)
+      ) {
+        return "Compiler-cache size must be greater than zero.";
+      }
+    }
+    return null;
+  }
+
+  function goNext() {
+    const validationError = validate(step);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    const nextStep = ADD_PACKAGE_STEPS[currentStepIndex + 1];
+    if (nextStep) {
+      setStep(nextStep.value);
+      setError(null);
+    }
+  }
+
+  function goBack() {
+    const previousStep = ADD_PACKAGE_STEPS[currentStepIndex - 1];
+    if (previousStep) {
+      setStep(previousStep.value);
+      setError(null);
+    }
+  }
+
   async function handleSubmit(event: SyntheticEvent) {
     event.preventDefault();
+    if (step !== "review") {
+      goNext();
+      return;
+    }
+
+    for (const entry of ADD_PACKAGE_STEPS.slice(0, -1)) {
+      const validationError = validate(entry.value);
+      if (validationError) {
+        setStep(entry.value);
+        setError(validationError);
+        return;
+      }
+    }
+
     setSubmitting(true);
     setError(null);
-
-    const source: SpecSource = {
-      repo_url: repoUrl.trim(),
-      spec_file: specPath.trim(),
-      poll,
-    };
-
-    const request: CreatePackageRequest = {
-      name: name.trim(),
-      source,
-      enabled,
-      publish_srpm: publishSrpm,
-      publish_debuginfo: publishDebuginfo,
-      network_access: networkAccess,
-      mock_chroots: mockChroots,
-      poll_interval_seconds: Number(pollIntervalSeconds),
-      build_timeout_seconds: Number(buildTimeoutSeconds),
-      package_history_count: Number(packageHistoryCount),
-      cpu_limit_millicores: cpuLimitEnabled
-        ? parseOptionalCpuLimit(cpuLimitCores, maxCpuCores)
-        : undefined,
-      memory_limit_mb: memoryLimitEnabled ? memorySliderValue : undefined,
-      ccache_enabled: ccacheEnabled,
-      ccache_max_size_mb: parseOptionalMegabytes(ccacheMaxSizeMb),
-      build_env: parseBuildEnv(buildEnv),
-    };
-
     try {
-      await api.createPackage(request);
+      await api.createPackage(
+        buildCreatePackageRequest(
+          form,
+          serverHardware?.cpu_cores ?? null,
+        ),
+      );
       onSuccess();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create package");
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to create package",
+      );
     } finally {
       setSubmitting(false);
     }
   }
 
   function toggleChroot(chroot: string, checked: boolean) {
-    setMockChroots((current) => {
-      const next = checked
-        ? Array.from(new Set([...current, chroot]))
-        : current.filter((value) => value !== chroot);
-      return next;
+    patchForm({
+      mockChroots: checked
+        ? Array.from(new Set([...form.mockChroots, chroot]))
+        : form.mockChroots.filter((value) => value !== chroot),
     });
   }
+
+  const copy = STEP_COPY[step];
 
   return (
     <ModalFrame
       open
+      dismissable={!submitting}
       onOpenChange={(open) => {
-        if (!open) onClose();
+        if (!open && !submitting) onClose();
       }}
       overlayClassName="flex items-center justify-center overflow-hidden overscroll-none bg-black/70 px-4 py-6"
-      className="flex max-h-[calc(100dvh-3rem)] max-w-3xl flex-col border border-edge-strong bg-black shadow-card-md"
+      className="flex max-h-[calc(100dvh-3rem)] max-w-3xl flex-col overflow-hidden border border-edge-strong bg-black shadow-card-md"
     >
-      <div className="border-b border-edge px-6 py-5">
-        <ModalTitle asChild>
-          <h2 className="font-mono text-lg font-bold uppercase tracking-[0.04em] text-white">Add package</h2>
-        </ModalTitle>
-      </div>
+      <header className="flex shrink-0 items-center justify-between gap-4 border-b border-edge px-6 py-4">
+        <div>
+          <ModalTitle asChild>
+            <h2 className="font-mono text-lg font-bold uppercase tracking-[0.04em] text-white">
+              Add package
+            </h2>
+          </ModalTitle>
+          <p className="mt-1 font-mono text-xs uppercase tracking-[0.12em] text-soft">
+            Step {currentStepIndex + 1} of {ADD_PACKAGE_STEPS.length}
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          disabled={submitting}
+          aria-label="Close add package dialog"
+        >
+          <FaIcon icon={faXmark} />
+        </Button>
+      </header>
 
-      <form
-        onSubmit={handleSubmit}
-        className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-6 py-6"
-      >
-          <SourceBasicsSection
-            ccacheEnabled={ccacheEnabled}
-            ccacheMaxSizeMb={ccacheMaxSizeMb}
-            enabled={enabled}
-            mockChroots={mockChroots}
-            name={name}
-            networkAccess={networkAccess}
-            poll={poll}
-            publishDebuginfo={publishDebuginfo}
-            publishSrpm={publishSrpm}
-            repoUrl={repoUrl}
-            setCcacheEnabled={setCcacheEnabled}
-            setCcacheMaxSizeMb={setCcacheMaxSizeMb}
-            setEnabled={setEnabled}
-            setName={setName}
-            setNetworkAccess={setNetworkAccess}
-            setPoll={setPoll}
-            setPublishDebuginfo={setPublishDebuginfo}
-            setPublishSrpm={setPublishSrpm}
-            setRepoUrl={setRepoUrl}
-          />
+      <WizardSteps current={step} />
 
-          <BuildSettingsSection
-            buildEnv={buildEnv}
-            buildTimeoutSeconds={buildTimeoutSeconds}
-            browsing={browsing}
-            chrootsLoading={chrootsLoading}
-            cpuDefaultCores={CPU_DEFAULT_CORES}
-            cpuLimitCores={cpuLimitCores}
-            cpuLimitEnabled={cpuLimitEnabled}
-            cpuSliderMax={cpuSliderMax}
-            cpuSliderValue={cpuSliderValue}
-            memoryDefaultMb={MEMORY_DEFAULT_MB}
-            memoryLimitEnabled={memoryLimitEnabled}
-            memoryLimitMb={memoryLimitMb}
-            memorySliderMax={memorySliderMax}
-            memorySliderValue={memorySliderValue}
-            mockChroots={mockChroots}
-            onChooseChroots={() => setShowChrootPicker(true)}
-            onChooseSpec={() => setShowSpecPicker(true)}
-            packageHistoryCount={packageHistoryCount}
-            pollIntervalSeconds={pollIntervalSeconds}
-            setBuildEnv={setBuildEnv}
-            setBuildTimeoutSeconds={setBuildTimeoutSeconds}
-            setCpuLimitCores={setCpuLimitCores}
-            setCpuLimitEnabled={setCpuLimitEnabled}
-            setMemoryLimitEnabled={setMemoryLimitEnabled}
-            setMemoryLimitMb={setMemoryLimitMb}
-            setPackageHistoryCount={setPackageHistoryCount}
-            setPollIntervalSeconds={setPollIntervalSeconds}
-            setSpecPath={setSpecPath}
-            specPath={specPath}
-          />
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-6">
+          <div className="mb-5">
+            <h3 className="font-display text-xl font-bold text-white">{copy.title}</h3>
+            <p className="mt-1 text-sm text-muted">{copy.description}</p>
+          </div>
 
-          {error && (
-             <div className="border border-edge bg-black px-4 py-3 text-sm text-strong">
+          {step === "source" ? (
+            <SourceBasicsSection
+              form={form}
+              browsing={browsing}
+              onChange={patchForm}
+              onChooseSpec={() => setShowSpecPicker(true)}
+            />
+          ) : null}
+          {step === "targets" ? (
+            <TargetsSection
+              form={form}
+              chrootsLoading={chrootsLoading}
+              onChange={patchForm}
+              onChooseChroots={() => setShowChrootPicker(true)}
+            />
+          ) : null}
+          {step === "build" ? (
+            <BuildSettingsSection
+              form={form}
+              maxCpuCores={serverHardware?.cpu_cores ?? null}
+              maxMemoryMb={serverHardware?.total_memory_mb ?? null}
+              onChange={patchForm}
+            />
+          ) : null}
+          {step === "review" ? <ReviewSection form={form} /> : null}
+
+          {error ? (
+            <div role="alert" className="mt-5 border border-error bg-error/10 px-4 py-3 text-sm text-error">
               {error}
             </div>
-          )}
-
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              size="sm"
-              loading={submitting}
-            >
-              {submitting ? null : <FaIcon icon={faPlus} />}
-            {submitting ? "Adding…" : "Add Package"}
-          </Button>
+          ) : null}
         </div>
+
+        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-edge bg-black px-6 py-4">
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={submitting}>
+            Cancel
+          </Button>
+          <div className="flex items-center gap-3">
+            {currentStepIndex > 0 ? (
+              <Button variant="subtle" size="sm" onClick={goBack} disabled={submitting}>
+                <FaIcon icon={faArrowLeft} />
+                Back
+              </Button>
+            ) : null}
+            <Button type="submit" variant="primary" size="sm" loading={submitting}>
+              {step === "review" ? (
+                <>
+                  {submitting ? null : <FaIcon icon={faPlus} />}
+                  {submitting ? "Adding…" : "Add package"}
+                </>
+              ) : (
+                <>
+                  Continue
+                  <FaIcon icon={faArrowRight} />
+                </>
+              )}
+            </Button>
+          </div>
+        </footer>
       </form>
 
-      {showSpecPicker && (
+      {showSpecPicker ? (
         <SpecPickerDialog
           browseError={browseError}
           browsing={browsing}
           onBrowse={handleBrowse}
           onClose={() => setShowSpecPicker(false)}
           onSelectSpec={(file) => {
-            setSpecPath(file);
+            patchForm({ specPath: file });
             setShowSpecPicker(false);
           }}
           selectableFiles={selectableFiles}
-          specPath={specPath}
+          specPath={form.specPath}
         />
-      )}
+      ) : null}
 
-      {showChrootPicker && (
+      {showChrootPicker ? (
         <ChrootPickerDialog
           availableChroots={availableChroots}
           chrootsLoading={chrootsLoading}
-          mockChroots={mockChroots}
+          mockChroots={form.mockChroots}
           onClose={() => setShowChrootPicker(false)}
           onToggleChroot={toggleChroot}
         />
-      )}
+      ) : null}
     </ModalFrame>
   );
+}
+
+function chooseInitialChroots(current: string[], available: string[]): string[] {
+  const stillAvailable = current.filter((value) => available.includes(value));
+  if (stillAvailable.length > 0) return stillAvailable;
+  if (available.includes("fedora-44-x86_64")) return ["fedora-44-x86_64"];
+  return available.length > 0 ? [available[0]] : [];
+}
+
+function isPositiveNumber(value: string): boolean {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0;
 }

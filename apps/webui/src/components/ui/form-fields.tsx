@@ -27,6 +27,7 @@ interface TextFieldProps {
   required?: boolean;
   className?: string;
   error?: string;
+  hint?: string;
 }
 
 export function TextField({
@@ -38,6 +39,7 @@ export function TextField({
   required,
   className = "",
   error,
+  hint,
 }: TextFieldProps) {
   return (
     <label className={`block ${className}`}>
@@ -53,7 +55,11 @@ export function TextField({
         aria-invalid={error ? true : undefined}
         className={error ? inputErrorClass : inputClass}
       />
-      <FieldError message={error} />
+      {error ? (
+        <FieldError message={error} />
+      ) : hint ? (
+        <span className="mt-2 block text-xs text-soft">{hint}</span>
+      ) : null}
     </label>
   );
 }

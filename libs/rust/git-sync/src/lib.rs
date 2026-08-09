@@ -25,11 +25,13 @@ pub use self::package_store::{
     MaterializePackageOptions as RuntimeMaterializePackageOptions, WorkerParseRunner,
 };
 pub use self::service::{
-    EnabledPackageCatalog, GitSyncService, InspectedPackageSource, ManualRefreshScheduler,
+    EnabledPackageCatalog, InspectedPackageSource, ManualRefreshScheduler,
     PackageBuildHistoryReader, PackageDefinitionMaterializer, PackageDefinitionWriter,
     PackageDeleter, PackageDeletionJobReader, PackageDeletionRunner, PackageDetailsReader,
     PackageLookup, PackageMaterializationOptions, PackageSourceInspector, RefreshAllProgressStore,
-    RepositoryBrowser,
+    RepositoryBrowser, browse_repository, create_package, delete_package, get_package,
+    get_package_build_history, get_refresh_all_packages_progress, trigger_refresh_all_packages,
+    update_package,
 };
 use self::sync_tracker::SyncResult;
 pub use self::sync_tracker::SyncStatusTracker;

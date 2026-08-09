@@ -4,10 +4,11 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use synforge_core::api::{
-    BrowseRepositoryResponse, BuildJobResponse, PackageBuildHistoryResponse,
-    PackageBuildInventoryEntry, PackageResponse, RefreshAllPackagesProgressResponse,
-    RefreshAllPackagesProgressView,
+    BrowseRepositoryRequest, BrowseRepositoryResponse, BuildJobResponse,
+    PackageBuildHistoryResponse, PackageBuildInventoryEntry, PackageResponse,
+    RefreshAllPackagesProgressResponse, RefreshAllPackagesProgressView,
 };
+use synforge_core::error::SynforgeError;
 use synforge_core::model::PublishedRepoFile;
 use uuid::Uuid;
 
@@ -43,6 +44,29 @@ pub trait PackageBuildHistoryReader {
         &self,
         package_name: &str,
     ) -> anyhow::Result<Vec<PublishedRepoFile>>;
+}
+
+pub async fn get_package<D>(deps: &D, package_name: &str) -> anyhow::Result<PackageResponse>
+where
+    D: PackageDetailsReader + Send + Sync,
+{
+    deps.get_package(package_name).await
+}
+
+pub async fn browse_repository<D>(
+    deps: &D,
+    request: BrowseRepositoryRequest,
+) -> anyhow::Result<BrowseRepositoryResponse>
+where
+    D: RepositoryBrowser + Send + Sync,
+{
+    let repo_url = request.repo_url.trim();
+    if repo_url.is_empty() {
+        return Err(anyhow::anyhow!(SynforgeError::BadRequest(
+            "repository URL is required".to_string()
+        )));
+    }
+    deps.browse_repository(repo_url).await
 }
 
 pub async fn get_refresh_all_packages_progress<D>(

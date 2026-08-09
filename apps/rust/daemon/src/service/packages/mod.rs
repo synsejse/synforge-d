@@ -11,7 +11,14 @@ use synforge_core::api::{
 };
 use synforge_core::validated::PackageName;
 use synforge_database::PackageStore;
-use synforge_git_sync::GitSyncService;
+use synforge_git_sync::{
+    browse_repository as browse_git_repository, create_package as create_git_package,
+    delete_package as delete_git_package, get_package as get_git_package,
+    get_package_build_history as get_git_package_build_history,
+    get_refresh_all_packages_progress as get_git_refresh_all_packages_progress,
+    trigger_refresh_all_packages as trigger_git_refresh_all_packages,
+    update_package as update_git_package,
+};
 use synforge_worker_host::MockChrootService;
 use tracing::warn;
 
@@ -38,9 +45,7 @@ impl SynforgeService {
     }
 
     pub async fn get_package(&self, package_name: &str) -> anyhow::Result<PackageResponse> {
-        GitSyncService
-            .get_package(&self.package_deps(), package_name)
-            .await
+        get_git_package(&self.package_deps(), package_name).await
     }
 
     pub async fn list_mock_chroots(
@@ -65,15 +70,11 @@ impl SynforgeService {
     pub async fn get_refresh_all_packages_progress(
         &self,
     ) -> anyhow::Result<RefreshAllPackagesProgressResponse> {
-        GitSyncService
-            .get_refresh_all_packages_progress(&self.package_deps())
-            .await
+        get_git_refresh_all_packages_progress(&self.package_deps()).await
     }
 
     pub async fn trigger_refresh_all_packages(&self) -> anyhow::Result<RefreshAllPackagesResponse> {
-        GitSyncService
-            .trigger_refresh_all_packages(&self.package_deps())
-            .await
+        trigger_git_refresh_all_packages(&self.package_deps()).await
     }
 
     pub async fn get_package_build_history(
@@ -84,33 +85,28 @@ impl SynforgeService {
         include_deleted: bool,
     ) -> anyhow::Result<PackageBuildHistoryResponse> {
         let (limit, offset) = normalize_pagination(limit, offset);
-        GitSyncService
-            .get_package_build_history(
-                &self.package_deps(),
-                package_name,
-                limit,
-                offset,
-                include_deleted,
-            )
-            .await
+        get_git_package_build_history(
+            &self.package_deps(),
+            package_name,
+            limit,
+            offset,
+            include_deleted,
+        )
+        .await
     }
 
     pub async fn create_package(
         &self,
         request: CreatePackageRequest,
     ) -> anyhow::Result<PackageResponse> {
-        GitSyncService
-            .create_package(&self.package_deps(), request)
-            .await
+        create_git_package(&self.package_deps(), request).await
     }
 
     pub async fn browse_repository(
         &self,
         request: BrowseRepositoryRequest,
     ) -> anyhow::Result<BrowseRepositoryResponse> {
-        GitSyncService
-            .browse_repository(&self.package_deps(), request)
-            .await
+        browse_git_repository(&self.package_deps(), request).await
     }
 
     pub async fn update_package(
@@ -118,9 +114,7 @@ impl SynforgeService {
         package_name: &str,
         request: UpdatePackageRequest,
     ) -> anyhow::Result<PackageResponse> {
-        let response = GitSyncService
-            .update_package(&self.package_deps(), package_name, request)
-            .await?;
+        let response = update_git_package(&self.package_deps(), package_name, request).await?;
         // If the update leaves ccache disabled, drop the on-disk
         // cache tree for this package immediately. Without this the
         // dir would linger until the periodic orphan sweep runs.
@@ -134,9 +128,7 @@ impl SynforgeService {
 
     pub async fn delete_package(&self, package_name: &str) -> anyhow::Result<()> {
         PackageName::new(package_name)?;
-        GitSyncService
-            .delete_package(&self.package_deps(), package_name)
-            .await?;
+        delete_git_package(&self.package_deps(), package_name).await?;
         // Now that the package row is gone, drop its on-disk
         // ccache and mock-cache trees. Best effort: a leaked dir is
         // strictly worse than the existing behaviour, but we won't

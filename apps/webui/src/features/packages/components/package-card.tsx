@@ -82,20 +82,22 @@ export default function PackageCard({
 
       <div className="flex flex-wrap items-center gap-3">
         {selectable ? (
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={(event) =>
-              onToggleSelected?.(entry.package.name, event.target.checked)
-            }
-            aria-label={`Select package ${entry.package.name}`}
-            className="shrink-0"
-          />
+          <label className="-m-2 inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center">
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={(event) =>
+                onToggleSelected?.(entry.package.name, event.target.checked)
+              }
+              aria-label={`Select package ${entry.package.name}`}
+              className="shrink-0 cursor-pointer"
+            />
+          </label>
         ) : null}
         <Link
           to="/packages/view"
           search={{ name: entry.package.name }}
-          className="break-all font-mono text-[15px] font-bold uppercase tracking-[0.02em] text-white transition-colors hover:text-accent-lime"
+          className="inline-flex min-h-10 items-center break-all font-mono text-[15px] font-bold uppercase tracking-[0.02em] text-white transition-colors hover:text-accent-lime sm:min-h-0"
         >
           {entry.package.name}
         </Link>

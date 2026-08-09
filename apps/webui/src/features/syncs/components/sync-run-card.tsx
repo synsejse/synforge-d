@@ -28,7 +28,7 @@ export default function SyncRunCard({ operation }: { operation: SyncOperation })
         <Link
           to="/syncs/view"
           search={{ id: operation.id }}
-          className="break-all font-mono text-[15px] font-bold uppercase tracking-[0.02em] text-white transition-colors hover:text-accent-cyan"
+          className="inline-flex min-h-10 items-center break-all font-mono text-[15px] font-bold uppercase tracking-[0.02em] text-white transition-colors hover:text-accent-cyan sm:min-h-0"
         >
           {operation.package_name}
         </Link>

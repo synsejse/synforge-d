@@ -52,7 +52,7 @@ export default function FilterBar({
           onClick={() => setMobileOpen((open) => !open)}
           aria-expanded={mobileOpen}
           aria-controls={panelId}
-          className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-white"
+          className="flex min-h-10 items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-white"
         >
           <FaIcon icon={faFilter} />
           Filters
@@ -63,7 +63,12 @@ export default function FilterBar({
           ) : null}
         </button>
         {showClear ? (
-          <Button variant="subtle" size="xs" onClick={clearFilters}>
+          <Button
+            variant="subtle"
+            size="xs"
+            onClick={clearFilters}
+            className="min-h-10"
+          >
             <FaIcon icon={faXmark} />
             Clear
           </Button>

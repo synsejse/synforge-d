@@ -28,7 +28,7 @@ export const buttonVariants = cva(
         sm: "min-h-10 px-3 py-2 text-xs tracking-[0.08em]",
         md: "min-h-11 px-3.5 py-2.5 text-xs tracking-[0.08em]",
         lg: "min-h-12 px-5 py-3 text-sm font-extrabold tracking-[0.06em]",
-        "icon-sm": "h-9 w-9 p-0",
+        "icon-sm": "h-10 w-10 p-0 sm:h-9 sm:w-9",
         icon: "h-10 w-10 p-0",
         "icon-lg": "h-11 w-11 p-0",
       },

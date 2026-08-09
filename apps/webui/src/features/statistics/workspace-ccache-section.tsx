@@ -99,7 +99,7 @@ export default function WorkspaceCcacheSection({
                 <Link
                   to="/packages/view"
                   search={{ name: target.package_name }}
-                  className="min-w-0 truncate font-mono text-sm font-bold text-white hover:text-accent-lime"
+                  className="inline-flex min-h-10 min-w-0 items-center truncate font-mono text-sm font-bold text-white hover:text-accent-lime md:min-h-0"
                 >
                   {target.package_name}
                 </Link>

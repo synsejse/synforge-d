@@ -83,7 +83,7 @@ export default function Tabs<TValue extends string>({
               disabled={item.disabled}
               onClick={() => onChange(item.value)}
               className={cn(
-                "shrink-0 whitespace-nowrap px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.16em] transition-colors",
+                "min-h-10 shrink-0 whitespace-nowrap px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.16em] transition-colors",
                 "focus-visible:outline-none focus-visible:relative focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-accent-lime focus-visible:ring-offset-2 focus-visible:ring-offset-black",
                 "disabled:pointer-events-none disabled:opacity-40",
                 idx > 0 ? "border-l border-edge-strong" : "",

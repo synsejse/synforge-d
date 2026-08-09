@@ -1,5 +1,5 @@
 export const rowActionClass =
-  "sf-ic inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center border border-edge bg-transparent text-soft transition-colors hover:border-accent-lime hover:text-accent-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime";
+  "sf-ic inline-flex h-10 w-10 shrink-0 items-center justify-center border border-edge bg-transparent text-soft transition-colors hover:border-accent-lime hover:text-accent-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime sm:h-[30px] sm:w-[30px]";
 
 export const ACCENT_RAIL = "var(--theme-accent-lime)";
 export const ERROR_RAIL = "var(--theme-error-red)";

@@ -130,7 +130,7 @@ function Dashboard() {
           </h2>
           <Link
             to="/jobs"
-            className="font-mono text-xs font-bold uppercase tracking-[0.08em] text-accent-lime transition-all duration-100 ease-linear hover:underline"
+            className="inline-flex min-h-10 items-center font-mono text-xs font-bold uppercase tracking-[0.08em] text-accent-lime transition-all duration-100 ease-linear hover:underline"
           >
             View All →
           </Link>

@@ -99,7 +99,7 @@ export default function JobCard({
         <Link
           to="/jobs/view"
           search={{ id: entry.job.id }}
-          className="break-all font-mono text-[15px] font-bold uppercase tracking-[0.02em] text-white transition-colors hover:text-accent-lime"
+          className="inline-flex min-h-10 items-center break-all font-mono text-[15px] font-bold uppercase tracking-[0.02em] text-white transition-colors hover:text-accent-lime sm:min-h-0"
         >
           {entry.job.package_name}
         </Link>
@@ -223,7 +223,7 @@ function ActiveJobCard({
         <Link
           to="/jobs/view"
           search={{ id: entry.job.id }}
-          className="font-mono text-[15px] font-bold uppercase tracking-[0.02em] text-white transition-colors hover:text-accent-lime"
+          className="inline-flex min-h-10 items-center font-mono text-[15px] font-bold uppercase tracking-[0.02em] text-white transition-colors hover:text-accent-lime sm:min-h-0"
         >
           {entry.job.package_name}
         </Link>

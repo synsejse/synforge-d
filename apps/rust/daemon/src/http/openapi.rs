@@ -175,6 +175,8 @@ impl Modify for SecurityAddon {
             synforge_core::api::TimeSeriesResponse,
             synforge_core::api::MockChrootCacheStats,
             synforge_core::api::GitMirrorCacheStats,
+            synforge_core::api::WorkspaceCcacheStats,
+            synforge_core::api::WorkspaceCcacheTargetStats,
             synforge_core::api::CacheStatsResponse,
             synforge_core::api::ServerHardwareResponse,
             synforge_core::api::SetupAdminRequest,

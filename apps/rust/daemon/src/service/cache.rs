@@ -2,6 +2,7 @@ use synforge_core::{
     api::{CacheStatsResponse, GitMirrorCacheStats, MockChrootCacheStats},
     model::{format_timestamp, now_utc},
 };
+use synforge_database::JobStore;
 use synforge_state::MockChrootCacheSnapshot;
 use time::OffsetDateTime;
 
@@ -27,11 +28,13 @@ impl SynforgeService {
             latest_fetched_at: git_stats.latest_fetched_at.and_then(format_unix_timestamp),
             latest_used_at: git_stats.latest_used_at.and_then(format_unix_timestamp),
         };
+        let compiler_cache = self.store.get_workspace_ccache_stats().await?;
 
         Ok(CacheStatsResponse {
             collected_at: format_timestamp(now_utc()),
             mock_chroot_cache,
             git_mirror_cache,
+            compiler_cache,
         })
     }
 }

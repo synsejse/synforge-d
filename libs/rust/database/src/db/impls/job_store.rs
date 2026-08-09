@@ -184,6 +184,10 @@ impl JobStore for DieselStore {
         job::list_package_ccache_stats(self, package_name).await
     }
 
+    async fn get_workspace_ccache_stats(&self) -> anyhow::Result<WorkspaceCcacheStats> {
+        job::get_workspace_ccache_stats(self).await
+    }
+
     async fn list_jobs_for_sync(
         &self,
         sync_operation_id: Uuid,

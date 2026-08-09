@@ -1095,6 +1095,7 @@ export interface components {
         BuildTrigger: "poll" | "manual_refresh" | "manual_rebuild" | "api";
         CacheStatsResponse: {
             collected_at: string;
+            compiler_cache: components["schemas"]["WorkspaceCcacheStats"];
             git_mirror_cache: components["schemas"]["GitMirrorCacheStats"];
             mock_chroot_cache: components["schemas"]["MockChrootCacheStats"];
         };
@@ -1835,6 +1836,19 @@ export interface components {
         UserResponse: {
             metrics: components["schemas"]["UserRepoMetrics"];
             user: components["schemas"]["UserAccount"];
+        };
+        WorkspaceCcacheStats: {
+            /** Format: int64 */
+            build_count: number;
+            stats: components["schemas"]["BuildCcacheStats"];
+            targets: components["schemas"]["WorkspaceCcacheTargetStats"][];
+        };
+        WorkspaceCcacheTargetStats: {
+            /** Format: int64 */
+            build_count: number;
+            mock_chroot: string;
+            package_name: string;
+            stats: components["schemas"]["BuildCcacheStats"];
         };
     };
     responses: never;

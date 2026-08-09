@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use synforge_core::{
-    api::{BuildJobResponse, PackageTargetCcacheStats},
+    api::{BuildJobResponse, PackageTargetCcacheStats, WorkspaceCcacheStats},
     model::{
         ArtifactSignature, BuildArtifact, BuildCcacheStats, BuildJob, BuildStatus, BuildTrigger,
         PublishedRepoFile,
@@ -137,6 +137,8 @@ pub trait JobStore: Send + Sync {
         &self,
         package_name: &str,
     ) -> anyhow::Result<Vec<PackageTargetCcacheStats>>;
+
+    async fn get_workspace_ccache_stats(&self) -> anyhow::Result<WorkspaceCcacheStats>;
 
     async fn list_jobs_for_sync(
         &self,

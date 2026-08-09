@@ -3,6 +3,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     api::BuildJobResponse,
+    model::BuildCcacheStats,
     sync::{SyncBatch, SyncOperation, SyncOperationEvent, SyncStatus},
 };
 
@@ -101,10 +102,26 @@ pub struct GitMirrorCacheStats {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct WorkspaceCcacheTargetStats {
+    pub package_name: String,
+    pub mock_chroot: String,
+    pub build_count: u64,
+    pub stats: BuildCcacheStats,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct WorkspaceCcacheStats {
+    pub build_count: u64,
+    pub stats: BuildCcacheStats,
+    pub targets: Vec<WorkspaceCcacheTargetStats>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct CacheStatsResponse {
     pub collected_at: String,
     pub mock_chroot_cache: MockChrootCacheStats,
     pub git_mirror_cache: GitMirrorCacheStats,
+    pub compiler_cache: WorkspaceCcacheStats,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

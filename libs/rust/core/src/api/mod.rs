@@ -42,7 +42,8 @@ pub use self::system::{
     ServerHardwareResponse, SyncBatchDetailResponse, SyncBatchListResponse, SyncEnqueueResponse,
     SyncMetricsResponse, SyncOperationDetailResponse, SyncOperationListQuery,
     SyncOperationListResponse, SyncScheduleEntry, SyncScheduleQuery, SyncScheduleResponse,
-    TimeSeriesPoint, TimeSeriesQuery, TimeSeriesResponse, resolve_time_range,
+    TimeSeriesPoint, TimeSeriesQuery, TimeSeriesResponse, WorkspaceCcacheStats,
+    WorkspaceCcacheTargetStats, resolve_time_range,
 };
 pub use self::users::{
     ChangePasswordRequest, CreateUserRequest, SessionLoginRequest, SessionResponse,

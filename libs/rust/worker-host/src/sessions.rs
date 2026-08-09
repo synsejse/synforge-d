@@ -12,8 +12,8 @@ use uuid::Uuid;
 
 use synforge_core::{
     model::{
-        ArtifactKind, BuildArtifact, BuildStatus, WorkerAction, WorkerBuildResult,
-        WorkerJobPayload, WorkerResult,
+        ArtifactKind, BuildArtifact, BuildCcacheStats, BuildStatus, WorkerAction,
+        WorkerBuildResult, WorkerJobPayload, WorkerResult,
     },
     package::{is_safe_path_segment, parse_mock_chroot},
     validated::PackageName,
@@ -244,6 +244,7 @@ impl WorkerSessionBroker {
                 status: BuildStatus::Failed,
                 artifacts: Vec::new(),
                 message: Some(message.to_string()),
+                ccache_stats: None,
             }),
         )
         .await?;
@@ -320,6 +321,7 @@ fn merge_result(
                 status: result.status,
                 artifacts: artifacts.to_vec(),
                 message: result.message,
+                ccache_stats: sanitize_ccache_stats(result.ccache_stats),
             }))
         }
         (WorkerAction::Parse(_), WorkerResult::Build(_)) => {
@@ -329,6 +331,24 @@ fn merge_result(
             anyhow::bail!("parse result received for build worker session")
         }
     }
+}
+
+fn sanitize_ccache_stats(stats: Option<BuildCcacheStats>) -> Option<BuildCcacheStats> {
+    stats.filter(|stats| {
+        let values = [
+            stats.direct_hits,
+            stats.preprocessed_hits,
+            stats.cache_misses,
+            stats.uncacheable_calls,
+            stats.error_calls,
+        ];
+        stats.compiler_calls <= i64::MAX as u64
+            && values.iter().all(|value| *value <= i64::MAX as u64)
+            && values
+                .into_iter()
+                .try_fold(0_u64, u64::checked_add)
+                .is_some_and(|total| total == stats.compiler_calls)
+    })
 }
 
 fn sanitize_relative_path(path: &str) -> PathBuf {

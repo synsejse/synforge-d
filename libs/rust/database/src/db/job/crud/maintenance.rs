@@ -30,10 +30,11 @@ pub(in crate::db) async fn soft_delete_job(
         .await
         .optional()?;
     let artifacts = helpers::load_artifacts_map_for_rows(&mut conn, row.as_ref()).await?;
+    let ccache_stats = helpers::load_ccache_stats_map_for_rows(&mut conn, row.as_ref()).await?;
     let Some(row) = row else {
         return Ok(None);
     };
-    let response = build_job_response_from_row(row, &artifacts)?;
+    let response = build_job_response_from_row(row, &artifacts, &ccache_stats)?;
     if matches!(
         response.job.status,
         BuildStatus::Pending | BuildStatus::Running

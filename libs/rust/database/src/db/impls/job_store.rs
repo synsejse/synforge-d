@@ -78,6 +78,7 @@ impl JobStore for DieselStore {
         artifacts: &[BuildArtifact],
         published_files: &[PublishedRepoFile],
         artifact_signatures: &[ArtifactSignature],
+        ccache_stats: Option<&BuildCcacheStats>,
     ) -> anyhow::Result<bool> {
         job::finish_job(
             self,
@@ -87,6 +88,7 @@ impl JobStore for DieselStore {
             artifacts,
             published_files,
             artifact_signatures,
+            ccache_stats,
         )
         .await
     }

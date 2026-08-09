@@ -125,6 +125,10 @@ pub(in crate::db) async fn reset_job_for_retry(
                 .execute(conn)
                 .await?;
 
+            diesel::delete(build_ccache_stats::table.filter(build_ccache_stats::job_id.eq(job_id)))
+                .execute(conn)
+                .await?;
+
             Ok(true)
         })
         .await;
@@ -153,11 +157,15 @@ pub(in crate::db) async fn finish_job(
     artifacts: &[BuildArtifact],
     published_files: &[PublishedRepoFile],
     artifact_signatures: &[ArtifactSignature],
+    ccache_stats: Option<&BuildCcacheStats>,
 ) -> anyhow::Result<bool> {
     let error_message = error_message.map(ToOwned::to_owned);
     let artifacts = artifacts.to_vec();
     let published_files = published_files.to_vec();
     let artifact_signatures = artifact_signatures.to_vec();
+    let ccache_stats = ccache_stats
+        .map(|stats| new_build_ccache_stats_record(job_id, stats))
+        .transpose()?;
     let mut conn = store.get_connection().await?;
     let finalized = conn
         .transaction::<bool, diesel::result::Error, _>(async |conn| {
@@ -197,6 +205,16 @@ pub(in crate::db) async fn finish_job(
                 .await?;
             if updated == 0 {
                 return Ok(false);
+            }
+
+            diesel::delete(build_ccache_stats::table.filter(build_ccache_stats::job_id.eq(job_id)))
+                .execute(conn)
+                .await?;
+            if let Some(row) = ccache_stats.as_ref() {
+                diesel::insert_into(build_ccache_stats::table)
+                    .values(row)
+                    .execute(conn)
+                    .await?;
             }
 
             let job_row = build_jobs::table
@@ -278,4 +296,19 @@ pub(in crate::db) async fn finish_job(
         })
         .await?;
     Ok(finalized)
+}
+
+fn new_build_ccache_stats_record(
+    job_id: Uuid,
+    stats: &BuildCcacheStats,
+) -> anyhow::Result<NewBuildCcacheStatsRecord> {
+    Ok(NewBuildCcacheStatsRecord {
+        job_id,
+        compiler_calls: i64::try_from(stats.compiler_calls)?,
+        direct_hits: i64::try_from(stats.direct_hits)?,
+        preprocessed_hits: i64::try_from(stats.preprocessed_hits)?,
+        cache_misses: i64::try_from(stats.cache_misses)?,
+        uncacheable_calls: i64::try_from(stats.uncacheable_calls)?,
+        error_calls: i64::try_from(stats.error_calls)?,
+    })
 }

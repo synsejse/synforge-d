@@ -75,6 +75,7 @@ impl JobLifecycle {
                 &[],
                 &[],
                 &[],
+                None,
             )
             .await
             .context("failed to persist failed build result")?;
@@ -187,6 +188,7 @@ impl JobLifecycle {
                 &build_result.artifacts,
                 &published_files,
                 &artifact_signatures,
+                build_result.ccache_stats.as_ref(),
             )
             .await;
         let finalized = match finalize_result {

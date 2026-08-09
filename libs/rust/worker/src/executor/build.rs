@@ -6,6 +6,7 @@ use synforge_core::{
 };
 use tracing::{info, warn};
 
+use super::ccache::{chroot_stats_log_path, collect_stats, prepare_stats_log, remove_stats_log};
 use super::{
     build_source_rpm, fetch_spec_sources, prepare_build_tooling, prepare_topdir, run_mock_build,
 };
@@ -46,6 +47,22 @@ pub(super) async fn execute_spec_build(
         repo_url = %package.source.repo_url,
         "repository checkout prepared"
     );
+    let ccache_dir = payload.workspace_dir.join("ccache");
+    let (ccache_stats_path, ccache_stats_chroot_path) = if package.ccache_enabled {
+        match prepare_stats_log(&ccache_dir, payload.job_id).await {
+            Ok(path) => (Some(path), Some(chroot_stats_log_path(payload.job_id))),
+            Err(error) => {
+                warn!(
+                    job_id = %payload.job_id,
+                    error = %error,
+                    "failed to prepare ccache statistics; continuing without telemetry"
+                );
+                (None, None)
+            }
+        }
+    } else {
+        (None, None)
+    };
     let spec_file = repo_dir.join(&package.source.spec_file);
     let package_dir = spec_file.parent().map(Path::to_path_buf).ok_or_else(|| {
         anyhow::anyhow!("spec path {} has no parent directory", spec_file.display())
@@ -78,7 +95,6 @@ pub(super) async fn execute_spec_build(
         let mut artifacts = Vec::new();
         let arch_topdir = topdir.join(&build_payload.mock_chroot);
         let mock_runtime_root = payload.workspace_dir.join("mock");
-        let ccache_dir = payload.workspace_dir.join("ccache");
         logger.section("Build packages").await?;
         logger
             .line(format!("Target: {}", build_payload.mock_chroot))
@@ -90,6 +106,7 @@ pub(super) async fn execute_spec_build(
             &arch_topdir,
             &mock_runtime_root,
             &ccache_dir,
+            ccache_stats_chroot_path.as_deref(),
             &logger,
         )
         .await?;
@@ -109,12 +126,16 @@ pub(super) async fn execute_spec_build(
         anyhow::Ok(artifacts)
     };
 
-    match tokio::time::timeout(
+    let build_result = tokio::time::timeout(
         std::time::Duration::from_secs(payload.timeout_seconds),
         build,
     )
-    .await
-    {
+    .await;
+    let ccache_stats =
+        collect_ccache_stats_best_effort(ccache_stats_path.as_deref(), &logger, payload.job_id)
+            .await;
+
+    match build_result {
         Ok(Ok(artifacts)) => {
             logger.section("Build completed").await?;
             logger.line("Build finished successfully").await?;
@@ -131,6 +152,7 @@ pub(super) async fn execute_spec_build(
                 status: BuildStatus::Succeeded,
                 artifacts,
                 message: None,
+                ccache_stats,
             })
         }
         Ok(Err(error)) => {
@@ -156,6 +178,7 @@ pub(super) async fn execute_spec_build(
                 status: BuildStatus::Failed,
                 artifacts,
                 message: Some(combine_messages(message, artifact_message)),
+                ccache_stats,
             })
         }
         Err(_) => {
@@ -183,7 +206,46 @@ pub(super) async fn execute_spec_build(
                     "build timed out".to_string(),
                     artifact_message,
                 )),
+                ccache_stats,
             })
+        }
+    }
+}
+
+async fn collect_ccache_stats_best_effort(
+    path: Option<&Path>,
+    logger: &BuildLogger,
+    job_id: uuid::Uuid,
+) -> Option<synforge_core::model::BuildCcacheStats> {
+    let path = path?;
+    let result = collect_stats(path).await;
+    remove_stats_log(path).await;
+    match result {
+        Ok(stats) => {
+            let hits = stats.direct_hits.saturating_add(stats.preprocessed_hits);
+            if let Err(error) = logger
+                .line(format!(
+                    "ccache calls: {}, hits: {}, misses: {}, uncacheable: {}, errors: {}",
+                    stats.compiler_calls,
+                    hits,
+                    stats.cache_misses,
+                    stats.uncacheable_calls,
+                    stats.error_calls
+                ))
+                .await
+            {
+                warn!(job_id = %job_id, %error, "failed to log ccache statistics summary");
+            }
+            Some(stats)
+        }
+        Err(error) => {
+            warn!(
+                job_id = %job_id,
+                path = %path.display(),
+                %error,
+                "failed to collect ccache statistics; build result remains valid"
+            );
+            None
         }
     }
 }

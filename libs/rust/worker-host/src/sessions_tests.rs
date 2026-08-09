@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use synforge_core::{
     model::{
-        ArtifactKind, BuildArtifact, BuildStatus, BuildTrigger, WorkerAction, WorkerBuildPayload,
-        WorkerBuildResult, WorkerJobPayload, WorkerResult,
+        ArtifactKind, BuildArtifact, BuildCcacheStats, BuildStatus, BuildTrigger, WorkerAction,
+        WorkerBuildPayload, WorkerBuildResult, WorkerJobPayload, WorkerResult,
     },
     package::{PackageDefinition, SpecSource},
 };
@@ -82,6 +82,14 @@ fn merge_result_replaces_worker_owned_artifact_identity() {
         status: BuildStatus::Succeeded,
         artifacts: vec![worker_supplied],
         message: None,
+        ccache_stats: Some(BuildCcacheStats {
+            compiler_calls: 2,
+            direct_hits: 1,
+            preprocessed_hits: 0,
+            cache_misses: 1,
+            uncacheable_calls: 0,
+            error_calls: 0,
+        }),
     });
 
     let merged = merge_result(
@@ -97,6 +105,7 @@ fn merge_result_replaces_worker_owned_artifact_identity() {
     assert_eq!(merged.job_id, job_id);
     assert_eq!(merged.package_name, "XYZ");
     assert_eq!(merged.artifacts, vec![uploaded]);
+    assert_eq!(merged.ccache_stats.expect("ccache stats").compiler_calls, 2);
 }
 
 #[test]
@@ -108,9 +117,37 @@ fn merge_result_rejects_non_terminal_status() {
         status: BuildStatus::Running,
         artifacts: Vec::new(),
         message: None,
+        ccache_stats: None,
     });
 
     assert!(merge_result(job_id, &payload(job_id), result, &[]).is_err());
+}
+
+#[test]
+fn merge_result_drops_inconsistent_ccache_stats() {
+    let job_id = Uuid::now_v7();
+    let result = WorkerResult::Build(WorkerBuildResult {
+        job_id,
+        package_name: "XYZ".to_string(),
+        status: BuildStatus::Succeeded,
+        artifacts: Vec::new(),
+        message: None,
+        ccache_stats: Some(BuildCcacheStats {
+            compiler_calls: 99,
+            direct_hits: 1,
+            preprocessed_hits: 0,
+            cache_misses: 1,
+            uncacheable_calls: 0,
+            error_calls: 0,
+        }),
+    });
+
+    let WorkerResult::Build(merged) =
+        merge_result(job_id, &payload(job_id), result, &[]).expect("valid build result")
+    else {
+        panic!("expected build result");
+    };
+    assert_eq!(merged.ccache_stats, None);
 }
 
 #[tokio::test]

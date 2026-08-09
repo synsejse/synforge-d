@@ -2,7 +2,8 @@ use async_trait::async_trait;
 use synforge_core::{
     api::BuildJobResponse,
     model::{
-        ArtifactSignature, BuildArtifact, BuildJob, BuildStatus, BuildTrigger, PublishedRepoFile,
+        ArtifactSignature, BuildArtifact, BuildCcacheStats, BuildJob, BuildStatus, BuildTrigger,
+        PublishedRepoFile,
     },
 };
 use time::OffsetDateTime;
@@ -80,6 +81,7 @@ pub trait JobStore: Send + Sync {
         artifacts: &[BuildArtifact],
         published_files: &[PublishedRepoFile],
         artifact_signatures: &[ArtifactSignature],
+        ccache_stats: Option<&BuildCcacheStats>,
     ) -> anyhow::Result<bool>;
 
     async fn upsert_build_log(&self, job_id: Uuid, file: &str) -> anyhow::Result<()>;

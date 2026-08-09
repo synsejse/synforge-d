@@ -118,6 +118,7 @@ impl RetryJobResetter for JobRetryDeps {
                 &[],
                 &[],
                 &[],
+                None,
             )
             .await?;
         Ok(())

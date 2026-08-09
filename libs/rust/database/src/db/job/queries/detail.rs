@@ -48,7 +48,8 @@ pub(in crate::db) async fn get_job(
         .await
         .optional()?;
     let artifacts = helpers::load_artifacts_map_for_rows(&mut conn, row.as_ref()).await?;
-    row.map(|row| build_job_response_from_row(row, &artifacts))
+    let ccache_stats = helpers::load_ccache_stats_map_for_rows(&mut conn, row.as_ref()).await?;
+    row.map(|row| build_job_response_from_row(row, &artifacts, &ccache_stats))
         .transpose()
 }
 

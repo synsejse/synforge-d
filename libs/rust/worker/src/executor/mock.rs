@@ -49,6 +49,7 @@ pub(super) async fn run_mock_build(
     topdir: &Path,
     mock_runtime_root: &Path,
     ccache_dir: &Path,
+    ccache_stats_log: Option<&str>,
     logger: &BuildLogger,
 ) -> anyhow::Result<()> {
     tokio::fs::create_dir_all(topdir).await?;
@@ -95,7 +96,7 @@ pub(super) async fn run_mock_build(
     if package.network_access {
         command.arg("--enable-network");
     }
-    apply_mock_build_env(&mut command, &package.build_env);
+    apply_mock_build_env(&mut command, &package.build_env, ccache_stats_log);
     command.arg("--rebuild").arg(srpm_path);
     run_mock_command(&mut command, logger, topdir).await
 }
@@ -106,15 +107,22 @@ fn apply_build_env(command: &mut Command, build_env: &[BuildEnvVar]) {
     }
 }
 
-fn apply_mock_build_env(command: &mut Command, build_env: &[BuildEnvVar]) {
-    if build_env.is_empty() {
+fn apply_mock_build_env(
+    command: &mut Command,
+    build_env: &[BuildEnvVar],
+    ccache_stats_log: Option<&str>,
+) {
+    if build_env.is_empty() && ccache_stats_log.is_none() {
         return;
     }
-    let exports = build_env
+    let mut exports = build_env
         .iter()
         .map(|entry| format!("export {}={};", entry.key.trim(), shell_quote(&entry.value)))
-        .collect::<Vec<_>>()
-        .join(" ");
+        .collect::<Vec<_>>();
+    if let Some(path) = ccache_stats_log {
+        exports.push(format!("export CCACHE_STATSLOG={};", shell_quote(path)));
+    }
+    let exports = exports.join(" ");
 
     for macro_name in [
         "__spec_prep_pre",

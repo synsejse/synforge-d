@@ -29,8 +29,8 @@ use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use synforge_core::{
     api::{BuildJobResponse, PackageResponse, RepoTargetSummary},
     model::{
-        ArtifactKind, ArtifactSignature, ArtifactSigningStatus, BuildArtifact, BuildJob,
-        BuildStatus, BuildTrigger, PackageRuntimeState, PackageTargetRuntimeState,
+        ArtifactKind, ArtifactSignature, ArtifactSigningStatus, BuildArtifact, BuildCcacheStats,
+        BuildJob, BuildStatus, BuildTrigger, PackageRuntimeState, PackageTargetRuntimeState,
         PublishedRepoFile, UserAccount, UserPermission, UserRepoMetrics, UserSummary,
         format_timestamp, now_utc,
     },
@@ -41,9 +41,9 @@ use tracing::info;
 use uuid::Uuid;
 
 use crate::schema::{
-    artifact_signatures, build_artifacts, build_failure_backoff, build_jobs, build_logs,
-    package_mock_chroots, packages, published_repo_files, runtime_settings, user_permissions,
-    user_repo_metrics, users,
+    artifact_signatures, build_artifacts, build_ccache_stats, build_failure_backoff, build_jobs,
+    build_logs, package_mock_chroots, packages, published_repo_files, runtime_settings,
+    user_permissions, user_repo_metrics, users,
 };
 
 pub(crate) use records::*;

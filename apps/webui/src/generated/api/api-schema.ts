@@ -1018,6 +1018,20 @@ export interface components {
             /** Format: int64 */
             size_bytes: number;
         };
+        BuildCcacheStats: {
+            /** Format: int64 */
+            cache_misses: number;
+            /** Format: int64 */
+            compiler_calls: number;
+            /** Format: int64 */
+            direct_hits: number;
+            /** Format: int64 */
+            error_calls: number;
+            /** Format: int64 */
+            preprocessed_hits: number;
+            /** Format: int64 */
+            uncacheable_calls: number;
+        };
         BuildEnvVar: {
             key: string;
             value: string;
@@ -1072,6 +1086,7 @@ export interface components {
         };
         BuildJobResponse: {
             artifacts: components["schemas"]["BuildArtifact"][];
+            ccache_stats?: null | components["schemas"]["BuildCcacheStats"];
             job: components["schemas"]["BuildJob"];
         };
         /** @enum {string} */

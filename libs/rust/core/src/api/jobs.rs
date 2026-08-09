@@ -1,12 +1,14 @@
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
-use crate::model::{BuildArtifact, BuildJob, PublishedRepoFile};
+use crate::model::{BuildArtifact, BuildCcacheStats, BuildJob, PublishedRepoFile};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct BuildJobResponse {
     pub job: BuildJob,
     pub artifacts: Vec<BuildArtifact>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ccache_stats: Option<BuildCcacheStats>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

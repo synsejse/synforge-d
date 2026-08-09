@@ -86,6 +86,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    build_ccache_stats (job_id) {
+        job_id -> Uuid,
+        compiler_calls -> BigInt,
+        direct_hits -> BigInt,
+        preprocessed_hits -> BigInt,
+        cache_misses -> BigInt,
+        uncacheable_calls -> BigInt,
+        error_calls -> BigInt,
+    }
+}
+
+diesel::table! {
     build_failure_backoff (package_name, mock_chroot) {
         package_name -> Text,
         mock_chroot -> Text,
@@ -210,6 +222,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     build_artifacts,
     artifact_signatures,
     build_logs,
+    build_ccache_stats,
     build_failure_backoff,
     users,
     user_permissions,

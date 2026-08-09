@@ -87,6 +87,30 @@ pub(crate) struct NewBuildLogRecord<'a> {
     pub(crate) updated_at: OffsetDateTime,
 }
 
+#[derive(Debug, Queryable, Selectable)]
+#[diesel(table_name = build_ccache_stats)]
+pub(crate) struct BuildCcacheStatsRecord {
+    pub(crate) job_id: Uuid,
+    pub(crate) compiler_calls: i64,
+    pub(crate) direct_hits: i64,
+    pub(crate) preprocessed_hits: i64,
+    pub(crate) cache_misses: i64,
+    pub(crate) uncacheable_calls: i64,
+    pub(crate) error_calls: i64,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = build_ccache_stats)]
+pub(crate) struct NewBuildCcacheStatsRecord {
+    pub(crate) job_id: Uuid,
+    pub(crate) compiler_calls: i64,
+    pub(crate) direct_hits: i64,
+    pub(crate) preprocessed_hits: i64,
+    pub(crate) cache_misses: i64,
+    pub(crate) uncacheable_calls: i64,
+    pub(crate) error_calls: i64,
+}
+
 #[allow(dead_code)]
 #[derive(Debug, Queryable, Selectable)]
 #[diesel(table_name = build_failure_backoff)]
@@ -118,18 +142,21 @@ pub(crate) async fn load_job_responses(
     rows: Vec<JobRecord>,
 ) -> anyhow::Result<Vec<BuildJobResponse>> {
     let artifacts = job::load_artifacts_map_for_rows(conn, rows.iter()).await?;
+    let ccache_stats = job::load_ccache_stats_map_for_rows(conn, rows.iter()).await?;
     rows.into_iter()
-        .map(|row| build_job_response_from_row(row, &artifacts))
+        .map(|row| build_job_response_from_row(row, &artifacts, &ccache_stats))
         .collect()
 }
 
 pub(crate) fn build_job_response_from_row(
     row: JobRecord,
     artifacts: &HashMap<Uuid, Vec<BuildArtifact>>,
+    ccache_stats: &HashMap<Uuid, BuildCcacheStats>,
 ) -> anyhow::Result<BuildJobResponse> {
     let job = job_from_row(row)?;
     Ok(BuildJobResponse {
         artifacts: artifacts.get(&job.id).cloned().unwrap_or_default(),
+        ccache_stats: ccache_stats.get(&job.id).cloned(),
         job,
     })
 }

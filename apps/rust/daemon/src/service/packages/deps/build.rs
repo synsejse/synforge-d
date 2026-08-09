@@ -136,6 +136,7 @@ impl BuildJobWriter for DaemonPackageDeps {
                 &[],
                 &[],
                 &[],
+                None,
             )
             .await?;
         Ok(())

@@ -180,7 +180,15 @@ impl SynforgeService {
         // the row or its backoff state.
         let _finalized = self
             .store
-            .finish_job(job_id, BuildStatus::Failed, Some(reason), &[], &[], &[])
+            .finish_job(
+                job_id,
+                BuildStatus::Failed,
+                Some(reason),
+                &[],
+                &[],
+                &[],
+                None,
+            )
             .await?;
         self.store
             .get_job(job_id)

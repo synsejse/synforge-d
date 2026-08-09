@@ -319,6 +319,16 @@ pub struct WorkerParseResult {
     pub revision: crate::package::SpecRevision,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct BuildCcacheStats {
+    pub compiler_calls: u64,
+    pub direct_hits: u64,
+    pub preprocessed_hits: u64,
+    pub cache_misses: u64,
+    pub uncacheable_calls: u64,
+    pub error_calls: u64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WorkerBuildResult {
     pub job_id: Uuid,
@@ -326,6 +336,8 @@ pub struct WorkerBuildResult {
     pub status: BuildStatus,
     pub artifacts: Vec<BuildArtifact>,
     pub message: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ccache_stats: Option<BuildCcacheStats>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

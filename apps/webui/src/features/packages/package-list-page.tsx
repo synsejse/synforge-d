@@ -14,8 +14,11 @@ import { packagesQueries } from "../../lib/queries";
 
 const route = getRouteApi("/_authed/packages/");
 import { summarizePackageAction } from "../../lib/package-actions";
-import type { RefreshAllPackagesProgressView } from "../../lib/types";
 import AddPackageModal from "./components/add-package-modal";
+import PackageListFilters, {
+  type EnabledFilter,
+} from "./components/package-list-filters";
+import RefreshAllProgressDialog from "./components/refresh-all-progress-dialog";
 import { useBulkAction } from "./use-bulk-action";
 import PackageCard from "./components/package-card";
 import ErrorMessage from "../../components/common/error-message";
@@ -24,90 +27,13 @@ import { useToast } from "../../components/common/toast-context";
 import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
 import Button from "../../components/ui/button";
-import Select from "../../components/ui/select";
 import PageHeader from "../../components/ui/page-header";
-import ProgressOverlayDialog from "../../components/ui/progress-overlay-dialog";
 import PaginationControls from "../../components/common/pagination-controls";
 import SelectionActionBar from "../../components/common/selection-action-bar";
 
 const PAGE_SIZE = 50;
 
-type EnabledFilter = "all" | "true" | "false";
-
-function refreshTitle(state: RefreshAllPackagesProgressView["state"]): string {
-  if (state === "running") return "Refreshing enabled packages";
-  if (state === "failed") return "Refresh all failed";
-  return "Refresh all complete";
-}
-
-function refreshTone(
-  state: RefreshAllPackagesProgressView["state"],
-): "running" | "success" | "error" {
-  if (state === "failed") return "error";
-  if (state === "running") return "running";
-  return "success";
-}
-
-function StatRow({
-  label,
-  value,
-  emphasis,
-}: {
-  label: string;
-  value: number;
-  emphasis?: "lime" | "error" | "muted";
-}) {
-  const valueClass =
-    value === 0
-      ? "text-soft"
-      : emphasis === "error"
-        ? "text-error"
-        : emphasis === "lime"
-          ? "text-accent-lime"
-          : "text-white";
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
-        {label}
-      </span>
-      <span className={`font-mono text-sm font-bold ${valueClass}`}>{value}</span>
-    </div>
-  );
-}
-
-function RefreshAllStats({
-  operation,
-}: {
-  operation: RefreshAllPackagesProgressView;
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-px border border-edge bg-edge-strong">
-      <div className="space-y-2 bg-black px-4 py-3">
-        <div className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-soft">
-          Packages
-        </div>
-        <StatRow label="Queued" value={operation.queued_packages} emphasis="lime" />
-        <StatRow label="Skipped" value={operation.skipped_packages} />
-        <StatRow label="Blocked" value={operation.blocked_packages} />
-        <StatRow
-          label="Failed"
-          value={operation.failed_packages}
-          emphasis="error"
-        />
-      </div>
-      <div className="space-y-2 bg-black px-4 py-3">
-        <div className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-soft">
-          Targets
-        </div>
-        <StatRow label="Queued" value={operation.queued_targets} emphasis="lime" />
-        <StatRow label="Skipped" value={operation.skipped_targets} />
-        <StatRow label="Blocked" value={operation.blocked_targets} />
-      </div>
-    </div>
-  );
-}
-
-function PackageList() {
+export default function PackageListPage() {
   const queryClient = useQueryClient();
   const { confirm } = useDialogs();
   const toast = useToast();
@@ -315,35 +241,6 @@ function PackageList() {
       ? triggerMutation.variables.name
       : null;
 
-  const overlayTitle = liveOperation
-    ? refreshTitle(liveOperation.state)
-    : "Refreshing enabled packages";
-  const overlayTone = liveOperation ? refreshTone(liveOperation.state) : "running";
-  const overlayProgress = liveOperation
-    ? liveOperation.total_packages === 0
-      ? liveOperation.state === "running"
-        ? 0
-        : 100
-      : Math.min(
-          100,
-          Math.round(
-            (liveOperation.processed_packages / liveOperation.total_packages) * 100,
-          ),
-        )
-    : 0;
-  const overlaySummary = liveOperation
-    ? liveOperation.total_packages === 0
-      ? "Preparing…"
-      : `${liveOperation.processed_packages} / ${liveOperation.total_packages} packages`
-    : "Preparing…";
-  // Only surface the message line when it's not redundant with the
-  // stats (e.g. an error string while failed, or "collecting enabled
-  // packages" pre-roll). Plain progress noise gets suppressed.
-  const overlayMessage =
-    liveOperation?.message && liveOperation.state !== "completed"
-      ? liveOperation.message
-      : null;
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -365,36 +262,12 @@ function PackageList() {
         ]}
       />
 
-      <div className="grid items-end gap-4 border border-edge bg-black p-[18px] sm:grid-cols-[minmax(0,1fr)_200px]">
-        <label className="block">
-          <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-soft">
-            Search
-          </span>
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Filter by name or description"
-            className="mt-2.5 w-full border border-edge bg-black px-3 py-2.5 font-mono text-[13px] text-white outline-none transition-colors focus:border-accent-lime"
-          />
-        </label>
-        <label className="block">
-          <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-soft">
-            Status
-          </span>
-          <div className="mt-2.5">
-            <Select
-              value={enabledFilter}
-              onValueChange={(val) => setEnabledFilter(val as EnabledFilter)}
-              options={[
-                { value: "all", label: "All" },
-                { value: "true", label: "Enabled" },
-                { value: "false", label: "Disabled" },
-              ]}
-            />
-          </div>
-        </label>
-      </div>
+      <PackageListFilters
+        search={searchInput}
+        enabled={enabledFilter}
+        onSearchChange={setSearchInput}
+        onEnabledChange={setEnabledFilter}
+      />
 
       {!loading && packages.length > 0 ? (
         <div className="flex items-center justify-between gap-3 border border-edge bg-[#09090b] px-4 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-soft">
@@ -480,28 +353,12 @@ function PackageList() {
         />
       )}
 
-      <ProgressOverlayDialog
+      <RefreshAllProgressDialog
         open={refreshOverlayOpen}
-        title={overlayTitle}
-        tone={overlayTone}
-        summary={overlaySummary}
-        progress={overlayProgress}
+        operation={liveOperation}
         onClose={() => setRefreshOverlayOpen(false)}
         closeDisabled={refreshingAll}
-      >
-        {liveOperation && liveOperation.total_packages > 0 ? (
-          <RefreshAllStats operation={liveOperation} />
-        ) : null}
-        {overlayMessage ? (
-          <p
-            className={`mt-4 font-mono text-xs ${
-              overlayTone === "error" ? "text-error" : "text-soft"
-            }`}
-          >
-            {overlayMessage}
-          </p>
-        ) : null}
-      </ProgressOverlayDialog>
+      />
 
       <SelectionActionBar
         count={selection.count}
@@ -538,8 +395,4 @@ function PackageList() {
       </SelectionActionBar>
     </div>
   );
-}
-
-export default function PackageListPage() {
-  return <PackageList />;
 }

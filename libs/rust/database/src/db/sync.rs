@@ -10,7 +10,7 @@ use crate::schema::sync_operations;
 
 #[derive(Debug, Queryable, Selectable)]
 #[diesel(table_name = sync_operations)]
-pub struct SyncOperationRow {
+pub(super) struct SyncOperationRow {
     pub id: Uuid,
     pub package_name: String,
     pub trigger_type: String,

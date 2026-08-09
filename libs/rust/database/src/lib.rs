@@ -7,7 +7,7 @@ pub mod schema;
 pub mod users;
 
 pub use db::{
-    BuildFailureBackoffState, BuildLogRecord, DieselStore, GitCacheStore, GitMirrorCacheState,
-    JobStore, PackageStore, RepoStore, SyncStore, UserAuthRecord, UserStore,
-    build_published_repo_path,
+    BuildFailureBackoffState, BuildLogRecord, DieselStore, EnqueuedSyncRun, GitCacheStore,
+    GitMirrorCacheState, JobStore, NewSyncRun, PackageStore, RepoStore, SyncRunCompletion,
+    SyncStore, UserAuthRecord, UserStore, build_published_repo_path,
 };

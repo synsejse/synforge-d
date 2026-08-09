@@ -6,6 +6,8 @@ mod records;
 mod repo;
 mod support;
 mod sync;
+mod sync_events;
+mod sync_lifecycle;
 mod traits;
 mod user;
 
@@ -46,8 +48,8 @@ use crate::schema::{
 pub(crate) use records::*;
 pub use records::{BuildLogRecord, UserAuthRecord, build_published_repo_path};
 pub use traits::{
-    BuildFailureBackoffState, GitCacheStore, GitMirrorCacheState, JobStore, PackageStore,
-    RepoStore, SyncStore, UserStore,
+    BuildFailureBackoffState, EnqueuedSyncRun, GitCacheStore, GitMirrorCacheState, JobStore,
+    NewSyncRun, PackageStore, RepoStore, SyncRunCompletion, SyncStore, UserStore,
 };
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");

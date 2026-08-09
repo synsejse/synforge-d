@@ -46,6 +46,9 @@ pub struct EffectiveConfigView {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct EffectiveConfigDto {
     pub config: EffectiveConfigView,
+    #[serde(default)]
+    pub pending_restart_settings: BTreeMap<String, Value>,
+    pub restart_required: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
@@ -76,6 +79,7 @@ pub struct ConfigFieldDescriptor {
     pub min_value: Option<u64>,
     pub editable_in_setup: bool,
     pub editable_in_runtime: bool,
+    pub restart_required: bool,
     pub default_value: Value,
 }
 

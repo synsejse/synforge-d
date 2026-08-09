@@ -11,6 +11,7 @@ pub(super) struct ConfigSection<'a> {
 pub(super) struct ConfigEditability {
     pub(super) in_setup: bool,
     pub(super) in_runtime: bool,
+    pub(super) restart_required: bool,
 }
 
 pub(super) fn config_string_field(
@@ -32,6 +33,7 @@ pub(super) fn config_string_field(
         min_value: None,
         editable_in_setup: editability.in_setup,
         editable_in_runtime: editability.in_runtime,
+        restart_required: editability.restart_required,
         default_value: Value::String(default_value.to_string()),
     }
 }
@@ -54,6 +56,7 @@ pub(super) fn config_optional_string_field(
         min_value: None,
         editable_in_setup: editability.in_setup,
         editable_in_runtime: editability.in_runtime,
+        restart_required: editability.restart_required,
         default_value: Value::Null,
     }
 }
@@ -77,6 +80,7 @@ pub(super) fn config_number_field(
         min_value: Some(1),
         editable_in_setup: editability.in_setup,
         editable_in_runtime: editability.in_runtime,
+        restart_required: editability.restart_required,
         default_value: Value::Number(default_value.into()),
     }
 }
@@ -100,6 +104,7 @@ pub(super) fn config_bool_field(
         min_value: None,
         editable_in_setup: editability.in_setup,
         editable_in_runtime: editability.in_runtime,
+        restart_required: editability.restart_required,
         default_value: Value::Bool(default_value),
     }
 }

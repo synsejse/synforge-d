@@ -979,6 +979,7 @@ export interface components {
             /** Format: int64 */
             min_value?: number | null;
             required: boolean;
+            restart_required: boolean;
             section_key: string;
             section_label: string;
             type: components["schemas"]["ConfigFieldType"];
@@ -1020,6 +1021,10 @@ export interface components {
         };
         EffectiveConfigDto: {
             config: components["schemas"]["EffectiveConfigView"];
+            pending_restart_settings?: {
+                [key: string]: unknown;
+            };
+            restart_required: boolean;
         };
         EffectiveConfigView: {
             bootstrap_completed: boolean;

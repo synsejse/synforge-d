@@ -4,17 +4,20 @@ use super::builders::{
 };
 use crate::api::ConfigFieldDescriptor;
 
-const SETUP_AND_RUNTIME: ConfigEditability = ConfigEditability {
+const SETUP_AND_RESTART: ConfigEditability = ConfigEditability {
     in_setup: true,
     in_runtime: true,
+    restart_required: true,
 };
 const SETUP_ONLY: ConfigEditability = ConfigEditability {
     in_setup: true,
     in_runtime: false,
+    restart_required: false,
 };
 const READ_ONLY: ConfigEditability = ConfigEditability {
     in_setup: false,
     in_runtime: false,
+    restart_required: false,
 };
 
 pub(super) fn server_fields() -> Vec<ConfigFieldDescriptor> {
@@ -37,7 +40,7 @@ pub(super) fn server_fields() -> Vec<ConfigFieldDescriptor> {
             "Public base URL",
             "Base URL used in generated links and repo setup.",
             "http://localhost:8080",
-            SETUP_AND_RUNTIME,
+            SETUP_AND_RESTART,
         ),
     ]
 }
@@ -54,7 +57,7 @@ pub(super) fn worker_fields() -> Vec<ConfigFieldDescriptor> {
             "Worker image",
             "Docker image used for spawned worker containers.",
             "synforge-worker-fedora:latest",
-            SETUP_AND_RUNTIME,
+            SETUP_AND_RESTART,
         ),
         config_number_field(
             worker,
@@ -62,7 +65,7 @@ pub(super) fn worker_fields() -> Vec<ConfigFieldDescriptor> {
             "Worker result timeout seconds",
             "Timeout while waiting for worker completion after request dispatch.",
             10,
-            SETUP_AND_RUNTIME,
+            SETUP_AND_RESTART,
         ),
         config_number_field(
             worker,
@@ -70,7 +73,7 @@ pub(super) fn worker_fields() -> Vec<ConfigFieldDescriptor> {
             "Worker socket timeout seconds",
             "Socket timeout used for worker protocol I/O.",
             30,
-            SETUP_AND_RUNTIME,
+            SETUP_AND_RESTART,
         ),
     ]
 }
@@ -110,7 +113,7 @@ pub(super) fn build_fields() -> Vec<ConfigFieldDescriptor> {
         "Max concurrent builds",
         "Maximum number of active builds at once.",
         2,
-        SETUP_AND_RUNTIME,
+        SETUP_AND_RESTART,
     )]
 }
 
@@ -141,7 +144,7 @@ pub(super) fn scheduler_fields() -> Vec<ConfigFieldDescriptor> {
             "Queue buffer size",
             "In-memory queued build channel capacity.",
             128,
-            SETUP_AND_RUNTIME,
+            SETUP_AND_RESTART,
         ),
         config_number_field(
             scheduler,
@@ -149,7 +152,7 @@ pub(super) fn scheduler_fields() -> Vec<ConfigFieldDescriptor> {
             "Poller tick seconds",
             "How often package polling wakes up.",
             30,
-            SETUP_AND_RUNTIME,
+            SETUP_AND_RESTART,
         ),
         config_number_field(
             scheduler,
@@ -157,7 +160,7 @@ pub(super) fn scheduler_fields() -> Vec<ConfigFieldDescriptor> {
             "Build failure backoff base seconds",
             "Base delay for failure backoff; each consecutive failure doubles this delay.",
             300,
-            SETUP_AND_RUNTIME,
+            SETUP_AND_RESTART,
         ),
         config_number_field(
             scheduler,
@@ -165,7 +168,7 @@ pub(super) fn scheduler_fields() -> Vec<ConfigFieldDescriptor> {
             "Build failure backoff max seconds",
             "Maximum delay cap for exponential failure backoff.",
             21_600,
-            SETUP_AND_RUNTIME,
+            SETUP_AND_RESTART,
         ),
     ]
 }
@@ -181,7 +184,7 @@ pub(super) fn git_fields() -> Vec<ConfigFieldDescriptor> {
         "Git operation timeout seconds",
         "Timeout applied to git inspection and sync commands.",
         600,
-        SETUP_AND_RUNTIME,
+        SETUP_AND_RESTART,
     )]
 }
 
@@ -197,7 +200,7 @@ pub(super) fn cache_fields() -> Vec<ConfigFieldDescriptor> {
             "Mock chroot cache TTL seconds",
             "How long to cache discovered mock chroots before refreshing.",
             300,
-            SETUP_AND_RUNTIME,
+            SETUP_AND_RESTART,
         ),
         config_number_field(
             cache,
@@ -205,7 +208,7 @@ pub(super) fn cache_fields() -> Vec<ConfigFieldDescriptor> {
             "Git mirror refresh TTL seconds",
             "Maximum age before a cached git mirror is refreshed from origin.",
             300,
-            SETUP_AND_RUNTIME,
+            SETUP_AND_RESTART,
         ),
         config_number_field(
             cache,
@@ -213,7 +216,7 @@ pub(super) fn cache_fields() -> Vec<ConfigFieldDescriptor> {
             "Git mirror max unused seconds",
             "Remove cached git mirrors that have not been used within this window.",
             604_800,
-            SETUP_AND_RUNTIME,
+            SETUP_AND_RESTART,
         ),
     ]
 }

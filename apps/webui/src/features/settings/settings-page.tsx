@@ -30,7 +30,11 @@ function Settings() {
       schemaQuery.data
     ) {
       setValues(
-        buildFieldValues(configQuery.data.config, schemaQuery.data.fields, false),
+        buildFieldValues(
+          configQuery.data.config,
+          schemaQuery.data.fields,
+          configQuery.data.pending_restart_settings,
+        ),
       );
       setValuesInitialized(true);
     }
@@ -47,7 +51,13 @@ function Settings() {
     },
     onSuccess: (response) => {
       if (schemaQuery.data) {
-        setValues(buildFieldValues(response.config, schemaQuery.data.fields, false));
+        setValues(
+          buildFieldValues(
+            response.config,
+            schemaQuery.data.fields,
+            response.pending_restart_settings,
+          ),
+        );
       }
       configQuery.refetch();
     },
@@ -100,6 +110,18 @@ function Settings() {
               : "Failed to update settings"
           }
         />
+      ) : null}
+
+      {configQuery.data.restart_required ? (
+        <div className="border border-accent-cyan bg-surface p-5 sm:p-6">
+          <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-accent-cyan">
+            Daemon restart required
+          </p>
+          <p className="mt-2 text-sm text-muted">
+            Saved values marked below are pending. The effective values remain unchanged until
+            the daemon restarts.
+          </p>
+        </div>
       ) : null}
 
       <form onSubmit={handleSave} className="space-y-6">
@@ -203,19 +225,26 @@ function ConfigFieldInput({
         <span className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
           {field.label}
         </span>
-        {canReset ? (
-          <Tooltip content={`Reset to default: ${defaultStr}`} side="top">
-            <button
-              type="button"
-              onClick={() => onChange(defaultStr)}
-              aria-label={`Reset ${field.label} to default`}
-              className="inline-flex items-center gap-1 border border-edge bg-black px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.15em] text-soft transition hover:border-edge-strong hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime"
-            >
-              <FaIcon icon={faRotateLeft} className="text-[0.85em]" />
-              Reset
-            </button>
-          </Tooltip>
-        ) : null}
+        <span className="flex items-center gap-2">
+          {field.restart_required ? (
+            <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-accent-cyan">
+              Restart required
+            </span>
+          ) : null}
+          {canReset ? (
+            <Tooltip content={`Reset to default: ${defaultStr}`} side="top">
+              <button
+                type="button"
+                onClick={() => onChange(defaultStr)}
+                aria-label={`Reset ${field.label} to default`}
+                className="inline-flex items-center gap-1 border border-edge bg-black px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.15em] text-soft transition hover:border-edge-strong hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime"
+              >
+                <FaIcon icon={faRotateLeft} className="text-[0.85em]" />
+                Reset
+              </button>
+            </Tooltip>
+          ) : null}
+        </span>
       </div>
       <input
         type={field.type === "number" ? "number" : "text"}
@@ -259,15 +288,19 @@ function groupConfigFields(schema: ConfigFieldDescriptor[]) {
 function buildFieldValues(
   config: DaemonConfig,
   schema: ConfigFieldDescriptor[],
-  runtimeOnly: boolean,
+  pendingRestartSettings: Record<string, unknown> = {},
 ): Record<string, string> {
   const source = config as Record<string, unknown>;
   return Object.fromEntries(
     schema
-      .filter((field) => (runtimeOnly ? field.editable_in_runtime : true))
       .map((field) => [
         field.key,
-        String(source[field.key] ?? field.default_value ?? ""),
+        String(
+          pendingRestartSettings[field.key] ??
+            source[field.key] ??
+            field.default_value ??
+            "",
+        ),
       ]),
   );
 }

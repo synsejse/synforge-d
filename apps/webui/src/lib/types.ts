@@ -64,9 +64,7 @@ export type LogSource = ApiSchema["LogSource"];
 export type LogManifestResponse = ApiSchema["LogManifestResponse"];
 
 export type DaemonConfig = ApiSchema["EffectiveConfigView"];
-export interface EffectiveConfigResponse {
-  config: DaemonConfig;
-}
+export type EffectiveConfigResponse = ApiSchema["EffectiveConfigDto"];
 
 export type ConfigFieldType = ApiSchema["ConfigFieldType"];
 export type ConfigFieldDescriptor = ApiSchema["ConfigFieldDescriptor"];

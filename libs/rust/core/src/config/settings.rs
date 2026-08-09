@@ -11,6 +11,28 @@ pub fn apply_config_settings(
     settings: &BTreeMap<String, Value>,
     allow_internal_runtime_settings: bool,
 ) -> anyhow::Result<()> {
+    validate_config_setting_keys(settings, allow_internal_runtime_settings)?;
+
+    apply_config_setting_values(config, settings)
+}
+
+pub fn apply_live_config_settings(
+    config: &mut DaemonConfig,
+    settings: &BTreeMap<String, Value>,
+) -> anyhow::Result<()> {
+    validate_config_setting_keys(settings, true)?;
+    let live_settings = settings
+        .iter()
+        .filter(|(key, _)| is_live_runtime_setting_key(key))
+        .map(|(key, value)| (key.clone(), value.clone()))
+        .collect();
+    apply_config_setting_values(config, &live_settings)
+}
+
+fn validate_config_setting_keys(
+    settings: &BTreeMap<String, Value>,
+    allow_internal_runtime_settings: bool,
+) -> anyhow::Result<()> {
     for key in settings.keys() {
         if is_internal_runtime_setting_key(key) {
             if !allow_internal_runtime_settings {
@@ -26,11 +48,14 @@ pub fn apply_config_settings(
             anyhow::bail!("unknown config setting: {key}");
         }
     }
+    Ok(())
+}
 
+fn apply_config_setting_values(
+    config: &mut DaemonConfig,
+    settings: &BTreeMap<String, Value>,
+) -> anyhow::Result<()> {
     if let Some(value) = settings.get("bootstrap_completed") {
-        if !allow_internal_runtime_settings {
-            anyhow::bail!("config setting is not editable at runtime: bootstrap_completed");
-        }
         config.bootstrap_completed = parse_bool_setting(value, "bootstrap_completed")?;
     }
 
@@ -207,8 +232,30 @@ pub fn daemon_config_runtime_settings(config: &DaemonConfig) -> BTreeMap<String,
     settings
 }
 
+pub fn pending_restart_config_settings(
+    config: &DaemonConfig,
+    stored_settings: &BTreeMap<String, Value>,
+) -> BTreeMap<String, Value> {
+    let active_settings = daemon_config_runtime_settings(config);
+    editable_config_fields()
+        .into_iter()
+        .filter(|field| field.restart_required)
+        .filter_map(|field| {
+            let stored = stored_settings.get(&field.key)?;
+            (active_settings.get(&field.key) != Some(stored)).then(|| (field.key, stored.clone()))
+        })
+        .collect()
+}
+
 fn is_non_runtime_dynamic_key(key: &str) -> bool {
     matches!(key, "signing_enabled" | "signing_key_id")
+}
+
+fn is_live_runtime_setting_key(key: &str) -> bool {
+    matches!(
+        key,
+        "bootstrap_completed" | "signing_enabled" | "signing_key_id"
+    )
 }
 
 fn is_internal_runtime_setting_key(key: &str) -> bool {
@@ -260,4 +307,63 @@ fn parse_usize_setting(value: &Value, key: &str) -> anyhow::Result<usize> {
 fn parse_u32_setting(value: &Value, key: &str) -> anyhow::Result<u32> {
     u32::try_from(parse_u64_setting(value, key)?)
         .map_err(|_| anyhow::anyhow!("config setting is out of range: {key}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn live_settings_do_not_change_restart_required_values() {
+        let mut config = DaemonConfig::default();
+        let original_worker_image = config.worker_image.clone();
+        let settings = BTreeMap::from([
+            (
+                "worker_image".to_string(),
+                Value::String("replacement:latest".to_string()),
+            ),
+            ("signing_enabled".to_string(), Value::Bool(true)),
+        ]);
+
+        apply_live_config_settings(&mut config, &settings).expect("apply live settings");
+
+        assert_eq!(config.worker_image, original_worker_image);
+        assert!(config.signing_enabled);
+    }
+
+    #[test]
+    fn pending_restart_settings_only_include_changed_restart_fields() {
+        let config = DaemonConfig::default();
+        let settings = BTreeMap::from([
+            (
+                "worker_image".to_string(),
+                Value::String("replacement:latest".to_string()),
+            ),
+            (
+                "public_base_url".to_string(),
+                Value::String(config.public_base_url.clone()),
+            ),
+            ("signing_enabled".to_string(), Value::Bool(true)),
+        ]);
+
+        let pending = pending_restart_config_settings(&config, &settings);
+
+        assert_eq!(
+            pending,
+            BTreeMap::from([(
+                "worker_image".to_string(),
+                Value::String("replacement:latest".to_string())
+            )])
+        );
+    }
+
+    #[test]
+    fn generic_runtime_fields_are_explicitly_restart_required() {
+        assert!(
+            editable_config_fields()
+                .into_iter()
+                .filter(|field| field.editable_in_runtime)
+                .all(|field| field.restart_required)
+        );
+    }
 }

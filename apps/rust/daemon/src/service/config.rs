@@ -8,8 +8,8 @@ use synforge_core::{
     },
     config::{
         DaemonConfig, RUNTIME_SETTING_SIGNING_PRIVATE_KEY_ARMORED, apply_config_settings,
-        daemon_config_runtime_settings, editable_config_fields, ensure_runtime_editable_keys,
-        ensure_setup_editable_keys,
+        apply_live_config_settings, daemon_config_runtime_settings, editable_config_fields,
+        ensure_runtime_editable_keys, ensure_setup_editable_keys, pending_restart_config_settings,
     },
     validation::{validate_display_name, validate_password, validate_user_handle},
 };
@@ -27,7 +27,7 @@ pub(crate) async fn load_effective_daemon_config_from_store(
     let mut current = base_config.clone();
     let runtime_settings = PostgresRuntimeSettingsStore::new(store.clone());
     let dynamic_settings = runtime_settings.list().await?;
-    apply_config_settings(&mut current, &dynamic_settings, true)?;
+    apply_live_config_settings(&mut current, &dynamic_settings)?;
     let mut updates = BTreeMap::new();
     if !current.bootstrap_completed && PostgresUserStore::new(store.clone()).user_count().await? > 0
     {
@@ -58,6 +58,10 @@ impl SynforgeService {
 
     pub async fn effective_config(&self) -> anyhow::Result<EffectiveConfigDto> {
         let current = self.load_effective_daemon_config().await?;
+        let stored_settings = PostgresRuntimeSettingsStore::new(self.store.clone())
+            .list()
+            .await?;
+        let pending_restart_settings = pending_restart_config_settings(&current, &stored_settings);
         let paths = current.runtime_paths();
         Ok(EffectiveConfigDto {
             config: EffectiveConfigView {
@@ -90,6 +94,8 @@ impl SynforgeService {
                 build_failure_backoff_base_seconds: current.build_failure_backoff_base_seconds,
                 build_failure_backoff_max_seconds: current.build_failure_backoff_max_seconds,
             },
+            restart_required: !pending_restart_settings.is_empty(),
+            pending_restart_settings,
         })
     }
 

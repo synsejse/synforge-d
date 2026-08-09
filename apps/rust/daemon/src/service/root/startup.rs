@@ -18,7 +18,7 @@ use synforge_database::DieselStore;
 use synforge_git_sync::{
     PackageSyncStore, RuntimeGitRegistryAdapter, SyncStatusTracker, WorkerParseRunner,
 };
-use synforge_publish::{FileRepoManager, RepoService};
+use synforge_publish::FileRepoManager;
 use synforge_state::{
     MockChrootCache, RefreshAllPackagesProgressState, RuntimeCache, SigningReconcileProgressState,
 };
@@ -186,7 +186,6 @@ impl SynforgeService {
         let registry = RuntimeGitRegistryAdapter::new(store.clone(), package_store, sync_tracker);
         let runner = BuildRunner::new(config.clone(), worker_launcher.clone(), lifecycle.clone());
         let build_service = BuildService::default();
-        let repo_service = RepoService;
 
         let (queue_tx, queue_rx) = mpsc::channel(config.queue_buffer_size);
         let (shutdown_tx, shutdown_rx) = watch::channel(false);
@@ -196,7 +195,6 @@ impl SynforgeService {
             store: store.clone(),
             registry,
             build_service,
-            repo_service,
             runner,
             lifecycle,
             sessions,

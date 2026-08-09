@@ -17,6 +17,16 @@ use synforge_core::{
     constants::DEFAULT_SIGNING_PUBLIC_KEY_NAME,
     model::{ArtifactKind, UserAccount},
 };
+use synforge_publish::{
+    export_repo_signing_private_key as export_signing_private_key,
+    export_repo_signing_public_key as export_signing_public_key,
+    generate_repo_signing_key as generate_signing_key, get_repo_inventory as query_repo_inventory,
+    get_repo_signing_reconcile_progress as query_signing_reconcile_progress,
+    get_repo_signing_status as query_signing_status, get_repo_summary as query_repo_summary,
+    import_repo_signing_key as import_signing_key, remove_repo_signing_key as remove_signing_key,
+    resolve_repo_file_path as resolve_published_repo_file, test_repo_signing as test_signing,
+    update_repo_signing_config as update_signing_config,
+};
 use uuid::Uuid;
 
 impl SynforgeService {
@@ -28,13 +38,11 @@ impl SynforgeService {
         mock_chroot: Option<String>,
         kind: Option<ArtifactKind>,
     ) -> anyhow::Result<RepoInventoryResponse> {
-        self.repo_service
-            .get_repo_inventory(&self.store, limit, offset, package_name, mock_chroot, kind)
-            .await
+        query_repo_inventory(&self.store, limit, offset, package_name, mock_chroot, kind).await
     }
 
     pub async fn get_repo_summary(&self) -> anyhow::Result<RepoSummaryResponse> {
-        self.repo_service.get_repo_summary(&self.store).await
+        query_repo_summary(&self.store).await
     }
 
     /// Returns just the bits needed to render the "Add repo" page —
@@ -56,8 +64,7 @@ impl SynforgeService {
         &self,
         relative_repo_path: &str,
     ) -> anyhow::Result<PathBuf> {
-        self.repo_service
-            .resolve_repo_file_path(self.config.runtime_paths().repo_dir(), relative_repo_path)
+        resolve_published_repo_file(self.config.runtime_paths().repo_dir(), relative_repo_path)
             .await
     }
 
@@ -66,18 +73,14 @@ impl SynforgeService {
         current_user: &UserAccount,
     ) -> anyhow::Result<RepoSigningStatusResponse> {
         let deps = self.repo_signing_deps();
-        self.repo_service
-            .get_repo_signing_status(&deps, self.is_bootstrap_admin_user(current_user.id).await?)
-            .await
+        query_signing_status(&deps, self.is_bootstrap_admin_user(current_user.id).await?).await
     }
 
     pub async fn get_repo_signing_reconcile_progress(
         &self,
     ) -> anyhow::Result<RepoSigningReconcileProgressResponse> {
         let deps = self.repo_signing_deps();
-        self.repo_service
-            .get_repo_signing_reconcile_progress(&deps)
-            .await
+        query_signing_reconcile_progress(&deps).await
     }
 
     pub async fn update_repo_signing_config(
@@ -86,13 +89,12 @@ impl SynforgeService {
         current_user_id: Uuid,
     ) -> anyhow::Result<RepoSigningStatusResponse> {
         let deps = self.repo_signing_deps();
-        self.repo_service
-            .update_repo_signing_config(
-                &deps,
-                request,
-                self.is_bootstrap_admin_user(current_user_id).await?,
-            )
-            .await
+        update_signing_config(
+            &deps,
+            request,
+            self.is_bootstrap_admin_user(current_user_id).await?,
+        )
+        .await
     }
 
     pub async fn generate_repo_signing_key(
@@ -100,9 +102,7 @@ impl SynforgeService {
         current_user_id: Uuid,
     ) -> anyhow::Result<GenerateRepoSigningKeyResponse> {
         let deps = self.repo_signing_deps();
-        self.repo_service
-            .generate_repo_signing_key(&deps, self.is_bootstrap_admin_user(current_user_id).await?)
-            .await
+        generate_signing_key(&deps, self.is_bootstrap_admin_user(current_user_id).await?).await
     }
 
     pub async fn import_repo_signing_key(
@@ -111,13 +111,12 @@ impl SynforgeService {
         current_user_id: Uuid,
     ) -> anyhow::Result<ImportRepoSigningKeyResponse> {
         let deps = self.repo_signing_deps();
-        self.repo_service
-            .import_repo_signing_key(
-                &deps,
-                request,
-                self.is_bootstrap_admin_user(current_user_id).await?,
-            )
-            .await
+        import_signing_key(
+            &deps,
+            request,
+            self.is_bootstrap_admin_user(current_user_id).await?,
+        )
+        .await
     }
 
     pub async fn remove_repo_signing_key(
@@ -125,14 +124,12 @@ impl SynforgeService {
         current_user_id: Uuid,
     ) -> anyhow::Result<RepoSigningStatusResponse> {
         let deps = self.repo_signing_deps();
-        self.repo_service
-            .remove_repo_signing_key(&deps, self.is_bootstrap_admin_user(current_user_id).await?)
-            .await
+        remove_signing_key(&deps, self.is_bootstrap_admin_user(current_user_id).await?).await
     }
 
     pub async fn test_repo_signing(&self) -> anyhow::Result<TestRepoSigningResponse> {
         let deps = self.repo_signing_deps();
-        self.repo_service.test_repo_signing(&deps).await
+        test_signing(&deps).await
     }
 
     pub async fn export_repo_signing_private_key(
@@ -140,11 +137,7 @@ impl SynforgeService {
         current_user: &UserAccount,
     ) -> anyhow::Result<ExportRepoSigningKeyResponse> {
         let deps = self.repo_signing_deps();
-        self.repo_service
-            .export_repo_signing_private_key(
-                &deps,
-                self.is_bootstrap_admin_user(current_user.id).await?,
-            )
+        export_signing_private_key(&deps, self.is_bootstrap_admin_user(current_user.id).await?)
             .await
     }
 
@@ -152,8 +145,6 @@ impl SynforgeService {
         &self,
     ) -> anyhow::Result<ExportRepoSigningPublicKeyResponse> {
         let deps = self.repo_signing_deps();
-        self.repo_service
-            .export_repo_signing_public_key(&deps)
-            .await
+        export_signing_public_key(&deps).await
     }
 }

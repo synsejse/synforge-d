@@ -9,7 +9,6 @@ use std::time::Instant;
 use synforge_core::config::DaemonConfig;
 use synforge_database::DieselStore;
 use synforge_git_sync::RuntimeGitRegistryAdapter;
-use synforge_publish::RepoService;
 use synforge_state::{
     MockChrootCache, RefreshAllPackagesProgressState, RuntimeCache, SigningReconcileProgressState,
 };
@@ -27,7 +26,6 @@ pub struct SynforgeService {
     pub(super) store: DieselStore,
     pub(super) registry: RuntimeGitRegistryAdapter,
     pub(super) build_service: BuildService,
-    pub(super) repo_service: RepoService,
     pub(super) runner: BuildRunner,
     pub(super) lifecycle: Arc<JobLifecycle>,
     pub(super) sessions: WorkerSessionBroker,

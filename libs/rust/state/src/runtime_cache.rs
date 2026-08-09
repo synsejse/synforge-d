@@ -49,7 +49,7 @@ impl RuntimeCache {
     }
 
     pub async fn create_ui_session(&self, user_id: Uuid) -> anyhow::Result<UiSessionRecord> {
-        let token = generate_session_token();
+        let token = generate_session_token()?;
         let issued_at = now_utc().unix_timestamp();
         let expires_at = issued_at + UI_SESSION_TTL_SECONDS as i64;
         let session = UiSessionRecord {
@@ -190,8 +190,26 @@ impl RuntimeCache {
     }
 }
 
-fn generate_session_token() -> String {
+fn generate_session_token() -> anyhow::Result<String> {
     let mut bytes = [0_u8; 32];
-    getrandom::fill(&mut bytes).expect("OS RNG failure generating session token");
-    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
+    getrandom::fill(&mut bytes)
+        .map_err(|error| anyhow::anyhow!("OS RNG failure generating session token: {error}"))?;
+    Ok(base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::generate_session_token;
+
+    #[test]
+    fn session_tokens_are_url_safe_and_256_bits() {
+        let token = generate_session_token().expect("generate session token");
+
+        assert_eq!(token.len(), 43);
+        assert!(
+            token
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+        );
+    }
 }

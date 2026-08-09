@@ -12,6 +12,7 @@ bollard.workspace = true
 bytes.workspace = true
 dashmap = "6.2"
 futures-util.workspace = true
+parking_lot.workspace = true
 path-clean.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

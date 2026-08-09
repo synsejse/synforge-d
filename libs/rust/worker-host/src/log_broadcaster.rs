@@ -1,6 +1,7 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
+use parking_lot::Mutex;
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
@@ -39,10 +40,7 @@ impl LogBroadcaster {
     /// Subscribe to a job's live log events, creating the channel lazily so a
     /// subscriber that connects before the worker can still receive output.
     pub fn subscribe(&self, job_id: Uuid) -> broadcast::Receiver<LogEvent> {
-        let mut channels = self
-            .channels
-            .lock()
-            .expect("log broadcaster mutex poisoned");
+        let mut channels = self.channels.lock();
         let sender = channels
             .entry(job_id)
             .or_insert_with(|| broadcast::channel(CHANNEL_CAPACITY).0);
@@ -53,10 +51,7 @@ impl LogBroadcaster {
     /// (i.e. nobody is listening); chunks are durable on disk regardless.
     pub fn publish_chunk(&self, job_id: Uuid, source: &str, bytes: Vec<u8>, end_offset: u64) {
         let sender = {
-            let channels = self
-                .channels
-                .lock()
-                .expect("log broadcaster mutex poisoned");
+            let channels = self.channels.lock();
             channels.get(&job_id).cloned()
         };
         if let Some(sender) = sender {
@@ -73,10 +68,7 @@ impl LogBroadcaster {
     /// were created after this call.
     pub fn publish_complete(&self, job_id: Uuid) {
         let sender = {
-            let mut channels = self
-                .channels
-                .lock()
-                .expect("log broadcaster mutex poisoned");
+            let mut channels = self.channels.lock();
             channels.remove(&job_id)
         };
         if let Some(sender) = sender {

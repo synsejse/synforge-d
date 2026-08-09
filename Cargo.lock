@@ -2781,6 +2781,7 @@ dependencies = [
  "bytes",
  "dashmap",
  "futures-util",
+ "parking_lot",
  "path-clean",
  "serde_json",
  "sha2 0.11.0",

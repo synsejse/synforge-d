@@ -44,6 +44,7 @@ helmet-core = "1.0.1"
 idna = "1.1.0"
 ini = { package = "rust-ini", version = "0.21.3" }
 notify = "8.2.0"
+parking_lot = "0.12.5"
 path-clean = "1.0.1"
 redis = { version = "1.2", features = ["aio", "connection-manager", "tokio-comp"] }
 reqwest = { version = "0.13.4", default-features = false, features = ["json", "rustls", "stream"] }

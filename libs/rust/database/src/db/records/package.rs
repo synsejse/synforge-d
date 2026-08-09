@@ -64,7 +64,9 @@ pub(crate) async fn package_response_from_record(
     record: PackageRecord,
 ) -> anyhow::Result<PackageResponse> {
     let mut responses = package_responses_from_records(conn, vec![record]).await?;
-    Ok(responses.pop().expect("input record produces one response"))
+    responses
+        .pop()
+        .ok_or_else(|| anyhow::anyhow!("package response builder returned no response"))
 }
 
 /// Aggregated runtime state for a batch of packages, keyed by name.

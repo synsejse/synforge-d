@@ -1,19 +1,15 @@
-import Ansi from "ansi-to-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  faChevronDown,
-  faChevronRight,
   faDownload,
   faMagnifyingGlass,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
-import type { CSSProperties, UIEvent } from "react";
-
 import { API_BASE } from "../../../lib/api/client";
 import { downloadLogText } from "../../../lib/api/jobs";
 import EmptyState from "../../../components/ui/empty-state";
 import FaIcon from "../../../components/ui/fa-icon";
 import { useDebounce } from "../../../lib/hooks/use-debounce";
+import { GroupedLogView, VirtualizedAnsiLines } from "./log-lines-view";
 
 interface Props {
   jobId: string;
@@ -22,11 +18,8 @@ interface Props {
 type StreamStatus = "connecting" | "live" | "reconnecting" | "complete";
 
 const PRIMARY_SOURCE = "worker.log";
-const GROUP_HEADER_RE = /^##\[group\]\s?(.*)$/;
-const ROW_HEIGHT = 24;
 const MOBILE_LOG_VIEWPORT_HEIGHT = 420;
 const DESKTOP_LOG_VIEWPORT_HEIGHT = 600;
-const SCROLL_BOTTOM_THRESHOLD = 24;
 
 /**
  * Subscribes to the SSE log stream for a job.
@@ -314,278 +307,6 @@ function StreamStatusBadge({ status }: { status: StreamStatus }) {
       <span className="h-2 w-2 animate-pulse bg-accent-lime" />
       Live
     </span>
-  );
-}
-
-function JumpToLive({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-2 border border-accent-lime bg-accent-lime px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.15em] text-black transition-[filter] hover:brightness-110"
-    >
-      <FaIcon icon={faChevronDown} />
-      Jump to live
-    </button>
-  );
-}
-
-/**
- * Tracks whether a scroll container is pinned to the bottom and exposes the
- * follow state plus a handler to (re)engage it. Auto-follow re-engages when the
- * user scrolls back to the bottom and disengages when they scroll up.
- */
-function useAutoFollow(
-  viewportRef: React.RefObject<HTMLDivElement | null>,
-  followKey: string,
-  resetToken: number,
-) {
-  const [following, setFollowing] = useState(true);
-
-  const scrollToBottom = useCallback(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    viewport.scrollTop = viewport.scrollHeight;
-    setFollowing(true);
-  }, [viewportRef]);
-
-  const handleScroll = useCallback(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    const distanceFromBottom =
-      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
-    setFollowing(distanceFromBottom <= SCROLL_BOTTOM_THRESHOLD);
-  }, [viewportRef]);
-
-  // Re-engage follow when switching sources or on a fresh replay.
-  useEffect(() => {
-    setFollowing(true);
-    const viewport = viewportRef.current;
-    if (viewport) {
-      viewport.scrollTop = viewport.scrollHeight;
-    }
-  }, [followKey, resetToken, viewportRef]);
-
-  return { following, scrollToBottom, handleScroll, setFollowing };
-}
-
-interface Section {
-  title: string | null;
-  startLine: number;
-  lines: string[];
-}
-
-function buildSections(lines: string[]): Section[] {
-  const sections: Section[] = [];
-  let current: Section | null = null;
-  lines.forEach((line, index) => {
-    const match = GROUP_HEADER_RE.exec(line);
-    if (match) {
-      current = { title: match[1] || "Section", startLine: index, lines: [] };
-      sections.push(current);
-      return;
-    }
-    if (!current) {
-      current = { title: null, startLine: index, lines: [] };
-      sections.push(current);
-    }
-    current.lines.push(line);
-  });
-  return sections;
-}
-
-/**
- * worker.log view with collapsible `##[group] {title}` sections. Sections
- * default to expanded so live tailing reads naturally. Lines before the first
- * group render ungrouped.
- */
-function GroupedLogView({
-  sourcePath,
-  lines,
-  viewportHeight,
-  resetToken,
-}: {
-  sourcePath: string;
-  lines: string[];
-  viewportHeight: number;
-  resetToken: number;
-}) {
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  const [collapsed, setCollapsed] = useState<Record<number, boolean>>({});
-  const { following, scrollToBottom, handleScroll } = useAutoFollow(
-    viewportRef,
-    sourcePath,
-    resetToken,
-  );
-
-  const sections = useMemo(() => buildSections(lines), [lines]);
-
-  // Stick to the bottom as new content arrives while following.
-  useEffect(() => {
-    if (!following) return;
-    const viewport = viewportRef.current;
-    if (viewport) {
-      viewport.scrollTop = viewport.scrollHeight;
-    }
-  }, [lines, collapsed, following]);
-
-  const toggle = (key: number) =>
-    setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
-
-  return (
-    <div className="relative">
-      <div
-        ref={viewportRef}
-        onScroll={handleScroll}
-        className="max-h-[78vh] overflow-auto bg-black font-mono text-[13px] leading-6"
-        style={{ height: viewportHeight }}
-      >
-        <div className="py-3" style={{ minWidth: "max-content" }}>
-          {sections.map((section) => {
-            if (section.title === null) {
-              return section.lines.map((line, offset) => (
-                <LogLine
-                  key={`${section.startLine}:${offset}`}
-                  line={line}
-                />
-              ));
-            }
-            const isCollapsed = collapsed[section.startLine] ?? false;
-            return (
-              <div key={section.startLine}>
-                <button
-                  type="button"
-                  onClick={() => toggle(section.startLine)}
-                  className="flex w-full items-center gap-2 border-y border-edge-strong bg-surface-alt/40 px-3 py-1 text-left font-mono text-xs font-bold uppercase tracking-[0.12em] text-muted transition hover:bg-surface-alt/70 hover:text-white sm:px-5"
-                >
-                  <FaIcon
-                    icon={isCollapsed ? faChevronRight : faChevronDown}
-                    className="text-soft"
-                  />
-                  <span className="truncate">{section.title}</span>
-                  <span className="ml-auto text-[10px] text-soft">
-                    {section.lines.length}
-                  </span>
-                </button>
-                {isCollapsed
-                  ? null
-                  : section.lines.map((line, offset) => (
-                      <LogLine
-                        key={`${section.startLine}:${offset}`}
-                        line={line}
-                      />
-                    ))}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      {following ? null : <JumpToLive onClick={scrollToBottom} />}
-    </div>
-  );
-}
-
-function LogLine({ line }: { line: string }) {
-  return (
-    <div className="whitespace-pre px-3 text-success hover:bg-surface-alt/30 sm:px-5">
-      <Ansi>{line || " "}</Ansi>
-    </div>
-  );
-}
-
-function VirtualizedAnsiLines({
-  sourcePath,
-  lines,
-  viewportHeight,
-  resetToken,
-}: {
-  sourcePath: string;
-  lines: string[];
-  viewportHeight: number;
-  resetToken: number;
-}) {
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  const [scrollTop, setScrollTop] = useState(0);
-  const { following, scrollToBottom, handleScroll } = useAutoFollow(
-    viewportRef,
-    sourcePath,
-    resetToken,
-  );
-
-  const renderLines = useMemo(
-    () => (lines.length > 0 ? lines : ["Waiting for output…"]),
-    [lines],
-  );
-  const totalHeight = renderLines.length * ROW_HEIGHT;
-  const overscan = 12;
-  const visibleStart = Math.max(
-    0,
-    Math.floor(scrollTop / ROW_HEIGHT) - overscan,
-  );
-  const visibleCount = Math.ceil(viewportHeight / ROW_HEIGHT) + overscan * 2;
-  const visibleEnd = Math.min(renderLines.length, visibleStart + visibleCount);
-
-  const visibleRows = useMemo(
-    () =>
-      renderLines.slice(visibleStart, visibleEnd).map((line, offset) => ({
-        index: visibleStart + offset,
-        line,
-      })),
-    [renderLines, visibleEnd, visibleStart],
-  );
-
-  // Stick to the bottom as new content arrives while following.
-  useEffect(() => {
-    if (!following) return;
-    const viewport = viewportRef.current;
-    if (viewport) {
-      viewport.scrollTop = viewport.scrollHeight;
-    }
-  }, [lines, following]);
-
-  function onScroll(event: UIEvent<HTMLDivElement>) {
-    setScrollTop(event.currentTarget.scrollTop);
-    handleScroll();
-  }
-
-  return (
-    <div className="relative">
-      <div
-        ref={viewportRef}
-        onScroll={onScroll}
-        className="max-h-[78vh] overflow-auto bg-black pt-3 font-mono text-[13px] leading-6"
-        style={{ height: viewportHeight }}
-      >
-        <div
-          style={{
-            height: totalHeight || ROW_HEIGHT,
-            position: "relative",
-            minWidth: "max-content",
-          }}
-        >
-          {visibleRows.map(({ index, line }) => {
-            const style: CSSProperties = {
-              position: "absolute",
-              top: index * ROW_HEIGHT,
-              left: 0,
-              right: 0,
-              height: ROW_HEIGHT,
-            };
-
-            return (
-              <div
-                key={`${sourcePath}:${index}`}
-                style={style}
-                className="whitespace-pre px-3 text-success hover:bg-surface-alt/30 sm:px-5"
-              >
-                <Ansi>{line || " "}</Ansi>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      {following ? null : <JumpToLive onClick={scrollToBottom} />}
-    </div>
   );
 }
 

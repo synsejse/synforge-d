@@ -1,5 +1,7 @@
+import { Link } from "@tanstack/react-router";
 import type { PackageResponse } from "../../../lib/types";
 import { formatDurationSeconds } from "../../../lib/datetime";
+import { formatCompactId } from "../../../lib/identifiers";
 import MetaPair from "../../../components/ui/meta-pair";
 import StatusPill from "../../../components/ui/status-pill";
 
@@ -38,9 +40,14 @@ export default function PackageStatusStrip({ pkg }: Props) {
         </MetaPair>
         <MetaPair label="Active job">
           {activeJobId ? (
-            <span className="break-all font-mono text-xs text-accent-lime">
-              {activeJobId}
-            </span>
+            <Link
+              to="/jobs/view"
+              search={{ id: activeJobId }}
+              title={activeJobId}
+              className="font-mono text-xs text-accent-lime underline-offset-2 hover:underline"
+            >
+              {formatCompactId(activeJobId)}
+            </Link>
           ) : (
             <span className="font-mono text-xs text-soft">idle</span>
           )}

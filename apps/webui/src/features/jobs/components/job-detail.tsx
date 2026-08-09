@@ -16,6 +16,8 @@ import Button from "../../../components/ui/button";
 import Breadcrumbs from "../../../components/ui/breadcrumbs";
 import MetaPair from "../../../components/ui/meta-pair";
 import Tabs from "../../../components/ui/tabs";
+import CompactId from "../../../components/ui/compact-id";
+import { formatCompactId } from "../../../lib/identifiers";
 import ArtifactCard from "./artifact-card";
 import JobLiveUsage from "./job-live-usage";
 import CcacheStatsCard from "../../cache/ccache-stats-card";
@@ -151,7 +153,10 @@ export default function JobDetail({ jobId }: Props) {
     return (
       <div className="min-w-0 space-y-6">
         <Breadcrumbs
-          items={[{ label: "Jobs", to: "/jobs" }, { label: jobId }]}
+          items={[
+            { label: "Jobs", to: "/jobs" },
+            { label: formatCompactId(jobId) },
+          ]}
         />
         <LoadingBlock label="Loading job details…" lines={4} />
       </div>
@@ -188,7 +193,7 @@ export default function JobDetail({ jobId }: Props) {
             to: "/packages/view",
             search: { name: job.package_name },
           },
-          { label: jobId },
+          { label: formatCompactId(jobId) },
         ]}
       />
 
@@ -239,7 +244,9 @@ export default function JobDetail({ jobId }: Props) {
                   </span>
                 </MetaPair>
               ) : null}
-              <MetaPair label={duration.label}>
+              <MetaPair
+                label={isLive ? `${duration.label} for` : duration.label}
+              >
                 <span className={isLive ? "text-accent-lime" : "text-strong"}>
                   {duration.value}
                 </span>
@@ -254,12 +261,14 @@ export default function JobDetail({ jobId }: Props) {
                     search={{ id: job.sync_operation_id }}
                     className="break-all text-accent-cyan underline-offset-2 hover:underline"
                   >
-                    {job.sync_operation_id}
+                    <span title={job.sync_operation_id}>
+                      {formatCompactId(job.sync_operation_id)}
+                    </span>
                   </Link>
                 </MetaPair>
               ) : null}
               <MetaPair label="Job">
-                <span className="break-all text-soft">{job.id}</span>
+                <CompactId value={job.id} className="text-soft" />
               </MetaPair>
             </div>
           </div>

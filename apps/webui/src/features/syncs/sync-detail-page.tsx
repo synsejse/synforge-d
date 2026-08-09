@@ -17,6 +17,8 @@ import StatusPill from "../../components/ui/status-pill";
 import Tabs from "../../components/ui/tabs";
 import SyncBuildLinks from "./components/sync-build-links";
 import SyncTimeline from "./components/sync-timeline";
+import CompactId from "../../components/ui/compact-id";
+import { formatCompactId } from "../../lib/identifiers";
 
 const TabbedLogViewer = lazy(
   () => import("../jobs/components/tabbed-log-viewer"),
@@ -71,13 +73,19 @@ export default function SyncDetailPage({ operationId }: { operationId: string })
 
   const { operation, events, builds } = detailQuery.data;
   const live = operation.status === "queued" || operation.status === "running";
+  const durationLabel =
+    operation.status === "queued"
+      ? "Queued for"
+      : operation.status === "running"
+        ? "Running for"
+        : "Duration";
   return (
     <div className="min-w-0 space-y-6">
       <Breadcrumbs
         items={[
           { label: "Syncs", to: "/syncs" },
           { label: operation.package_name, to: "/packages/view", search: { name: operation.package_name } },
-          { label: operation.id },
+          { label: formatCompactId(operation.id) },
         ]}
       />
       <header className="border-b border-edge pb-5">
@@ -85,6 +93,11 @@ export default function SyncDetailPage({ operationId }: { operationId: string })
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-3">
               <StatusPill status={operation.status} />
+              {operation.changed === false ? (
+                <span className="border border-accent-cyan px-2 py-1 font-mono text-xs font-bold uppercase tracking-[0.08em] text-accent-cyan">
+                  No changes
+                </span>
+              ) : null}
               <h1 className="break-all font-mono text-2xl font-bold uppercase text-white sm:text-3xl">
                 {operation.package_name}
               </h1>
@@ -94,9 +107,9 @@ export default function SyncDetailPage({ operationId }: { operationId: string })
               <MetaPair label="Trigger"><span className="text-strong">{operation.trigger_type.replaceAll("_", " ")}</span></MetaPair>
               <MetaPair label="Target"><span className="text-strong">{operation.target_mock_chroot || "All targets"}</span></MetaPair>
               <MetaPair label="Created"><span className="text-strong">{formatDateTime(operation.created_at)}</span></MetaPair>
-              <MetaPair label="Duration"><span className={live ? "text-accent-lime" : "text-strong"}>{formatDurationBetween(operation.started_at ?? operation.created_at, operation.finished_at)}</span></MetaPair>
+              <MetaPair label={durationLabel}><span className={live ? "text-accent-lime" : "text-strong"}>{formatDurationBetween(operation.started_at ?? operation.created_at, live ? undefined : operation.finished_at)}</span></MetaPair>
               <MetaPair label="Revision"><span className="text-strong">{operation.revision || "—"}</span></MetaPair>
-              <MetaPair label="Sync"><span className="text-soft">{operation.id}</span></MetaPair>
+              <MetaPair label="Sync"><CompactId value={operation.id} className="text-soft" /></MetaPair>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -122,10 +135,10 @@ export default function SyncDetailPage({ operationId }: { operationId: string })
         </section>
       ) : null}
 
-      <div className="grid grid-cols-3 gap-4">
-        <TargetCount label="Queued" value={operation.queued_targets} tone="text-accent-lime" />
-        <TargetCount label="Skipped" value={operation.skipped_targets} tone="text-soft" />
-        <TargetCount label="Blocked" value={operation.blocked_targets} tone="text-accent-orange" />
+      <div className="grid gap-4 sm:grid-cols-3">
+        <TargetCount label="Builds queued" value={operation.queued_targets} tone="text-accent-lime" />
+        <TargetCount label="Targets skipped" value={operation.skipped_targets} tone="text-soft" />
+        <TargetCount label="Targets blocked" value={operation.blocked_targets} tone="text-accent-orange" />
       </div>
 
       <Tabs

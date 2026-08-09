@@ -11,6 +11,7 @@ import Button from "../../../components/ui/button";
 import FaIcon from "../../../components/ui/fa-icon";
 import StatusPill from "../../../components/ui/status-pill";
 import Tooltip from "../../../components/ui/tooltip";
+import CompactId from "../../../components/ui/compact-id";
 import {
   RecordCard,
   RecordMeta,
@@ -163,7 +164,7 @@ export default function BuildHistoryCard({
             : []),
           {
             label: "Job",
-            value: <span className="text-[#52525b]">{job.id}</span>,
+            value: <CompactId value={job.id} className="text-soft" />,
           },
         ]}
       />

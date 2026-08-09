@@ -1,5 +1,8 @@
 import type { SyncOperationEvent } from "../../../lib/types";
-import { formatDateTime } from "../../../lib/datetime";
+import {
+  formatDateTime,
+  formatDurationBetween,
+} from "../../../lib/datetime";
 
 export default function SyncTimeline({ events }: { events: SyncOperationEvent[] }) {
   if (events.length === 0) {
@@ -27,6 +30,14 @@ export default function SyncTimeline({ events }: { events: SyncOperationEvent[] 
                 {event.stage.replaceAll("_", " ")}
               </span>
               <time className="font-mono text-xs text-soft">
+                {index > 0 ? (
+                  <span
+                    className="mr-2 text-accent-cyan"
+                    title={`Elapsed since previous event: ${formatDurationBetween(events[index - 1].created_at, event.created_at)}`}
+                  >
+                    +{formatDurationBetween(events[index - 1].created_at, event.created_at)}
+                  </span>
+                ) : null}
                 {formatDateTime(event.created_at)}
               </time>
             </div>

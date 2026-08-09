@@ -45,7 +45,7 @@ export default function InFlightCard({ entry, usage, now }: InFlightCardProps) {
           Running
         </span>
         <span className="ml-auto font-mono text-xs font-semibold leading-none tabular-nums text-soft">
-          {elapsed}
+          Running for {elapsed}
         </span>
       </div>
 

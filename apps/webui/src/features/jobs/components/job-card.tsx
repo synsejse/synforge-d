@@ -17,6 +17,12 @@ import Button from "../../../components/ui/button";
 import FaIcon from "../../../components/ui/fa-icon";
 import StatusPill from "../../../components/ui/status-pill";
 import Tooltip from "../../../components/ui/tooltip";
+import CompactId from "../../../components/ui/compact-id";
+import {
+  formatCcacheCount,
+  formatCcacheRate,
+  getCcacheMetrics,
+} from "../../cache/ccache-metrics";
 import type { JobViewMode } from "../types";
 
 interface JobCardProps {
@@ -24,6 +30,8 @@ interface JobCardProps {
   mode: JobViewMode;
   killing: boolean;
   usage: JobResourceUsageSample | null;
+  queuePosition: number | null;
+  queueLength: number;
   onKill: (job: BuildJobResponse) => void;
   onRetry: (job: BuildJobResponse) => void;
   onDelete: (job: BuildJobResponse) => void;
@@ -42,6 +50,8 @@ export default function JobCard({
   mode,
   killing,
   usage,
+  queuePosition,
+  queueLength,
   onKill,
   onRetry,
   onDelete,
@@ -52,7 +62,14 @@ export default function JobCard({
 
   if (isActiveCard) {
     return (
-      <ActiveJobCard entry={entry} usage={usage} killing={killing} onKill={onKill} />
+      <ActiveJobCard
+        entry={entry}
+        usage={usage}
+        killing={killing}
+        queuePosition={queuePosition}
+        queueLength={queueLength}
+        onKill={onKill}
+      />
     );
   }
 
@@ -62,6 +79,9 @@ export default function JobCard({
     ? "var(--theme-text-soft)"
     : (STATUS_RAIL[entry.job.status] ?? "var(--theme-text-soft)");
   const duration = formatJobDuration(entry.job);
+  const cacheMetrics = entry.ccache_stats
+    ? getCcacheMetrics(entry.ccache_stats)
+    : null;
 
   return (
     <article
@@ -133,7 +153,7 @@ export default function JobCard({
           </JobMeta>
           <div className="mt-2.5">
             <JobMeta label="Job">
-              <span className="break-all text-[#52525b]">{entry.job.id}</span>
+              <CompactId value={entry.job.id} className="text-soft" />
             </JobMeta>
           </div>
         </div>
@@ -147,6 +167,20 @@ export default function JobCard({
           <span className="font-semibold text-strong">{duration.value}</span>
         </JobMeta>
       </div>
+
+      {entry.job.error_message ? (
+        <div className="mt-3.5 border-l-2 border-error bg-error/5 px-3 py-2 font-mono text-xs text-error">
+          {entry.job.error_message}
+        </div>
+      ) : null}
+
+      {cacheMetrics && entry.ccache_stats ? (
+        <div className="mt-3.5 border border-edge bg-surface-alt px-3 py-2 font-mono text-xs text-muted">
+          ccache {formatCcacheRate(cacheMetrics.hitRate)} hit rate ·{" "}
+          {formatCcacheCount(cacheMetrics.hits)} hits /{" "}
+          {formatCcacheCount(cacheMetrics.cacheableCalls)} cacheable calls
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -155,11 +189,15 @@ function ActiveJobCard({
   entry,
   usage,
   killing,
+  queuePosition,
+  queueLength,
   onKill,
 }: {
   entry: BuildJobResponse;
   usage: JobResourceUsageSample | null;
   killing: boolean;
+  queuePosition: number | null;
+  queueLength: number;
   onKill: (job: BuildJobResponse) => void;
 }) {
   const duration = formatJobDuration(entry.job);
@@ -170,12 +208,16 @@ function ActiveJobCard({
     usage && usage.memory_limit_bytes > 0
       ? clamp((usage.memory_usage_bytes / usage.memory_limit_bytes) * 100)
       : 0;
+  const pending = entry.job.status === "pending";
+  const accentClass = pending ? "bg-accent-orange" : "bg-accent-lime";
 
   return (
-    <article className="synforge-row-live relative border border-edge bg-[#070708] pl-[22px] pr-[18px] py-4">
+    <article
+      className={`${pending ? "" : "synforge-row-live"} relative border border-edge bg-[#070708] pl-[22px] pr-[18px] py-4`}
+    >
       <span
         aria-hidden="true"
-        className="absolute inset-y-0 left-0 w-[2px] bg-accent-lime"
+        className={`absolute inset-y-0 left-0 w-[2px] ${accentClass}`}
       />
       <div className="flex flex-wrap items-center gap-3">
         <Link
@@ -191,18 +233,24 @@ function ActiveJobCard({
         </span>
         <div className="ml-auto flex items-center gap-3">
           <span className="font-mono text-xs font-semibold tabular-nums text-soft">
-            {duration.value}
+            {duration.label} for {duration.value}
           </span>
           <IconButton
             icon={faStop}
-            label={`Kill job ${entry.job.id}`}
-            tooltip="Kill active job"
+            label={`${pending ? "Cancel" : "Kill"} job ${entry.job.id}`}
+            tooltip={pending ? "Cancel queued job" : "Kill active job"}
             onClick={() => onKill(entry)}
             disabled={killing}
             danger
           />
         </div>
       </div>
+
+      {pending && queuePosition != null ? (
+        <div className="mt-3 border border-accent-orange/50 bg-black px-3 py-2 font-mono text-xs text-accent-orange">
+          Queue position {queuePosition} of {queueLength}
+        </div>
+      ) : null}
 
       {usage ? (
         <div className="mt-3.5 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-[18px]">
@@ -224,7 +272,7 @@ function ActiveJobCard({
       ) : null}
 
       <div className="mt-3 font-mono text-xs leading-none text-[#52525b]">
-        {entry.job.id}
+        <CompactId value={entry.job.id} className="text-soft" />
       </div>
     </article>
   );

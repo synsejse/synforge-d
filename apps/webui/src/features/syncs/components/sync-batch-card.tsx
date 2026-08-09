@@ -1,15 +1,22 @@
 import type { SyncBatch } from "../../../lib/types";
 import { Link } from "@tanstack/react-router";
-import { formatDateTime } from "../../../lib/datetime";
+import { formatDateTime, formatDurationBetween } from "../../../lib/datetime";
 import StatusPill from "../../../components/ui/status-pill";
 import { RecordCard, RecordMeta } from "../../../components/ui/record-card";
 import { STATUS_RAIL } from "../../../components/ui/record-card-styles";
+import CompactId from "../../../components/ui/compact-id";
 
 export default function SyncBatchCard({ batch }: { batch: SyncBatch }) {
   const live = batch.status === "queued" || batch.status === "running";
   const pct = batch.total_packages
     ? Math.round((batch.completed_packages / batch.total_packages) * 100)
     : 100;
+  const durationLabel =
+    batch.status === "queued"
+      ? "Queued for"
+      : batch.status === "running"
+        ? "Running for"
+        : "Duration";
   return (
     <RecordCard
       rail={STATUS_RAIL[batch.status] ?? "var(--theme-text-soft)"}
@@ -24,11 +31,21 @@ export default function SyncBatchCard({ batch }: { batch: SyncBatch }) {
       <RecordMeta
         items={[
           { label: "Created", value: formatDateTime(batch.created_at) },
+          {
+            label: durationLabel,
+            value: formatDurationBetween(
+              batch.started_at ?? batch.created_at,
+              live ? undefined : batch.finished_at,
+            ),
+          },
           { label: "Progress", value: `${batch.completed_packages} / ${batch.total_packages} (${pct}%)` },
           { label: "Succeeded", value: batch.succeeded_packages },
           { label: "Failed", value: batch.failed_packages },
           { label: "Already active", value: batch.deduplicated_packages },
-          { label: "Batch", value: batch.id },
+          {
+            label: "Batch",
+            value: <CompactId value={batch.id} className="text-soft" />,
+          },
         ]}
       />
       <div className="mt-3 h-1.5 overflow-hidden bg-surface-alt">

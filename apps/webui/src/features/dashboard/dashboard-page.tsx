@@ -11,7 +11,7 @@ import LoadingBlock from "../../components/ui/loading-block";
 import MetricCard from "../../components/ui/metric-card";
 import PageHeader from "../../components/ui/page-header";
 import BuildRunRow from "./build-run-row";
-import InFlightCard from "./in-flight-card";
+import ActiveBuildsSection from "./active-builds-section";
 import SyncScheduleStrip from "./sync-schedule-strip";
 import {
   faBoxesStacked,
@@ -31,6 +31,7 @@ function Dashboard() {
   });
   const liveJobs = data?.liveJobs ?? [];
   const hasRunning = liveJobs.some((j) => j.job.status === "running");
+  const hasLiveJobs = liveJobs.length > 0;
 
   // Live CPU/MEM samples for the in-flight panel — only polled while builds
   // are actually running and the tab is visible. Queued jobs have no
@@ -44,13 +45,13 @@ function Dashboard() {
     (usageQuery.data?.samples ?? []).map((s) => [s.job_id, s]),
   );
 
-  // Ticks the in-flight elapsed counters once a second while a build runs.
+  // Ticks queued and running elapsed counters once a second while work exists.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!visible || !hasRunning) return;
+    if (!visible || !hasLiveJobs) return;
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
-  }, [visible, hasRunning]);
+  }, [visible, hasLiveJobs]);
 
   if (error) {
     return (
@@ -63,11 +64,7 @@ function Dashboard() {
   const loading = isPending;
   const jobs = data?.jobs ?? [];
   const queued = liveJobs.filter((j) => j.job.status === "pending").length;
-  // Only running jobs are truly "in flight" — they have a container, so live
-  // CPU/MEM samples and a log stream. Queued jobs have none of that yet; they
-  // are represented by the pipeline's QUEUED count instead.
-  const inFlightJobs = liveJobs.filter((j) => j.job.status === "running");
-  const building = inFlightJobs.length;
+  const building = liveJobs.filter((j) => j.job.status === "running").length;
 
   return (
     <div className="space-y-6">
@@ -80,7 +77,7 @@ function Dashboard() {
       {loading ? (
         <LoadingBlock label="Loading metrics…" lines={2} />
       ) : (
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           <MetricCard
             label="Packages"
             value={data?.packageCount ?? 0}
@@ -108,6 +105,23 @@ function Dashboard() {
           />
         </section>
       )}
+
+      <ActiveBuildsSection
+        loading={loading}
+        jobs={liveJobs}
+        usageByJob={usageByJob}
+        now={now}
+      />
+
+      {!loading && (
+        <PipelineStrip
+          queued={queued}
+          building={building}
+          recentDone={jobs.length}
+        />
+      )}
+
+      <SyncScheduleStrip />
 
       <section className="border border-edge bg-black">
         <div className="flex items-center justify-between gap-4 border-b border-edge px-[18px] py-[15px]">
@@ -141,63 +155,6 @@ function Dashboard() {
                 key={entry.job.id}
                 entry={entry}
                 last={i === jobs.length - 1}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {!loading && (
-        <PipelineStrip
-          queued={queued}
-          building={building}
-          recentDone={jobs.length}
-        />
-      )}
-
-      <SyncScheduleStrip />
-
-      <section className="border border-edge bg-black">
-        <div className="flex items-center justify-between gap-4 border-b border-edge bg-black px-[18px] py-[15px]">
-          <div className="flex items-center gap-2.5">
-            <span className="relative flex h-2 w-2">
-              {building > 0 ? (
-                <span className="absolute inline-flex h-full w-full animate-ping bg-accent-lime opacity-75" />
-              ) : null}
-              <span
-                className={`relative inline-flex h-2 w-2 ${building > 0 ? "bg-accent-lime" : "bg-soft"}`}
-              />
-            </span>
-            <h2 className="font-mono text-[13px] font-bold uppercase tracking-[0.06em] text-white">
-              Builds in flight
-            </h2>
-          </div>
-          {!loading && (
-            <span
-              className={`font-mono text-xs font-bold uppercase tracking-[0.16em] ${building > 0 ? "text-accent-lime" : "text-soft"}`}
-            >
-              {building} active
-            </span>
-          )}
-        </div>
-        {loading ? (
-          <div className="p-[18px]">
-            <LoadingBlock label="Loading active builds…" lines={2} />
-          </div>
-        ) : inFlightJobs.length === 0 ? (
-          <div className="p-2">
-            <div className="flex items-center justify-center border border-dashed border-edge px-5 py-[60px] font-mono text-[13px] text-[#52525b]">
-              Nothing is building right now.
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4 p-2">
-            {inFlightJobs.map((entry) => (
-              <InFlightCard
-                key={entry.job.id}
-                entry={entry}
-                usage={usageByJob.get(entry.job.id) ?? null}
-                now={now}
               />
             ))}
           </div>

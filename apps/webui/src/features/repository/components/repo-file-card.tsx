@@ -3,6 +3,7 @@ import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import type { PublishedRepoFile } from "../../../lib/types";
 import { formatBytes } from "../../../lib/bytes";
 import { formatDateTime } from "../../../lib/datetime";
+import { formatCompactId } from "../../../lib/identifiers";
 import FaIcon from "../../../components/ui/fa-icon";
 import Tooltip from "../../../components/ui/tooltip";
 import {
@@ -84,7 +85,7 @@ export default function RepoFileCard({
                 search={{ id: file.job_id }}
                 className="text-[#52525b] transition-colors hover:text-accent-lime"
               >
-                {file.job_id}
+                <span title={file.job_id}>{formatCompactId(file.job_id)}</span>
               </Link>
             ),
           },

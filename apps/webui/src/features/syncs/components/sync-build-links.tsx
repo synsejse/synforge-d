@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { BuildJobResponse } from "../../../lib/types";
 import { formatDateTime } from "../../../lib/datetime";
 import StatusPill from "../../../components/ui/status-pill";
+import { formatCompactId } from "../../../lib/identifiers";
 
 export default function SyncBuildLinks({ builds }: { builds: BuildJobResponse[] }) {
   if (builds.length === 0) {
@@ -23,7 +24,8 @@ export default function SyncBuildLinks({ builds }: { builds: BuildJobResponse[] 
           <div className="min-w-0 flex-1">
             <div className="font-mono text-sm font-bold text-white">{job.mock_chroot}</div>
             <div className="mt-1 break-all font-mono text-xs text-soft">
-              {job.id} · {formatDateTime(job.created_at)}
+              <span title={job.id}>{formatCompactId(job.id)}</span> ·{" "}
+              {formatDateTime(job.created_at)}
             </div>
           </div>
           <StatusPill status={job.status} />

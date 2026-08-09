@@ -24,6 +24,16 @@ export default function JobListTable({
   onKill,
   usageByJob,
 }: JobListTableProps) {
+  const pending = jobs
+    .filter((entry) => entry.job.status === "pending")
+    .sort(
+      (left, right) =>
+        Date.parse(left.job.created_at) - Date.parse(right.job.created_at),
+    );
+  const queuePositions = new Map(
+    pending.map((entry, index) => [entry.job.id, index + 1]),
+  );
+
   return (
     <div className="flex flex-col gap-3">
       {jobs.map((entry) => (
@@ -33,6 +43,8 @@ export default function JobListTable({
           mode={mode}
           killing={killingJobId === entry.job.id}
           usage={usageByJob[entry.job.id] ?? null}
+          queuePosition={queuePositions.get(entry.job.id) ?? null}
+          queueLength={pending.length}
           onKill={onKill}
           onRetry={onRetry}
           onDelete={onDelete}

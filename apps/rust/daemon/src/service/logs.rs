@@ -6,7 +6,7 @@ use synforge_core::{
     error::SynforgeError,
     model::BuildStatus,
 };
-use synforge_database::JobStore;
+use synforge_database::{JobStore, SyncStore};
 use synforge_worker_host::LogBroadcaster;
 
 impl SynforgeService {
@@ -54,7 +54,36 @@ impl SynforgeService {
         ))
     }
 
+    pub async fn sync_is_terminal(&self, id: Uuid) -> anyhow::Result<bool> {
+        let operation = self
+            .store
+            .get_sync_operation(id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(format!("sync {}", id))))?;
+        Ok(operation.status.is_terminal())
+    }
+
     pub async fn get_job_log_manifest(&self, job_id: Uuid) -> anyhow::Result<LogManifestResponse> {
+        if self.store.get_job(job_id).await?.is_none() {
+            return Err(anyhow::anyhow!(SynforgeError::NotFound(format!(
+                "job {}",
+                job_id
+            ))));
+        }
+        self.collect_log_manifest(job_id).await
+    }
+
+    pub async fn get_sync_log_manifest(&self, id: Uuid) -> anyhow::Result<LogManifestResponse> {
+        if self.store.get_sync_operation(id).await?.is_none() {
+            return Err(anyhow::anyhow!(SynforgeError::NotFound(format!(
+                "sync {}",
+                id
+            ))));
+        }
+        self.collect_log_manifest(id).await
+    }
+
+    async fn collect_log_manifest(&self, job_id: Uuid) -> anyhow::Result<LogManifestResponse> {
         let mut sources = Vec::new();
         let db_logs = self.store.list_build_logs_for_job(job_id).await?;
 

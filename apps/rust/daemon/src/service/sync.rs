@@ -2,9 +2,11 @@ use std::collections::HashMap;
 
 use synforge_core::{
     api::{
-        SyncMetricsResponse, SyncOperationListResponse, SyncScheduleEntry, SyncScheduleResponse,
-        TimeSeriesPoint, TimeSeriesResponse, build_page_info, resolve_time_range,
+        SyncMetricsResponse, SyncOperationDetailResponse, SyncOperationListResponse,
+        SyncScheduleEntry, SyncScheduleResponse, TimeSeriesPoint, TimeSeriesResponse,
+        build_page_info, resolve_time_range,
     },
+    error::SynforgeError,
     model::format_timestamp,
     sync::SyncStatus,
 };
@@ -14,6 +16,24 @@ use super::SynforgeService;
 use synforge_database::{JobStore, PackageStore, SyncStore};
 
 impl SynforgeService {
+    pub async fn get_sync_operation_detail(
+        &self,
+        id: uuid::Uuid,
+    ) -> anyhow::Result<SyncOperationDetailResponse> {
+        let operation = self
+            .store
+            .get_sync_operation(id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(id.to_string())))?;
+        let events = self.store.list_sync_operation_events(id).await?;
+        let builds = self.store.list_jobs_for_sync(id).await?;
+        Ok(SyncOperationDetailResponse {
+            operation,
+            events,
+            builds,
+        })
+    }
+
     pub async fn list_sync_operations(
         &self,
         limit: Option<usize>,

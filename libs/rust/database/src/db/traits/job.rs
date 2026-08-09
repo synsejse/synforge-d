@@ -131,6 +131,11 @@ pub trait JobStore: Send + Sync {
         include_deleted: bool,
     ) -> anyhow::Result<Vec<BuildJobResponse>>;
 
+    async fn list_jobs_for_sync(
+        &self,
+        sync_operation_id: Uuid,
+    ) -> anyhow::Result<Vec<BuildJobResponse>>;
+
     async fn get_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>>;
 
     /// Count artifacts attached to a single job (for paginated listing).

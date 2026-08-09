@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
-use crate::sync::{SyncOperation, SyncStatus};
+use crate::{
+    api::BuildJobResponse,
+    sync::{SyncOperation, SyncOperationEvent, SyncStatus},
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, IntoParams, ToSchema)]
 pub struct SyncOperationListQuery {
@@ -37,6 +40,14 @@ pub struct SyncEnqueueResponse {
     /// False when this request was deduplicated onto an already active run
     /// for the same package.
     pub created: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct SyncOperationDetailResponse {
+    pub operation: SyncOperation,
+    pub events: Vec<SyncOperationEvent>,
+    /// Builds planned by this sync run. Empty is a normal no-change result.
+    pub builds: Vec<BuildJobResponse>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

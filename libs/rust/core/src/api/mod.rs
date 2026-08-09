@@ -39,9 +39,9 @@ pub use self::repo::{
 };
 pub use self::system::{
     CacheStatsResponse, GitMirrorCacheStats, MockChrootCacheStats, PackageSyncOperationListQuery,
-    ServerHardwareResponse, SyncEnqueueResponse, SyncMetricsResponse, SyncOperationListQuery,
-    SyncOperationListResponse, SyncScheduleEntry, SyncScheduleQuery, SyncScheduleResponse,
-    TimeSeriesPoint, TimeSeriesQuery, TimeSeriesResponse, resolve_time_range,
+    ServerHardwareResponse, SyncEnqueueResponse, SyncMetricsResponse, SyncOperationDetailResponse,
+    SyncOperationListQuery, SyncOperationListResponse, SyncScheduleEntry, SyncScheduleQuery,
+    SyncScheduleResponse, TimeSeriesPoint, TimeSeriesQuery, TimeSeriesResponse, resolve_time_range,
 };
 pub use self::users::{
     ChangePasswordRequest, CreateUserRequest, SessionLoginRequest, SessionResponse,

@@ -24,6 +24,8 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/jobs/{id}/logs", get(get_job_log_manifest))
         .route("/jobs/{id}/logs/stream", get(stream_job_logs))
+        .route("/sync/operations/{id}/logs", get(get_sync_log_manifest))
+        .route("/sync/operations/{id}/logs/stream", get(stream_sync_logs))
 }
 
 #[utoipa::path(
@@ -45,6 +47,25 @@ pub(super) async fn get_job_log_manifest(
     Path(id): Path<Uuid>,
 ) -> Result<Json<LogManifestResponse>, AppError> {
     Ok(Json(state.service.get_job_log_manifest(id).await?))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/sync/operations/{id}/logs",
+    tag = "Logs",
+    params(("id" = Uuid, Path, description = "Sync operation identifier")),
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "Get available log sources for a sync", body = LogManifestResponse),
+        (status = 401, body = synforge_core::api::ApiError),
+        (status = 404, body = synforge_core::api::ApiError)
+    )
+)]
+pub(super) async fn get_sync_log_manifest(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<LogManifestResponse>, AppError> {
+    Ok(Json(state.service.get_sync_log_manifest(id).await?))
 }
 
 #[utoipa::path(
@@ -72,6 +93,39 @@ pub(super) async fn stream_job_logs(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, AppError> {
+    stream_logs(state, id, LogOwner::Build).await
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/sync/operations/{id}/logs/stream",
+    tag = "Logs",
+    params(("id" = Uuid, Path, description = "Sync operation identifier")),
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "Server-sent event stream of sync logs", content_type = "text/event-stream"),
+        (status = 401, body = synforge_core::api::ApiError),
+        (status = 404, body = synforge_core::api::ApiError)
+    )
+)]
+pub(super) async fn stream_sync_logs(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, AppError> {
+    stream_logs(state, id, LogOwner::Sync).await
+}
+
+#[derive(Clone, Copy)]
+enum LogOwner {
+    Build,
+    Sync,
+}
+
+async fn stream_logs(
+    state: AppState,
+    id: Uuid,
+    owner: LogOwner,
+) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, AppError> {
     let service = state.service.clone();
     let broadcaster = service.log_broadcaster();
 
@@ -85,11 +139,18 @@ pub(super) async fn stream_job_logs(
 
     // 2. Resolve the job (unknown -> 404) and capture whether it had already
     //    finished, so a stream opened on a completed job ends instead of hanging.
-    let terminal_at_start = service.job_is_terminal(id).await?;
+    let terminal_at_start = match owner {
+        LogOwner::Build => service.job_is_terminal(id).await?,
+        LogOwner::Sync => service.sync_is_terminal(id).await?,
+    };
 
     let stream = async_stream::stream! {
         // 3. Manifest event lists the currently-known sources.
-        let manifest = match service.get_job_log_manifest(id).await {
+        let manifest = match owner {
+            LogOwner::Build => service.get_job_log_manifest(id).await,
+            LogOwner::Sync => service.get_sync_log_manifest(id).await,
+        };
+        let manifest = match manifest {
             Ok(manifest) => manifest,
             Err(_) => {
                 yield Ok(complete_event());

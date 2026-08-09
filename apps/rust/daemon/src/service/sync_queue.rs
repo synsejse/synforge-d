@@ -209,6 +209,10 @@ impl SynforgeService {
         };
         let status = completion.status;
         self.store.finish_sync_run(id, completion).await?;
+        // Parse workers close their socket before the enclosing sync row is
+        // finalized. Publish again after the terminal DB transition to close
+        // subscribers that connected inside that narrow race window.
+        self.log_broadcaster.publish_complete(id);
         info!(sync_operation_id = %id, ?status, "sync run finished");
         Ok(())
     }

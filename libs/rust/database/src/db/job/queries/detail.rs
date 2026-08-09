@@ -22,6 +22,20 @@ pub(in crate::db) async fn list_jobs_for_package(
     load_job_responses(&mut conn, rows).await
 }
 
+pub(in crate::db) async fn list_jobs_for_sync(
+    store: &DieselStore,
+    sync_operation_id: Uuid,
+) -> anyhow::Result<Vec<BuildJobResponse>> {
+    let mut conn = store.get_connection().await?;
+    let rows = build_jobs::table
+        .filter(build_jobs::sync_operation_id.eq(sync_operation_id))
+        .order(build_jobs::created_at.asc())
+        .select(JobRecord::as_select())
+        .load(&mut conn)
+        .await?;
+    load_job_responses(&mut conn, rows).await
+}
+
 pub(in crate::db) async fn get_job(
     store: &DieselStore,
     job_id: Uuid,

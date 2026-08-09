@@ -175,6 +175,13 @@ impl JobStore for DieselStore {
         job::list_jobs_for_package(self, package_name, include_deleted).await
     }
 
+    async fn list_jobs_for_sync(
+        &self,
+        sync_operation_id: Uuid,
+    ) -> anyhow::Result<Vec<BuildJobResponse>> {
+        job::list_jobs_for_sync(self, sync_operation_id).await
+    }
+
     async fn get_job(&self, job_id: Uuid) -> anyhow::Result<Option<BuildJobResponse>> {
         job::get_job(self, job_id).await
     }

@@ -35,7 +35,7 @@ jobs:
         run: cargo test --workspace
 
   webui:
-    name: WebUI (lint, typecheck, build)
+    name: WebUI (lint, test, typecheck, build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -55,6 +55,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Test
+        run: npm test
 
       - name: Typecheck
         run: npm run typecheck

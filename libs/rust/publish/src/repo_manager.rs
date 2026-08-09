@@ -1,22 +1,23 @@
 use std::collections::HashSet;
 use std::path::Path;
+use std::sync::Arc;
 
 use anyhow::Context;
 use synforge_core::{
     config::DaemonConfig,
-    model::{
-        ArtifactKind, BuildArtifact, BuildStatus, PublishedRepoFile, RepoPublication,
-        WorkerBuildResult, format_timestamp, now_utc,
-    },
+    model::{ArtifactKind, BuildArtifact, PublishedRepoFile},
     package::{PackageDefinition, RepoTarget},
 };
-use synforge_database::build_published_repo_path;
 use tokio::process::Command;
+use tokio::sync::Mutex;
 use tokio_stream::{StreamExt, wrappers::ReadDirStream};
-use tracing::{info, warn};
+use tracing::info;
 use uuid::Uuid;
 
-use crate::{RepoSigningManager, resolve_job_artifact_path};
+use crate::RepoSigningManager;
+
+#[path = "repo_manager/publication.rs"]
+mod publication;
 
 fn should_skip_artifact(artifact: &BuildArtifact, package: &PackageDefinition) -> bool {
     match artifact.kind {
@@ -27,7 +28,9 @@ fn should_skip_artifact(artifact: &BuildArtifact, package: &PackageDefinition) -
 }
 
 #[derive(Debug, Clone)]
-pub struct FileRepoManager;
+pub struct FileRepoManager {
+    operation_lock: Arc<Mutex<()>>,
+}
 
 impl Default for FileRepoManager {
     fn default() -> Self {
@@ -37,10 +40,14 @@ impl Default for FileRepoManager {
 
 impl FileRepoManager {
     pub fn new() -> Self {
-        Self
+        Self {
+            operation_lock: Arc::new(Mutex::new(())),
+        }
     }
 
     pub async fn ensure_repo(&self, config: &DaemonConfig) -> anyhow::Result<()> {
+        let _operation = self.operation_lock.lock().await;
+        ensure_createrepo_available().await?;
         info!(
             repo_dir = %config.runtime_paths().repo_dir().display(),
             "ensuring repository metadata exists"
@@ -52,117 +59,12 @@ impl FileRepoManager {
         reconcile_repo_state(config).await
     }
 
-    pub async fn publish_build(
-        &self,
-        package: &PackageDefinition,
-        worker_result: &WorkerBuildResult,
-        config: &DaemonConfig,
-    ) -> anyhow::Result<RepoPublication> {
-        let paths = config.runtime_paths();
-        if worker_result.status != BuildStatus::Succeeded {
-            return Err(anyhow::anyhow!(
-                "cannot publish artifacts for failed worker result"
-            ));
-        }
-        info!(
-            job_id = %worker_result.job_id,
-            package_name = %package.name,
-            artifact_count = worker_result.artifacts.len(),
-            "publishing build output into repository"
-        );
-        let published_at = now_utc();
-        let mut files = Vec::new();
-        let mut seen_paths = HashSet::new();
-        let mut affected_targets = HashSet::new();
-        for artifact in &worker_result.artifacts {
-            if should_skip_artifact(artifact, package) {
-                continue;
-            }
-            let build_root = build_repo_build_dir(config, package, worker_result.job_id, artifact)?;
-            tokio::fs::create_dir_all(&build_root)
-                .await
-                .with_context(|| format!("failed to create {}", build_root.display()))?;
-            let source_path = resolve_job_artifact_path(config, worker_result.job_id, artifact)?;
-            if !tokio::fs::try_exists(source_path.interop_path()).await? {
-                anyhow::bail!(
-                    "artifact {} is not available locally",
-                    artifact.file.display()
-                );
-            }
-            let file_name = artifact.file.file_name().ok_or_else(|| {
-                anyhow::anyhow!("artifact file {} has no filename", artifact.file.display())
-            })?;
-            let destination = build_root.join(file_name);
-            let path = build_published_repo_path(
-                &package.name,
-                &artifact.mock_chroot,
-                worker_result.job_id,
-                &artifact.file,
-            )?;
-            if !seen_paths.insert(path.clone()) {
-                continue;
-            }
-            affected_targets.insert(target_repo_dir_from_mock_chroot(
-                config,
-                &artifact.mock_chroot,
-            )?);
-            if tokio::fs::try_exists(&destination).await? {
-                tokio::fs::remove_file(&destination)
-                    .await
-                    .with_context(|| format!("failed to replace {}", destination.display()))?;
-            }
-            if let Err(link_error) =
-                tokio::fs::hard_link(source_path.interop_path(), &destination).await
-            {
-                tokio::fs::copy(source_path.interop_path(), &destination)
-                    .await
-                    .map(|_| ())
-                    .with_context(|| {
-                        format!(
-                            "failed to link ({}) or copy artifact {} to {}",
-                            link_error,
-                            source_path.strictpath_display(),
-                            destination.display()
-                        )
-                    })?;
-            }
-            files.push(PublishedRepoFile {
-                artifact_id: artifact.id,
-                job_id: worker_result.job_id,
-                package_name: package.name.clone(),
-                mock_chroot: artifact.mock_chroot.clone(),
-                path,
-                sha256: artifact.sha256.clone(),
-                size_bytes: artifact.size_bytes,
-                kind: artifact.kind,
-                published_at,
-                signing_status: artifact.signing_status,
-                signing_error_message: artifact.signing_error_message.clone(),
-            });
-        }
-        for target_repo_dir in affected_targets {
-            regenerate_target_metadata(&target_repo_dir).await?;
-        }
-        reconcile_repo_state(config).await?;
-        info!(
-            job_id = %worker_result.job_id,
-            package_name = %package.name,
-            published_file_count = files.len(),
-            "repository publication completed"
-        );
-        Ok(RepoPublication {
-            package_name: package.name.clone(),
-            repo_root: paths.repo_dir().to_path_buf(),
-            published_at,
-            files,
-        })
-    }
-
     pub async fn remove_build_files(
         &self,
         files: &[PublishedRepoFile],
         config: &DaemonConfig,
     ) -> anyhow::Result<()> {
+        let _operation = self.operation_lock.lock().await;
         let paths = config.runtime_paths();
         if !files.is_empty() {
             info!(
@@ -199,7 +101,7 @@ impl FileRepoManager {
     }
 }
 
-fn build_repo_build_dir(
+pub(super) fn build_repo_build_dir(
     config: &DaemonConfig,
     package: &PackageDefinition,
     job_id: Uuid,
@@ -214,40 +116,40 @@ fn build_repo_build_dir(
     )
 }
 
-async fn regenerate_target_metadata(repo_dir: &Path) -> anyhow::Result<()> {
+pub(super) async fn ensure_createrepo_available() -> anyhow::Result<()> {
+    let output = Command::new("createrepo_c")
+        .arg("--version")
+        .output()
+        .await
+        .context("createrepo_c is required for repository publication")?;
+    if !output.status.success() {
+        anyhow::bail!(
+            "createrepo_c --version failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    Ok(())
+}
+
+pub(super) async fn regenerate_target_metadata(repo_dir: &Path) -> anyhow::Result<()> {
     tokio::fs::create_dir_all(repo_dir).await?;
     info!(repo_dir = %repo_dir.display(), "regenerating repository metadata");
     let output = Command::new("createrepo_c")
         .arg("--update")
         .arg(repo_dir)
         .output()
-        .await;
-    let createrepo_result: anyhow::Result<()> = match output {
-        Ok(output) if output.status.success() => Ok(()),
-        Ok(output) => Err(anyhow::anyhow!(
+        .await
+        .context("createrepo_c is required for repository publication")?;
+    if !output.status.success() {
+        return Err(anyhow::anyhow!(
             "createrepo_c failed: {}",
             String::from_utf8_lossy(&output.stderr)
-        )),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            let repodata = repo_dir.join("repodata");
-            tokio::fs::create_dir_all(&repodata).await?;
-            tokio::fs::write(
-                repodata.join("repomd.xml"),
-                format!("<repomd generated=\"{}\" />", format_timestamp(now_utc())),
-            )
-            .await?;
-            warn!(
-                repo_dir = %repo_dir.display(),
-                "createrepo_c not found; wrote placeholder repomd.xml"
-            );
-            Ok(())
-        }
-        Err(error) => Err(error.into()),
-    };
-    createrepo_result
+        ));
+    }
+    Ok(())
 }
 
-async fn reconcile_repo_state(config: &DaemonConfig) -> anyhow::Result<()> {
+pub(super) async fn reconcile_repo_state(config: &DaemonConfig) -> anyhow::Result<()> {
     let runtime_paths = config.runtime_paths();
     let repo_root = runtime_paths.repo_dir();
     clear_root_repo_metadata(repo_root).await?;
@@ -303,7 +205,7 @@ pub(crate) async fn discover_repo_targets(repo_root: &Path) -> anyhow::Result<Ve
     Ok(targets)
 }
 
-async fn refresh_target_repo_after_removal(
+pub(super) async fn refresh_target_repo_after_removal(
     repo_root: &Path,
     target_repo_dir: &Path,
 ) -> anyhow::Result<()> {
@@ -344,7 +246,7 @@ async fn dir_contains_files(dir: &Path) -> anyhow::Result<bool> {
     Ok(false)
 }
 
-fn target_repo_dir_from_mock_chroot(
+pub(super) fn target_repo_dir_from_mock_chroot(
     config: &DaemonConfig,
     mock_chroot: &str,
 ) -> anyhow::Result<std::path::PathBuf> {

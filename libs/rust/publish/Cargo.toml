@@ -15,5 +15,6 @@ synforge-core = { path = "../core" }
 synforge-database = { path = "../database" }
 tokio.workspace = true
 tokio-stream.workspace = true
+tempfile.workspace = true
 tracing.workspace = true
 uuid.workspace = true

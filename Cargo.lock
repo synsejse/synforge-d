@@ -2714,6 +2714,7 @@ dependencies = [
  "strict-path",
  "synforge-core",
  "synforge-database",
+ "tempfile",
  "tokio",
  "tokio-stream",
  "tracing",

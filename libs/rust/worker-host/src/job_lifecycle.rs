@@ -177,7 +177,7 @@ impl JobLifecycle {
             }
         }
 
-        let finalized = self
+        let finalize_result = self
             .store
             .finish_job(
                 build.job_id,
@@ -187,11 +187,32 @@ impl JobLifecycle {
                 &published_files,
                 &artifact_signatures,
             )
-            .await?;
+            .await;
+        let finalized = match finalize_result {
+            Ok(finalized) => finalized,
+            Err(error) => {
+                if !published_files.is_empty()
+                    && let Err(rollback_error) = self
+                        .repo_manager
+                        .remove_build_files(&published_files, &effective_config)
+                        .await
+                {
+                    return Err(anyhow::anyhow!(
+                        "failed to finalize build ({error}); publication rollback also failed ({rollback_error})"
+                    ));
+                }
+                return Err(error);
+            }
+        };
         if !finalized {
+            if !published_files.is_empty() {
+                self.repo_manager
+                    .remove_build_files(&published_files, &effective_config)
+                    .await?;
+            }
             // A racing finisher (e.g. a user-requested kill) already
             // transitioned this job out of an active state. Don't clobber
-            // its recorded outcome or backoff bookkeeping.
+            // its recorded outcome, publication, or backoff bookkeeping.
             info!(
                 job_id = %build.job_id,
                 package_name = %build.package.name,

@@ -141,6 +141,9 @@ export type SyncScheduleResponse = ApiSchema["SyncScheduleResponse"];
 export type MockChrootCacheStats = ApiSchema["MockChrootCacheStats"];
 export type GitMirrorCacheStats = ApiSchema["GitMirrorCacheStats"];
 export type CacheStatsResponse = ApiSchema["CacheStatsResponse"];
+export type WorkspaceCcacheStats = ApiSchema["WorkspaceCcacheStats"];
+export type WorkspaceCcacheTargetStats =
+  ApiSchema["WorkspaceCcacheTargetStats"];
 export type ServerHardwareResponse = ApiSchema["ServerHardwareResponse"];
 export type TimeSeriesPoint = ApiSchema["TimeSeriesPoint"];
 export type TimeSeriesResponse = ApiSchema["TimeSeriesResponse"];

@@ -17,6 +17,7 @@ import RatioBar from "../../components/ui/ratio-bar";
 import Tabs from "../../components/ui/tabs";
 import TimeRangeSelector from "../../components/ui/time-range-selector";
 import TimeSeriesChart from "../../components/ui/time-series-chart";
+import WorkspaceCcacheSection from "./workspace-ccache-section";
 
 const STATS_REFRESH_INTERVAL_MS = 15_000;
 const TIMESERIES_REFRESH_INTERVAL_MS = 30_000;
@@ -47,7 +48,7 @@ function Statistics() {
     navigate({ search: (prev) => ({ ...prev, range: next }) });
   const [cacheTab, setCacheTab] = useState<"mock" | "git">("mock");
 
-  const { data, isPending, error } = useQuery({
+  const { data, isPending, error, isFetching, refetch } = useQuery({
     ...statisticsQueries.overview(),
     refetchInterval: visible ? STATS_REFRESH_INTERVAL_MS : false,
   });
@@ -74,6 +75,8 @@ function Statistics() {
     return (
       <ErrorMessage
         message={error instanceof Error ? error.message : "Failed to load statistics"}
+        onRetry={() => void refetch()}
+        retrying={isFetching}
       />
     );
   }
@@ -105,31 +108,45 @@ function Statistics() {
           <TimeRangeSelector value={range} onChange={setRange} />
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-2">
-          <article className="border border-edge bg-black p-5">
-            <div className="mb-3 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent-cyan">
-              <FaIcon icon={faRotate} />
-              Sync operations
-            </div>
-            <TimeSeriesChart
-              data={timeseriesQuery.data?.sync}
-              isLoading={timeseriesQuery.isPending}
-              emptyLabel="No sync activity in this window."
-            />
-          </article>
+        {timeseriesQuery.error ? (
+          <ErrorMessage
+            message={
+              timeseriesQuery.error instanceof Error
+                ? timeseriesQuery.error.message
+                : "Failed to load activity history"
+            }
+            onRetry={() => void timeseriesQuery.refetch()}
+            retrying={timeseriesQuery.isFetching}
+          />
+        ) : (
+          <div className="grid gap-6 xl:grid-cols-2">
+            <article className="border border-edge bg-black p-5">
+              <div className="mb-3 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent-cyan">
+                <FaIcon icon={faRotate} />
+                Sync operations
+              </div>
+              <TimeSeriesChart
+                data={timeseriesQuery.data?.sync}
+                isLoading={timeseriesQuery.isPending}
+                emptyLabel="No sync activity in this window."
+                ariaLabel={`Sync operation outcomes over ${range}`}
+              />
+            </article>
 
-          <article className="flex flex-col border border-edge bg-black p-5">
-            <div className="mb-3 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent-lime">
-              <FaIcon icon={faChartLine} />
-              Build jobs
-            </div>
-            <TimeSeriesChart
-              data={timeseriesQuery.data?.jobs}
-              isLoading={timeseriesQuery.isPending}
-              emptyLabel="No completed builds in this window."
-            />
-          </article>
-        </div>
+            <article className="flex flex-col border border-edge bg-black p-5">
+              <div className="mb-3 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent-lime">
+                <FaIcon icon={faChartLine} />
+                Build jobs
+              </div>
+              <TimeSeriesChart
+                data={timeseriesQuery.data?.jobs}
+                isLoading={timeseriesQuery.isPending}
+                emptyLabel="No completed builds in this window."
+                ariaLabel={`Build job outcomes over ${range}`}
+              />
+            </article>
+          </div>
+        )}
       </section>
 
       {/* Ratio visualizations — point-in-time distributions */}
@@ -144,12 +161,12 @@ function Statistics() {
                 {
                   label: "Succeeded",
                   value: data.syncMetrics.succeeded_24h,
-                  color: "#1FA463",
+                  color: "var(--theme-terminal-green)",
                 },
                 {
                   label: "Failed",
                   value: data.syncMetrics.failed_24h,
-                  color: "#E0383B",
+                  color: "var(--theme-error-red)",
                 },
               ]}
             />
@@ -158,7 +175,7 @@ function Statistics() {
 
         <article className="border border-edge bg-black p-5">
           <h3 className="text-sm font-semibold text-white">
-            Mock chroot cache
+            Mock target lookup
           </h3>
           <div className="mt-3">
             <RatioBar
@@ -171,12 +188,12 @@ function Statistics() {
                 {
                   label: "Miss",
                   value: chrootCache.miss_count,
-                  color: "#FF6B00",
+                  color: "var(--theme-accent-orange)",
                 },
                 {
                   label: "Stale served",
                   value: chrootCache.stale_served_count,
-                  color: "#22D3EE",
+                  color: "var(--theme-accent-cyan)",
                 },
               ]}
             />
@@ -193,12 +210,12 @@ function Statistics() {
                 {
                   label: "Healthy",
                   value: healthyMirrors,
-                  color: "#1FA463",
+                  color: "var(--theme-terminal-green)",
                 },
                 {
                   label: "Stale",
                   value: mirrorCache.stale_mirrors,
-                  color: "#FF6B00",
+                  color: "var(--theme-accent-orange)",
                 },
               ]}
             />
@@ -206,13 +223,17 @@ function Statistics() {
         </article>
       </section>
 
+      <WorkspaceCcacheSection
+        compilerCache={data.cacheStats.compiler_cache}
+      />
+
       {/* Cache detail — one panel at a time */}
       <Tabs
         ariaLabel="Cache details"
         value={cacheTab}
         onChange={setCacheTab}
         items={[
-          { value: "mock", label: "Mock chroot cache" },
+          { value: "mock", label: "Mock target discovery" },
           { value: "git", label: "Git mirror cache" },
         ]}
       >

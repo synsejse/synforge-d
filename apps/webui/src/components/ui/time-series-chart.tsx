@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import type { TimeSeriesPoint, TimeSeriesResponse } from "../../lib/types";
 import LoadingBlock from "./loading-block";
 
@@ -11,6 +11,8 @@ interface Props {
   failedColor?: string;
   /** Message rendered when there are no events at all in the window. */
   emptyLabel?: string;
+  /** Accessible name used by the screen-reader data table. */
+  ariaLabel?: string;
 }
 
 interface ChartRow {
@@ -35,10 +37,12 @@ const MAX_LABELS = 8;
 export default function TimeSeriesChart({
   data,
   isLoading = false,
-  succeededColor = "#1FA463",
-  failedColor = "#E0383B",
+  succeededColor = "var(--theme-terminal-green)",
+  failedColor = "var(--theme-error-red)",
   emptyLabel = "No activity in this window.",
+  ariaLabel = "Activity outcomes over time",
 }: Props) {
+  const captionId = useId();
   const range = data?.range ?? "24h";
 
   const rows = useMemo<ChartRow[]>(() => {
@@ -51,6 +55,8 @@ export default function TimeSeriesChart({
   }, [data, range]);
 
   const total = rows.reduce((sum, r) => sum + r.succeeded + r.failed, 0);
+  const succeededTotal = rows.reduce((sum, row) => sum + row.succeeded, 0);
+  const failedTotal = rows.reduce((sum, row) => sum + row.failed, 0);
 
   if (isLoading) {
     return (
@@ -87,46 +93,75 @@ export default function TimeSeriesChart({
   const labels = bars.filter((_, i) => i % step === 0).map((r) => r.label);
 
   return (
-    <div>
-      <div
-        className="flex items-end gap-[3px] border-b border-l border-edge px-0.5"
-        style={{ height: BAR_HEIGHT }}
-      >
-        {bars.map((r, i) => (
-          <div
-            key={i}
-            className="flex h-full flex-1 flex-col justify-end"
-            title={`${r.label} — ${r.succeeded} succeeded, ${r.failed} failed`}
-          >
-            {r.failed > 0 ? (
-              <div
-                style={{
-                  height: `${(r.failed / max) * 100}%`,
-                  minHeight: 2,
-                  background: failedColor,
-                }}
-              />
-            ) : null}
-            {r.succeeded > 0 ? (
-              <div
-                style={{
-                  height: `${(r.succeeded / max) * 100}%`,
-                  minHeight: 2,
-                  background: succeededColor,
-                }}
-              />
-            ) : null}
-          </div>
-        ))}
+    <figure aria-labelledby={captionId}>
+      <figcaption id={captionId} className="sr-only">
+        {ariaLabel}. {total} total events: {succeededTotal} succeeded and{" "}
+        {failedTotal} failed.
+      </figcaption>
+
+      <div className="mb-3 flex flex-wrap gap-x-5 gap-y-1 font-mono text-xs text-soft">
+        <span>
+          Total <strong className="text-strong">{total}</strong>
+        </span>
+        <span>
+          Succeeded <strong className="text-success">{succeededTotal}</strong>
+        </span>
+        <span>
+          Failed <strong className="text-error">{failedTotal}</strong>
+        </span>
+        <span>
+          Peak / bucket <strong className="text-strong">{max}</strong>
+        </span>
       </div>
 
-      <div className="mt-2 flex justify-between font-mono text-xs leading-none text-[#52525b]">
+      <div aria-hidden="true" className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
+        <div
+          className="relative w-8 font-mono text-xs tabular-nums text-soft"
+          style={{ height: BAR_HEIGHT }}
+        >
+          <span className="absolute right-0 top-0">{max}</span>
+          <span className="absolute bottom-0 right-0">0</span>
+        </div>
+        <div
+          className="flex items-end gap-[3px] border-b border-l border-edge px-0.5"
+          style={{ height: BAR_HEIGHT }}
+        >
+          {bars.map((r, i) => (
+            <div
+              key={i}
+              className="flex h-full flex-1 flex-col justify-end"
+              title={`${r.label} — ${r.succeeded} succeeded, ${r.failed} failed`}
+            >
+              {r.failed > 0 ? (
+                <div
+                  style={{
+                    height: `${(r.failed / max) * 100}%`,
+                    minHeight: 2,
+                    background: failedColor,
+                  }}
+                />
+              ) : null}
+              {r.succeeded > 0 ? (
+                <div
+                  style={{
+                    height: `${(r.succeeded / max) * 100}%`,
+                    minHeight: 2,
+                    background: succeededColor,
+                  }}
+                />
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div aria-hidden="true" className="ml-10 mt-2 flex justify-between font-mono text-xs leading-none text-soft">
         {labels.map((label, i) => (
           <span key={i}>{label}</span>
         ))}
       </div>
 
-      <div className="mt-3.5 flex justify-center gap-[18px] font-mono text-xs font-semibold uppercase leading-none tracking-[0.08em] text-soft">
+      <div aria-hidden="true" className="mt-3.5 flex justify-center gap-[18px] font-mono text-xs font-semibold uppercase leading-none tracking-[0.08em] text-soft">
         <span className="flex items-center gap-1.5">
           <span className="h-[9px] w-[9px]" style={{ background: failedColor }} />
           Failed
@@ -136,7 +171,27 @@ export default function TimeSeriesChart({
           Succeeded
         </span>
       </div>
-    </div>
+
+      <table className="sr-only">
+        <caption>{ariaLabel} data</caption>
+        <thead>
+          <tr>
+            <th scope="col">Time bucket</th>
+            <th scope="col">Succeeded</th>
+            <th scope="col">Failed</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={`${row.label}-${index}`}>
+              <th scope="row">{row.label}</th>
+              <td>{row.succeeded}</td>
+              <td>{row.failed}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </figure>
   );
 }
 

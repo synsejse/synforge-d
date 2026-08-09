@@ -1,5 +1,11 @@
+import { faRotate } from "@fortawesome/free-solid-svg-icons";
+import Button from "../ui/button";
+import FaIcon from "../ui/fa-icon";
+
 interface ErrorMessageProps {
   message: string;
+  onRetry?: () => void;
+  retrying?: boolean;
 }
 
 /**
@@ -7,7 +13,11 @@ interface ErrorMessageProps {
  * displaces and recovers once. Plays once via the synforge-glitch-once
  * CSS class; the keyframe is a no-op when prefers-reduced-motion is set.
  */
-export default function ErrorMessage({ message }: ErrorMessageProps) {
+export default function ErrorMessage({
+  message,
+  onRetry,
+  retrying = false,
+}: ErrorMessageProps) {
   return (
     <div role="alert" className="border border-error bg-black p-4">
       <div className="flex items-center gap-2">
@@ -20,6 +30,18 @@ export default function ErrorMessage({ message }: ErrorMessageProps) {
         />
       </div>
       <p className="mt-2 text-sm text-strong">{message}</p>
+      {onRetry ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onRetry}
+          loading={retrying}
+          className="mt-4 border-error/60 text-error hover:border-error hover:text-error"
+        >
+          {retrying ? null : <FaIcon icon={faRotate} />}
+          {retrying ? "Retrying…" : "Retry"}
+        </Button>
+      ) : null}
     </div>
   );
 }

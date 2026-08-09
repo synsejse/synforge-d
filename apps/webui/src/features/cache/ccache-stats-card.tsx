@@ -81,7 +81,12 @@ export default function CcacheStatsCard({
 
         <div
           className="h-2 border border-edge-strong bg-black"
-          aria-hidden="true"
+          role="progressbar"
+          aria-label={`${title} cacheable hit rate`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={metrics.hitRate == null ? undefined : Math.round(metrics.hitRate)}
+          aria-valuetext={formatCcacheRate(metrics.hitRate)}
         >
           <div
             className="h-full bg-accent-lime transition-[width] duration-500"

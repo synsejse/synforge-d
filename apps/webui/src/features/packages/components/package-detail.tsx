@@ -292,6 +292,8 @@ export default function PackageDetail({ packageName }: Props) {
 
   const buildsTotal = buildsQuery.data?.page.total ?? null;
   const repoFilesTotal = repoFilesQuery.data?.page.total ?? null;
+  const configurationDirty =
+    pristine != null && JSON.stringify(form) !== JSON.stringify(pristine);
 
   return (
     <div className="min-w-0 space-y-6">
@@ -314,38 +316,37 @@ export default function PackageDetail({ packageName }: Props) {
 
       <PackageStatusStrip pkg={packageQuery.data} />
 
-      <PackageEditFormSection
-        form={form}
-        pristine={pristine}
-        maxCpuCores={maxCpuCores}
-        maxMemoryMb={maxMemoryMb}
-        saving={saveMutation.isPending}
-        availableChroots={chrootsQuery.data?.chroots ?? []}
-        showSpecPicker={showSpecPicker}
-        showChrootPicker={showChrootPicker}
-        browsing={browseMutation.isPending}
-        browseError={browseError}
-        selectableFiles={selectableFiles}
-        onSubmit={handleSave}
-        onFormChange={(next) =>
-          setForm((current) => ({
-            ...current,
-            ...next,
-          }))
-        }
-        onToggleChroot={toggleChroot}
-        onOpenSpecPicker={() => setShowSpecPicker(true)}
-        onCloseSpecPicker={() => setShowSpecPicker(false)}
-        onOpenChrootPicker={() => setShowChrootPicker(true)}
-        onCloseChrootPicker={() => setShowChrootPicker(false)}
-        onBrowseRepository={handleBrowse}
-        onDiscard={() => pristine && setForm(pristine)}
-      />
-
       <PackageDetailTabs
         packageName={packageName}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        configurationDirty={configurationDirty}
+        configuration={
+          <PackageEditFormSection
+            form={form}
+            pristine={pristine}
+            maxCpuCores={maxCpuCores}
+            maxMemoryMb={maxMemoryMb}
+            saving={saveMutation.isPending}
+            availableChroots={chrootsQuery.data?.chroots ?? []}
+            showSpecPicker={showSpecPicker}
+            showChrootPicker={showChrootPicker}
+            browsing={browseMutation.isPending}
+            browseError={browseError}
+            selectableFiles={selectableFiles}
+            onSubmit={handleSave}
+            onFormChange={(next) =>
+              setForm((current) => ({ ...current, ...next }))
+            }
+            onToggleChroot={toggleChroot}
+            onOpenSpecPicker={() => setShowSpecPicker(true)}
+            onCloseSpecPicker={() => setShowSpecPicker(false)}
+            onOpenChrootPicker={() => setShowChrootPicker(true)}
+            onCloseChrootPicker={() => setShowChrootPicker(false)}
+            onBrowseRepository={handleBrowse}
+            onDiscard={() => pristine && setForm(pristine)}
+          />
+        }
         buildsLoaded={!buildsQuery.isPending}
         buildsTotal={buildsTotal}
         buildsLoading={buildsQuery.isFetching}

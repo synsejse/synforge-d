@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Tabs from "../../../components/ui/tabs";
 import PackageBuildHistorySection from "./package-build-history-section";
 import PackageRepoFilesSection from "./package-repo-files-section";
@@ -8,12 +9,14 @@ import type {
   PublishedRepoFile,
 } from "../../../lib/types";
 
-export type PackageDetailTab = "builds" | "repo" | "sync";
+export type PackageDetailTab = "builds" | "repo" | "sync" | "configuration";
 
 interface PackageDetailTabsProps {
   packageName: string;
   activeTab: PackageDetailTab;
   onTabChange: (tab: PackageDetailTab) => void;
+  configuration: ReactNode;
+  configurationDirty: boolean;
 
   buildsLoaded: boolean;
   buildsTotal: number | null;
@@ -46,6 +49,8 @@ export default function PackageDetailTabs({
   packageName,
   activeTab,
   onTabChange,
+  configuration,
+  configurationDirty,
   buildsLoaded,
   buildsTotal,
   buildsLoading,
@@ -80,6 +85,10 @@ export default function PackageDetailTabs({
         { value: "builds", label: "Build History", count: buildsTotal },
         { value: "repo", label: "Repository Files", count: repoFilesTotal },
         { value: "sync", label: "Sync History" },
+        {
+          value: "configuration",
+          label: configurationDirty ? "Configuration •" : "Configuration",
+        },
       ]}
     >
       {activeTab === "builds" ? (
@@ -117,6 +126,7 @@ export default function PackageDetailTabs({
       {activeTab === "sync" ? (
         <SyncHistoryTable packageName={packageName} />
       ) : null}
+      {activeTab === "configuration" ? configuration : null}
     </Tabs>
   );
 }

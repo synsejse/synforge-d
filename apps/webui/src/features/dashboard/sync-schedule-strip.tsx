@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { faClock, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faClock } from "@fortawesome/free-solid-svg-icons";
 import { syncQueries } from "../../lib/queries";
+import type { SyncScheduleEntry } from "../../lib/types";
 import { usePageVisible } from "../../components/common/page-visibility-context";
 import EmptyState from "../../components/ui/empty-state";
 import FaIcon from "../../components/ui/fa-icon";
@@ -11,18 +12,9 @@ import LoadingBlock from "../../components/ui/loading-block";
 const SCHEDULE_LIMIT = 10;
 const POLL_INTERVAL_MS = 30_000;
 
-interface ScheduleItem {
-  package_name: string;
-  mock_chroot: string;
-  seconds_until: number;
-  next_eligible_at: string;
-  blocked_by_backoff: boolean;
-  consecutive_failures: number;
-}
-
 /**
  * Dashboard "Up next" widget — leans on /api/v1/sync/schedule. Renders
- * the upcoming sync targets as a horizontal timeline with cards
+ * the upcoming package source polls as a horizontal timeline with cards
  * alternating above and below a single track, ordered left-to-right by
  * time-until. The countdown ticks locally every second using the
  * server's `computed_at` as the anchor — avoids drift across the polling
@@ -90,7 +82,7 @@ function ScheduleTimeline({
   computedAt,
   now,
 }: {
-  items: ScheduleItem[];
+  items: SyncScheduleEntry[];
   computedAt: string;
   now: number;
 }) {
@@ -99,7 +91,7 @@ function ScheduleTimeline({
       <ul className="flex min-w-max items-stretch gap-0">
         {items.map((item) => (
           <ScheduleCard
-            key={`${item.package_name}:${item.mock_chroot}`}
+            key={item.package_name}
             item={item}
             remainingSec={computeRemaining(item, computedAt, now)}
           />
@@ -113,22 +105,11 @@ function ScheduleCard({
   item,
   remainingSec,
 }: {
-  item: ScheduleItem;
+  item: SyncScheduleEntry;
   remainingSec: number;
 }) {
   const overdue = remainingSec <= 0;
-  const blocked = item.blocked_by_backoff;
-  const markerClass = blocked ? "bg-accent-orange" : "bg-accent-lime";
-  const etaClass = blocked
-    ? "text-accent-orange"
-    : overdue
-      ? "text-accent-lime"
-      : "text-accent-lime";
-  const eta = overdue
-    ? blocked
-      ? "blocked"
-      : "due now"
-    : `in ${formatRemaining(remainingSec)}`;
+  const eta = overdue ? "due now" : `in ${formatRemaining(remainingSec)}`;
 
   return (
     <li className="flex w-[148px] shrink-0 flex-col items-start">
@@ -136,25 +117,22 @@ function ScheduleCard({
         to="/packages/view"
         search={{ name: item.package_name }}
         className="group block w-[140px] border border-edge bg-surface-alt px-[11px] py-[9px] transition-colors hover:border-edge-strong"
-        title={`${item.package_name} · ${item.mock_chroot}`}
+        title={`${item.package_name} source poll`}
       >
         <div className="truncate font-mono text-[11px] font-bold leading-none text-white group-hover:text-accent-lime">
           {item.package_name}
         </div>
         <div className="mt-1.5 truncate font-mono text-[9px] leading-none text-[#6b6b73]">
-          {item.mock_chroot}
+          Package source
         </div>
         <div
-          className={`mt-2 flex items-center gap-1 font-mono text-[10px] font-semibold leading-none tabular-nums ${etaClass}`}
+          className="mt-2 flex items-center gap-1 font-mono text-[10px] font-semibold leading-none tabular-nums text-accent-lime"
         >
-          {blocked ? (
-            <FaIcon icon={faTriangleExclamation} className="text-[0.7em]" />
-          ) : null}
           {eta}
         </div>
       </Link>
       <div className="mt-2.5 flex w-[140px] items-center">
-        <span aria-hidden="true" className={`h-2 w-2 shrink-0 ${markerClass}`} />
+        <span aria-hidden="true" className="h-2 w-2 shrink-0 bg-accent-lime" />
         <span aria-hidden="true" className="h-px flex-1 bg-edge" />
       </div>
     </li>

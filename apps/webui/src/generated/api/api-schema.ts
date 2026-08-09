@@ -744,6 +744,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sync/batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_sync_batches"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sync/batches/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_sync_batch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sync/metrics": {
         parameters: {
             query?: never;
@@ -770,6 +802,86 @@ export interface paths {
         get: operations["list_sync_operations"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sync/operations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_sync_operation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sync/operations/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancel_sync_operation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sync/operations/{id}/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_sync_log_manifest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sync/operations/{id}/logs/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stream_sync_logs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sync/operations/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retry_sync_operation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -944,6 +1056,11 @@ export interface components {
              */
             started_at?: string | null;
             status: components["schemas"]["BuildStatus"];
+            /**
+             * Format: uuid
+             * @description Source-sync run that planned this build, when applicable.
+             */
+            sync_operation_id?: string | null;
             trigger: components["schemas"]["BuildTrigger"];
             /** Format: date-time */
             updated_at: string;
@@ -1463,19 +1580,93 @@ export interface components {
             repo_url: string;
             spec_file: string;
         };
+        SyncBatch: {
+            /** Format: int64 */
+            cancelled_packages: number;
+            /** Format: int64 */
+            completed_packages: number;
+            created_at: string;
+            /** Format: int64 */
+            deduplicated_packages: number;
+            /** Format: int64 */
+            enqueue_failed_packages: number;
+            error_message?: string | null;
+            /** Format: int64 */
+            failed_packages: number;
+            finished_at?: string | null;
+            id: string;
+            started_at?: string | null;
+            status: components["schemas"]["SyncBatchStatus"];
+            /** Format: int64 */
+            succeeded_packages: number;
+            /** Format: int64 */
+            total_packages: number;
+            trigger_type: components["schemas"]["SyncTriggerType"];
+            updated_at: string;
+        };
+        SyncBatchDetailResponse: {
+            batch: components["schemas"]["SyncBatch"];
+            operations: components["schemas"]["SyncOperation"][];
+        };
+        SyncBatchListResponse: {
+            batches: components["schemas"]["SyncBatch"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        /** @enum {string} */
+        SyncBatchStatus: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
+        SyncEnqueueResponse: {
+            /**
+             * @description False when this request was deduplicated onto an already active run
+             *     for the same package.
+             */
+            created: boolean;
+            operation: components["schemas"]["SyncOperation"];
+        };
+        /** @enum {string} */
+        SyncEventLevel: "info" | "warning" | "error";
         SyncMetricsResponse: {
             failed_24h: number;
             last_failure_at?: string | null;
             succeeded_24h: number;
         };
         SyncOperation: {
+            batch_id?: string | null;
+            /** Format: int64 */
+            blocked_targets: number;
+            cancellation_requested: boolean;
+            changed?: boolean | null;
             created_at: string;
             error_message?: string | null;
+            finished_at?: string | null;
             id: string;
             package_name: string;
+            previous_revision?: string | null;
+            /** Format: int64 */
+            queued_targets: number;
+            retry_of?: string | null;
             revision?: string | null;
+            /** Format: int64 */
+            skipped_targets: number;
+            stage: components["schemas"]["SyncStage"];
+            started_at?: string | null;
             status: components["schemas"]["SyncStatus"];
+            target_mock_chroot?: string | null;
             trigger_type: components["schemas"]["SyncTriggerType"];
+            updated_at: string;
+        };
+        SyncOperationDetailResponse: {
+            /** @description Builds planned by this sync run. Empty is a normal no-change result. */
+            builds: components["schemas"]["BuildJobResponse"][];
+            events: components["schemas"]["SyncOperationEvent"][];
+            operation: components["schemas"]["SyncOperation"];
+        };
+        SyncOperationEvent: {
+            created_at: string;
+            id: string;
+            level: components["schemas"]["SyncEventLevel"];
+            message: string;
+            stage: components["schemas"]["SyncStage"];
+            sync_operation_id: string;
         };
         SyncOperationListQuery: {
             limit?: number | null;
@@ -1487,22 +1678,9 @@ export interface components {
             operations: components["schemas"]["SyncOperation"][];
             page: components["schemas"]["PageInfo"];
         };
-        /**
-         * @description One scheduled-poll entry returned by `/api/v1/sync/schedule`. Granularity
-         *     is `(package_name, mock_chroot)` — a target may be eligible while another
-         *     target on the same package is sitting in failure backoff.
-         */
+        /** @description One package-level source poll returned by `/api/v1/sync/schedule`. */
         SyncScheduleEntry: {
-            /** @description True if a non-zero `build_failure_backoff` row is gating this target. */
-            blocked_by_backoff: boolean;
-            /**
-             * Format: int32
-             * @description Carried through from `build_failure_backoff` so the UI can show
-             *     "after 3 failed builds" context. Zero when no backoff is active.
-             */
-            consecutive_failures: number;
-            mock_chroot: string;
-            /** @description When this target becomes (or became) eligible to poll. ISO-8601 string. */
+            /** @description When this package source becomes (or became) eligible to poll. */
             next_eligible_at: string;
             package_name: string;
             /**
@@ -1527,7 +1705,9 @@ export interface components {
             page: components["schemas"]["PageInfo"];
         };
         /** @enum {string} */
-        SyncStatus: "succeeded" | "failed";
+        SyncStage: "queued" | "inspecting_source" | "updating_package" | "planning_builds" | "enqueuing_builds" | "completed";
+        /** @enum {string} */
+        SyncStatus: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
         /** @enum {string} */
         SyncTriggerType: "poll" | "manual_refresh" | "manual_rebuild";
         TestRepoSigningResponse: {
@@ -2710,13 +2890,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Queue rebuild */
-            200: {
+            /** @description Queue rebuild sync */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PackageActionResponse"];
+                    "application/json": components["schemas"]["SyncEnqueueResponse"];
                 };
             };
             400: {
@@ -2769,13 +2949,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Queue refresh */
-            200: {
+            /** @description Queue refresh sync */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PackageActionResponse"];
+                    "application/json": components["schemas"]["SyncEnqueueResponse"];
                 };
             };
             400: {
@@ -2873,13 +3053,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Queue rebuild for one target */
-            200: {
+            /** @description Queue rebuild sync for one target */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PackageActionTargetResult"];
+                    "application/json": components["schemas"]["SyncEnqueueResponse"];
                 };
             };
             400: {
@@ -2934,13 +3114,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Queue refresh for one target */
-            200: {
+            /** @description Queue refresh sync for one target */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PackageActionTargetResult"];
+                    "application/json": components["schemas"]["SyncEnqueueResponse"];
                 };
             };
             400: {
@@ -3545,6 +3725,83 @@ export interface operations {
             };
         };
     };
+    list_sync_batches: {
+        parameters: {
+            query?: {
+                limit?: number | null;
+                offset?: number | null;
+                /**
+                 * @description When true, soft-deleted records are included in the result.
+                 *     Defaults to false. Currently consumed by the package-builds
+                 *     listing; harmless on endpoints that don't have a soft-delete
+                 *     concept (they ignore it).
+                 */
+                include_deleted?: boolean | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List refresh-all sync batches */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncBatchListResponse"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    get_sync_batch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Sync batch identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Get a refresh-all batch and its sync runs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncBatchDetailResponse"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     get_sync_metrics: {
         parameters: {
             query?: never;
@@ -3597,6 +3854,209 @@ export interface operations {
                 };
             };
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    get_sync_operation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Sync operation identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Get sync operation, timeline, and builds */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncOperationDetailResponse"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    cancel_sync_operation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Sync operation identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancel a queued or running sync */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncOperation"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    get_sync_log_manifest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Sync operation identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Get available log sources for a sync */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogManifestResponse"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    stream_sync_logs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Sync operation identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Server-sent event stream of sync logs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    retry_sync_operation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Sync operation identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Retry a finished sync operation */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncEnqueueResponse"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -3,10 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import api from "../../../lib/api";
 import { packagesQueries } from "../../../lib/queries";
-import {
-  summarizePackageAction,
-  summarizePackageTargetAction,
-} from "../../../lib/package-actions";
+import { summarizeSyncEnqueue } from "../../../lib/package-actions";
 import ErrorMessage from "../../../components/common/error-message";
 import { useDialogs } from "../../../components/common/dialogs-context";
 import { useToast } from "../../../components/common/toast-context";
@@ -135,7 +132,7 @@ export default function PackageDetail({ packageName }: Props) {
     onSuccess: (response, variables) => {
       toast.success(
         variables.action === "rebuild" ? "Rebuild queued" : "Refresh queued",
-        summarizePackageAction(response),
+        summarizeSyncEnqueue(response),
       );
       void invalidatePackage();
     },
@@ -157,10 +154,7 @@ export default function PackageDetail({ packageName }: Props) {
     onSuccess: (response, variables) => {
       toast.success(
         variables.action === "rebuild" ? "Rebuild queued" : "Refresh queued",
-        summarizePackageTargetAction(
-          response,
-          variables.action === "rebuild" ? "Rebuild" : "Refresh",
-        ),
+        summarizeSyncEnqueue(response),
       );
       void invalidatePackage();
     },

@@ -13,7 +13,7 @@ import api from "../../lib/api";
 import { packagesQueries } from "../../lib/queries";
 
 const route = getRouteApi("/_authed/packages/");
-import { summarizePackageAction } from "../../lib/package-actions";
+import { summarizeSyncEnqueue } from "../../lib/package-actions";
 import AddPackageModal from "./components/add-package-modal";
 import PackageListFilters, {
   type EnabledFilter,
@@ -96,7 +96,7 @@ export default function PackageListPage() {
     onSuccess: (response, variables) => {
       toast.success(
         variables.action === "refresh" ? "Refresh queued" : "Rebuild queued",
-        summarizePackageAction(response),
+        summarizeSyncEnqueue(response),
       );
       void invalidatePackages();
     },

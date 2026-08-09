@@ -112,11 +112,21 @@ export type SessionResponse = ApiSchema["SessionResponse"];
 
 export type SyncTriggerType = ApiSchema["SyncTriggerType"];
 export type SyncStatus = ApiSchema["SyncStatus"];
+export type SyncStage = ApiSchema["SyncStage"];
+export type SyncEventLevel = ApiSchema["SyncEventLevel"];
 export type SyncOperation = ApiSchema["SyncOperation"];
+export type SyncOperationEvent = ApiSchema["SyncOperationEvent"];
 export type SyncOperationListQuery = ApiSchema["SyncOperationListQuery"];
 export type PackageSyncOperationListQuery =
   ApiSchema["PackageSyncOperationListQuery"];
 export type SyncOperationListResponse = ApiSchema["SyncOperationListResponse"];
+export type SyncOperationDetailResponse =
+  ApiSchema["SyncOperationDetailResponse"];
+export type SyncEnqueueResponse = ApiSchema["SyncEnqueueResponse"];
+export type SyncBatchStatus = ApiSchema["SyncBatchStatus"];
+export type SyncBatch = ApiSchema["SyncBatch"];
+export type SyncBatchDetailResponse = ApiSchema["SyncBatchDetailResponse"];
+export type SyncBatchListResponse = ApiSchema["SyncBatchListResponse"];
 export type SyncMetricsResponse = ApiSchema["SyncMetricsResponse"];
 export type SyncScheduleEntry = ApiSchema["SyncScheduleEntry"];
 export type SyncScheduleResponse = ApiSchema["SyncScheduleResponse"];

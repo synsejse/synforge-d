@@ -3,8 +3,6 @@ import type {
   BrowseRepositoryResponse,
   CreatePackageRequest,
   MockChrootListResponse,
-  PackageActionResponse,
-  PackageActionTargetResult,
   PackageBuildHistoryResponse,
   PackageListResponse,
   PackageResponse,
@@ -14,6 +12,7 @@ import type {
   RepoSetupInfoResponse,
   RepoSummaryResponse,
   ServerHardwareResponse,
+  SyncEnqueueResponse,
   UpdatePackageRequest,
 } from "../types";
 import { request } from "./client";
@@ -127,11 +126,11 @@ export function getServerHardware(): Promise<ServerHardwareResponse> {
   return request("GET", "/api/v1/system/hardware");
 }
 
-export function rebuildPackage(name: string): Promise<PackageActionResponse> {
+export function rebuildPackage(name: string): Promise<SyncEnqueueResponse> {
   return request("POST", `/api/v1/packages/${encodeURIComponent(name)}/rebuild`, {});
 }
 
-export function refreshPackage(name: string): Promise<PackageActionResponse> {
+export function refreshPackage(name: string): Promise<SyncEnqueueResponse> {
   return request("POST", `/api/v1/packages/${encodeURIComponent(name)}/refresh`, {});
 }
 
@@ -146,7 +145,7 @@ export function getRefreshAllPackagesProgress(): Promise<RefreshAllPackagesProgr
 export function rebuildPackageTarget(
   name: string,
   mockChroot: string,
-): Promise<PackageActionTargetResult> {
+): Promise<SyncEnqueueResponse> {
   return request(
     "POST",
     `/api/v1/packages/${encodeURIComponent(name)}/targets/${encodeURIComponent(mockChroot)}/rebuild`,
@@ -157,7 +156,7 @@ export function rebuildPackageTarget(
 export function refreshPackageTarget(
   name: string,
   mockChroot: string,
-): Promise<PackageActionTargetResult> {
+): Promise<SyncEnqueueResponse> {
   return request(
     "POST",
     `/api/v1/packages/${encodeURIComponent(name)}/targets/${encodeURIComponent(mockChroot)}/refresh`,

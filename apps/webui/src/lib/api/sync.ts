@@ -1,6 +1,11 @@
 import type {
   CacheStatsResponse,
+  SyncBatchDetailResponse,
+  SyncBatchListResponse,
+  SyncEnqueueResponse,
   SyncMetricsResponse,
+  SyncOperation,
+  SyncOperationDetailResponse,
   SyncOperationListQuery,
   SyncOperationListResponse,
   SyncScheduleResponse,
@@ -41,6 +46,40 @@ export function listPackageSyncOperations(
       params.toString() ? `?${params.toString()}` : ""
     }`,
   );
+}
+
+export function getSyncOperation(id: string): Promise<SyncOperationDetailResponse> {
+  return request("GET", `/api/v1/sync/operations/${encodeURIComponent(id)}`);
+}
+
+export function retrySyncOperation(id: string): Promise<SyncEnqueueResponse> {
+  return request(
+    "POST",
+    `/api/v1/sync/operations/${encodeURIComponent(id)}/retry`,
+    {},
+  );
+}
+
+export function cancelSyncOperation(id: string): Promise<SyncOperation> {
+  return request(
+    "POST",
+    `/api/v1/sync/operations/${encodeURIComponent(id)}/cancel`,
+    {},
+  );
+}
+
+export function listSyncBatches(
+  limit = 25,
+  offset = 0,
+): Promise<SyncBatchListResponse> {
+  return request(
+    "GET",
+    `/api/v1/sync/batches?limit=${limit}&offset=${offset}`,
+  );
+}
+
+export function getSyncBatch(id: string): Promise<SyncBatchDetailResponse> {
+  return request("GET", `/api/v1/sync/batches/${encodeURIComponent(id)}`);
 }
 
 export function getSyncMetrics(): Promise<SyncMetricsResponse> {

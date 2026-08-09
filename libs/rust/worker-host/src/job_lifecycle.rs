@@ -36,7 +36,7 @@ impl JobLifecycle {
     }
 
     #[tracing::instrument(skip_all, fields(job_id = %job_id, container_id = %container_id))]
-    pub async fn mark_running(&self, job_id: Uuid, container_id: &str) -> anyhow::Result<()> {
+    pub async fn mark_running(&self, job_id: Uuid, container_id: &str) -> anyhow::Result<bool> {
         info!("marking build as running");
         self.store
             .set_job_running(job_id, Some(container_id))
@@ -355,7 +355,7 @@ impl JobLifecycle {
 
 #[async_trait::async_trait]
 impl WorkerJobTracker for JobLifecycle {
-    async fn mark_job_running(&self, job_id: Uuid, container_id: &str) -> anyhow::Result<()> {
+    async fn mark_job_running(&self, job_id: Uuid, container_id: &str) -> anyhow::Result<bool> {
         self.mark_running(job_id, container_id).await
     }
 }

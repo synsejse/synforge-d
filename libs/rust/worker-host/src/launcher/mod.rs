@@ -15,7 +15,7 @@ use crate::{WorkerSessionBroker, container::detect_daemon_network};
 
 #[async_trait]
 pub trait WorkerJobTracker: Send + Sync {
-    async fn mark_job_running(&self, job_id: Uuid, container_id: &str) -> anyhow::Result<()>;
+    async fn mark_job_running(&self, job_id: Uuid, container_id: &str) -> anyhow::Result<bool>;
 }
 
 #[derive(Clone)]

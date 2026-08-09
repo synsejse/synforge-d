@@ -97,9 +97,21 @@ impl DockerWorkerLauncher {
             )
             .await
             .with_context(|| format!("failed to start worker container {}", container_id))?;
-        self.lifecycle
+        let marked_running = match self
+            .lifecycle
             .mark_job_running(payload.job_id, &container_id)
-            .await?;
+            .await
+        {
+            Ok(marked_running) => marked_running,
+            Err(error) => {
+                self.force_remove_container(&container_id).await;
+                return Err(error);
+            }
+        };
+        if !marked_running {
+            self.force_remove_container(&container_id).await;
+            anyhow::bail!("job {} is no longer pending", payload.job_id);
+        }
         info!(
             job_id = %payload.job_id,
             container_id = %container_id,

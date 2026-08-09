@@ -30,20 +30,22 @@ pub trait JobStore: Send + Sync {
         mock_chroot: &str,
     ) -> anyhow::Result<bool>;
 
-    async fn insert_job(&self, job: &BuildJob) -> anyhow::Result<()>;
+    /// Atomically reserve a target by inserting a pending job. Returns
+    /// `false` when another pending/running job already owns the target.
+    async fn insert_job(&self, job: &BuildJob) -> anyhow::Result<bool>;
 
     async fn set_job_running(
         &self,
         job_id: Uuid,
         worker_container_id: Option<&str>,
-    ) -> anyhow::Result<()>;
+    ) -> anyhow::Result<bool>;
 
     async fn reset_job_for_retry(
         &self,
         job_id: Uuid,
         trigger: BuildTrigger,
         revision: &str,
-    ) -> anyhow::Result<()>;
+    ) -> anyhow::Result<bool>;
 
     async fn update_build_failure_backoff(
         &self,

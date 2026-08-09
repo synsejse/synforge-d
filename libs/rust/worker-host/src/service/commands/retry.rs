@@ -8,7 +8,7 @@ use uuid::Uuid;
 use super::{
     ActiveTargetBuildReader, BuildJobReader, BuildQueue, ExistingSourceSyncer,
     PackageDefinitionReader, QueuedBuildRequest, RetryBuildCleaner, RetryJobResetter,
-    sync_trigger_from_build_trigger,
+    RetryPublishedFilesReader, sync_trigger_from_build_trigger,
 };
 
 pub async fn retry_job<D>(deps: &D, job_id: Uuid) -> anyhow::Result<BuildJobResponse>
@@ -17,6 +17,7 @@ where
         + PackageDefinitionReader
         + ExistingSourceSyncer
         + ActiveTargetBuildReader
+        + RetryPublishedFilesReader
         + RetryBuildCleaner
         + RetryJobResetter
         + BuildQueue
@@ -46,17 +47,33 @@ where
         )));
     }
 
-    deps.cleanup_retry_build(job_id).await?;
-    deps.reset_job_for_retry(job_id, trigger, &revision.comparison_key())
-        .await?;
-    deps.enqueue_build(QueuedBuildRequest {
+    let published_files = deps.get_retry_published_files(job_id).await?;
+    if !deps
+        .reset_job_for_retry(job_id, trigger, &revision.comparison_key())
+        .await?
+    {
+        return Err(anyhow::anyhow!(SynforgeError::Conflict(
+            "retry target is already queued or running".to_string(),
+        )));
+    }
+
+    if let Err(error) = deps.cleanup_retry_build(job_id, &published_files).await {
+        let message = format!("failed to clean reserved retry: {error}");
+        deps.cancel_job_retry(job_id, &message).await?;
+        return Err(error);
+    }
+    let queued = QueuedBuildRequest {
         package,
         mock_chroot: job.job.mock_chroot.clone(),
         revision,
         trigger,
         job_id,
-    })
-    .await?;
+    };
+    if let Err(error) = deps.enqueue_build(queued).await {
+        let message = format!("failed to enqueue reserved retry: {error}");
+        deps.cancel_job_retry(job_id, &message).await?;
+        return Err(error);
+    }
 
     deps.get_build_job(job_id).await
 }

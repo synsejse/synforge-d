@@ -18,7 +18,7 @@ impl JobStore for DieselStore {
         job::has_active_job_for_target(self, package_name, mock_chroot).await
     }
 
-    async fn insert_job(&self, job: &BuildJob) -> anyhow::Result<()> {
+    async fn insert_job(&self, job: &BuildJob) -> anyhow::Result<bool> {
         job::insert_job(self, job).await
     }
 
@@ -26,7 +26,7 @@ impl JobStore for DieselStore {
         &self,
         job_id: Uuid,
         worker_container_id: Option<&str>,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<bool> {
         job::set_job_running(self, job_id, worker_container_id).await
     }
 
@@ -35,7 +35,7 @@ impl JobStore for DieselStore {
         job_id: Uuid,
         trigger: BuildTrigger,
         revision: &str,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<bool> {
         job::reset_job_for_retry(self, job_id, trigger, revision).await
     }
 

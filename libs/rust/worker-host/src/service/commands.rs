@@ -3,7 +3,7 @@
 use async_trait::async_trait;
 use synforge_core::{
     api::BuildJobResponse,
-    model::{BuildJob, BuildTrigger},
+    model::{BuildJob, BuildTrigger, PublishedRepoFile},
     package::{PackageDefinition, SpecRevision},
     sync::SyncTriggerType,
 };
@@ -69,7 +69,8 @@ pub trait TargetBuildBackoffReader {
 
 #[async_trait]
 pub trait BuildJobWriter {
-    async fn insert_build_job(&self, job: &BuildJob) -> anyhow::Result<()>;
+    async fn insert_build_job(&self, job: &BuildJob) -> anyhow::Result<bool>;
+    async fn cancel_build_job(&self, job_id: Uuid, message: &str) -> anyhow::Result<()>;
 }
 
 #[async_trait]
@@ -93,7 +94,19 @@ pub trait ExistingSourceSyncer {
 
 #[async_trait]
 pub trait RetryBuildCleaner {
-    async fn cleanup_retry_build(&self, job_id: Uuid) -> anyhow::Result<()>;
+    async fn cleanup_retry_build(
+        &self,
+        job_id: Uuid,
+        published_files: &[PublishedRepoFile],
+    ) -> anyhow::Result<()>;
+}
+
+#[async_trait]
+pub trait RetryPublishedFilesReader {
+    async fn get_retry_published_files(
+        &self,
+        job_id: Uuid,
+    ) -> anyhow::Result<Vec<PublishedRepoFile>>;
 }
 
 #[async_trait]
@@ -103,7 +116,8 @@ pub trait RetryJobResetter {
         job_id: Uuid,
         trigger: BuildTrigger,
         revision: &str,
-    ) -> anyhow::Result<()>;
+    ) -> anyhow::Result<bool>;
+    async fn cancel_job_retry(&self, job_id: Uuid, message: &str) -> anyhow::Result<()>;
 }
 
 pub(super) fn sync_trigger_from_build_trigger(trigger: BuildTrigger) -> SyncTriggerType {

@@ -14,7 +14,7 @@ use synforge_git_sync::RuntimeGitRegistryAdapter;
 use synforge_worker_host::{
     ActiveTargetBuildReader, BuildJobReader, BuildQueue, DockerWorkerLauncher,
     ExistingSourceSyncer, JobLifecycle, PackageDefinitionReader, QueuedBuild, QueuedBuildRequest,
-    RetryBuildCleaner, RetryJobResetter, WorkerBuildQueue,
+    RetryBuildCleaner, RetryJobResetter, RetryPublishedFilesReader, WorkerBuildQueue,
 };
 use tokio::sync::mpsc;
 use uuid::Uuid;
@@ -74,13 +74,26 @@ impl ActiveTargetBuildReader for JobRetryDeps {
 
 #[async_trait]
 impl RetryBuildCleaner for JobRetryDeps {
-    async fn cleanup_retry_build(&self, job_id: Uuid) -> anyhow::Result<()> {
-        let published_files = self.load_published_repo_files_for_job(job_id).await?;
+    async fn cleanup_retry_build(
+        &self,
+        job_id: Uuid,
+        published_files: &[synforge_core::model::PublishedRepoFile],
+    ) -> anyhow::Result<()> {
         self.lifecycle
-            .remove_published_files(&published_files)
+            .remove_published_files(published_files)
             .await?;
         self.worker_launcher.cleanup_session(job_id);
         self.cleanup_retry_runtime_dirs(job_id).await
+    }
+}
+
+#[async_trait]
+impl RetryPublishedFilesReader for JobRetryDeps {
+    async fn get_retry_published_files(
+        &self,
+        job_id: Uuid,
+    ) -> anyhow::Result<Vec<synforge_core::model::PublishedRepoFile>> {
+        self.load_published_repo_files_for_job(job_id).await
     }
 }
 
@@ -91,8 +104,23 @@ impl RetryJobResetter for JobRetryDeps {
         job_id: Uuid,
         trigger: BuildTrigger,
         revision: &str,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<bool> {
         self.reset_retry_job(job_id, trigger, revision).await
+    }
+
+    async fn cancel_job_retry(&self, job_id: Uuid, message: &str) -> anyhow::Result<()> {
+        let _ = self
+            .store
+            .finish_job(
+                job_id,
+                synforge_core::model::BuildStatus::Failed,
+                Some(message),
+                &[],
+                &[],
+                &[],
+            )
+            .await?;
+        Ok(())
     }
 }
 
@@ -117,7 +145,7 @@ impl JobRetryDeps {
             async fn load_published_repo_files_for_job(&self, job_id: Uuid) -> anyhow::Result<Vec<synforge_core::model::PublishedRepoFile>>;
 
             #[call(reset_job_for_retry)]
-            async fn reset_retry_job(&self, job_id: Uuid, trigger: BuildTrigger, revision: &str) -> anyhow::Result<()>;
+            async fn reset_retry_job(&self, job_id: Uuid, trigger: BuildTrigger, revision: &str) -> anyhow::Result<bool>;
 
             #[call(has_active_job_for_target)]
             async fn target_has_active_job(&self, package_name: &str, mock_chroot: &str) -> anyhow::Result<bool>;

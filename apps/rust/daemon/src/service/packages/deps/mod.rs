@@ -172,7 +172,7 @@ impl DaemonPackageDeps {
         ))
     }
 
-    pub(super) async fn save_build_job(&self, job: &BuildJob) -> anyhow::Result<()> {
+    pub(super) async fn save_build_job(&self, job: &BuildJob) -> anyhow::Result<bool> {
         self.store.insert_job(job).await
     }
 

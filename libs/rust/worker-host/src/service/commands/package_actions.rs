@@ -19,9 +19,13 @@ use super::{
 struct PackageActionPlan {
     package_name: String,
     trigger: BuildTrigger,
-    jobs: Vec<BuildJob>,
-    queued_builds: Vec<QueuedBuildRequest>,
+    builds: Vec<PlannedBuild>,
     results: Vec<PackageActionTargetResult>,
+}
+
+struct PlannedBuild {
+    job: BuildJob,
+    queued: QueuedBuildRequest,
 }
 
 pub async fn trigger_package_action<D>(
@@ -45,13 +49,7 @@ where
 {
     let package = deps.get_package_definition(package_name).await?;
     let plan = prepare_package_action(deps, package, None, trigger, force).await?;
-
-    for job in &plan.jobs {
-        deps.insert_build_job(job).await?;
-    }
-    for queued in plan.queued_builds {
-        deps.enqueue_build(queued).await?;
-    }
+    let plan = reserve_and_enqueue_builds(deps, plan).await?;
 
     Ok(PackageActionResponse {
         package_name: plan.package_name,
@@ -82,13 +80,7 @@ where
 {
     let package = deps.get_package_definition(package_name).await?;
     let plan = prepare_package_action(deps, package, Some(mock_chroot), trigger, force).await?;
-
-    for job in &plan.jobs {
-        deps.insert_build_job(job).await?;
-    }
-    for queued in plan.queued_builds {
-        deps.enqueue_build(queued).await?;
-    }
+    let plan = reserve_and_enqueue_builds(deps, plan).await?;
 
     plan.results
         .into_iter()
@@ -99,6 +91,44 @@ where
                 mock_chroot, package_name
             )))
         })
+}
+
+async fn reserve_and_enqueue_builds<D>(
+    deps: &D,
+    mut plan: PackageActionPlan,
+) -> anyhow::Result<PackageActionPlan>
+where
+    D: BuildJobWriter + BuildQueue + Send + Sync,
+{
+    for planned in std::mem::take(&mut plan.builds) {
+        let revision = planned.job.revision.clone();
+        if !deps.insert_build_job(&planned.job).await? {
+            plan.results.push(PackageActionTargetResult {
+                package_name: planned.job.package_name,
+                mock_chroot: planned.job.mock_chroot,
+                disposition: PackageActionDisposition::Blocked,
+                reason: Some("pending_or_running".to_string()),
+                job_id: None,
+                revision: Some(revision),
+            });
+            continue;
+        }
+
+        if let Err(error) = deps.enqueue_build(planned.queued).await {
+            let message = format!("failed to enqueue reserved build: {error}");
+            deps.cancel_build_job(planned.job.id, &message).await?;
+            return Err(error);
+        }
+        plan.results.push(PackageActionTargetResult {
+            package_name: planned.job.package_name,
+            mock_chroot: planned.job.mock_chroot,
+            disposition: PackageActionDisposition::Queued,
+            reason: None,
+            job_id: Some(planned.job.id),
+            revision: Some(revision),
+        });
+    }
+    Ok(plan)
 }
 
 async fn prepare_package_action<D>(
@@ -223,8 +253,7 @@ where
     deps.upsert_package_definition(&updated_package).await?;
 
     let now = now_utc();
-    let mut jobs = Vec::new();
-    let mut queued_builds = Vec::new();
+    let mut builds = Vec::new();
     for mock_chroot in queued_chroots {
         parse_mock_chroot(&mock_chroot)
             .ok_or_else(|| anyhow::anyhow!("invalid mock chroot {}", mock_chroot))?;
@@ -246,29 +275,24 @@ where
             error_message: None,
             deleted_at: None,
         };
-        queued_builds.push(QueuedBuildRequest {
+        let queued = QueuedBuildRequest {
             package: updated_package.clone(),
             mock_chroot,
             revision: inspected.revision.clone(),
             trigger,
             job_id,
-        });
-        results.push(PackageActionTargetResult {
-            package_name: updated_package.name.clone(),
-            mock_chroot: job.mock_chroot.clone(),
-            disposition: PackageActionDisposition::Queued,
-            reason: None,
-            job_id: Some(job_id),
-            revision: Some(revision_key.clone()),
-        });
-        jobs.push(job);
+        };
+        builds.push(PlannedBuild { job, queued });
     }
 
     Ok(PackageActionPlan {
         package_name: updated_package.name,
         trigger,
-        jobs,
-        queued_builds,
+        builds,
         results,
     })
 }
+
+#[cfg(test)]
+#[path = "package_actions_tests.rs"]
+mod tests;

@@ -19,8 +19,8 @@ use tracing::{info, warn};
 use super::commands::{
     ActiveTargetBuildReader, BuildJobReader, BuildJobWriter, BuildQueue, ExistingSourceSyncer,
     LastSuccessfulRevisionReader, PackageDefinitionCatalog, PackageDefinitionReader,
-    RetryBuildCleaner, RetryJobResetter, TargetBuildBackoffReader, TrackedSourceInspector,
-    retry_job, trigger_package_action, trigger_target_action,
+    RetryBuildCleaner, RetryJobResetter, RetryPublishedFilesReader, TargetBuildBackoffReader,
+    TrackedSourceInspector, retry_job, trigger_package_action, trigger_target_action,
 };
 
 #[derive(Debug, Clone)]
@@ -143,6 +143,7 @@ impl BuildService {
             + PackageDefinitionReader
             + ExistingSourceSyncer
             + ActiveTargetBuildReader
+            + RetryPublishedFilesReader
             + RetryBuildCleaner
             + RetryJobResetter
             + BuildQueue

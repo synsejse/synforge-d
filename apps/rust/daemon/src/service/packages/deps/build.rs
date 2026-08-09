@@ -5,6 +5,7 @@ use synforge_core::{
     model::{BuildJob, PublishedRepoFile},
     package::PackageDefinition,
 };
+use synforge_database::JobStore;
 use synforge_git_sync::{
     EnabledPackageCatalog, PackageBuildHistoryReader, PackageDefinitionWriter,
     PackageDeletionJobReader, PackageDeletionRunner, PackageLookup,
@@ -128,8 +129,23 @@ impl TargetBuildBackoffReader for DaemonPackageDeps {
 
 #[async_trait]
 impl BuildJobWriter for DaemonPackageDeps {
-    async fn insert_build_job(&self, job: &BuildJob) -> anyhow::Result<()> {
+    async fn insert_build_job(&self, job: &BuildJob) -> anyhow::Result<bool> {
         self.save_build_job(job).await
+    }
+
+    async fn cancel_build_job(&self, job_id: Uuid, message: &str) -> anyhow::Result<()> {
+        let _ = self
+            .store
+            .finish_job(
+                job_id,
+                synforge_core::model::BuildStatus::Failed,
+                Some(message),
+                &[],
+                &[],
+                &[],
+            )
+            .await?;
+        Ok(())
     }
 }
 

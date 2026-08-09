@@ -2,7 +2,12 @@ use diesel_async::{AsyncConnection, RunQueryDsl};
 
 use super::super::*;
 
-pub(in crate::db) async fn insert_job(store: &DieselStore, job: &BuildJob) -> anyhow::Result<()> {
+const ACTIVE_TARGET_UNIQUE_INDEX: &str = "uq_build_jobs_active_target";
+
+pub(in crate::db) async fn insert_job(store: &DieselStore, job: &BuildJob) -> anyhow::Result<bool> {
+    if job.status != BuildStatus::Pending {
+        anyhow::bail!("new build job {} must be pending", job.id);
+    }
     let job = job.clone();
     let mut conn = store.get_connection().await?;
     let spec_file = job.spec_file.to_string_lossy().to_string();
@@ -22,40 +27,43 @@ pub(in crate::db) async fn insert_job(store: &DieselStore, job: &BuildJob) -> an
         signed_at: job.signed_at,
         error_message: job.error_message.as_deref(),
     };
-    diesel::insert_into(build_jobs::table)
+    let inserted = diesel::insert_into(build_jobs::table)
         .values(&new_job)
         .execute(&mut conn)
-        .await?;
-    Ok(())
+        .await;
+    match inserted {
+        Ok(1) => Ok(true),
+        Ok(_) => Ok(false),
+        Err(error) if is_active_target_conflict(&error) => Ok(false),
+        Err(error) => Err(error.into()),
+    }
 }
 
 pub(in crate::db) async fn set_job_running(
     store: &DieselStore,
     job_id: Uuid,
     worker_container_id: Option<&str>,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<bool> {
     let now = now_utc();
     let worker_container_id = worker_container_id.map(ToOwned::to_owned);
     let mut conn = store.get_connection().await?;
-    // Single atomic UPDATE: stamp started_at only on the row's first
-    // transition to Running (COALESCE keeps an existing value, e.g. for a
-    // job retried mid-run), while always advancing status / worker /
-    // updated_at. Collapsing the prior pair of conditional UPDATEs avoids
-    // the non-transactional window between them.
-    diesel::update(build_jobs::table.find(job_id))
-        .set((
-            build_jobs::status.eq(BuildStatus::Running),
-            build_jobs::updated_at.eq(now),
-            build_jobs::worker_container_id.eq(worker_container_id.as_deref()),
-            build_jobs::started_at.eq(diesel::dsl::sql::<
-                diesel::sql_types::Nullable<diesel::sql_types::Timestamptz>,
-            >("COALESCE(started_at, ")
-            .bind::<diesel::sql_types::Timestamptz, _>(now)
-            .sql(")")),
-        ))
-        .execute(&mut conn)
-        .await?;
-    Ok(())
+    // Compare-and-set prevents a late launcher from resurrecting a job that
+    // was killed or otherwise finalized while its container was starting.
+    let updated = diesel::update(
+        build_jobs::table
+            .find(job_id)
+            .filter(build_jobs::status.eq(BuildStatus::Pending))
+            .filter(build_jobs::deleted_at.is_null()),
+    )
+    .set((
+        build_jobs::status.eq(BuildStatus::Running),
+        build_jobs::updated_at.eq(now),
+        build_jobs::worker_container_id.eq(worker_container_id.as_deref()),
+        build_jobs::started_at.eq(Some(now)),
+    ))
+    .execute(&mut conn)
+    .await?;
+    Ok(updated == 1)
 }
 
 pub(in crate::db) async fn reset_job_for_retry(
@@ -63,32 +71,22 @@ pub(in crate::db) async fn reset_job_for_retry(
     job_id: Uuid,
     trigger: BuildTrigger,
     revision: &str,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<bool> {
     let revision = revision.to_string();
     let now = now_utc();
     let mut conn = store.get_connection().await?;
-    conn.transaction::<(), anyhow::Error, _>(async |conn| {
-        diesel::delete(
-            published_repo_files::table.filter(
-                published_repo_files::artifact_id.eq_any(
-                    build_artifacts::table
-                        .filter(build_artifacts::job_id.eq(job_id))
-                        .select(build_artifacts::id),
-                ),
-            ),
-        )
-        .execute(conn)
-        .await?;
-
-        diesel::delete(build_artifacts::table.filter(build_artifacts::job_id.eq(job_id)))
-            .execute(conn)
-            .await?;
-
-        diesel::delete(build_logs::table.filter(build_logs::job_id.eq(job_id)))
-            .execute(conn)
-            .await?;
-
-        diesel::update(build_jobs::table.find(job_id))
+    let reset = conn
+        .transaction::<bool, diesel::result::Error, _>(async |conn| {
+            let updated = diesel::update(
+                build_jobs::table
+                    .find(job_id)
+                    .filter(build_jobs::status.eq_any([
+                        BuildStatus::Succeeded,
+                        BuildStatus::Failed,
+                        BuildStatus::TimedOut,
+                    ]))
+                    .filter(build_jobs::deleted_at.is_null()),
+            )
             .set((
                 build_jobs::trigger.eq(trigger),
                 build_jobs::revision.eq(revision.as_str()),
@@ -102,10 +100,48 @@ pub(in crate::db) async fn reset_job_for_retry(
             ))
             .execute(conn)
             .await?;
-        Ok(())
-    })
-    .await?;
-    Ok(())
+            if updated == 0 {
+                return Ok(false);
+            }
+
+            diesel::delete(
+                published_repo_files::table.filter(
+                    published_repo_files::artifact_id.eq_any(
+                        build_artifacts::table
+                            .filter(build_artifacts::job_id.eq(job_id))
+                            .select(build_artifacts::id),
+                    ),
+                ),
+            )
+            .execute(conn)
+            .await?;
+
+            diesel::delete(build_artifacts::table.filter(build_artifacts::job_id.eq(job_id)))
+                .execute(conn)
+                .await?;
+
+            diesel::delete(build_logs::table.filter(build_logs::job_id.eq(job_id)))
+                .execute(conn)
+                .await?;
+
+            Ok(true)
+        })
+        .await;
+    match reset {
+        Ok(reset) => Ok(reset),
+        Err(error) if is_active_target_conflict(&error) => Ok(false),
+        Err(error) => Err(error.into()),
+    }
+}
+
+fn is_active_target_conflict(error: &diesel::result::Error) -> bool {
+    matches!(
+        error,
+        diesel::result::Error::DatabaseError(
+            diesel::result::DatabaseErrorKind::UniqueViolation,
+            info,
+        ) if info.constraint_name() == Some(ACTIVE_TARGET_UNIQUE_INDEX)
+    )
 }
 
 pub(in crate::db) async fn finish_job(

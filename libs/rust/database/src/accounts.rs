@@ -30,15 +30,11 @@ impl AccountService {
     }
 
     pub async fn is_bootstrap_admin_user(&self, user_id: Uuid) -> anyhow::Result<bool> {
-        let users = self.users.list_users().await?;
-        let Some(first_user) = users
-            .iter()
-            .min_by_key(|summary| summary.user.created_at)
-            .map(|summary| &summary.user)
-        else {
-            return Ok(false);
-        };
-        Ok(first_user.id == user_id)
+        Ok(self
+            .users
+            .get_bootstrap_admin()
+            .await?
+            .is_some_and(|summary| summary.user.id == user_id))
     }
 
     pub async fn authenticate_user(
@@ -138,17 +134,33 @@ impl AccountService {
         validate_user_handle(handle)?;
         validate_display_name(display_name)?;
         validate_password(password)?;
+        if let Some(existing) = self.users.get_bootstrap_admin().await? {
+            if existing.user.handle != handle {
+                anyhow::bail!("setup retry must use the existing initial admin handle");
+            }
+            let auth = self
+                .users
+                .get_user_auth_by_handle(handle)
+                .await?
+                .ok_or_else(|| anyhow::anyhow!("initial admin authentication record is missing"))?;
+            if !verify_password(&auth.password_hash, password)? {
+                anyhow::bail!("setup retry credentials do not match the existing initial admin");
+            }
+            return Ok(UserResponse {
+                user: existing.user,
+                metrics: existing.metrics,
+            });
+        }
         if self.users.user_count().await? > 0 {
-            anyhow::bail!("initial admin already exists");
+            anyhow::bail!("initial admin cannot be created because users already exist");
         }
         let password_hash = hash_password(password)?;
         let summary = self
             .users
-            .create_user(
+            .create_bootstrap_admin(
                 handle,
                 display_name,
                 &password_hash,
-                true,
                 &[
                     UserPermission::Read,
                     UserPermission::Write,
@@ -223,6 +235,9 @@ impl AccountService {
         let user_count = self.users.user_count().await?;
         if user_count <= 1 {
             anyhow::bail!("cannot delete the last user");
+        }
+        if self.is_bootstrap_admin_user(user_id).await? {
+            anyhow::bail!("cannot delete the initial admin user");
         }
         let summary = self
             .users

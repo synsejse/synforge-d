@@ -15,7 +15,6 @@ use synforge_core::{
 };
 use synforge_database::DieselStore;
 use synforge_database::runtime_settings::PostgresRuntimeSettingsStore;
-use synforge_database::users::PostgresUserStore;
 use synforge_publish::RepoSigningManager;
 
 use super::SynforgeService;
@@ -28,17 +27,6 @@ pub(crate) async fn load_effective_daemon_config_from_store(
     let runtime_settings = PostgresRuntimeSettingsStore::new(store.clone());
     let dynamic_settings = runtime_settings.list().await?;
     apply_live_config_settings(&mut current, &dynamic_settings)?;
-    let mut updates = BTreeMap::new();
-    if !current.bootstrap_completed && PostgresUserStore::new(store.clone()).user_count().await? > 0
-    {
-        current.bootstrap_completed = true;
-        updates.insert("bootstrap_completed".to_string(), Value::Bool(true));
-    } else if current.bootstrap_completed && !dynamic_settings.contains_key("bootstrap_completed") {
-        updates.insert("bootstrap_completed".to_string(), Value::Bool(true));
-    }
-    if !updates.is_empty() {
-        runtime_settings.upsert(updates).await?;
-    }
     current
         .validate()
         .map_err(|error| anyhow::anyhow!(error.to_string()))?;
@@ -146,13 +134,6 @@ impl SynforgeService {
         config
             .validate()
             .map_err(|error| anyhow::anyhow!(error.to_string()))?;
-        if PostgresUserStore::new(self.store.clone())
-            .user_count()
-            .await?
-            > 0
-        {
-            anyhow::bail!("initial admin cannot be created because users already exist");
-        }
         self.bootstrap_admin(&admin.handle, &admin.display_name, &admin.password)
             .await?;
         let mut runtime_settings = daemon_config_runtime_settings(&config);
@@ -194,13 +175,16 @@ impl SynforgeService {
             config.signing_enabled = false;
             config.signing_key_id = None;
         }
-        config.bootstrap_completed = true;
-        runtime_settings.insert("bootstrap_completed".to_string(), Value::Bool(true));
-        PostgresRuntimeSettingsStore::new(self.store.clone())
-            .upsert(runtime_settings)
-            .await?;
+        let runtime_settings_store = PostgresRuntimeSettingsStore::new(self.store.clone());
+        runtime_settings_store.upsert(runtime_settings).await?;
         signing_manager
             .reconcile_repo_metadata_signature(&config, config.runtime_paths().repo_dir())
+            .await?;
+        runtime_settings_store
+            .upsert(BTreeMap::from([(
+                "bootstrap_completed".to_string(),
+                Value::Bool(true),
+            )]))
             .await?;
         self.effective_config().await
     }

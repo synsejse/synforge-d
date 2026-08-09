@@ -14,6 +14,7 @@ pub trait UserStore: Send + Sync {
         offset: usize,
     ) -> anyhow::Result<Vec<UserSummary>>;
     async fn get_user(&self, user_id: Uuid) -> anyhow::Result<Option<UserSummary>>;
+    async fn get_bootstrap_admin(&self) -> anyhow::Result<Option<UserSummary>>;
     async fn get_user_by_handle(&self, handle: &str) -> anyhow::Result<Option<UserSummary>>;
     async fn get_user_auth_by_handle(&self, handle: &str)
     -> anyhow::Result<Option<UserAuthRecord>>;
@@ -24,6 +25,7 @@ pub trait UserStore: Send + Sync {
         display_name: &str,
         password_hash: &str,
         active: bool,
+        is_bootstrap_admin: bool,
         permissions: &[UserPermission],
     ) -> anyhow::Result<UserSummary>;
 

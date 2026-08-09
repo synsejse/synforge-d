@@ -26,6 +26,7 @@ pub(crate) struct NewUserRecord<'a> {
     pub(crate) display_name: &'a str,
     pub(crate) password_hash: &'a str,
     pub(crate) active: bool,
+    pub(crate) is_bootstrap_admin: bool,
     pub(crate) created_at: OffsetDateTime,
     pub(crate) updated_at: OffsetDateTime,
 }

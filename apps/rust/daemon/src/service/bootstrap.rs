@@ -1,12 +1,9 @@
-use std::collections::BTreeMap;
-
 use serde_json::Value;
 use synforge_core::config::{
     DaemonConfig, RUNTIME_SETTING_SIGNING_PRIVATE_KEY_ARMORED, apply_config_settings,
 };
 use synforge_database::DieselStore;
 use synforge_database::runtime_settings::PostgresRuntimeSettingsStore;
-use synforge_database::users::PostgresUserStore;
 use synforge_publish::RepoSigningManager;
 
 pub(crate) async fn apply_startup_runtime_overrides(
@@ -16,17 +13,6 @@ pub(crate) async fn apply_startup_runtime_overrides(
     let runtime_settings = PostgresRuntimeSettingsStore::new(store.clone());
     let settings = runtime_settings.list().await?;
     apply_config_settings(config, &settings, true)?;
-    let mut updates = BTreeMap::new();
-    if !config.bootstrap_completed && PostgresUserStore::new(store.clone()).user_count().await? > 0
-    {
-        config.bootstrap_completed = true;
-        updates.insert("bootstrap_completed".to_string(), Value::Bool(true));
-    } else if config.bootstrap_completed && !settings.contains_key("bootstrap_completed") {
-        updates.insert("bootstrap_completed".to_string(), Value::Bool(true));
-    }
-    if !updates.is_empty() {
-        runtime_settings.upsert(updates).await?;
-    }
     config
         .validate()
         .map_err(|error| anyhow::anyhow!(error.to_string()))?;
@@ -56,7 +42,7 @@ pub(crate) async fn apply_startup_runtime_overrides(
         .await?;
     if config.signing_key_id.as_deref() != Some(imported.key_id.as_str()) {
         config.signing_key_id = Some(imported.key_id.clone());
-        let mut updates = BTreeMap::new();
+        let mut updates = std::collections::BTreeMap::new();
         updates.insert("signing_key_id".to_string(), Value::String(imported.key_id));
         runtime_settings.upsert(updates).await?;
     }

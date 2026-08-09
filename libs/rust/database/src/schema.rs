@@ -101,6 +101,7 @@ diesel::table! {
         display_name -> Text,
         password_hash -> Text,
         active -> Bool,
+        is_bootstrap_admin -> Bool,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
     }

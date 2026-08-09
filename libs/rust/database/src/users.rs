@@ -34,6 +34,10 @@ impl PostgresUserStore {
         self.store.get_user(user_id).await
     }
 
+    pub async fn get_bootstrap_admin(&self) -> anyhow::Result<Option<UserSummary>> {
+        self.store.get_bootstrap_admin().await
+    }
+
     pub async fn get_user_by_handle(&self, handle: &str) -> anyhow::Result<Option<UserSummary>> {
         self.store.get_user_by_handle(handle).await
     }
@@ -54,7 +58,26 @@ impl PostgresUserStore {
         permissions: &[UserPermission],
     ) -> anyhow::Result<UserSummary> {
         self.store
-            .create_user(handle, display_name, password_hash, active, permissions)
+            .create_user(
+                handle,
+                display_name,
+                password_hash,
+                active,
+                false,
+                permissions,
+            )
+            .await
+    }
+
+    pub async fn create_bootstrap_admin(
+        &self,
+        handle: &str,
+        display_name: &str,
+        password_hash: &str,
+        permissions: &[UserPermission],
+    ) -> anyhow::Result<UserSummary> {
+        self.store
+            .create_user(handle, display_name, password_hash, true, true, permissions)
             .await
     }
 

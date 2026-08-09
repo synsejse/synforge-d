@@ -22,6 +22,10 @@ impl UserStore for DieselStore {
         user::get_user(self, user_id).await
     }
 
+    async fn get_bootstrap_admin(&self) -> anyhow::Result<Option<UserSummary>> {
+        user::get_bootstrap_admin(self).await
+    }
+
     async fn get_user_by_handle(&self, handle: &str) -> anyhow::Result<Option<UserSummary>> {
         user::get_user_by_handle(self, handle).await
     }
@@ -39,6 +43,7 @@ impl UserStore for DieselStore {
         display_name: &str,
         password_hash: &str,
         active: bool,
+        is_bootstrap_admin: bool,
         permissions: &[UserPermission],
     ) -> anyhow::Result<UserSummary> {
         user::create_user(
@@ -47,6 +52,7 @@ impl UserStore for DieselStore {
             display_name,
             password_hash,
             active,
+            is_bootstrap_admin,
             permissions,
         )
         .await

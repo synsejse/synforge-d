@@ -7,6 +7,7 @@ pub(in crate::db) async fn create_user(
     display_name: &str,
     password_hash: &str,
     active: bool,
+    is_bootstrap_admin: bool,
     permissions: &[UserPermission],
 ) -> anyhow::Result<UserSummary> {
     let user_id = Uuid::now_v7();
@@ -23,6 +24,7 @@ pub(in crate::db) async fn create_user(
             display_name: display_name.as_str(),
             password_hash: password_hash.as_str(),
             active,
+            is_bootstrap_admin,
             created_at: now,
             updated_at: now,
         };

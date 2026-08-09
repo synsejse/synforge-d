@@ -52,6 +52,25 @@ pub(in crate::db) async fn get_user(
     }
 }
 
+pub(in crate::db) async fn get_bootstrap_admin(
+    store: &DieselStore,
+) -> anyhow::Result<Option<UserSummary>> {
+    let mut conn = store.get_connection().await?;
+    let row = users::table
+        .filter(users::is_bootstrap_admin.eq(true))
+        .select(UserRecord::as_select())
+        .first(&mut conn)
+        .await
+        .optional()?;
+    match row {
+        Some(row) => {
+            let mut users = build_user_summaries(&mut conn, vec![row]).await?;
+            Ok(users.pop())
+        }
+        None => Ok(None),
+    }
+}
+
 pub(in crate::db) async fn get_user_by_handle(
     store: &DieselStore,
     handle: &str,

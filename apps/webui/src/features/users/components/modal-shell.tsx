@@ -2,7 +2,8 @@ import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { ReactNode } from "react";
 import Button from "../../../components/ui/button";
 import FaIcon from "../../../components/ui/fa-icon";
-import ModalFrame, { ModalTitle } from "../../../components/ui/modal-frame";
+import ModalFrame from "../../../components/ui/modal-frame";
+import { ModalTitle } from "../../../components/ui/modal-primitives";
 
 interface UserModalShellProps {
   title: string;

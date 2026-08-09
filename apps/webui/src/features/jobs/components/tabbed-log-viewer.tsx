@@ -512,7 +512,10 @@ function VirtualizedAnsiLines({
     resetToken,
   );
 
-  const renderLines = lines.length > 0 ? lines : ["Waiting for output…"];
+  const renderLines = useMemo(
+    () => (lines.length > 0 ? lines : ["Waiting for output…"]),
+    [lines],
+  );
   const totalHeight = renderLines.length * ROW_HEIGHT;
   const overscan = 12;
   const visibleStart = Math.max(

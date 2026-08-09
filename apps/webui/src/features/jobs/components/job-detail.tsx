@@ -10,8 +10,8 @@ import type {
 } from "../../../lib/types";
 import ErrorMessage from "../../../components/common/error-message";
 import PaginationControls from "../../../components/common/pagination-controls";
-import { useDialogs } from "../../../components/common/dialogs-provider";
-import { useToast } from "../../../components/common/toast-provider";
+import { useDialogs } from "../../../components/common/dialogs-context";
+import { useToast } from "../../../components/common/toast-context";
 import { useServerHardware } from "../../../components/common/server-hardware-provider";
 import LoadingBlock from "../../../components/ui/loading-block";
 import FaIcon from "../../../components/ui/fa-icon";
@@ -513,4 +513,3 @@ function cpuUsagePercent(sample?: JobResourceUsageSample | null): number {
   const cores = sample.online_cpus > 0 ? sample.online_cpus : 1;
   return clampPercent((sample.cpu_percent / (cores * 100)) * 100);
 }
-

@@ -11,7 +11,7 @@ import { statisticsQueries } from "../../lib/queries";
 import { formatDateTime } from "../../lib/datetime";
 import type { TimeRange } from "../../lib/types";
 import ErrorMessage from "../../components/common/error-message";
-import { usePageVisible } from "../../components/common/page-visibility-provider";
+import { usePageVisible } from "../../components/common/page-visibility-context";
 import LoadingBlock from "../../components/ui/loading-block";
 import FaIcon from "../../components/ui/fa-icon";
 import PageHeader from "../../components/ui/page-header";

@@ -71,10 +71,3 @@ export default function ModalFrame({
     </DialogPrimitive.Root>
   );
 }
-
-/** The accessible (and usually visible) modal heading. Render the brutalist
- *  heading markup as a child via `asChild`, or pass text directly. */
-export const ModalTitle = DialogPrimitive.Title;
-
-/** Optional accessible description, associated with the dialog via aria. */
-export const ModalDescription = DialogPrimitive.Description;

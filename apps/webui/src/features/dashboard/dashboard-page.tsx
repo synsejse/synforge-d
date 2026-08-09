@@ -5,7 +5,7 @@ import { dashboardQueries, jobsQueries } from "../../lib/queries";
 import { formatBytes } from "../../lib/bytes";
 import type { JobResourceUsageSample } from "../../lib/types";
 import ErrorMessage from "../../components/common/error-message";
-import { usePageVisible } from "../../components/common/page-visibility-provider";
+import { usePageVisible } from "../../components/common/page-visibility-context";
 import FaIcon from "../../components/ui/fa-icon";
 import LoadingBlock from "../../components/ui/loading-block";
 import MetricCard from "../../components/ui/metric-card";

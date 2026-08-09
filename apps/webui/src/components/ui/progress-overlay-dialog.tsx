@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Button from "./button";
-import ModalFrame, { ModalTitle } from "./modal-frame";
+import ModalFrame from "./modal-frame";
+import { ModalTitle } from "./modal-primitives";
 
 interface ProgressOverlayDialogProps {
   open: boolean;

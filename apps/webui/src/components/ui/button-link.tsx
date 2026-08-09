@@ -1,6 +1,6 @@
 import { Link, type LinkProps } from "@tanstack/react-router";
 import type { AnchorHTMLAttributes, ReactNode } from "react";
-import { buttonVariants, type ButtonVariantProps } from "./button";
+import { buttonVariants, type ButtonVariantProps } from "./button-variants";
 import { cn } from "../../lib/utils";
 
 interface ButtonLinkOwnProps extends ButtonVariantProps {

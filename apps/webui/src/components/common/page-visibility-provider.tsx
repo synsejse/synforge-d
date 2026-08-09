@@ -1,22 +1,5 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
-
-const PageVisibilityContext = createContext<boolean | null>(null);
-
-export function usePageVisible(): boolean {
-  const value = useContext(PageVisibilityContext);
-  if (value === null) {
-    throw new Error(
-      "usePageVisible must be used inside <PageVisibilityProvider>",
-    );
-  }
-  return value;
-}
+import { useEffect, useState, type ReactNode } from "react";
+import { PageVisibilityContext } from "./page-visibility-context";
 
 export default function PageVisibilityProvider({
   children,

@@ -15,9 +15,11 @@ import {
   RecordCard,
   RecordMeta,
   SigningBadge,
+} from "../../../components/ui/record-card";
+import {
   STATUS_RAIL,
   rowActionClass,
-} from "../../../components/ui/record-card";
+} from "../../../components/ui/record-card-styles";
 
 interface BuildHistoryCardProps {
   entry: PackageBuildInventoryEntry;

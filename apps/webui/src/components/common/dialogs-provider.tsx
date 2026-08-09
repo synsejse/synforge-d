@@ -1,38 +1,11 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import Dialog from "../ui/dialog";
 import Button from "../ui/button";
-
-interface ConfirmOptions {
-  title: string;
-  message?: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  destructive?: boolean;
-}
-
-interface DialogsContextValue {
-  confirm: (options: ConfirmOptions) => Promise<boolean>;
-}
+import { DialogsContext, type ConfirmOptions } from "./dialogs-context";
 
 interface ConfirmState {
   options: ConfirmOptions;
   resolve: (value: boolean) => void;
-}
-
-const DialogsContext = createContext<DialogsContextValue | null>(null);
-
-export function useDialogs(): DialogsContextValue {
-  const value = useContext(DialogsContext);
-  if (!value) {
-    throw new Error("useDialogs must be used inside <DialogsProvider>");
-  }
-  return value;
 }
 
 export default function DialogsProvider({ children }: { children: ReactNode }) {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useToast } from "../../components/common/toast-provider";
+import { useToast } from "../../components/common/toast-context";
 
 interface RunBulkActionOptions<T> {
   /** The items to act on; the action runs once per item, all in flight. */

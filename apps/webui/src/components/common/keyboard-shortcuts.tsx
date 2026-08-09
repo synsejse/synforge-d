@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "@tanstack/react-router";
-import ModalFrame, { ModalTitle } from "../ui/modal-frame";
+import ModalFrame from "../ui/modal-frame";
+import { ModalTitle } from "../ui/modal-primitives";
 
 interface ShortcutGroup {
   label: string;

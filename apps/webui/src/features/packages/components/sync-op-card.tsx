@@ -4,8 +4,8 @@ import StatusPill from "../../../components/ui/status-pill";
 import {
   RecordCard,
   RecordMeta,
-  STATUS_RAIL,
 } from "../../../components/ui/record-card";
+import { STATUS_RAIL } from "../../../components/ui/record-card-styles";
 
 interface SyncOpCardProps {
   op: SyncOperation;

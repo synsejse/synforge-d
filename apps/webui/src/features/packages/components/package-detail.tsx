@@ -8,8 +8,8 @@ import {
   summarizePackageTargetAction,
 } from "../../../lib/package-actions";
 import ErrorMessage from "../../../components/common/error-message";
-import { useDialogs } from "../../../components/common/dialogs-provider";
-import { useToast } from "../../../components/common/toast-provider";
+import { useDialogs } from "../../../components/common/dialogs-context";
+import { useToast } from "../../../components/common/toast-context";
 import { useServerHardware } from "../../../components/common/server-hardware-provider";
 import LoadingBlock from "../../../components/ui/loading-block";
 import Breadcrumbs from "../../../components/ui/breadcrumbs";

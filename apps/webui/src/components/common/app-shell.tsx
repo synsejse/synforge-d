@@ -26,7 +26,7 @@ import api from "../../lib/api";
 import { dashboardQueries } from "../../lib/queries";
 import BrandMark from "./brand-mark";
 import { useSession } from "./session-provider";
-import { usePageVisible } from "./page-visibility-provider";
+import { usePageVisible } from "./page-visibility-context";
 import { KeyboardShortcutsProvider } from "./keyboard-shortcuts";
 import SystemNoticeBar from "./system-notice-bar";
 

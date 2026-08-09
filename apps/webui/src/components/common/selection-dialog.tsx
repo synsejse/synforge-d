@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Button from "../ui/button";
-import ModalFrame, { ModalDescription, ModalTitle } from "../ui/modal-frame";
+import ModalFrame from "../ui/modal-frame";
+import { ModalDescription, ModalTitle } from "../ui/modal-primitives";
 
 interface SelectionDialogProps {
   title: string;

@@ -8,12 +8,14 @@ import Tooltip from "../../../components/ui/tooltip";
 import {
   ACCENT_RAIL,
   ERROR_RAIL,
+  rowActionClass,
+} from "../../../components/ui/record-card-styles";
+import {
   KindBadge,
   RecordCard,
   RecordChip,
   RecordMeta,
   SigningBadge,
-  rowActionClass,
 } from "../../../components/ui/record-card";
 
 interface RepoFileCardProps {

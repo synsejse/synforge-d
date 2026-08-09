@@ -1,42 +1,14 @@
 import * as ToastPrimitive from "@radix-ui/react-toast";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { cn } from "../../lib/utils";
-
-export type ToastVariant = "info" | "success" | "error" | "warning";
-
-interface ToastOptions {
-  title: string;
-  message?: string;
-  variant?: ToastVariant;
-  duration?: number;
-}
+import {
+  ToastContext,
+  type ToastOptions,
+  type ToastVariant,
+} from "./toast-context";
 
 interface ToastEntry extends ToastOptions {
   id: number;
-}
-
-interface ToastContextValue {
-  toast: (options: ToastOptions) => void;
-  info: (title: string, message?: string) => void;
-  success: (title: string, message?: string) => void;
-  error: (title: string, message?: string) => void;
-  warning: (title: string, message?: string) => void;
-}
-
-const ToastContext = createContext<ToastContextValue | null>(null);
-
-export function useToast(): ToastContextValue {
-  const value = useContext(ToastContext);
-  if (!value) {
-    throw new Error("useToast must be used inside <ToastProvider>");
-  }
-  return value;
 }
 
 const variantBorder: Record<ToastVariant, string> = {

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { faClock, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { syncQueries } from "../../lib/queries";
-import { usePageVisible } from "../../components/common/page-visibility-provider";
+import { usePageVisible } from "../../components/common/page-visibility-context";
 import EmptyState from "../../components/ui/empty-state";
 import FaIcon from "../../components/ui/fa-icon";
 import LoadingBlock from "../../components/ui/loading-block";

@@ -39,6 +39,7 @@ diesel::table! {
         revision -> Text,
         trigger -> Text,
         status -> Text,
+        sync_operation_id -> Nullable<Uuid>,
         spec_file -> Text,
         worker_container_id -> Nullable<Text>,
         created_at -> Timestamptz,
@@ -130,13 +131,55 @@ diesel::table! {
 }
 
 diesel::table! {
+    sync_batches (id) {
+        id -> Uuid,
+        trigger_type -> Text,
+        status -> Text,
+        total_packages -> BigInt,
+        completed_packages -> BigInt,
+        succeeded_packages -> BigInt,
+        failed_packages -> BigInt,
+        cancelled_packages -> BigInt,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+        started_at -> Nullable<Timestamptz>,
+        finished_at -> Nullable<Timestamptz>,
+        error_message -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
     sync_operations (id) {
         id -> Uuid,
         package_name -> Text,
         trigger_type -> Text,
         status -> Text,
+        stage -> Text,
         revision -> Nullable<Text>,
+        previous_revision -> Nullable<Text>,
+        changed -> Nullable<Bool>,
+        target_mock_chroot -> Nullable<Text>,
+        batch_id -> Nullable<Uuid>,
+        retry_of -> Nullable<Uuid>,
+        cancellation_requested -> Bool,
+        queued_targets -> BigInt,
+        skipped_targets -> BigInt,
+        blocked_targets -> BigInt,
         error_message -> Nullable<Text>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+        started_at -> Nullable<Timestamptz>,
+        finished_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    sync_operation_events (id) {
+        id -> Uuid,
+        sync_operation_id -> Uuid,
+        stage -> Text,
+        level -> Text,
+        message -> Text,
         created_at -> Timestamptz,
     }
 }
@@ -170,7 +213,9 @@ diesel::allow_tables_to_appear_in_same_query!(
     user_permissions,
     user_repo_metrics,
     published_repo_files,
+    sync_batches,
     sync_operations,
+    sync_operation_events,
     git_mirror_cache_states,
     runtime_settings,
 );

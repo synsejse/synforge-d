@@ -262,6 +262,7 @@ where
             revision: revision_key.clone(),
             trigger,
             status: BuildStatus::Pending,
+            sync_operation_id: None,
             spec_file: updated_package.spec_file.clone(),
             worker_container_id: None,
             created_at: now,

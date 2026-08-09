@@ -196,6 +196,8 @@ pub struct BuildJob {
     pub revision: String,
     pub trigger: BuildTrigger,
     pub status: BuildStatus,
+    /// Source-sync run that planned this build, when applicable.
+    pub sync_operation_id: Option<Uuid>,
     #[schema(value_type = String)]
     pub spec_file: PathBuf,
     pub worker_container_id: Option<String>,

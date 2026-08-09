@@ -18,6 +18,7 @@ pub(in crate::db) async fn insert_job(store: &DieselStore, job: &BuildJob) -> an
         revision: job.revision.as_str(),
         trigger: job.trigger,
         status: job.status,
+        sync_operation_id: job.sync_operation_id,
         spec_file: spec_file.as_str(),
         worker_container_id: job.worker_container_id.as_deref(),
         created_at: job.created_at,

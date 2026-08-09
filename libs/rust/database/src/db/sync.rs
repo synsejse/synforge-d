@@ -1,7 +1,7 @@
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use synforge_core::model::{format_timestamp, now_utc};
-use synforge_core::sync::{SyncOperation, SyncStatus, SyncTriggerType};
+use synforge_core::sync::{SyncOperation, SyncStage, SyncStatus, SyncTriggerType};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
@@ -15,9 +15,22 @@ pub struct SyncOperationRow {
     pub package_name: String,
     pub trigger_type: String,
     pub status: String,
+    pub stage: String,
     pub revision: Option<String>,
+    pub previous_revision: Option<String>,
+    pub changed: Option<bool>,
+    pub target_mock_chroot: Option<String>,
+    pub batch_id: Option<Uuid>,
+    pub retry_of: Option<Uuid>,
+    pub cancellation_requested: bool,
+    pub queued_targets: i64,
+    pub skipped_targets: i64,
+    pub blocked_targets: i64,
     pub error_message: Option<String>,
     pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
+    pub started_at: Option<OffsetDateTime>,
+    pub finished_at: Option<OffsetDateTime>,
 }
 
 #[derive(Insertable)]
@@ -27,9 +40,13 @@ pub struct NewSyncOperation<'a> {
     pub package_name: &'a str,
     pub trigger_type: &'a str,
     pub status: &'a str,
+    pub stage: &'a str,
     pub revision: Option<&'a str>,
     pub error_message: Option<&'a str>,
     pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
+    pub started_at: Option<OffsetDateTime>,
+    pub finished_at: Option<OffsetDateTime>,
 }
 
 impl From<SyncOperationRow> for SyncOperation {
@@ -39,9 +56,22 @@ impl From<SyncOperationRow> for SyncOperation {
             package_name: row.package_name,
             trigger_type: row.trigger_type.parse().unwrap_or(SyncTriggerType::Poll),
             status: row.status.parse().unwrap_or(SyncStatus::Failed),
+            stage: row.stage.parse().unwrap_or(SyncStage::Completed),
             revision: row.revision,
+            previous_revision: row.previous_revision,
+            changed: row.changed,
+            target_mock_chroot: row.target_mock_chroot,
+            batch_id: row.batch_id.map(|id| id.to_string()),
+            retry_of: row.retry_of.map(|id| id.to_string()),
+            cancellation_requested: row.cancellation_requested,
+            queued_targets: row.queued_targets.max(0) as u64,
+            skipped_targets: row.skipped_targets.max(0) as u64,
+            blocked_targets: row.blocked_targets.max(0) as u64,
             error_message: row.error_message,
             created_at: format_timestamp(row.created_at),
+            updated_at: format_timestamp(row.updated_at),
+            started_at: row.started_at.map(format_timestamp),
+            finished_at: row.finished_at.map(format_timestamp),
         }
     }
 }
@@ -59,6 +89,7 @@ pub(super) async fn insert_sync_operation(
     let package_name = package_name.to_string();
     let trigger_type_str = trigger_type.as_str().to_string();
     let status_str = status.as_str().to_string();
+    let stage = SyncStage::Completed.as_str().to_string();
     let revision = revision.map(str::to_string);
     let error_message = error_message.map(str::to_string);
 
@@ -68,9 +99,13 @@ pub(super) async fn insert_sync_operation(
         package_name: &package_name,
         trigger_type: &trigger_type_str,
         status: &status_str,
+        stage: &stage,
         revision: revision.as_deref(),
         error_message: error_message.as_deref(),
         created_at,
+        updated_at: created_at,
+        started_at: Some(created_at),
+        finished_at: Some(created_at),
     };
     diesel::insert_into(sync_operations::table)
         .values(&new_operation)

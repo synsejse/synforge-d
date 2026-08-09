@@ -84,6 +84,7 @@ fn plan() -> (PackageActionPlan, Uuid) {
         revision: "1.0-1".to_string(),
         trigger: BuildTrigger::Api,
         status: BuildStatus::Pending,
+        sync_operation_id: None,
         spec_file: package.spec_file.clone(),
         worker_container_id: None,
         created_at: now,

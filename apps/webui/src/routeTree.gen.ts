@@ -9,24 +9,23 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SetupRouteImport } from './routes/setup'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
-import { Route as AuthedUsersRouteImport } from './routes/_authed/users'
-import { Route as AuthedStatisticsRouteImport } from './routes/_authed/statistics'
-import { Route as AuthedSigningRouteImport } from './routes/_authed/signing'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
-import { Route as AuthedRepositoryIndexRouteImport } from './routes/_authed/repository/index'
-import { Route as AuthedPackagesIndexRouteImport } from './routes/_authed/packages/index'
+import { Route as AuthedSigningRouteImport } from './routes/_authed/signing'
+import { Route as AuthedStatisticsRouteImport } from './routes/_authed/statistics'
+import { Route as AuthedUsersRouteImport } from './routes/_authed/users'
 import { Route as AuthedJobsIndexRouteImport } from './routes/_authed/jobs/index'
-import { Route as AuthedRepositoryUseRouteImport } from './routes/_authed/repository/use'
-import { Route as AuthedPackagesViewRouteImport } from './routes/_authed/packages/view'
 import { Route as AuthedJobsViewRouteImport } from './routes/_authed/jobs/view'
+import { Route as AuthedPackagesIndexRouteImport } from './routes/_authed/packages/index'
+import { Route as AuthedPackagesViewRouteImport } from './routes/_authed/packages/view'
+import { Route as AuthedRepositoryIndexRouteImport } from './routes/_authed/repository/index'
+import { Route as AuthedRepositoryUseRouteImport } from './routes/_authed/repository/use'
 
-const SetupRoute = SetupRouteImport.update({
-  id: '/setup',
-  path: '/setup',
+const AuthedRoute = AuthedRouteImport.update({
+  id: '/_authed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -34,8 +33,9 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedRoute = AuthedRouteImport.update({
-  id: '/_authed',
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedIndexRoute = AuthedIndexRouteImport.update({
@@ -43,14 +43,9 @@ const AuthedIndexRoute = AuthedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedUsersRoute = AuthedUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedStatisticsRoute = AuthedStatisticsRouteImport.update({
-  id: '/statistics',
-  path: '/statistics',
+const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSigningRoute = AuthedSigningRouteImport.update({
@@ -58,19 +53,14 @@ const AuthedSigningRoute = AuthedSigningRouteImport.update({
   path: '/signing',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
+const AuthedStatisticsRoute = AuthedStatisticsRouteImport.update({
+  id: '/statistics',
+  path: '/statistics',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedRepositoryIndexRoute = AuthedRepositoryIndexRouteImport.update({
-  id: '/repository/',
-  path: '/repository/',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedPackagesIndexRoute = AuthedPackagesIndexRouteImport.update({
-  id: '/packages/',
-  path: '/packages/',
+const AuthedUsersRoute = AuthedUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedJobsIndexRoute = AuthedJobsIndexRouteImport.update({
@@ -78,9 +68,14 @@ const AuthedJobsIndexRoute = AuthedJobsIndexRouteImport.update({
   path: '/jobs/',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedRepositoryUseRoute = AuthedRepositoryUseRouteImport.update({
-  id: '/repository/use',
-  path: '/repository/use',
+const AuthedJobsViewRoute = AuthedJobsViewRouteImport.update({
+  id: '/jobs/view',
+  path: '/jobs/view',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedPackagesIndexRoute = AuthedPackagesIndexRouteImport.update({
+  id: '/packages/',
+  path: '/packages/',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedPackagesViewRoute = AuthedPackagesViewRouteImport.update({
@@ -88,9 +83,14 @@ const AuthedPackagesViewRoute = AuthedPackagesViewRouteImport.update({
   path: '/packages/view',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedJobsViewRoute = AuthedJobsViewRouteImport.update({
-  id: '/jobs/view',
-  path: '/jobs/view',
+const AuthedRepositoryIndexRoute = AuthedRepositoryIndexRouteImport.update({
+  id: '/repository/',
+  path: '/repository/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedRepositoryUseRoute = AuthedRepositoryUseRouteImport.update({
+  id: '/repository/use',
+  path: '/repository/use',
   getParentRoute: () => AuthedRoute,
 } as any)
 
@@ -198,11 +198,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/setup': {
-      id: '/setup'
-      path: '/setup'
-      fullPath: '/setup'
-      preLoaderRoute: typeof SetupRouteImport
+    '/_authed': {
+      id: '/_authed'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -212,11 +212,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed': {
-      id: '/_authed'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthedRouteImport
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/': {
@@ -226,18 +226,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/users': {
-      id: '/_authed/users'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof AuthedUsersRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/statistics': {
-      id: '/_authed/statistics'
-      path: '/statistics'
-      fullPath: '/statistics'
-      preLoaderRoute: typeof AuthedStatisticsRouteImport
+    '/_authed/settings': {
+      id: '/_authed/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthedSettingsRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/signing': {
@@ -247,25 +240,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSigningRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/settings': {
-      id: '/_authed/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AuthedSettingsRouteImport
+    '/_authed/statistics': {
+      id: '/_authed/statistics'
+      path: '/statistics'
+      fullPath: '/statistics'
+      preLoaderRoute: typeof AuthedStatisticsRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/repository/': {
-      id: '/_authed/repository/'
-      path: '/repository'
-      fullPath: '/repository/'
-      preLoaderRoute: typeof AuthedRepositoryIndexRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/packages/': {
-      id: '/_authed/packages/'
-      path: '/packages'
-      fullPath: '/packages/'
-      preLoaderRoute: typeof AuthedPackagesIndexRouteImport
+    '/_authed/users': {
+      id: '/_authed/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AuthedUsersRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/jobs/': {
@@ -275,11 +261,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedJobsIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/repository/use': {
-      id: '/_authed/repository/use'
-      path: '/repository/use'
-      fullPath: '/repository/use'
-      preLoaderRoute: typeof AuthedRepositoryUseRouteImport
+    '/_authed/jobs/view': {
+      id: '/_authed/jobs/view'
+      path: '/jobs/view'
+      fullPath: '/jobs/view'
+      preLoaderRoute: typeof AuthedJobsViewRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/packages/': {
+      id: '/_authed/packages/'
+      path: '/packages'
+      fullPath: '/packages/'
+      preLoaderRoute: typeof AuthedPackagesIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/packages/view': {
@@ -289,11 +282,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedPackagesViewRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/jobs/view': {
-      id: '/_authed/jobs/view'
-      path: '/jobs/view'
-      fullPath: '/jobs/view'
-      preLoaderRoute: typeof AuthedJobsViewRouteImport
+    '/_authed/repository/': {
+      id: '/_authed/repository/'
+      path: '/repository'
+      fullPath: '/repository/'
+      preLoaderRoute: typeof AuthedRepositoryIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/repository/use': {
+      id: '/_authed/repository/use'
+      path: '/repository/use'
+      fullPath: '/repository/use'
+      preLoaderRoute: typeof AuthedRepositoryUseRouteImport
       parentRoute: typeof AuthedRoute
     }
   }

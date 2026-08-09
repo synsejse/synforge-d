@@ -1,4 +1,3 @@
-import Ansi from "ansi-to-react";
 import {
   useCallback,
   useEffect,
@@ -9,6 +8,7 @@ import {
   type UIEvent,
 } from "react";
 import { faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import AnsiText from "../../../components/ui/ansi-text";
 import FaIcon from "../../../components/ui/fa-icon";
 
 const GROUP_HEADER_RE = /^##\[group\]\s?(.*)$/;
@@ -96,7 +96,7 @@ function buildSections(lines: string[]): Section[] {
 function LogLine({ line }: { line: string }) {
   return (
     <div className="whitespace-pre px-3 text-success hover:bg-surface-alt/30 sm:px-5">
-      <Ansi>{line || " "}</Ansi>
+      <AnsiText>{line || " "}</AnsiText>
     </div>
   );
 }
@@ -244,7 +244,7 @@ export function VirtualizedAnsiLines({
                 style={style}
                 className="whitespace-pre px-3 text-success hover:bg-surface-alt/30 sm:px-5"
               >
-                <Ansi>{line || " "}</Ansi>
+                <AnsiText>{line || " "}</AnsiText>
               </div>
             );
           })}

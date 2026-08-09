@@ -19,25 +19,25 @@ license = "MIT"
 authors = ["synse"]
 
 [workspace.dependencies]
-anyhow = "1.0.102"
+anyhow = "1.0.104"
 argon2 = "0.5.3"
 async-stream = "0.3.6"
-async-trait = "0.1.89"
+async-trait = "0.1.92"
 axum = { version = "0.8.9", features = ["macros"] }
 axum-helmet = "1.0.2"
-base64 = "0.22.1"
+base64 = "0.23.1"
 bigdecimal = "0.4.10"
 bollard = "0.21.0"
-bytes = "1.12.0"
-clap = { version = "4.6.1", features = ["derive", "env"] }
+bytes = "1.12.1"
+clap = { version = "4.6.6", features = ["derive", "env"] }
 delegate = "0.13.5"
-diesel = { version = "2.3.10", features = ["postgres", "numeric", "r2d2", "time", "uuid", "serde_json"] }
+diesel = { version = "2.3.12", features = ["postgres", "numeric", "r2d2", "time", "uuid", "serde_json"] }
 diesel-async = { version = "0.9", features = ["postgres", "bb8", "migrations", "async-connection-wrapper"] }
 diesel_migrations = "2.3.2"
 flate2 = "1.1.9"
-futures-util = { version = "0.3.32", features = ["sink"] }
-getrandom = "0.3"
-glob = "0.3.3"
+futures-util = { version = "0.3.33", features = ["sink"] }
+getrandom = "0.4"
+glob = "0.3.4"
 hex = "0.4.3"
 hmac = "0.13.0"
 helmet-core = "1.0.1"
@@ -46,25 +46,25 @@ ini = { package = "rust-ini", version = "0.21.3" }
 notify = "8.2.0"
 parking_lot = "0.12.5"
 path-clean = "1.0.1"
-redis = { version = "1.2", features = ["aio", "connection-manager", "tokio-comp"] }
+redis = { version = "1.5", features = ["aio", "connection-manager", "tokio-comp"] }
 reqwest = { version = "0.13.4", default-features = false, features = ["json", "rustls", "stream"] }
-rkyv = "0.8.16"
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.150"
+rkyv = "0.8.18"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
 sanitize-filename = "0.6.0"
 sha2 = "0.11.0"
 strict-path = "0.2.3"
 tempfile = "3.27.0"
-thiserror = "2.0.18"
-time = { version = "0.3.51", features = ["formatting", "parsing", "serde"] }
-tokio = { version = "1.52.3", features = ["fs", "macros", "process", "rt-multi-thread", "signal", "sync", "time"] }
-tokio-stream = { version = "0.1.18", features = ["fs"] }
-tokio-util = { version = "0.7.18", features = ["codec", "io", "rt"] }
+thiserror = "2.0.20"
+time = { version = "0.3.55", features = ["formatting", "parsing", "serde"] }
+tokio = { version = "1.53.1", features = ["fs", "macros", "process", "rt-multi-thread", "signal", "sync", "time"] }
+tokio-stream = { version = "0.1.19", features = ["fs"] }
+tokio-util = { version = "0.7.19", features = ["codec", "io", "rt"] }
 tower = "0.5.3"
 tower-http = { version = "0.7.0", features = ["auth", "fs", "trace"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
 utoipa = { version = "5.5.0", features = ["axum_extras", "time", "uuid"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
-uuid = { version = "1.23.3", features = ["serde", "v7"] }
+uuid = { version = "1.24.0", features = ["serde", "v7"] }
 xz2 = "0.1.7"

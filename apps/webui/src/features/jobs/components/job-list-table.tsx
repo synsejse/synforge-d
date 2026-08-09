@@ -24,14 +24,6 @@ export default function JobListTable({
   onKill,
   usageByJob,
 }: JobListTableProps) {
-  if (jobs.length === 0) {
-    return (
-      <div className="border border-dashed border-edge px-5 py-[60px] text-center font-mono text-[13px] text-[#52525b]">
-        {mode === "active" ? "No active jobs." : "No jobs found."}
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-3">
       {jobs.map((entry) => (

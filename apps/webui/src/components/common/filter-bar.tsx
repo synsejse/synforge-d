@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { faFilter, faXmark } from "@fortawesome/free-solid-svg-icons";
 import Button from "../ui/button";
 import FaIcon from "../ui/fa-icon";
@@ -30,8 +30,17 @@ export default function FilterBar({
   className = "",
 }: FilterBarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const panelId = useId();
+
+  useEffect(() => {
+    if (activeCount > 0) setMobileOpen(true);
+  }, [activeCount]);
 
   const showClear = onClear && activeCount > 0;
+  const clearFilters = () => {
+    onClear?.();
+    setMobileOpen(false);
+  };
 
   return (
     <div
@@ -42,7 +51,7 @@ export default function FilterBar({
           type="button"
           onClick={() => setMobileOpen((open) => !open)}
           aria-expanded={mobileOpen}
-          aria-controls="filter-bar-panel"
+          aria-controls={panelId}
           className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-white"
         >
           <FaIcon icon={faFilter} />
@@ -54,7 +63,7 @@ export default function FilterBar({
           ) : null}
         </button>
         {showClear ? (
-          <Button variant="subtle" size="xs" onClick={onClear}>
+          <Button variant="subtle" size="xs" onClick={clearFilters}>
             <FaIcon icon={faXmark} />
             Clear
           </Button>
@@ -63,7 +72,7 @@ export default function FilterBar({
 
       {/* Filter content: hidden on mobile until toggled, always shown on md:+ */}
       <div
-        id="filter-bar-panel"
+        id={panelId}
         className={`p-5 ${mobileOpen ? "" : "hidden"} md:block`}
       >
         {children}
@@ -74,7 +83,7 @@ export default function FilterBar({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onClear}
+                onClick={clearFilters}
                 className="hidden md:inline-flex"
               >
                 <FaIcon icon={faXmark} />

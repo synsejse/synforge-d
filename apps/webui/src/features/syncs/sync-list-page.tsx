@@ -13,6 +13,8 @@ import SegmentedControl from "../../components/ui/segmented-control";
 import Select from "../../components/ui/select";
 import SyncBatchCard from "./components/sync-batch-card";
 import SyncRunCard from "./components/sync-run-card";
+import FilterBar from "../../components/common/filter-bar";
+import Button from "../../components/ui/button";
 
 const route = getRouteApi("/_authed/syncs/");
 const PAGE_SIZE = 25;
@@ -39,6 +41,11 @@ export default function SyncListPage() {
   const debouncedPackage = useDebounce(packageInput, 250);
   const setSearch = (update: Partial<typeof search>) =>
     navigate({ search: (previous) => ({ ...previous, ...update }) });
+
+  const clearFilters = () => {
+    setPackageInput("");
+    setSearch({ packageFilter: "", status: "all", offset: 0 });
+  };
 
   useEffect(() => {
     if (debouncedPackage !== filters.packageFilter) {
@@ -73,6 +80,12 @@ export default function SyncListPage() {
   const batches = batchesQuery.data?.batches ?? [];
   const page = filters.mode === "runs" ? runsQuery.data?.page : batchesQuery.data?.page;
   const count = filters.mode === "runs" ? runs.length : batches.length;
+  const hasActiveFilters =
+    filters.mode === "runs" &&
+    (filters.packageFilter.trim().length > 0 || filters.status !== "all");
+  const activeFilterCount =
+    Number(filters.packageFilter.trim().length > 0) +
+    Number(filters.status !== "all");
 
   return (
     <div className="space-y-6">
@@ -82,7 +95,7 @@ export default function SyncListPage() {
         color="cyan"
       />
 
-      <div className="flex flex-col gap-3 border border-edge bg-black p-4 lg:flex-row lg:items-center">
+      <div className="border border-edge bg-black p-4">
         <SegmentedControl
           value={filters.mode}
           onChange={(mode) => setSearch({ mode, offset: 0 })}
@@ -92,34 +105,63 @@ export default function SyncListPage() {
             { value: "batches", label: "Refresh batches", tone: "white" },
           ]}
         />
-        {filters.mode === "runs" ? (
-          <>
-            <input
-              value={packageInput}
-              onChange={(event) => setPackageInput(event.target.value)}
-              placeholder="Filter package…"
-              aria-label="Filter syncs by package"
-              className="min-w-0 flex-1 border border-edge bg-black px-4 py-2.5 font-mono text-sm text-white outline-none placeholder:text-soft focus:border-accent-cyan"
-            />
-            <div className="w-full lg:w-52">
-              <Select
-                value={filters.status}
-                options={STATUS_OPTIONS}
-                onValueChange={(value) =>
-                  setSearch({ status: value as "all" | SyncStatus, offset: 0 })
-                }
-              />
-            </div>
-          </>
-        ) : null}
       </div>
+
+      {filters.mode === "runs" ? (
+        <FilterBar activeCount={activeFilterCount} onClear={clearFilters}>
+          <div className="grid items-end gap-4 sm:grid-cols-[minmax(0,1fr)_220px]">
+            <label className="block">
+              <span className="block font-mono text-xs font-semibold uppercase tracking-[0.22em] text-soft">
+                Package
+              </span>
+              <input
+                value={packageInput}
+                onChange={(event) => setPackageInput(event.target.value)}
+                placeholder="Filter by package"
+                className="mt-2.5 w-full border border-edge bg-black px-4 py-2.5 font-mono text-sm text-white outline-none placeholder:text-soft focus:border-accent-cyan"
+              />
+            </label>
+            <label className="block">
+              <span className="block font-mono text-xs font-semibold uppercase tracking-[0.22em] text-soft">
+                Status
+              </span>
+              <div className="mt-2.5">
+                <Select
+                  value={filters.status}
+                  options={STATUS_OPTIONS}
+                  onValueChange={(value) =>
+                    setSearch({ status: value as "all" | SyncStatus, offset: 0 })
+                  }
+                />
+              </div>
+            </label>
+          </div>
+        </FilterBar>
+      ) : null}
 
       {activeQuery.isPending ? (
         <LoadingBlock label="Loading sync activity…" lines={4} />
       ) : count === 0 ? (
         <EmptyState
-          title={filters.mode === "runs" ? "No sync runs" : "No refresh batches"}
-          description="Source refresh activity will appear here as soon as it is queued."
+          title={
+            hasActiveFilters
+              ? "No matching syncs"
+              : filters.mode === "runs"
+                ? "No sync runs"
+                : "No refresh batches"
+          }
+          description={
+            hasActiveFilters
+              ? "Try a different package or status filter."
+              : "Source refresh activity will appear here as soon as it is queued."
+          }
+          action={
+            hasActiveFilters ? (
+              <Button variant="subtle" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            ) : undefined
+          }
         />
       ) : (
         <div className="space-y-3">

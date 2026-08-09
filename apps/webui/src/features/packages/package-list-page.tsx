@@ -30,6 +30,8 @@ import Button from "../../components/ui/button";
 import PageHeader from "../../components/ui/page-header";
 import PaginationControls from "../../components/common/pagination-controls";
 import SelectionActionBar from "../../components/common/selection-action-bar";
+import PackageSelectionRow from "./components/package-selection-row";
+import PackageListEmptyState from "./components/package-list-empty-state";
 
 const PAGE_SIZE = 50;
 
@@ -57,6 +59,18 @@ export default function PackageListPage() {
   const setEnabledFilter = (next: EnabledFilter) => {
     selection.clear();
     navigate({ search: (prev) => ({ ...prev, offset: 0, enabled: next }) });
+  };
+  const clearFilters = () => {
+    setSearchInput("");
+    selection.clear();
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        offset: 0,
+        search: "",
+        enabled: "all" as const,
+      }),
+    });
   };
 
   useEffect(() => {
@@ -239,6 +253,8 @@ export default function PackageListPage() {
 
   const loading = listQuery.isPending;
   const packages = listQuery.data?.packages ?? [];
+  const packageNames = packages.map((entry) => entry.package.name);
+  const hasActiveFilters = search.trim().length > 0 || enabledFilter !== "all";
 
   const refreshingNameForMutation =
     triggerMutation.isPending &&
@@ -272,52 +288,27 @@ export default function PackageListPage() {
         enabled={enabledFilter}
         onSearchChange={setSearchInput}
         onEnabledChange={setEnabledFilter}
+        onClear={clearFilters}
       />
 
       {!loading && packages.length > 0 ? (
-        <div className="flex items-center justify-between gap-3 border border-edge bg-[#09090b] px-4 py-3 font-mono text-xs uppercase tracking-[0.14em] text-soft">
-          <label className="flex items-center gap-2.5 hover:text-white">
-            <input
-              type="checkbox"
-              checked={selection.allSelected(
-                packages.map((p) => p.package.name),
-              )}
-              ref={(el) => {
-                if (el) {
-                  el.indeterminate = selection.someSelected(
-                    packages.map((p) => p.package.name),
-                  );
-                }
-              }}
-              onChange={(event) =>
-                selection.setMany(
-                  packages.map((p) => p.package.name),
-                  event.target.checked,
-                )
-              }
-              aria-label="Select all packages on this page"
-            />
-            Select all on page ({packages.length})
-          </label>
-          {selection.count > 0 ? (
-            <span className="text-soft">
-              {selection.count} total selected
-            </span>
-          ) : null}
-        </div>
+        <PackageSelectionRow
+          packageNames={packageNames}
+          selectedCount={selection.count}
+          allSelected={selection.allSelected(packageNames)}
+          someSelected={selection.someSelected(packageNames)}
+          onToggleAll={(selected) => selection.setMany(packageNames, selected)}
+        />
       ) : null}
 
       {loading ? (
         <LoadingBlock label="Loading packages…" lines={4} />
       ) : packages.length === 0 ? (
-        <div className="border border-edge bg-black p-12 text-center">
-          <p className="font-mono text-sm font-bold uppercase tracking-[0.3em] text-soft">
-            NO_PACKAGES_CONFIGURED
-          </p>
-          <p className="mt-2 text-sm text-soft">
-            Add a spec source to start building.
-          </p>
-        </div>
+        <PackageListEmptyState
+          filtered={hasActiveFilters}
+          onClearFilters={clearFilters}
+          onAddPackage={() => setShowAddModal(true)}
+        />
       ) : (
         <div className="space-y-4">
           {packages.map((entry) => (

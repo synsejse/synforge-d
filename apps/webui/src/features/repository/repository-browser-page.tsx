@@ -19,6 +19,9 @@ import MetricCard from "../../components/ui/metric-card";
 import PageHeader from "../../components/ui/page-header";
 import PaginationControls from "../../components/common/pagination-controls";
 import RepoFileCard from "./components/repo-file-card";
+import FilterBar from "../../components/common/filter-bar";
+import EmptyState from "../../components/ui/empty-state";
+import Button from "../../components/ui/button";
 
 const PAGE_SIZE = 50;
 
@@ -42,6 +45,17 @@ function RepositoryBrowser() {
 
   const setFilters = (update: Partial<typeof search>) =>
     navigate({ search: (prev) => ({ ...prev, ...update }) });
+
+  const clearFilters = () => {
+    setPackageInput("");
+    setTargetInput("");
+    setFilters({
+      offset: 0,
+      packageFilter: "",
+      targetFilter: "",
+      kindFilter: "all",
+    });
+  };
 
   useEffect(() => {
     if (debouncedPackage !== filters.packageFilter || debouncedTarget !== filters.targetFilter) {
@@ -84,6 +98,11 @@ function RepositoryBrowser() {
   const summary = summaryQuery.data;
   const inventory = inventoryQuery.data;
   const repoFiles = inventory?.repo_files ?? [];
+  const activeFilterCount =
+    Number(filters.packageFilter.trim().length > 0) +
+    Number(filters.targetFilter.trim().length > 0) +
+    Number(filters.kindFilter !== "all");
+  const hasActiveFilters = activeFilterCount > 0;
 
   return (
     <div className="space-y-6">
@@ -132,51 +151,53 @@ function RepositoryBrowser() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-end gap-4 border border-edge bg-black p-[18px]">
-        <label className="block min-w-[180px] flex-1">
-          <span className="block font-mono text-xs font-semibold uppercase tracking-[0.22em] text-soft">
-            Package
-          </span>
-          <input
-            type="text"
-            value={packageInput}
-            onChange={(e) => setPackageInput(e.target.value)}
-            placeholder="Filter by package name"
-            className="mt-2.5 w-full border border-edge bg-black px-3 py-2.5 font-mono text-xs text-white outline-none transition-colors focus:border-accent-lime"
-          />
-        </label>
-        <label className="block min-w-[180px] flex-1">
-          <span className="block font-mono text-xs font-semibold uppercase tracking-[0.22em] text-soft">
-            Target
-          </span>
-          <input
-            type="text"
-            value={targetInput}
-            onChange={(e) => setTargetInput(e.target.value)}
-            placeholder="Filter by target"
-            className="mt-2.5 w-full border border-edge bg-black px-3 py-2.5 font-mono text-xs text-white outline-none transition-colors focus:border-accent-lime"
-          />
-        </label>
-        <div>
-          <span className="block font-mono text-xs font-semibold uppercase tracking-[0.22em] text-soft">
-            Kind
-          </span>
-          <div className="mt-2.5">
-            <SegmentedControl<KindFilter>
-              value={filters.kindFilter}
-              onChange={(val) => setFilters({ kindFilter: val, offset: 0 })}
-              ariaLabel="Filter by file kind"
-              size="md"
-              items={[
-                { value: "all", label: "All" },
-                { value: "rpm", label: "RPM" },
-                { value: "srpm", label: "SRPM" },
-                { value: "log", label: "Logs" },
-              ]}
+      <FilterBar activeCount={activeFilterCount} onClear={clearFilters}>
+        <div className="grid items-end gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+          <label className="block min-w-0">
+            <span className="block font-mono text-xs font-semibold uppercase tracking-[0.22em] text-soft">
+              Package
+            </span>
+            <input
+              type="text"
+              value={packageInput}
+              onChange={(e) => setPackageInput(e.target.value)}
+              placeholder="Filter by package name"
+              className="mt-2.5 w-full border border-edge bg-black px-3 py-2.5 font-mono text-xs text-white outline-none transition-colors focus:border-accent-lime"
             />
+          </label>
+          <label className="block min-w-0">
+            <span className="block font-mono text-xs font-semibold uppercase tracking-[0.22em] text-soft">
+              Target
+            </span>
+            <input
+              type="text"
+              value={targetInput}
+              onChange={(e) => setTargetInput(e.target.value)}
+              placeholder="Filter by target"
+              className="mt-2.5 w-full border border-edge bg-black px-3 py-2.5 font-mono text-xs text-white outline-none transition-colors focus:border-accent-lime"
+            />
+          </label>
+          <div className="min-w-0">
+            <span className="block font-mono text-xs font-semibold uppercase tracking-[0.22em] text-soft">
+              Kind
+            </span>
+            <div className="mt-2.5">
+              <SegmentedControl<KindFilter>
+                value={filters.kindFilter}
+                onChange={(val) => setFilters({ kindFilter: val, offset: 0 })}
+                ariaLabel="Filter by file kind"
+                size="md"
+                items={[
+                  { value: "all", label: "All" },
+                  { value: "rpm", label: "RPM" },
+                  { value: "srpm", label: "SRPM" },
+                  { value: "log", label: "Logs" },
+                ]}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      </FilterBar>
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-4">
@@ -193,9 +214,21 @@ function RepositoryBrowser() {
         {inventoryLoading ? (
           <LoadingBlock label="Loading published files…" lines={4} />
         ) : repoFiles.length === 0 ? (
-          <div className="border border-dashed border-edge px-5 py-14 text-center font-mono text-[13px] text-[#52525b]">
-            No files match this kind filter.
-          </div>
+          <EmptyState
+            title={hasActiveFilters ? "No matching files" : "No published files"}
+            description={
+              hasActiveFilters
+                ? "Try different package, target, or file-kind filters."
+                : "RPMs, source RPMs, and logs will appear here after a successful build."
+            }
+            action={
+              hasActiveFilters ? (
+                <Button variant="subtle" onClick={clearFilters}>
+                  Clear filters
+                </Button>
+              ) : undefined
+            }
+          />
         ) : (
           <div className="space-y-3">
             {repoFiles.map((file) => (

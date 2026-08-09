@@ -2,15 +2,10 @@ import { useEffect, useState } from "react";
 import { useDebounce } from "../../lib/hooks/use-debounce";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import { jobsQueries } from "../../lib/queries";
 import type { BuildJobResponse } from "../../lib/types";
-import {
-  HISTORY_BUILD_STATUS_LABELS,
-  isHistoryBuildStatus,
-  type HistoryBuildStatus,
-} from "../../lib/job-status";
+import type { HistoryBuildStatus } from "../../lib/job-status";
 import type { JobViewMode } from "./types";
 
 const route = getRouteApi("/_authed/jobs/");
@@ -19,11 +14,12 @@ import ErrorMessage from "../../components/common/error-message";
 import { useDialogs } from "../../components/common/dialogs-context";
 import { useToast } from "../../components/common/toast-context";
 import LoadingBlock from "../../components/ui/loading-block";
-import FaIcon from "../../components/ui/fa-icon";
 import SegmentedControl from "../../components/ui/segmented-control";
-import Select from "../../components/ui/select";
 import PageHeader from "../../components/ui/page-header";
 import PaginationControls from "../../components/common/pagination-controls";
+import EmptyState from "../../components/ui/empty-state";
+import Button from "../../components/ui/button";
+import JobListFilters from "./components/job-list-filters";
 
 const PAGE_SIZE = 50;
 const USAGE_POLL_INTERVAL_MS = 1000;
@@ -108,7 +104,14 @@ function JobList() {
 
   const pruneMutation = useMutation({
     mutationFn: () => api.pruneFailedJobs(),
-    onSuccess: invalidateJobs,
+    onSuccess: (response) => {
+      void invalidateJobs();
+      const count = response.deleted_jobs.length;
+      toast.success(
+        count === 0 ? "Nothing to prune" : "Failed jobs pruned",
+        `${count} ${count === 1 ? "job" : "jobs"} removed.`,
+      );
+    },
     onError: (error) =>
       toast.error(
         "Prune failed",
@@ -148,13 +151,9 @@ function JobList() {
   }
 
   async function handlePruneFailed() {
-    const failedCount = (jobsQuery.data?.jobs ?? []).filter(
-      (entry) => entry.job.status === "failed" || entry.job.status === "timed_out",
-    ).length;
-    if (failedCount === 0) return;
     const ok = await confirm({
       title: "Prune failed jobs?",
-      message: `Delete ${failedCount} failed or timed out jobs?`,
+      message: "Delete all failed or timed out jobs, including results outside this page?",
       confirmLabel: "Delete",
       destructive: true,
     });
@@ -184,7 +183,7 @@ function JobList() {
   }
 
   function setMode(mode: JobViewMode) {
-    setFilters({ mode, filter: "all", offset: 0 });
+    setFilters({ mode, filter: "all", includeDeleted: undefined, offset: 0 });
   }
 
   function setFilter(filter: "all" | HistoryBuildStatus) {
@@ -193,6 +192,18 @@ function JobList() {
 
   function setOffset(offset: number) {
     setFilters({ offset });
+  }
+
+  function clearFilters() {
+    setPackageInput("");
+    setTargetInput("");
+    setFilters({
+      filter: "all",
+      packageFilter: "",
+      targetFilter: "",
+      includeDeleted: undefined,
+      offset: 0,
+    });
   }
 
   if (jobsQuery.error) {
@@ -214,11 +225,17 @@ function JobList() {
     killMutation.isPending && killMutation.variables
       ? killMutation.variables
       : null;
-  const failedJobsCount = jobs.filter(
-    (entry) => entry.job.status === "failed" || entry.job.status === "timed_out",
-  ).length;
-
   const resultCount = data?.page.total ?? jobs.length;
+  const hasActiveFilters =
+    filters.packageFilter.trim().length > 0 ||
+    filters.targetFilter.trim().length > 0 ||
+    (filters.mode === "history" &&
+      (filters.filter !== "all" || filters.includeDeleted));
+  const activeFilterCount =
+    Number(filters.packageFilter.trim().length > 0) +
+    Number(filters.targetFilter.trim().length > 0) +
+    Number(filters.mode === "history" && filters.filter !== "all") +
+    Number(filters.mode === "history" && filters.includeDeleted);
 
   return (
     <div className="space-y-5">
@@ -233,8 +250,7 @@ function JobList() {
         color="orange"
       />
 
-      {/* Control bar */}
-      <div className="flex flex-wrap items-center gap-2.5 border border-edge bg-black p-4">
+      <div className="border border-edge bg-black p-4">
         <SegmentedControl<JobViewMode>
           value={filters.mode}
           onChange={setMode}
@@ -245,74 +261,25 @@ function JobList() {
             { value: "active", label: "Active", tone: "lime" },
           ]}
         />
-
-        {filters.mode === "history" && (
-          <div className="w-full sm:w-[190px]">
-            <Select
-              options={[
-                { value: "all", label: "All Statuses" },
-                ...Object.entries(HISTORY_BUILD_STATUS_LABELS).map(
-                  ([value, label]) => ({ value, label }),
-                ),
-              ]}
-              value={filters.filter}
-              onValueChange={(val) =>
-                setFilter(isHistoryBuildStatus(val) ? val : "all")
-              }
-              placeholder="Filter status..."
-            />
-          </div>
-        )}
-
-        {filters.mode === "history" && (
-          <div className="flex flex-wrap items-center gap-2.5 sm:ml-auto">
-            {/* Show-deleted toggle. Off by default — soft-deleted jobs are
-                pruned of artifacts/logs but kept so statistics still see
-                them; surface them on demand. */}
-            <label className="inline-flex cursor-pointer items-center gap-2 border border-edge bg-black px-3 py-2 font-mono text-xs font-semibold uppercase tracking-[0.06em] text-soft transition-colors hover:text-strong">
-              <input
-                type="checkbox"
-                checked={filters.includeDeleted}
-                onChange={(e) =>
-                  setFilters({
-                    includeDeleted: e.target.checked || undefined,
-                    offset: 0,
-                  })
-                }
-              />
-              Show deleted
-            </label>
-
-            <button
-              type="button"
-              onClick={handlePruneFailed}
-              disabled={pruneMutation.isPending || failedJobsCount === 0}
-              className="inline-flex items-center gap-2 border border-error bg-error/10 px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.06em] text-error transition-colors hover:bg-error/20 disabled:pointer-events-none disabled:opacity-40"
-            >
-              <FaIcon icon={faTrash} className="text-[12px]" />
-              Prune Failed
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Filters (history only) */}
-      {filters.mode === "history" && (
-        <div className="grid gap-3.5 sm:grid-cols-2">
-          <FilterBox
-            label="Package"
-            value={packageInput}
-            onChange={setPackageInput}
-            placeholder="Filter by package ..."
-          />
-          <FilterBox
-            label="Target"
-            value={targetInput}
-            onChange={setTargetInput}
-            placeholder="Filter by target ..."
-          />
-        </div>
-      )}
+      <JobListFilters
+        mode={filters.mode}
+        status={filters.filter}
+        packageValue={packageInput}
+        targetValue={targetInput}
+        includeDeleted={filters.includeDeleted}
+        activeCount={activeFilterCount}
+        pruning={pruneMutation.isPending}
+        onPackageChange={setPackageInput}
+        onTargetChange={setTargetInput}
+        onStatusChange={setFilter}
+        onIncludeDeletedChange={(includeDeleted) =>
+          setFilters({ includeDeleted: includeDeleted || undefined, offset: 0 })
+        }
+        onClear={clearFilters}
+        onPrune={() => void handlePruneFailed()}
+      />
 
       {/* Result count */}
       {!loading && filters.mode === "history" && (
@@ -323,6 +290,30 @@ function JobList() {
 
       {loading ? (
         <LoadingBlock label="Loading jobs…" lines={4} />
+      ) : jobs.length === 0 ? (
+        <EmptyState
+          title={
+            hasActiveFilters
+              ? "No matching jobs"
+              : filters.mode === "active"
+                ? "No active jobs"
+                : "No job history"
+          }
+          description={
+            hasActiveFilters
+              ? "Try different package, target, or status filters."
+              : filters.mode === "active"
+                ? "Queued and running builds will appear here."
+                : "Completed builds will appear here."
+          }
+          action={
+            hasActiveFilters ? (
+              <Button variant="subtle" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <JobListTable
           jobs={jobs}
@@ -346,33 +337,6 @@ function JobList() {
           onOffsetChange={setOffset}
         />
       )}
-    </div>
-  );
-}
-
-function FilterBox({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-}) {
-  return (
-    <div className="border border-edge bg-black px-4 py-3.5">
-      <div className="font-mono text-xs font-semibold uppercase tracking-[0.22em] text-soft">
-        {label}
-      </div>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="mt-2.5 w-full border border-edge bg-black px-3 py-2.5 font-mono text-xs text-white outline-none transition-colors focus:border-accent-lime"
-      />
     </div>
   );
 }

@@ -112,22 +112,14 @@ pub struct TimeSeriesPoint {
     pub failed: u64,
 }
 
-/// One scheduled-poll entry returned by `/api/v1/sync/schedule`. Granularity
-/// is `(package_name, mock_chroot)` — a target may be eligible while another
-/// target on the same package is sitting in failure backoff.
+/// One package-level source poll returned by `/api/v1/sync/schedule`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct SyncScheduleEntry {
     pub package_name: String,
-    pub mock_chroot: String,
-    /// When this target becomes (or became) eligible to poll. ISO-8601 string.
+    /// When this package source becomes (or became) eligible to poll.
     pub next_eligible_at: String,
     /// Seconds from now until eligibility. Negative when overdue.
     pub seconds_until: i64,
-    /// True if a non-zero `build_failure_backoff` row is gating this target.
-    pub blocked_by_backoff: bool,
-    /// Carried through from `build_failure_backoff` so the UI can show
-    /// "after 3 failed builds" context. Zero when no backoff is active.
-    pub consecutive_failures: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

@@ -198,10 +198,6 @@ impl DaemonPackageDeps {
         self.git.get_package(package_name).await
     }
 
-    pub(super) async fn load_package_definitions(&self) -> anyhow::Result<Vec<PackageDefinition>> {
-        self.git.list_definitions().await
-    }
-
     pub(super) async fn load_package_definition(
         &self,
         package_name: &str,

@@ -28,11 +28,6 @@ pub trait PackageDefinitionReader {
 }
 
 #[async_trait]
-pub trait PackageDefinitionCatalog {
-    async fn list_package_definitions(&self) -> anyhow::Result<Vec<PackageDefinition>>;
-}
-
-#[async_trait]
 pub trait TrackedSourceInspector {
     async fn inspect_source_tracked(
         &self,

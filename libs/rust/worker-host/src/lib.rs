@@ -30,9 +30,9 @@ pub use log_broadcaster::{LogBroadcaster, LogEvent};
 pub use mock_chroots::MockChrootService;
 pub use service::{
     ActiveTargetBuildReader, BuildJobReader, BuildJobWriter, BuildQueue, BuildService,
-    ExistingSourceSyncer, LastSuccessfulRevisionReader, PackageDefinitionCatalog,
-    PackageDefinitionReader, QueuedBuildRequest, RetryBuildCleaner, RetryJobResetter,
-    RetryPublishedFilesReader, SyncRunReporter, TargetBuildBackoffReader, TrackedSourceInspector,
+    ExistingSourceSyncer, LastSuccessfulRevisionReader, PackageDefinitionReader,
+    QueuedBuildRequest, RetryBuildCleaner, RetryJobResetter, RetryPublishedFilesReader,
+    SyncRunReporter, TargetBuildBackoffReader, TrackedSourceInspector,
 };
 pub use sessions::{ActiveWorkerSession, WorkerSession, WorkerSessionBroker};
 pub use worker_socket::start_worker_listener;

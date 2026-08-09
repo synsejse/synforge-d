@@ -14,9 +14,7 @@ use synforge_git_sync::{
     PackageSourceInspector as GitSyncPackageSourceInspector,
     RepositoryBrowser as GitSyncRepositoryBrowser,
 };
-use synforge_worker_host::{
-    PackageDefinitionCatalog, PackageDefinitionReader, SyncRunReporter, TrackedSourceInspector,
-};
+use synforge_worker_host::{PackageDefinitionReader, SyncRunReporter, TrackedSourceInspector};
 use uuid::Uuid;
 
 use super::DaemonPackageDeps;
@@ -44,13 +42,6 @@ impl GitSyncRepositoryBrowser for DaemonPackageDeps {
 impl GitSyncPackageDetailsReader for DaemonPackageDeps {
     async fn get_package(&self, package_name: &str) -> anyhow::Result<PackageResponse> {
         self.load_git_package(package_name).await
-    }
-}
-
-#[async_trait]
-impl PackageDefinitionCatalog for DaemonPackageDeps {
-    async fn list_package_definitions(&self) -> anyhow::Result<Vec<PackageDefinition>> {
-        self.load_package_definitions().await
     }
 }
 

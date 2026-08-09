@@ -79,12 +79,9 @@ impl SynforgeService {
         })
     }
 
-    /// Compute the next-up poll schedule across all enabled+polling
-    /// packages. Each (package, mock_chroot) pair gets a row with
-    /// `next_eligible_at` derived from the most recent sync attempt
-    /// plus the package's poll_interval, capped against any active build
-    /// failure backoff. Items are sorted soonest-first; pass `limit` to
-    /// cap the response (default 20, max 100).
+    /// Compute package-level source polling eligibility. Build-target
+    /// backoff is intentionally not applied here: it can skip a target after
+    /// source inspection, but it must never make source polling itself late.
     pub async fn get_sync_schedule(
         &self,
         limit: Option<usize>,
@@ -109,19 +106,6 @@ impl SynforgeService {
             .into_iter()
             .collect();
 
-        let backoffs: HashMap<(String, String), (u32, OffsetDateTime)> = self
-            .store
-            .list_target_build_backoffs()
-            .await?
-            .into_iter()
-            .map(|(pkg, chroot, state)| {
-                (
-                    (pkg, chroot),
-                    (state.consecutive_failures, state.next_eligible_at),
-                )
-            })
-            .collect();
-
         let mut entries: Vec<SyncScheduleEntry> = Vec::new();
         for response in packages {
             let pkg = &response.package;
@@ -136,25 +120,11 @@ impl SynforgeService {
                 .map(|last| *last + interval)
                 .unwrap_or(now);
 
-            for chroot in &pkg.mock_chroots {
-                let backoff = backoffs.get(&(pkg.name.clone(), chroot.clone())).copied();
-                let (next_at, blocked_by_backoff, consecutive_failures) = match backoff {
-                    Some((failures, backoff_until)) if backoff_until > interval_eligible_at => {
-                        (backoff_until, backoff_until > now, failures)
-                    }
-                    Some((failures, _)) => (interval_eligible_at, false, failures),
-                    None => (interval_eligible_at, false, 0),
-                };
-
-                entries.push(SyncScheduleEntry {
-                    package_name: pkg.name.clone(),
-                    mock_chroot: chroot.clone(),
-                    next_eligible_at: format_timestamp(next_at),
-                    seconds_until: (next_at - now).whole_seconds(),
-                    blocked_by_backoff,
-                    consecutive_failures,
-                });
-            }
+            entries.push(SyncScheduleEntry {
+                package_name: pkg.name.clone(),
+                next_eligible_at: format_timestamp(interval_eligible_at),
+                seconds_until: (interval_eligible_at - now).whole_seconds(),
+            });
         }
 
         entries.sort_by_key(|entry| entry.seconds_until);

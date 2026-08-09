@@ -18,7 +18,7 @@ export default function PackageListFilters({
   return (
     <div className="grid items-end gap-4 border border-edge bg-black p-[18px] sm:grid-cols-[minmax(0,1fr)_200px]">
       <label className="block">
-        <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-soft">
+        <span className="block font-mono text-xs font-semibold uppercase tracking-[0.22em] text-soft">
           Search
         </span>
         <input
@@ -30,7 +30,7 @@ export default function PackageListFilters({
         />
       </label>
       <label className="block">
-        <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-soft">
+        <span className="block font-mono text-xs font-semibold uppercase tracking-[0.22em] text-soft">
           Status
         </span>
         <div className="mt-2.5">

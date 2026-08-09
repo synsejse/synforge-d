@@ -35,7 +35,7 @@ function StatRow({
           : "text-white";
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
+      <span className="font-mono text-xs font-bold uppercase tracking-[0.22em] text-soft">
         {label}
       </span>
       <span className={`font-mono text-sm font-bold ${valueClass}`}>{value}</span>
@@ -51,7 +51,7 @@ function RefreshAllStats({
   return (
     <div className="grid grid-cols-2 gap-px border border-edge bg-edge-strong">
       <div className="space-y-2 bg-black px-4 py-3">
-        <div className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-soft">
+        <div className="font-mono text-xs font-bold uppercase tracking-[0.24em] text-soft">
           Packages
         </div>
         <StatRow label="Queued" value={operation.queued_packages} emphasis="lime" />
@@ -64,7 +64,7 @@ function RefreshAllStats({
         />
       </div>
       <div className="space-y-2 bg-black px-4 py-3">
-        <div className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-soft">
+        <div className="font-mono text-xs font-bold uppercase tracking-[0.24em] text-soft">
           Targets
         </div>
         <StatRow label="Queued" value={operation.queued_targets} emphasis="lime" />
@@ -131,7 +131,7 @@ export default function RefreshAllProgressDialog({
         <Link
           to="/syncs/batch"
           search={{ id: operation.operation_id }}
-          className="mt-4 inline-flex border border-edge-strong px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-white transition hover:border-accent-cyan hover:text-accent-cyan"
+          className="mt-4 inline-flex border border-edge-strong px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:border-accent-cyan hover:text-accent-cyan"
         >
           Open batch details
         </Link>

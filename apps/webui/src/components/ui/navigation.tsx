@@ -84,7 +84,7 @@ function NavSection({ group, rail, onNavigate, withDivider }: NavSectionProps) {
       )}
     >
       {!rail ? (
-        <div className="px-3 pb-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-soft">
+        <div className="px-3 pb-1.5 font-mono text-xs font-bold uppercase tracking-[0.28em] text-soft">
           {group.label}
         </div>
       ) : null}
@@ -213,7 +213,7 @@ function NavLinkBody({
             <NavBadge value={item.badge} tone={item.badgeTone ?? "neutral"} />
           ) : null}
         </span>
-        <span className="block truncate font-mono text-[11px] text-soft">
+        <span className="block truncate font-mono text-xs text-soft">
           {item.description}
         </span>
       </span>
@@ -255,7 +255,7 @@ function NavBadge({
         // optically centered inside the filled chip; tracking is
         // dropped because letter-spacing pads only the right side and
         // shoves single-character badges off-center.
-        "ml-auto inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center border px-1 font-mono text-[10px] font-extrabold leading-none",
+        "ml-auto inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center border px-1 font-mono text-xs font-extrabold leading-none",
         toneClass,
       )}
     >
@@ -270,7 +270,7 @@ function RailTooltipContent({ item }: { item: NavItem }) {
       <span className="font-display text-xs font-bold uppercase tracking-[0.12em] text-white">
         {item.label}
       </span>
-      <span className="font-mono text-[10px] normal-case tracking-normal text-soft">
+      <span className="font-mono text-xs normal-case tracking-normal text-soft">
         {item.description}
       </span>
     </div>

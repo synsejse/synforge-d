@@ -39,19 +39,19 @@ export default function BuildRunRow({ entry, last = false }: BuildRunRowProps) {
       <span className="shrink-0 truncate font-mono text-[13px] font-bold leading-none text-white group-hover:text-accent-lime sm:w-[118px]">
         {entry.job.package_name}
       </span>
-      <span className="hidden shrink-0 border border-edge px-[7px] py-1 font-mono text-[9px] font-medium uppercase leading-none tracking-[0.06em] text-muted sm:inline-block">
+      <span className="hidden shrink-0 border border-edge px-[7px] py-1 font-mono text-xs font-medium uppercase leading-none tracking-[0.06em] text-muted sm:inline-block">
         {entry.job.mock_chroot}
       </span>
-      <span className="hidden min-w-0 flex-1 truncate font-mono text-[11px] leading-none text-[#52525b] md:block">
+      <span className="hidden min-w-0 flex-1 truncate font-mono text-xs leading-none text-[#52525b] md:block">
         {entry.job.revision || "—"}
       </span>
       <span
-        className={`inline-flex shrink-0 items-center gap-1.5 border px-2 py-[5px] font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.1em] ${status.cls}`}
+        className={`inline-flex shrink-0 items-center gap-1.5 border px-2 py-[5px] font-mono text-xs font-semibold uppercase leading-none tracking-[0.1em] ${status.cls}`}
       >
         <span aria-hidden="true" className={`h-[5px] w-[5px] ${status.dot}`} />
         {status.label}
       </span>
-      <span className="hidden shrink-0 text-right font-mono text-[11px] leading-none text-[#71717a] lg:block lg:w-[150px]">
+      <span className="hidden shrink-0 text-right font-mono text-xs leading-none text-[#71717a] lg:block lg:w-[150px]">
         {formatDateTime(entry.job.created_at)}
       </span>
       <span aria-hidden="true" className="shrink-0 font-mono text-[#52525b] group-hover:text-accent-lime">

@@ -72,7 +72,7 @@ export default function PackageStatusStrip({ pkg }: Props) {
                   </span>
                   <StatusPill status={status} />
                 </div>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-soft">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-soft">
                   <span className="break-all">
                     {target.last_revision
                       ? shortRevision(target.last_revision)

@@ -37,12 +37,12 @@ export default function SyncScheduleStrip() {
     <section className="border border-edge bg-black">
       <div className="flex items-center justify-between gap-4 border-b border-edge px-[18px] py-[15px]">
         <div className="flex items-center gap-2.5">
-          <FaIcon icon={faClock} className="text-[11px] text-soft" />
+          <FaIcon icon={faClock} className="text-xs text-soft" />
           <h2 className="font-mono text-[13px] font-bold uppercase tracking-[0.06em] text-white">
             Up next
           </h2>
         </div>
-        <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-soft">
+        <span className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-soft">
           Sync schedule
         </span>
       </div>
@@ -119,14 +119,14 @@ function ScheduleCard({
         className="group block w-[140px] border border-edge bg-surface-alt px-[11px] py-[9px] transition-colors hover:border-edge-strong"
         title={`${item.package_name} source poll`}
       >
-        <div className="truncate font-mono text-[11px] font-bold leading-none text-white group-hover:text-accent-lime">
+        <div className="truncate font-mono text-xs font-bold leading-none text-white group-hover:text-accent-lime">
           {item.package_name}
         </div>
-        <div className="mt-1.5 truncate font-mono text-[9px] leading-none text-[#6b6b73]">
+        <div className="mt-1.5 truncate font-mono text-xs leading-none text-[#6b6b73]">
           Package source
         </div>
         <div
-          className="mt-2 flex items-center gap-1 font-mono text-[10px] font-semibold leading-none tabular-nums text-accent-lime"
+          className="mt-2 flex items-center gap-1 font-mono text-xs font-semibold leading-none tabular-nums text-accent-lime"
         >
           {eta}
         </div>

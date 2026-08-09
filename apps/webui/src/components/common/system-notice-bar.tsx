@@ -82,7 +82,7 @@ export default function SystemNoticeBar() {
           key={notice.id}
           className="group relative flex items-center gap-3 overflow-hidden px-3 py-1.5"
         >
-          <span className="flex shrink-0 items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-accent-orange">
+          <span className="flex shrink-0 items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.22em] text-accent-orange">
             <FaIcon icon={faTriangleExclamation} />
             Notice
           </span>
@@ -104,7 +104,7 @@ export default function SystemNoticeBar() {
             aria-label="Dismiss notice"
             className="shrink-0 border border-edge bg-black px-1.5 py-0.5 text-soft transition-colors hover:border-white hover:text-white"
           >
-            <FaIcon icon={faXmark} className="text-[11px]" />
+            <FaIcon icon={faXmark} className="text-xs" />
           </button>
         </div>
       ))}

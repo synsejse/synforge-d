@@ -275,7 +275,7 @@ export default function PackageListPage() {
       />
 
       {!loading && packages.length > 0 ? (
-        <div className="flex items-center justify-between gap-3 border border-edge bg-[#09090b] px-4 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-soft">
+        <div className="flex items-center justify-between gap-3 border border-edge bg-[#09090b] px-4 py-3 font-mono text-xs uppercase tracking-[0.14em] text-soft">
           <label className="flex items-center gap-2.5 hover:text-white">
             <input
               type="checkbox"

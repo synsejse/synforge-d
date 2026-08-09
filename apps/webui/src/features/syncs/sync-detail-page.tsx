@@ -154,7 +154,7 @@ function TargetCount({ label, value, tone }: { label: string; value: number; ton
   return (
     <div className="border border-edge bg-surface-alt p-4 text-center">
       <div className={`font-mono text-2xl font-bold ${tone}`}>{value}</div>
-      <div className="mt-1 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-soft">{label}</div>
+      <div className="mt-1 font-mono text-xs font-bold uppercase tracking-[0.18em] text-soft">{label}</div>
     </div>
   );
 }

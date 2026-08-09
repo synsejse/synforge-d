@@ -1,7 +1,11 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "@tanstack/react-router";
+import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import ModalFrame from "../ui/modal-frame";
 import { ModalTitle } from "../ui/modal-primitives";
+import Button from "../ui/button";
+import FaIcon from "../ui/fa-icon";
+import { KeyboardShortcutsContext } from "./keyboard-shortcuts-context";
 
 interface ShortcutGroup {
   label: string;
@@ -119,16 +123,18 @@ export function KeyboardShortcutsProvider({ children }: { children: ReactNode })
       window.removeEventListener("keydown", handleKey);
       clearPrefix();
     };
-  }, [overlayOpen, router]);
+  }, [router]);
 
   return (
-    <>
+    <KeyboardShortcutsContext.Provider
+      value={{ open: () => setOverlayOpen(true) }}
+    >
       {children}
       <ShortcutsOverlay
         open={overlayOpen}
         onClose={() => setOverlayOpen(false)}
       />
-    </>
+    </KeyboardShortcutsContext.Provider>
   );
 }
 
@@ -182,18 +188,23 @@ function ShortcutsOverlay({
       overlayClassName="flex items-center justify-center bg-black/85 p-4"
       className="max-w-2xl border border-edge-strong bg-black p-6"
     >
-      <div className="mb-5 flex items-baseline justify-between gap-4 border-b border-edge pb-3">
+      <div className="mb-5 flex items-center justify-between gap-4 border-b border-edge pb-3">
         <ModalTitle asChild>
           <h2 className="font-mono text-lg font-bold uppercase tracking-[0.04em] text-white">Keyboard shortcuts</h2>
         </ModalTitle>
-        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-soft">
-          press <Chord parts={["?"]} /> to close
-        </span>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          aria-label="Close keyboard shortcuts"
+        >
+          <FaIcon icon={faXmark} />
+        </Button>
       </div>
       <div className="grid gap-6 sm:grid-cols-3">
         {SHORTCUT_GROUPS.map((group) => (
           <div key={group.label}>
-            <h3 className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-accent-lime">
+            <h3 className="font-mono text-xs font-bold uppercase tracking-[0.28em] text-accent-lime">
               {group.label}
             </h3>
             <dl className="mt-3 space-y-2">
@@ -213,10 +224,10 @@ function ShortcutsOverlay({
 
 function Chord({ parts }: { parts: string[] }) {
   return (
-    <span className="inline-flex items-center gap-1 font-mono text-[11px]">
+    <span className="inline-flex items-center gap-1 font-mono text-xs">
       {parts.map((part, idx) => (
         <span key={idx} className="contents">
-          <kbd className="border border-edge-strong bg-surface-alt px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wide text-strong">
+          <kbd className="border border-edge-strong bg-surface-alt px-1.5 py-0.5 font-mono text-xs uppercase tracking-wide text-strong">
             {part}
           </kbd>
           {idx < parts.length - 1 ? (

@@ -62,7 +62,7 @@ export default function TimeSeriesChart({
 
   if (!data || rows.length === 0 || total === 0) {
     return (
-      <div className="flex min-h-[180px] flex-1 items-center justify-center border border-dashed border-edge px-5 py-8 text-center font-mono text-[11px] uppercase tracking-[0.06em] text-[#52525b]">
+      <div className="flex min-h-[180px] flex-1 items-center justify-center border border-dashed border-edge px-5 py-8 text-center font-mono text-xs uppercase tracking-[0.06em] text-[#52525b]">
         {emptyLabel}
       </div>
     );
@@ -120,13 +120,13 @@ export default function TimeSeriesChart({
         ))}
       </div>
 
-      <div className="mt-2 flex justify-between font-mono text-[9px] leading-none text-[#52525b]">
+      <div className="mt-2 flex justify-between font-mono text-xs leading-none text-[#52525b]">
         {labels.map((label, i) => (
           <span key={i}>{label}</span>
         ))}
       </div>
 
-      <div className="mt-3.5 flex justify-center gap-[18px] font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.08em] text-soft">
+      <div className="mt-3.5 flex justify-center gap-[18px] font-mono text-xs font-semibold uppercase leading-none tracking-[0.08em] text-soft">
         <span className="flex items-center gap-1.5">
           <span className="h-[9px] w-[9px]" style={{ background: failedColor }} />
           Failed

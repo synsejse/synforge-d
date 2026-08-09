@@ -88,12 +88,16 @@ function RepositoryBrowser() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Repository Control"
+        title="Repository"
         description="Published packages, builds, and files."
         color="lime"
         actions={[
-          { to: "/packages", label: "Packages", icon: faBoxesStacked },
-          { to: "/repository/use", label: "Add Repo", icon: faPlus, variant: "primary" },
+          {
+            to: "/repository/use",
+            label: "Use Repository",
+            icon: faPlus,
+            variant: "primary",
+          },
         ]}
       />
 
@@ -130,7 +134,7 @@ function RepositoryBrowser() {
 
       <div className="flex flex-wrap items-end gap-4 border border-edge bg-black p-[18px]">
         <label className="block min-w-[180px] flex-1">
-          <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-soft">
+          <span className="block font-mono text-xs font-semibold uppercase tracking-[0.22em] text-soft">
             Package
           </span>
           <input
@@ -142,7 +146,7 @@ function RepositoryBrowser() {
           />
         </label>
         <label className="block min-w-[180px] flex-1">
-          <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-soft">
+          <span className="block font-mono text-xs font-semibold uppercase tracking-[0.22em] text-soft">
             Target
           </span>
           <input
@@ -154,7 +158,7 @@ function RepositoryBrowser() {
           />
         </label>
         <div>
-          <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-soft">
+          <span className="block font-mono text-xs font-semibold uppercase tracking-[0.22em] text-soft">
             Kind
           </span>
           <div className="mt-2.5">
@@ -180,7 +184,7 @@ function RepositoryBrowser() {
             Published files
           </h2>
           {!inventoryLoading && repoFiles.length > 0 ? (
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6b6b73]">
+            <span className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6b73]">
               {repoFiles.length} shown
             </span>
           ) : null}

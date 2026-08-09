@@ -55,7 +55,7 @@ export default function MetricCard({
           <span />
         )}
         {live ? (
-          <span className="inline-flex items-center gap-1.5 border border-accent-lime px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-accent-lime">
+          <span className="inline-flex items-center gap-1.5 border border-accent-lime px-1.5 py-0.5 font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent-lime">
             <span
               aria-hidden="true"
               className="h-1.5 w-1.5 animate-pulse bg-accent-lime"
@@ -65,7 +65,7 @@ export default function MetricCard({
         ) : null}
       </div>
 
-      <div className="mt-5 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
+      <div className="mt-5 font-mono text-xs font-bold uppercase tracking-[0.22em] text-soft">
         {label}
       </div>
       <div

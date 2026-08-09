@@ -189,6 +189,17 @@ select:focus-visible {
   box-shadow: none;
 }
 
+/* Keep native toggles comfortably targetable without replacing their
+   platform semantics. Most are wrapped by a larger label/card, while the
+   24px control itself meets the compact pointer-target baseline. */
+input[type="checkbox"],
+input[type="radio"] {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  accent-color: var(--theme-accent);
+}
+
 /* Brutalist progress glyph — 4 cells fading in/out in sequence. */
 @keyframes synforge-progress-cell {
   0%, 70% { opacity: 0.2; }

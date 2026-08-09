@@ -71,7 +71,7 @@ export default function BuildHistoryCard({
           <StatusPill status={job.status} />
           {isDeleted ? (
             <span
-              className="border border-edge bg-black px-[7px] py-[3px] font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.1em] text-soft"
+              className="border border-edge bg-black px-[7px] py-[3px] font-mono text-xs font-semibold uppercase leading-none tracking-[0.1em] text-soft"
               title="Build artifacts and logs were pruned. Row kept for statistics."
             >
               Deleted
@@ -101,7 +101,7 @@ export default function BuildHistoryCard({
                   size="icon-sm"
                   onClick={() => onRefreshTarget(job.mock_chroot)}
                   aria-label={`Refresh target ${job.mock_chroot}`}
-                  className="h-[30px] w-[30px] border-edge text-soft hover:border-accent-lime hover:text-accent-lime"
+                  className="h-10 w-10 sm:h-9 sm:w-9 border-edge text-soft hover:border-accent-lime hover:text-accent-lime"
                 >
                   <FaIcon icon={faRotate} className="text-[13px]" />
                 </Button>
@@ -112,7 +112,7 @@ export default function BuildHistoryCard({
                   size="icon-sm"
                   onClick={() => onRebuildTarget(job.mock_chroot)}
                   aria-label={`Rebuild target ${job.mock_chroot}`}
-                  className="h-[30px] w-[30px] border-edge text-soft hover:border-accent-lime hover:text-accent-lime"
+                  className="h-10 w-10 sm:h-9 sm:w-9 border-edge text-soft hover:border-accent-lime hover:text-accent-lime"
                 >
                   <FaIcon icon={faHammer} className="text-[13px]" />
                 </Button>
@@ -128,7 +128,7 @@ export default function BuildHistoryCard({
                 disabled={live || deleting}
                 loading={deleting}
                 aria-label={`Delete build ${job.id}`}
-                className="h-[30px] w-[30px] border-edge text-soft hover:border-error hover:text-error"
+                className="h-10 w-10 sm:h-9 sm:w-9 border-edge text-soft hover:border-error hover:text-error"
               >
                 {deleting ? null : (
                   <FaIcon icon={faTrash} className="text-[13px]" />

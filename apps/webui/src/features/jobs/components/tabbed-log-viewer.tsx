@@ -238,7 +238,7 @@ export default function TabbedLogViewer({ jobId, owner = "job" }: Props) {
               ) : null}
             </div>
             {searchActive ? (
-              <span className="font-mono text-[11px] uppercase tracking-[0.15em] text-soft">
+              <span className="font-mono text-xs uppercase tracking-[0.15em] text-soft">
                 {displayLines.length} / {logLines.length} match
                 {displayLines.length === 1 ? "" : "es"}
               </span>
@@ -293,7 +293,7 @@ export default function TabbedLogViewer({ jobId, owner = "job" }: Props) {
 function StreamStatusBadge({ status }: { status: StreamStatus }) {
   if (status === "complete") {
     return (
-      <span className="inline-flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.15em] text-success">
+      <span className="inline-flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-success">
         <span className="h-2 w-2 bg-success" />
         Complete
       </span>
@@ -301,14 +301,14 @@ function StreamStatusBadge({ status }: { status: StreamStatus }) {
   }
   if (status === "reconnecting") {
     return (
-      <span className="inline-flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.15em] text-accent-amber">
+      <span className="inline-flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-accent-amber">
         <span className="h-2 w-2 animate-pulse bg-accent-amber" />
         Reconnecting…
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.15em] text-accent-lime">
+    <span className="inline-flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.15em] text-accent-lime">
       <span className="h-2 w-2 animate-pulse bg-accent-lime" />
       Live
     </span>

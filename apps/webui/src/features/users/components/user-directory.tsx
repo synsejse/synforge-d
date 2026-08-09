@@ -64,11 +64,11 @@ export default function UserDirectory({
                   <span className="font-mono text-[15px] font-bold text-white">
                     {entry.user.display_name}
                   </span>
-                  <span className="border border-edge px-[7px] py-[3px] font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.08em] text-[#71717a]">
+                  <span className="border border-edge px-[7px] py-[3px] font-mono text-xs font-semibold uppercase leading-none tracking-[0.08em] text-[#71717a]">
                     {entry.user.active ? "Active" : "Disabled"}
                   </span>
                   {isCurrentUser ? (
-                    <span className="border border-accent-lime px-[7px] py-[3px] font-mono text-[9px] font-bold uppercase leading-none tracking-[0.08em] text-accent-lime">
+                    <span className="border border-accent-lime px-[7px] py-[3px] font-mono text-xs font-bold uppercase leading-none tracking-[0.08em] text-accent-lime">
                       Current
                     </span>
                   ) : null}
@@ -107,7 +107,7 @@ export default function UserDirectory({
                 {entry.user.permissions.map((permission) => (
                   <span
                     key={`${entry.user.id}:${permission}`}
-                    className="border border-edge px-[9px] py-[5px] font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.08em] text-muted"
+                    className="border border-edge px-[9px] py-[5px] font-mono text-xs font-semibold uppercase leading-none tracking-[0.08em] text-muted"
                   >
                     {permission}
                   </span>
@@ -141,11 +141,11 @@ function Metric({
 }) {
   return (
     <div>
-      <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-[#6b6b73]">
+      <span className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-[#6b6b73]">
         {label}{" "}
       </span>
       <span
-        className={`font-mono text-[11px] ${strong ? "font-bold text-strong" : "font-medium text-[#8b8b95]"}`}
+        className={`font-mono text-xs ${strong ? "font-bold text-strong" : "font-medium text-[#8b8b95]"}`}
       >
         {value}
       </span>
@@ -176,7 +176,7 @@ function IconButton({
         onClick={onClick}
         disabled={disabled}
         aria-label={label}
-        className={`h-[30px] w-[30px] border-edge text-soft ${
+        className={`h-10 w-10 sm:h-9 sm:w-9 border-edge text-soft ${
           danger
             ? "hover:border-error hover:text-error"
             : "hover:border-accent-lime hover:text-accent-lime"

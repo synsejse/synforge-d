@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useDebounce } from "../../lib/hooks/use-debounce";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { faBars, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import { jobsQueries } from "../../lib/queries";
 import type { BuildJobResponse } from "../../lib/types";
@@ -223,14 +223,14 @@ function JobList() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title={filters.mode === "active" ? "Active Builds" : "Build Timeline"}
+        eyebrow={filters.mode === "active" ? "Active" : "History"}
+        title="Jobs"
         description={
           filters.mode === "active"
             ? "Pending and running jobs currently in flight."
             : "Finished job history across all packages and targets."
         }
         color="orange"
-        actions={[{ to: "/", label: "Overview", icon: faBars }]}
       />
 
       {/* Control bar */}
@@ -269,7 +269,7 @@ function JobList() {
             {/* Show-deleted toggle. Off by default — soft-deleted jobs are
                 pruned of artifacts/logs but kept so statistics still see
                 them; surface them on demand. */}
-            <label className="inline-flex cursor-pointer items-center gap-2 border border-edge bg-black px-3 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-soft transition-colors hover:text-strong">
+            <label className="inline-flex cursor-pointer items-center gap-2 border border-edge bg-black px-3 py-2 font-mono text-xs font-semibold uppercase tracking-[0.06em] text-soft transition-colors hover:text-strong">
               <input
                 type="checkbox"
                 checked={filters.includeDeleted}
@@ -287,7 +287,7 @@ function JobList() {
               type="button"
               onClick={handlePruneFailed}
               disabled={pruneMutation.isPending || failedJobsCount === 0}
-              className="inline-flex items-center gap-2 border border-error bg-error/10 px-3 py-2 font-mono text-[11px] font-bold uppercase tracking-[0.06em] text-error transition-colors hover:bg-error/20 disabled:pointer-events-none disabled:opacity-40"
+              className="inline-flex items-center gap-2 border border-error bg-error/10 px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.06em] text-error transition-colors hover:bg-error/20 disabled:pointer-events-none disabled:opacity-40"
             >
               <FaIcon icon={faTrash} className="text-[12px]" />
               Prune Failed
@@ -316,7 +316,7 @@ function JobList() {
 
       {/* Result count */}
       {!loading && filters.mode === "history" && (
-        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6b6b73]">
+        <div className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#6b6b73]">
           {resultCount} {resultCount === 1 ? "result" : "results"}
         </div>
       )}
@@ -363,7 +363,7 @@ function FilterBox({
 }) {
   return (
     <div className="border border-edge bg-black px-4 py-3.5">
-      <div className="font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-soft">
+      <div className="font-mono text-xs font-semibold uppercase tracking-[0.22em] text-soft">
         {label}
       </div>
       <input

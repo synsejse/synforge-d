@@ -85,7 +85,7 @@ export function Disclosure({
               {title}
             </div>
             {description ? (
-              <p className="mt-1.5 font-mono text-[10px] text-[#6b6b73]">
+              <p className="mt-1.5 font-mono text-xs text-[#6b6b73]">
                 {description}
               </p>
             ) : null}
@@ -97,7 +97,7 @@ export function Disclosure({
           ) : null}
           <FaIcon
             icon={faChevronDown}
-            className="shrink-0 text-[11px] text-[#52525b] transition-transform duration-200 group-data-[state=open]:rotate-180"
+            className="shrink-0 text-xs text-[#52525b] transition-transform duration-200 group-data-[state=open]:rotate-180"
           />
         </AccordionPrimitive.Trigger>
       </AccordionPrimitive.Header>

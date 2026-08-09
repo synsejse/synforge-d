@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { faRotate } from "@fortawesome/free-solid-svg-icons";
 import { useDebounce } from "../../lib/hooks/use-debounce";
 import { syncQueries } from "../../lib/queries";
 import type { SyncStatus } from "../../lib/types";
@@ -78,10 +77,9 @@ export default function SyncListPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Source Syncs"
+        title="Syncs"
         description="Live source inspection, planning stages, refresh batches, logs, and resulting builds."
         color="cyan"
-        actions={[{ to: "/packages", label: "Refresh packages", icon: faRotate }]}
       />
 
       <div className="flex flex-col gap-3 border border-edge bg-black p-4 lg:flex-row lg:items-center">

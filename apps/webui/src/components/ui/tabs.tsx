@@ -96,7 +96,7 @@ export default function Tabs<TValue extends string>({
               {typeof item.count === "number" ? (
                 <span
                   className={cn(
-                    "ml-2 inline-block min-w-[1.5rem] px-1 py-0.5 text-[10px] tracking-[0.12em]",
+                    "ml-2 inline-block min-w-[1.5rem] px-1 py-0.5 text-xs tracking-[0.12em]",
                     isActive
                       ? "border border-accent-lime text-accent-lime"
                       : "border border-edge text-soft",

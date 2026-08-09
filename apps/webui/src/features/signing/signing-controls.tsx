@@ -163,17 +163,17 @@ export default function SigningControls({
         </div>
 
         {!enabled && !status.key_present ? (
-          <p className="border-t border-edge px-4 py-2 font-mono text-[11px] text-soft sm:px-5">
+          <p className="border-t border-edge px-4 py-2 font-mono text-xs text-soft sm:px-5">
             Generate or import a key before enabling signing.
           </p>
         ) : null}
         {enabled ? (
-          <p className="border-t border-edge px-4 py-2 font-mono text-[11px] text-soft sm:px-5">
+          <p className="border-t border-edge px-4 py-2 font-mono text-xs text-soft sm:px-5">
             Disable signing before generating, importing, or deleting the key.
           </p>
         ) : null}
         {!status.can_export_private_key ? (
-          <p className="border-t border-edge px-4 py-2 font-mono text-[11px] text-soft sm:px-5">
+          <p className="border-t border-edge px-4 py-2 font-mono text-xs text-soft sm:px-5">
             Private key export is restricted to the bootstrap admin. Public key filename is fixed
             to <code> gpg.key</code>.
           </p>

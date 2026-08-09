@@ -52,7 +52,7 @@ export default function SyncHistoryTable({ packageName }: SyncHistoryTableProps)
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
+        <span className="font-mono text-xs font-bold uppercase tracking-[0.22em] text-soft">
           Filter status
         </span>
         <SegmentedControl<StatusFilter>

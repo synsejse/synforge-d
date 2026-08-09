@@ -22,7 +22,7 @@ export default function SyncBuildLinks({ builds }: { builds: BuildJobResponse[] 
         >
           <div className="min-w-0 flex-1">
             <div className="font-mono text-sm font-bold text-white">{job.mock_chroot}</div>
-            <div className="mt-1 break-all font-mono text-[10px] text-soft">
+            <div className="mt-1 break-all font-mono text-xs text-soft">
               {job.id} · {formatDateTime(job.created_at)}
             </div>
           </div>

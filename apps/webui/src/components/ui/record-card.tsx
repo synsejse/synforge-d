@@ -66,10 +66,10 @@ export function RecordMeta({ items }: { items: RecordMetaItem[] }) {
     <div className="mt-3 flex flex-wrap gap-x-8 gap-y-2">
       {items.map((item) => (
         <div key={item.label} className="min-w-0">
-          <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.16em] text-[#6b6b73]">
+          <span className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#6b6b73]">
             {item.label}{" "}
           </span>
-          <span className="break-all font-mono text-[11px] text-muted">
+          <span className="break-all font-mono text-xs text-muted">
             {item.value}
           </span>
         </div>
@@ -81,7 +81,7 @@ export function RecordMeta({ items }: { items: RecordMetaItem[] }) {
 /** Neutral bordered metadata chip (package name, target chroot). */
 export function RecordChip({ children }: { children: ReactNode }) {
   return (
-    <span className="shrink-0 border border-edge bg-black px-[7px] py-1 font-mono text-[9px] font-medium uppercase leading-none tracking-[0.04em] text-[#71717a]">
+    <span className="shrink-0 border border-edge bg-black px-[7px] py-1 font-mono text-xs font-medium uppercase leading-none tracking-[0.04em] text-[#71717a]">
       {children}
     </span>
   );
@@ -101,7 +101,7 @@ export function KindBadge({ kind }: { kind: string }) {
   return (
     <span
       className={cn(
-        "shrink-0 border bg-black px-[7px] py-1 font-mono text-[9px] font-bold uppercase leading-none tracking-[0.08em]",
+        "shrink-0 border bg-black px-[7px] py-1 font-mono text-xs font-bold uppercase leading-none tracking-[0.08em]",
         KIND_CHIP[kind] ?? "border-edge-strong text-soft",
       )}
     >
@@ -128,7 +128,7 @@ export function SigningBadge({
     <span
       title={state.title}
       className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 border px-[7px] py-1 font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.08em]",
+        "inline-flex shrink-0 items-center gap-1.5 border px-[7px] py-1 font-mono text-xs font-semibold uppercase leading-none tracking-[0.08em]",
         state.cls,
       )}
     >

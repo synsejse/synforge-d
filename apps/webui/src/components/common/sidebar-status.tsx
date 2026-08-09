@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
-import { faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
+import {
+  faKeyboard,
+  faRightFromBracket,
+} from "@fortawesome/free-solid-svg-icons";
 import Button from "../ui/button";
 import FaIcon from "../ui/fa-icon";
 import Tooltip from "../ui/tooltip";
 import { cn } from "../../lib/utils";
+import { useKeyboardShortcuts } from "./keyboard-shortcuts-context";
 
 interface SidebarSystemTickProps {
   isRail: boolean;
@@ -35,7 +39,7 @@ export function SidebarSystemTick({
               <span className="font-display text-xs font-bold uppercase tracking-[0.12em] text-white">
                 {isBuilding ? `Building · ${activeJobCount} active` : "Idle"}
               </span>
-              <span className="font-mono text-[10px] tracking-normal text-soft">
+              <span className="font-mono text-xs tracking-normal text-soft">
                 Local time {clock}
               </span>
             </div>
@@ -52,7 +56,7 @@ export function SidebarSystemTick({
                 isBuilding ? "animate-pulse bg-accent-lime" : "bg-soft",
               )}
             />
-            <span className="font-mono text-[9px] tabular-nums tracking-wide text-soft">
+            <span className="font-mono text-xs tabular-nums tracking-wide text-soft">
               {clock.slice(0, 5)}
             </span>
           </div>
@@ -63,7 +67,7 @@ export function SidebarSystemTick({
 
   return (
     <div className="border-t border-edge bg-black px-3 py-2">
-      <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.18em]">
+      <div className="flex items-center justify-between gap-3 font-mono text-xs uppercase tracking-[0.18em]">
         <div className="flex items-center gap-2">
           <span
             aria-hidden="true"
@@ -115,6 +119,8 @@ export function SidebarFooter({
   handle,
   onLogout,
 }: SidebarFooterProps) {
+  const shortcuts = useKeyboardShortcuts();
+
   if (isRail) {
     return (
       <div className="border-t border-edge-strong bg-black lg:mt-auto">
@@ -126,7 +132,7 @@ export function SidebarFooter({
                   {displayName ?? "Account"}
                 </span>
                 {handle ? (
-                  <span className="font-mono text-[10px] normal-case tracking-normal text-soft">
+                  <span className="font-mono text-xs normal-case tracking-normal text-soft">
                     @{handle}
                   </span>
                 ) : null}
@@ -140,6 +146,17 @@ export function SidebarFooter({
             >
               {userInitial}
             </div>
+          </Tooltip>
+          <Tooltip content="Keyboard shortcuts" side="right">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={shortcuts.open}
+              aria-label="Open keyboard shortcuts"
+              className="text-soft hover:border-accent-lime hover:text-accent-lime"
+            >
+              <FaIcon icon={faKeyboard} />
+            </Button>
           </Tooltip>
           <Tooltip content="Sign out" side="right">
             <Button
@@ -160,7 +177,22 @@ export function SidebarFooter({
   return (
     <div className="border-t border-edge-strong bg-black lg:mt-auto">
       <div className="px-3 py-3 sm:px-4 sm:py-4">
-        <div className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-soft">
+        <Button
+          variant="subtle"
+          size="sm"
+          fullWidth
+          onClick={shortcuts.open}
+          className="mb-3 justify-between px-2 text-soft"
+        >
+          <span className="inline-flex items-center gap-2">
+            <FaIcon icon={faKeyboard} />
+            Shortcuts
+          </span>
+          <kbd className="border border-edge-strong bg-black px-1.5 py-0.5 font-mono text-xs text-strong">
+            ?
+          </kbd>
+        </Button>
+        <div className="font-mono text-xs font-bold uppercase tracking-[0.28em] text-soft">
           Session
         </div>
         <div className="mt-2 flex items-center gap-3 border border-edge bg-black px-3 py-2.5">
@@ -175,7 +207,7 @@ export function SidebarFooter({
               {displayName ?? "Account"}
             </div>
             {handle ? (
-              <div className="truncate font-mono text-[11px] text-soft">
+              <div className="truncate font-mono text-xs text-soft">
                 @{handle}
               </div>
             ) : null}

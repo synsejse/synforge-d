@@ -86,13 +86,13 @@ export default function JobCard({
         <StatusPill status={entry.job.status} />
         {isDeleted ? (
           <span
-            className="border border-edge bg-black px-2 py-[5px] font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.1em] text-soft"
+            className="border border-edge bg-black px-2 py-[5px] font-mono text-xs font-semibold uppercase leading-none tracking-[0.1em] text-soft"
             title="This job's artifacts and logs were pruned. The row is kept so historical statistics still see it."
           >
             Deleted
           </span>
         ) : null}
-        <span className="border border-edge bg-black px-2 py-[5px] font-mono text-[9px] font-medium uppercase leading-none tracking-[0.06em] text-muted">
+        <span className="border border-edge bg-black px-2 py-[5px] font-mono text-xs font-medium uppercase leading-none tracking-[0.06em] text-muted">
           {entry.job.mock_chroot}
         </span>
 
@@ -186,7 +186,7 @@ function ActiveJobCard({
           {entry.job.package_name}
         </Link>
         <StatusPill status={entry.job.status} />
-        <span className="border border-edge bg-black px-2 py-[5px] font-mono text-[9px] font-medium uppercase leading-none tracking-[0.06em] text-muted">
+        <span className="border border-edge bg-black px-2 py-[5px] font-mono text-xs font-medium uppercase leading-none tracking-[0.06em] text-muted">
           {entry.job.mock_chroot}
         </span>
         <div className="ml-auto flex items-center gap-3">
@@ -223,7 +223,7 @@ function ActiveJobCard({
         </div>
       ) : null}
 
-      <div className="mt-3 font-mono text-[11px] leading-none text-[#52525b]">
+      <div className="mt-3 font-mono text-xs leading-none text-[#52525b]">
         {entry.job.id}
       </div>
     </article>
@@ -233,10 +233,10 @@ function ActiveJobCard({
 function JobMeta({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="min-w-0">
-      <div className="font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.18em] text-[#6b6b73]">
+      <div className="font-mono text-xs font-semibold uppercase leading-none tracking-[0.18em] text-[#6b6b73]">
         {label}
       </div>
-      <div className="mt-[7px] font-mono text-[11px] leading-[1.4]">
+      <div className="mt-[7px] font-mono text-xs leading-[1.4]">
         {children}
       </div>
     </div>
@@ -258,7 +258,7 @@ function Meter({
 }) {
   return (
     <div>
-      <div className="flex items-center justify-between font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.14em] text-soft">
+      <div className="flex items-center justify-between font-mono text-xs font-semibold uppercase leading-none tracking-[0.14em] text-soft">
         <span>{label}</span>
         <span className={`tabular-nums ${valueClass}`}>{value}</span>
       </div>
@@ -288,7 +288,7 @@ function IconLink({
         to={to}
         search={search}
         aria-label={label}
-        className="sf-ic inline-flex h-[30px] w-[30px] items-center justify-center border border-edge bg-transparent text-soft transition-colors hover:border-accent-lime hover:text-accent-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime"
+        className="sf-ic inline-flex h-10 w-10 sm:h-9 sm:w-9 items-center justify-center border border-edge bg-transparent text-soft transition-colors hover:border-accent-lime hover:text-accent-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime"
       >
         <FaIcon icon={icon} className="text-[13px]" />
       </Link>
@@ -319,7 +319,7 @@ function IconButton({
         onClick={onClick}
         disabled={disabled}
         aria-label={label}
-        className={`h-[30px] w-[30px] border-edge text-soft ${
+        className={`h-10 w-10 sm:h-9 sm:w-9 border-edge text-soft ${
           danger
             ? "hover:border-error hover:text-error"
             : "hover:border-accent-lime hover:text-accent-lime"

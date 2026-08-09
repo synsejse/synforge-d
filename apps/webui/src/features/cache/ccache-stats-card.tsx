@@ -45,13 +45,13 @@ export default function CcacheStatsCard({
             {title}
           </h2>
           {description ? (
-            <p className="mt-1 font-mono text-[11px] text-soft">
+            <p className="mt-1 font-mono text-xs text-soft">
               {description}
             </p>
           ) : null}
         </div>
         <span
-          className={`border bg-black px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.16em] ${temperature.className}`}
+          className={`border bg-black px-2 py-1 font-mono text-xs font-bold uppercase tracking-[0.16em] ${temperature.className}`}
         >
           {temperature.label}
         </span>
@@ -60,7 +60,7 @@ export default function CcacheStatsCard({
       <div className="space-y-4 p-5 sm:p-6">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-soft">
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-soft">
               Cacheable hit rate
             </p>
             <p className="mt-1 font-mono text-3xl font-bold text-accent-lime">
@@ -69,7 +69,7 @@ export default function CcacheStatsCard({
           </div>
           {buildCount != null ? (
             <div className="text-right">
-              <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-soft">
+              <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-soft">
                 Recorded builds
               </p>
               <p className="mt-1 font-mono text-lg font-bold text-strong">
@@ -98,7 +98,7 @@ export default function CcacheStatsCard({
           <Metric label="Errors" value={stats.error_calls} tone="error" />
         </dl>
 
-        <p className="font-mono text-[10px] leading-relaxed text-soft">
+        <p className="font-mono text-xs leading-relaxed text-soft">
           Hit rate uses cacheable compiler calls only. Preprocessed hits:{" "}
           {formatCcacheCount(stats.preprocessed_hits)}.
         </p>
@@ -124,7 +124,7 @@ function Metric({
         : "text-strong";
   return (
     <div>
-      <dt className="font-mono text-[9px] font-semibold uppercase tracking-[0.16em] text-soft">
+      <dt className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-soft">
         {label}
       </dt>
       <dd className={`mt-1 font-mono text-base font-bold ${valueClass}`}>

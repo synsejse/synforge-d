@@ -24,12 +24,12 @@ export const buttonVariants = cva(
           "bg-black text-success border-success hover:bg-success hover:text-black",
       },
       size: {
-        xs: "px-2 py-1 text-[10px] tracking-[0.1em] gap-1.5",
-        sm: "px-3 py-2 text-[11px] tracking-[0.08em]",
-        md: "px-3.5 py-2.5 text-[11px] tracking-[0.08em]",
-        lg: "px-5 py-3 text-xs font-extrabold tracking-[0.06em]",
-        "icon-sm": "h-8 w-8 p-0",
-        icon: "h-9 w-9 p-0",
+        xs: "min-h-8 px-2 py-1 text-[11px] tracking-[0.1em] gap-1.5",
+        sm: "min-h-10 px-3 py-2 text-xs tracking-[0.08em]",
+        md: "min-h-11 px-3.5 py-2.5 text-xs tracking-[0.08em]",
+        lg: "min-h-12 px-5 py-3 text-sm font-extrabold tracking-[0.06em]",
+        "icon-sm": "h-9 w-9 p-0",
+        icon: "h-10 w-10 p-0",
         "icon-lg": "h-11 w-11 p-0",
       },
       fullWidth: {

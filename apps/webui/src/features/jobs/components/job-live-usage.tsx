@@ -14,7 +14,7 @@ export default function JobLiveUsage({ sample, hardware }: Props) {
       aria-label="Live resource usage"
       className="flex flex-col gap-3 border border-accent-lime bg-black px-4 py-3 sm:flex-row sm:items-center sm:gap-x-6 sm:px-5"
     >
-      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-accent-lime">
+      <span className="font-mono text-xs font-bold uppercase tracking-[0.22em] text-accent-lime">
         Live
       </span>
       <LiveUsageMetric
@@ -47,7 +47,7 @@ function LiveUsageMetric({
   const hasSample = value !== "-";
   return (
     <div className="flex flex-1 flex-wrap items-center gap-x-3 gap-y-1">
-      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
+      <span className="font-mono text-xs font-bold uppercase tracking-[0.22em] text-soft">
         {label}
       </span>
       <span className="font-mono text-sm font-bold text-white">{value}</span>

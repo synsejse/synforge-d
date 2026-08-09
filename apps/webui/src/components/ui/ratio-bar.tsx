@@ -81,7 +81,7 @@ export default function RatioBar({
         })}
       </div>
       {showLegend ? (
-        <div className="flex flex-wrap gap-x-4 gap-y-2 font-mono text-[10px] font-semibold">
+        <div className="flex flex-wrap gap-x-4 gap-y-2 font-mono text-xs font-semibold">
           {segments.map((seg, idx) => {
             const percent = total > 0 ? (Math.max(0, seg.value) / total) * 100 : 0;
             return (

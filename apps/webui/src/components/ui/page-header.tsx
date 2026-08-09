@@ -65,7 +65,7 @@ export default function PageHeader({
           <div className="min-w-0 flex-1">
             {eyebrow ? (
               <p
-                className={`font-mono text-[10px] font-bold uppercase tracking-[0.3em] ${colors.text}`}
+                className={`font-mono text-xs font-bold uppercase tracking-[0.3em] ${colors.text}`}
               >
                 {eyebrow}
               </p>

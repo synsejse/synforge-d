@@ -198,7 +198,7 @@ export default function JobDetail({ jobId }: Props) {
             <div className="flex flex-wrap items-center gap-3">
               <StatusPill status={job.status} />
               {isDeleted ? (
-                <span className="border border-edge bg-black px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-soft">
+                <span className="border border-edge bg-black px-2 py-1 font-mono text-xs font-bold uppercase tracking-[0.22em] text-soft">
                   Deleted
                 </span>
               ) : null}

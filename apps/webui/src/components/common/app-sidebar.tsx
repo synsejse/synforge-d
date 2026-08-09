@@ -30,9 +30,9 @@ function buildNavGroups(activeJobCount: number): NavGroup[] {
       items: [
         {
           href: "/",
-          label: "Overview",
+          label: "Dashboard",
           icon: faGaugeHigh,
-          description: "System summary",
+          description: "System overview",
         },
         {
           href: "/jobs",
@@ -222,7 +222,7 @@ function SidebarHeader({
             isRail ? "lg:hidden" : "",
           )}
         >
-          <div className="truncate font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-accent-lime">
+          <div className="truncate font-mono text-xs font-bold uppercase tracking-[0.28em] text-accent-lime">
             Synforge
           </div>
           <h1 className="font-display mt-1.5 truncate text-base font-extrabold uppercase tracking-tighter text-white xl:text-lg">

@@ -31,7 +31,7 @@ export default function PackageCcacheSummary({ targets, enabled }: Props) {
         >
           Compiler cache by target
         </h2>
-        <p className="mt-1 font-mono text-[11px] text-soft">
+        <p className="mt-1 font-mono text-xs text-soft">
           Lifetime package totals, including retained statistics from pruned
           builds.
         </p>

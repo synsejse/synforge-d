@@ -38,13 +38,13 @@ export default function InFlightCard({ entry, usage, now }: InFlightCardProps) {
         <span className="font-mono text-[14px] font-bold leading-none text-white">
           {job.package_name}
         </span>
-        <span className="border border-edge px-[7px] py-1 font-mono text-[9px] font-medium uppercase leading-none tracking-[0.06em] text-muted">
+        <span className="border border-edge px-[7px] py-1 font-mono text-xs font-medium uppercase leading-none tracking-[0.06em] text-muted">
           {job.mock_chroot}
         </span>
-        <span className="font-mono text-[10px] font-semibold uppercase leading-none tracking-[0.08em] text-accent-lime">
+        <span className="font-mono text-xs font-semibold uppercase leading-none tracking-[0.08em] text-accent-lime">
           Running
         </span>
-        <span className="ml-auto font-mono text-[11px] font-semibold leading-none tabular-nums text-soft">
+        <span className="ml-auto font-mono text-xs font-semibold leading-none tabular-nums text-soft">
           {elapsed}
         </span>
       </div>
@@ -66,7 +66,7 @@ export default function InFlightCard({ entry, usage, now }: InFlightCardProps) {
         />
       </div>
 
-      <div className="mt-3 max-h-[92px] overflow-hidden border border-[#161618] bg-black px-[11px] py-[9px] font-mono text-[11px] leading-[1.6] text-[#71717a]">
+      <div className="mt-3 max-h-[92px] overflow-hidden border border-[#161618] bg-black px-[11px] py-[9px] font-mono text-xs leading-[1.6] text-[#71717a]">
         {logLines.length > 0 ? (
           logLines.map((line, i) => (
             <div key={i} className="truncate">
@@ -96,7 +96,7 @@ function Meter({
 }) {
   return (
     <div>
-      <div className="flex items-center justify-between font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.14em] text-soft">
+      <div className="flex items-center justify-between font-mono text-xs font-semibold uppercase leading-none tracking-[0.14em] text-soft">
         <span>{label}</span>
         <span className={`tabular-nums ${valueClass}`}>{value}</span>
       </div>

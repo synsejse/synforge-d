@@ -27,7 +27,7 @@ function JumpToLive({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-2 border border-accent-lime bg-accent-lime px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.15em] text-black transition-[filter] hover:brightness-110"
+      className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-2 border border-accent-lime bg-accent-lime px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-[0.15em] text-black transition-[filter] hover:brightness-110"
     >
       <FaIcon icon={faChevronDown} />
       Jump to live
@@ -153,7 +153,7 @@ export function GroupedLogView({
                     className="text-soft"
                   />
                   <span className="truncate">{section.title}</span>
-                  <span className="ml-auto text-[10px] text-soft">
+                  <span className="ml-auto text-xs text-soft">
                     {section.lines.length}
                   </span>
                 </button>

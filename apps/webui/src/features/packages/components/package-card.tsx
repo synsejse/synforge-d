@@ -102,7 +102,7 @@ export default function PackageCard({
         <StatusPill status={status} />
         {backoffTargets.length > 0 ? (
           <Tooltip content={summarizeBackoffTargets(backoffTargets)} side="top">
-            <span className="border border-accent-orange bg-black px-2 py-[5px] font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.1em] text-accent-orange">
+            <span className="border border-accent-orange bg-black px-2 py-[5px] font-mono text-xs font-semibold uppercase leading-none tracking-[0.1em] text-accent-orange">
               Backoff {backoffTargets.length}
             </span>
           </Tooltip>
@@ -171,7 +171,7 @@ export default function PackageCard({
 function Meta({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="min-w-0">
-      <div className="font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.18em] text-[#6b6b73]">
+      <div className="font-mono text-xs font-semibold uppercase leading-none tracking-[0.18em] text-[#6b6b73]">
         {label}
       </div>
       <div className="mt-[7px] font-mono text-xs leading-[1.3]">{children}</div>
@@ -185,7 +185,7 @@ function TargetChip({ target }: { target: PackageTargetState }) {
   const dot = STATUS_DOTS[status] ?? "bg-muted";
   return (
     <div className="inline-flex items-center gap-2 border border-edge px-2.5 py-1.5">
-      <span className="font-mono text-[10px] font-semibold leading-none text-muted">
+      <span className="font-mono text-xs font-semibold leading-none text-muted">
         {target.mock_chroot}
       </span>
       <span
@@ -193,13 +193,13 @@ function TargetChip({ target }: { target: PackageTargetState }) {
         aria-label={`status ${status}`}
         className={`h-1.5 w-1.5 shrink-0 ${dot}`}
       />
-      <span className="font-mono text-[10px] leading-none text-[#52525b]">
+      <span className="font-mono text-xs leading-none text-[#52525b]">
         {target.last_revision
           ? compactRevision(target.last_revision)
           : "no revision yet"}
       </span>
       {backoff > 0 ? (
-        <span className="border border-accent-orange px-1.5 py-0.5 font-mono text-[9px] uppercase leading-none tracking-[0.1em] text-accent-orange">
+        <span className="border border-accent-orange px-1.5 py-0.5 font-mono text-xs uppercase leading-none tracking-[0.1em] text-accent-orange">
           backoff {formatDurationSeconds(backoff)}
         </span>
       ) : null}
@@ -233,7 +233,7 @@ function IconButton({
         disabled={disabled}
         loading={loading}
         aria-label={label}
-        className={`h-[30px] w-[30px] border-edge text-soft ${
+        className={`h-10 w-10 sm:h-9 sm:w-9 border-edge text-soft ${
           danger
             ? "hover:border-error hover:text-error"
             : "hover:border-accent-lime hover:text-accent-lime"

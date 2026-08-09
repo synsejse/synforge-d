@@ -60,7 +60,7 @@ export default function SyncRunCard({ operation }: { operation: SyncOperation })
         ]}
       />
       {operation.error_message ? (
-        <div className="mt-3 border-l-2 border-error bg-error/5 px-3 py-2 font-mono text-[11px] text-error">
+        <div className="mt-3 border-l-2 border-error bg-error/5 px-3 py-2 font-mono text-xs text-error">
           {operation.error_message}
         </div>
       ) : null}

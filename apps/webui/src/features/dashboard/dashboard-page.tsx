@@ -15,7 +15,6 @@ import InFlightCard from "./in-flight-card";
 import SyncScheduleStrip from "./sync-schedule-strip";
 import {
   faBoxesStacked,
-  faChartLine,
   faCircleCheck,
   faFolderTree,
   faRocket,
@@ -76,11 +75,6 @@ function Dashboard() {
         title="Dashboard"
         description="High-signal snapshot of package state, active builds, and execution history."
         color="lime"
-        actions={[
-          { to: "/packages", label: "Packages", icon: faBoxesStacked },
-          { to: "/statistics", label: "Statistics", icon: faChartLine },
-          { to: "/jobs", label: "Open Jobs", icon: faChartLine, variant: "primary" },
-        ]}
       />
 
       {loading ? (
@@ -122,7 +116,7 @@ function Dashboard() {
           </h2>
           <Link
             to="/jobs"
-            className="font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-accent-lime transition-all duration-100 ease-linear hover:underline"
+            className="font-mono text-xs font-bold uppercase tracking-[0.08em] text-accent-lime transition-all duration-100 ease-linear hover:underline"
           >
             View All →
           </Link>
@@ -180,7 +174,7 @@ function Dashboard() {
           </div>
           {!loading && (
             <span
-              className={`font-mono text-[10px] font-bold uppercase tracking-[0.16em] ${building > 0 ? "text-accent-lime" : "text-soft"}`}
+              className={`font-mono text-xs font-bold uppercase tracking-[0.16em] ${building > 0 ? "text-accent-lime" : "text-soft"}`}
             >
               {building} active
             </span>
@@ -244,14 +238,14 @@ function PipelineStrip({ queued, building, recentDone }: PipelineStripProps) {
         className="group flex items-center justify-between gap-4 border-t border-edge px-5 py-[18px] transition-colors hover:bg-surface-hover sm:border-t-0"
       >
         <div>
-          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-soft">
+          <div className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-soft">
             Recent done
           </div>
           <div className="mt-3.5 font-mono text-3xl font-extrabold leading-none tabular-nums text-white">
             {recentDone}
           </div>
         </div>
-        <span className="font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-soft transition-colors group-hover:text-accent-lime">
+        <span className="font-mono text-xs font-bold uppercase tracking-[0.08em] text-soft transition-colors group-hover:text-accent-lime">
           View all →
         </span>
       </Link>
@@ -274,7 +268,7 @@ function PipelineStage({
       className={`px-5 py-[18px] ${accent ? "border-t border-edge sm:border-x sm:border-t-0 sm:border-[#161618]" : ""}`}
     >
       <div
-        className={`font-mono text-[10px] font-bold uppercase tracking-[0.2em] ${live ? "text-accent-lime" : "text-soft"}`}
+        className={`font-mono text-xs font-bold uppercase tracking-[0.2em] ${live ? "text-accent-lime" : "text-soft"}`}
       >
         [ {label} ]
       </div>

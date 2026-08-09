@@ -3,7 +3,6 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   faRotateLeft,
   faSave,
-  faServer,
 } from "@fortawesome/free-solid-svg-icons";
 import api from "../../lib/api";
 import { configQueries } from "../../lib/queries";
@@ -72,10 +71,9 @@ function Settings() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Configuration"
+          title="Settings"
           description="Runtime settings and effective daemon values."
           color="purple"
-          actions={[{ to: "/", label: "Overview", icon: faServer }]}
         />
         <LoadingBlock label="Loading config…" lines={4} />
       </div>
@@ -96,10 +94,9 @@ function Settings() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Configuration"
+        title="Settings"
         description="Runtime settings and effective daemon values."
         color="purple"
-        actions={[{ to: "/", label: "Overview", icon: faServer }]}
       />
 
       {saveMutation.error ? (
@@ -227,7 +224,7 @@ function ConfigFieldInput({
         </span>
         <span className="flex items-center gap-2">
           {field.restart_required ? (
-            <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-accent-cyan">
+            <span className="font-mono text-xs uppercase tracking-[0.15em] text-accent-cyan">
               Restart required
             </span>
           ) : null}
@@ -237,7 +234,7 @@ function ConfigFieldInput({
                 type="button"
                 onClick={() => onChange(defaultStr)}
                 aria-label={`Reset ${field.label} to default`}
-                className="inline-flex items-center gap-1 border border-edge bg-black px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.15em] text-soft transition hover:border-edge-strong hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime"
+                className="inline-flex items-center gap-1 border border-edge bg-black px-2 py-0.5 font-mono text-xs uppercase tracking-[0.15em] text-soft transition hover:border-edge-strong hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime"
               >
                 <FaIcon icon={faRotateLeft} className="text-[0.85em]" />
                 Reset
@@ -258,7 +255,7 @@ function ConfigFieldInput({
       <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span className="text-xs text-soft">{field.description}</span>
         {defaultStr !== "" ? (
-          <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-soft">
+          <span className="font-mono text-xs uppercase tracking-[0.15em] text-soft">
             Default: <span className="text-muted">{defaultStr}</span>
           </span>
         ) : null}

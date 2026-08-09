@@ -17,7 +17,7 @@ interface MetaPairProps {
 export default function MetaPair({ label, children, className }: MetaPairProps) {
   return (
     <div className={cn("flex min-w-0 flex-col gap-0.5", className)}>
-      <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-[#6b6b73]">
+      <span className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[#6b6b73]">
         {label}
       </span>
       <span className="mt-[7px] min-w-0 break-all">{children}</span>

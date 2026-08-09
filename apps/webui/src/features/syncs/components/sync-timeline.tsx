@@ -26,7 +26,7 @@ export default function SyncTimeline({ events }: { events: SyncOperationEvent[] 
               <span className="font-mono text-xs font-bold uppercase tracking-[0.12em] text-white">
                 {event.stage.replaceAll("_", " ")}
               </span>
-              <time className="font-mono text-[10px] text-soft">
+              <time className="font-mono text-xs text-soft">
                 {formatDateTime(event.created_at)}
               </time>
             </div>

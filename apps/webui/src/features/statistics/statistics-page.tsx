@@ -3,9 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import {
   faChartLine,
-  faLayerGroup,
   faRotate,
-  faRocket,
 } from "@fortawesome/free-solid-svg-icons";
 import { statisticsQueries } from "../../lib/queries";
 import { formatDateTime } from "../../lib/datetime";
@@ -66,10 +64,6 @@ function Statistics() {
           title="Statistics"
           description="Dedicated operational metrics for system throughput, sync health, and cache behavior."
           color="cyan"
-          actions={[
-            { to: "/", label: "Overview", icon: faLayerGroup },
-            { to: "/jobs", label: "Jobs", icon: faRocket },
-          ]}
         />
         <LoadingBlock label="Loading statistics…" lines={4} />
       </div>
@@ -97,10 +91,6 @@ function Statistics() {
         title="Statistics"
         description="Dedicated operational metrics for system throughput, sync health, and cache behavior."
         color="cyan"
-        actions={[
-          { to: "/", label: "Overview", icon: faLayerGroup },
-          { to: "/jobs", label: "Jobs", icon: faRocket },
-        ]}
       />
 
       {/* Time-series — sync and build activity over a selectable window. */}
@@ -273,7 +263,7 @@ function Statistics() {
         ) : null}
       </Tabs>
 
-      <p className="font-mono text-[11px] text-soft">
+      <p className="font-mono text-xs text-soft">
         Snapshot collected at{" "}
         {formatDateTime(data.cacheStats.collected_at, "n/a")}.
       </p>

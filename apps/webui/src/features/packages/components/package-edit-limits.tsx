@@ -88,7 +88,7 @@ export function CcacheCompatibilityNotice({ chroots }: { chroots: string[] }) {
 
   return (
     <div className="border border-accent-orange bg-black px-3 py-2">
-      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-accent-orange">
+      <p className="font-mono text-xs font-bold uppercase tracking-[0.22em] text-accent-orange">
         ccache incompatible with selected targets
       </p>
       <p className="mt-1 font-mono text-xs text-strong">

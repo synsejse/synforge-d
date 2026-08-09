@@ -72,5 +72,5 @@ export default function SyncBatchDetailPage({ batchId }: { batchId: string }) {
 }
 
 function BatchCount({ label, value }: { label: string; value: number }) {
-  return <div><div className="font-mono text-xl font-bold text-white">{value}</div><div className="mt-1 font-mono text-[9px] uppercase tracking-[0.14em] text-soft">{label}</div></div>;
+  return <div><div className="font-mono text-xl font-bold text-white">{value}</div><div className="mt-1 font-mono text-xs uppercase tracking-[0.14em] text-soft">{label}</div></div>;
 }

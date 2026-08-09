@@ -65,7 +65,7 @@ export default function ArtifactCard({ jobId, artifact }: ArtifactCardProps) {
       }
     >
       {artifact.file !== fileName ? (
-        <div className="mt-2.5 break-all font-mono text-[11px] leading-[1.3] text-[#52525b]">
+        <div className="mt-2.5 break-all font-mono text-xs leading-[1.3] text-[#52525b]">
           {artifact.file}
         </div>
       ) : null}

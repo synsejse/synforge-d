@@ -131,7 +131,8 @@ export default function PackageDetail({ packageName }: Props) {
         : api.refreshPackage(packageName),
     onSuccess: (response, variables) => {
       toast.toast({
-        title: variables.action === "rebuild" ? "Rebuild queued" : "Refresh queued",
+        title:
+          variables.action === "rebuild" ? "Rebuild queued" : "Refresh queued",
         message: summarizeSyncEnqueue(response),
         variant: "success",
         action: {
@@ -142,7 +143,9 @@ export default function PackageDetail({ packageName }: Props) {
       void invalidatePackage();
     },
     onError: (err, variables) =>
-      setError(err instanceof Error ? err.message : `Failed to ${variables.action}`),
+      setError(
+        err instanceof Error ? err.message : `Failed to ${variables.action}`,
+      ),
   });
 
   const triggerTargetMutation = useMutation({
@@ -158,7 +161,8 @@ export default function PackageDetail({ packageName }: Props) {
         : api.refreshPackageTarget(packageName, mockChroot),
     onSuccess: (response, variables) => {
       toast.toast({
-        title: variables.action === "rebuild" ? "Rebuild queued" : "Refresh queued",
+        title:
+          variables.action === "rebuild" ? "Rebuild queued" : "Refresh queued",
         message: summarizeSyncEnqueue(response),
         variant: "success",
         action: {
@@ -170,7 +174,9 @@ export default function PackageDetail({ packageName }: Props) {
     },
     onError: (err, variables) =>
       setError(
-        err instanceof Error ? err.message : `Failed to ${variables.action} target`,
+        err instanceof Error
+          ? err.message
+          : `Failed to ${variables.action} target`,
       ),
   });
 
@@ -182,16 +188,22 @@ export default function PackageDetail({ packageName }: Props) {
   });
 
   const browseMutation = useMutation({
-    mutationFn: (repoUrl: string) => api.browseRepository({ repo_url: repoUrl }),
+    mutationFn: (repoUrl: string) =>
+      api.browseRepository({ repo_url: repoUrl }),
     onSuccess: (response) => {
       setBrowseFiles(response.files);
       setBrowseError(null);
       if (!form.specPath && response.spec_files.length > 0) {
-        setForm((current) => ({ ...current, specPath: response.spec_files[0] }));
+        setForm((current) => ({
+          ...current,
+          specPath: response.spec_files[0],
+        }));
       }
     },
     onError: (err) =>
-      setBrowseError(err instanceof Error ? err.message : "Failed to browse repository"),
+      setBrowseError(
+        err instanceof Error ? err.message : "Failed to browse repository",
+      ),
   });
 
   async function handleDelete() {
@@ -275,7 +287,8 @@ export default function PackageDetail({ packageName }: Props) {
   }
 
   const refreshing =
-    triggerMutation.isPending && triggerMutation.variables?.action === "refresh";
+    triggerMutation.isPending &&
+    triggerMutation.variables?.action === "refresh";
 
   const buildsTotal = buildsQuery.data?.page.total ?? null;
   const repoFilesTotal = repoFilesQuery.data?.page.total ?? null;
@@ -341,6 +354,8 @@ export default function PackageDetail({ packageName }: Props) {
         buildsPageSize={BUILD_HISTORY_PAGE_SIZE}
         buildsHasMore={buildsQuery.data?.page.has_more ?? false}
         includeDeleted={includeDeletedBuilds}
+        ccacheEnabled={packageQuery.data.package.ccache_enabled ?? false}
+        ccacheStatsByTarget={buildsQuery.data?.ccache_stats_by_target ?? []}
         deletingJobId={
           deleteJobMutation.isPending && deleteJobMutation.variables
             ? deleteJobMutation.variables

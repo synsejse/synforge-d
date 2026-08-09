@@ -1,8 +1,12 @@
-import type { PackageBuildInventoryEntry } from "../../../lib/types";
+import type {
+  PackageBuildInventoryEntry,
+  PackageTargetCcacheStats,
+} from "../../../lib/types";
 import PaginationControls from "../../../components/common/pagination-controls";
 import EmptyState from "../../../components/ui/empty-state";
 import LoadingBlock from "../../../components/ui/loading-block";
 import BuildHistoryCard from "./build-history-card";
+import PackageCcacheSummary from "./package-ccache-summary";
 
 interface PackageBuildHistorySectionProps {
   buildsLoaded: boolean;
@@ -19,6 +23,8 @@ interface PackageBuildHistorySectionProps {
   onRebuildTarget: (mockChroot: string) => void;
   onDeleteJob: (jobId: string) => void;
   deletingJobId: string | null;
+  ccacheEnabled: boolean;
+  ccacheStatsByTarget: PackageTargetCcacheStats[];
 }
 
 export default function PackageBuildHistorySection({
@@ -36,6 +42,8 @@ export default function PackageBuildHistorySection({
   onRebuildTarget,
   onDeleteJob,
   deletingJobId,
+  ccacheEnabled,
+  ccacheStatsByTarget,
 }: PackageBuildHistorySectionProps) {
   const loading = buildsLoading && !buildsLoaded;
   const showDeletedToggle = (
@@ -52,6 +60,10 @@ export default function PackageBuildHistorySection({
 
   return (
     <div className="space-y-4">
+      <PackageCcacheSummary
+        targets={ccacheStatsByTarget}
+        enabled={ccacheEnabled}
+      />
       <div className="flex justify-end">{showDeletedToggle}</div>
       {loading ? (
         <LoadingBlock label="Loading build history…" lines={3} />

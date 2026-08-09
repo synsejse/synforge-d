@@ -18,6 +18,7 @@ import MetaPair from "../../../components/ui/meta-pair";
 import Tabs from "../../../components/ui/tabs";
 import ArtifactCard from "./artifact-card";
 import JobLiveUsage from "./job-live-usage";
+import CcacheStatsCard from "../../cache/ccache-stats-card";
 import {
   faArrowLeft,
   faRotate,
@@ -74,8 +75,7 @@ export default function JobDetail({ jobId }: Props) {
     refetchInterval: isLive ? POLL_INTERVAL_MS : false,
   });
   const artifacts = artifactsQuery.data?.artifacts ?? [];
-  const artifactCount =
-    artifactsQuery.data?.page.total ?? artifacts.length;
+  const artifactCount = artifactsQuery.data?.page.total ?? artifacts.length;
 
   const invalidateJob = () =>
     queryClient.invalidateQueries({ queryKey: ["jobs"] });
@@ -151,10 +151,7 @@ export default function JobDetail({ jobId }: Props) {
     return (
       <div className="min-w-0 space-y-6">
         <Breadcrumbs
-          items={[
-            { label: "Jobs", to: "/jobs" },
-            { label: jobId },
-          ]}
+          items={[{ label: "Jobs", to: "/jobs" }, { label: jobId }]}
         />
         <LoadingBlock label="Loading job details…" lines={4} />
       </div>
@@ -165,7 +162,9 @@ export default function JobDetail({ jobId }: Props) {
     return (
       <ErrorMessage
         message={
-          jobQuery.error instanceof Error ? jobQuery.error.message : "Job not found"
+          jobQuery.error instanceof Error
+            ? jobQuery.error.message
+            : "Job not found"
         }
       />
     );
@@ -241,11 +240,7 @@ export default function JobDetail({ jobId }: Props) {
                 </MetaPair>
               ) : null}
               <MetaPair label={duration.label}>
-                <span
-                  className={
-                    isLive ? "text-accent-lime" : "text-strong"
-                  }
-                >
+                <span className={isLive ? "text-accent-lime" : "text-strong"}>
                   {duration.value}
                 </span>
               </MetaPair>
@@ -321,6 +316,14 @@ export default function JobDetail({ jobId }: Props) {
 
       {isLive ? (
         <JobLiveUsage sample={latestUsage} hardware={serverHardware} />
+      ) : null}
+
+      {jobQuery.data.ccache_stats ? (
+        <CcacheStatsCard
+          title="Compiler cache"
+          stats={jobQuery.data.ccache_stats}
+          description={`This build on ${job.mock_chroot}`}
+        />
       ) : null}
 
       {isDeleted ? (

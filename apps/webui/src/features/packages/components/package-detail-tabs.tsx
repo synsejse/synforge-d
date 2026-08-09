@@ -4,6 +4,7 @@ import PackageRepoFilesSection from "./package-repo-files-section";
 import SyncHistoryTable from "./sync-history-table";
 import type {
   PackageBuildInventoryEntry,
+  PackageTargetCcacheStats,
   PublishedRepoFile,
 } from "../../../lib/types";
 
@@ -23,6 +24,8 @@ interface PackageDetailTabsProps {
   buildsHasMore: boolean;
   includeDeleted: boolean;
   deletingJobId: string | null;
+  ccacheEnabled: boolean;
+  ccacheStatsByTarget: PackageTargetCcacheStats[];
   onIncludeDeletedChange: (next: boolean) => void;
   onBuildsOffsetChange: (offset: number) => void;
   onRefreshTarget: (mockChroot: string) => void;
@@ -52,6 +55,8 @@ export default function PackageDetailTabs({
   buildsHasMore,
   includeDeleted,
   deletingJobId,
+  ccacheEnabled,
+  ccacheStatsByTarget,
   onIncludeDeletedChange,
   onBuildsOffsetChange,
   onRefreshTarget,
@@ -93,6 +98,8 @@ export default function PackageDetailTabs({
           onRebuildTarget={onRebuildTarget}
           onDeleteJob={onDeleteJob}
           deletingJobId={deletingJobId}
+          ccacheEnabled={ccacheEnabled}
+          ccacheStatsByTarget={ccacheStatsByTarget}
         />
       ) : null}
       {activeTab === "repo" ? (

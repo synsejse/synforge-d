@@ -20,6 +20,11 @@ import {
   STATUS_RAIL,
   rowActionClass,
 } from "../../../components/ui/record-card-styles";
+import {
+  formatCcacheCount,
+  formatCcacheRate,
+  getCcacheMetrics,
+} from "../../cache/ccache-metrics";
 
 interface BuildHistoryCardProps {
   entry: PackageBuildInventoryEntry;
@@ -43,6 +48,9 @@ export default function BuildHistoryCard({
     ? "var(--theme-text-soft)"
     : (STATUS_RAIL[job.status] ?? "var(--theme-text-soft)");
   const duration = formatJobDuration(job);
+  const cacheMetrics = entry.build.ccache_stats
+    ? getCcacheMetrics(entry.build.ccache_stats)
+    : null;
 
   return (
     <RecordCard
@@ -122,7 +130,9 @@ export default function BuildHistoryCard({
                 aria-label={`Delete build ${job.id}`}
                 className="h-[30px] w-[30px] border-edge text-soft hover:border-error hover:text-error"
               >
-                {deleting ? null : <FaIcon icon={faTrash} className="text-[13px]" />}
+                {deleting ? null : (
+                  <FaIcon icon={faTrash} className="text-[13px]" />
+                )}
               </Button>
             </Tooltip>
           ) : null}
@@ -143,6 +153,14 @@ export default function BuildHistoryCard({
             ),
           },
           { label: "Repo files", value: entry.repo_files.length },
+          ...(cacheMetrics && entry.build.ccache_stats
+            ? [
+                {
+                  label: "ccache",
+                  value: `${formatCcacheRate(cacheMetrics.hitRate)} · ${formatCcacheCount(entry.build.ccache_stats.compiler_calls)} calls`,
+                },
+              ]
+            : []),
           {
             label: "Job",
             value: <span className="text-[#52525b]">{job.id}</span>,
@@ -164,7 +182,9 @@ function buildSignStatus(
       file.kind === "debugsource",
   );
   if (signable.length === 0) return null;
-  if (signable.some((file) => file.signing_status === "failed")) return "failed";
-  if (signable.every((file) => file.signing_status === "signed")) return "signed";
+  if (signable.some((file) => file.signing_status === "failed"))
+    return "failed";
+  if (signable.every((file) => file.signing_status === "signed"))
+    return "signed";
   return null;
 }

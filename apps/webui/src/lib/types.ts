@@ -1,4 +1,8 @@
-import type { components, operations, paths } from "../generated/api/api-schema";
+import type {
+  components,
+  operations,
+  paths,
+} from "../generated/api/api-schema";
 
 export type ApiSchema = components["schemas"];
 export type ApiPaths = paths;
@@ -27,13 +31,15 @@ export type ArtifactKind = ApiSchema["ArtifactKind"];
 export type UserPermission = ApiSchema["UserPermission"];
 
 export type BuildArtifact = ApiSchema["BuildArtifact"];
+export type BuildCcacheStats = ApiSchema["BuildCcacheStats"];
 export type PublishedRepoFile = ApiSchema["PublishedRepoFile"];
 export type BuildJob = ApiSchema["BuildJob"];
 export type BuildJobResponse = ApiSchema["BuildJobResponse"];
 export type JobArtifactListResponse = ApiSchema["JobArtifactListResponse"];
 export type JobArtifactMetaResponse = ApiSchema["JobArtifactMetaResponse"];
 export type JobResourceUsageSample = ApiSchema["JobResourceUsageSample"];
-export type JobResourceUsageListResponse = ApiSchema["JobResourceUsageListResponse"];
+export type JobResourceUsageListResponse =
+  ApiSchema["JobResourceUsageListResponse"];
 export type JobResourceUsageResponse = ApiSchema["JobResourceUsageResponse"];
 
 export type PackageActionDisposition = ApiSchema["PackageActionDisposition"];
@@ -51,6 +57,7 @@ export type BuildJobListResponse = ApiSchema["BuildJobListResponse"];
 export type PruneJobsResponse = ApiSchema["PruneJobsResponse"];
 export type PackageBuildInventoryEntry =
   ApiSchema["PackageBuildInventoryEntry"];
+export type PackageTargetCcacheStats = ApiSchema["PackageTargetCcacheStats"];
 export type PackageBuildHistoryResponse =
   ApiSchema["PackageBuildHistoryResponse"];
 
@@ -91,7 +98,8 @@ export type ExportRepoSigningKeyResponse =
 export type ExportRepoSigningPublicKeyResponse =
   ApiSchema["ExportRepoSigningPublicKeyResponse"];
 
-export type UpdateRuntimeSettingsRequest = ApiSchema["UpdateRuntimeSettingsRequest"];
+export type UpdateRuntimeSettingsRequest =
+  ApiSchema["UpdateRuntimeSettingsRequest"];
 
 export type ApiError = ApiSchema["ApiError"];
 

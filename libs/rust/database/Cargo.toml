@@ -17,7 +17,7 @@ futures-util.workspace = true
 getrandom.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-synforge-core = { path = "../core" }
+synforge-core = { path = "../core", features = ["diesel"] }
 time.workspace = true
 tokio.workspace = true
 tracing.workspace = true

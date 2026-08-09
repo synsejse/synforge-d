@@ -31,6 +31,7 @@ macro_rules! impl_text_enum {
             }
         }
 
+        #[cfg(feature = "diesel")]
         impl<DB> diesel::serialize::ToSql<diesel::sql_types::Text, DB> for $name
         where
             DB: diesel::backend::Backend,
@@ -44,6 +45,7 @@ macro_rules! impl_text_enum {
             }
         }
 
+        #[cfg(feature = "diesel")]
         impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Text, DB> for $name
         where
             DB: diesel::backend::Backend,

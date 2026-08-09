@@ -1,9 +1,8 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use diesel::deserialize::FromSqlRow;
-use diesel::expression::AsExpression;
-use diesel::sql_types::Text;
+#[cfg(feature = "diesel")]
+use diesel::{deserialize::FromSqlRow, expression::AsExpression, sql_types::Text};
 use serde::{Deserialize, Serialize};
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use utoipa::ToSchema;
@@ -11,11 +10,10 @@ use uuid::Uuid;
 
 use crate::text_enum::impl_text_enum;
 
-#[derive(
-    Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow, ToSchema,
-)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[cfg_attr(feature = "diesel", derive(AsExpression, FromSqlRow))]
 #[serde(rename_all = "snake_case")]
-#[diesel(sql_type = Text)]
+#[cfg_attr(feature = "diesel", diesel(sql_type = Text))]
 pub enum BuildTrigger {
     Poll,
     ManualRefresh,
@@ -23,11 +21,10 @@ pub enum BuildTrigger {
     Api,
 }
 
-#[derive(
-    Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow, ToSchema,
-)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[cfg_attr(feature = "diesel", derive(AsExpression, FromSqlRow))]
 #[serde(rename_all = "snake_case")]
-#[diesel(sql_type = Text)]
+#[cfg_attr(feature = "diesel", diesel(sql_type = Text))]
 pub enum BuildStatus {
     Pending,
     Running,
@@ -52,11 +49,10 @@ pub struct BuildArtifact {
     pub signing_error_message: Option<String>,
 }
 
-#[derive(
-    Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow, ToSchema,
-)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[cfg_attr(feature = "diesel", derive(AsExpression, FromSqlRow))]
 #[serde(rename_all = "snake_case")]
-#[diesel(sql_type = Text)]
+#[cfg_attr(feature = "diesel", diesel(sql_type = Text))]
 pub enum ArtifactSigningStatus {
     Signed,
     Failed,
@@ -108,11 +104,10 @@ pub struct PublishedRepoFile {
     pub signing_error_message: Option<String>,
 }
 
-#[derive(
-    Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, AsExpression, FromSqlRow, ToSchema,
-)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[cfg_attr(feature = "diesel", derive(AsExpression, FromSqlRow))]
 #[serde(rename_all = "snake_case")]
-#[diesel(sql_type = Text)]
+#[cfg_attr(feature = "diesel", diesel(sql_type = Text))]
 pub enum ArtifactKind {
     Rpm,
     Srpm,
@@ -147,22 +142,10 @@ fn rpm_name_component(filename: &str) -> Option<&str> {
     Some(name)
 }
 
-#[derive(
-    Debug,
-    Clone,
-    Copy,
-    Serialize,
-    Deserialize,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    AsExpression,
-    FromSqlRow,
-    ToSchema,
-)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, ToSchema)]
+#[cfg_attr(feature = "diesel", derive(AsExpression, FromSqlRow))]
 #[serde(rename_all = "snake_case")]
-#[diesel(sql_type = Text)]
+#[cfg_attr(feature = "diesel", diesel(sql_type = Text))]
 pub enum UserPermission {
     Read,
     Write,

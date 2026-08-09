@@ -4,7 +4,7 @@ mod git;
 use std::sync::Arc;
 
 use synforge_core::{
-    api::{BrowseRepositoryResponse, BuildJobResponse, PackageResponse},
+    api::{BrowseRepositoryResponse, BuildJobResponse, PackageResponse, PackageTargetCcacheStats},
     model::{BuildJob, PublishedRepoFile},
     package::PackageDefinition,
 };
@@ -73,6 +73,13 @@ impl DaemonPackageDeps {
                 include_deleted,
             )
             .await
+    }
+
+    pub(super) async fn load_package_ccache_stats(
+        &self,
+        package_name: &str,
+    ) -> anyhow::Result<Vec<PackageTargetCcacheStats>> {
+        self.store.list_package_ccache_stats(package_name).await
     }
 
     pub(super) async fn load_published_repo_files_for_package(

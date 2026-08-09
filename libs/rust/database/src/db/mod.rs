@@ -27,7 +27,7 @@ use diesel_async::{
 };
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use synforge_core::{
-    api::{BuildJobResponse, PackageResponse, RepoTargetSummary},
+    api::{BuildJobResponse, PackageResponse, PackageTargetCcacheStats, RepoTargetSummary},
     model::{
         ArtifactKind, ArtifactSignature, ArtifactSigningStatus, BuildArtifact, BuildCcacheStats,
         BuildJob, BuildStatus, BuildTrigger, PackageRuntimeState, PackageTargetRuntimeState,

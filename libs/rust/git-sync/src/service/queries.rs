@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use synforge_core::api::{
     BrowseRepositoryRequest, BrowseRepositoryResponse, BuildJobResponse,
     PackageBuildHistoryResponse, PackageBuildInventoryEntry, PackageResponse,
-    RefreshAllPackagesProgressResponse, RefreshAllPackagesProgressView,
+    PackageTargetCcacheStats, RefreshAllPackagesProgressResponse, RefreshAllPackagesProgressView,
 };
 use synforge_core::error::SynforgeError;
 use synforge_core::model::PublishedRepoFile;
@@ -44,6 +44,11 @@ pub trait PackageBuildHistoryReader {
         &self,
         package_name: &str,
     ) -> anyhow::Result<Vec<PublishedRepoFile>>;
+
+    async fn list_package_ccache_stats(
+        &self,
+        package_name: &str,
+    ) -> anyhow::Result<Vec<PackageTargetCcacheStats>>;
 }
 
 pub async fn get_package<D>(deps: &D, package_name: &str) -> anyhow::Result<PackageResponse>
@@ -92,16 +97,13 @@ where
 {
     deps.get_package(package_name).await?;
 
-    let total = deps
-        .count_package_builds(package_name, include_deleted)
-        .await?;
-    let jobs = deps
-        .list_package_builds(package_name, limit, offset, include_deleted)
-        .await?;
+    let (total, jobs, published_files, ccache_stats_by_target) = tokio::try_join!(
+        deps.count_package_builds(package_name, include_deleted),
+        deps.list_package_builds(package_name, limit, offset, include_deleted),
+        deps.list_published_repo_files_for_package(package_name),
+        deps.list_package_ccache_stats(package_name),
+    )?;
     let returned = jobs.len();
-    let published_files = deps
-        .list_published_repo_files_for_package(package_name)
-        .await?;
 
     let mut published_files_by_job = HashMap::<Uuid, Vec<PublishedRepoFile>>::new();
     for file in &published_files {
@@ -124,6 +126,7 @@ where
     Ok(PackageBuildHistoryResponse {
         package_name: package_name.to_string(),
         builds,
+        ccache_stats_by_target,
         page: synforge_core::api::PageInfo {
             limit,
             offset,

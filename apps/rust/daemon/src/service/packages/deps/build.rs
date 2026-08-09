@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use synforge_core::{
-    api::{BuildJobResponse, PackageResponse},
+    api::{BuildJobResponse, PackageResponse, PackageTargetCcacheStats},
     error::SynforgeError,
     model::{BuildJob, PublishedRepoFile},
     package::PackageDefinition,
@@ -67,6 +67,13 @@ impl PackageBuildHistoryReader for DaemonPackageDeps {
     ) -> anyhow::Result<Vec<PublishedRepoFile>> {
         self.load_published_repo_files_for_package(package_name)
             .await
+    }
+
+    async fn list_package_ccache_stats(
+        &self,
+        package_name: &str,
+    ) -> anyhow::Result<Vec<PackageTargetCcacheStats>> {
+        self.load_package_ccache_stats(package_name).await
     }
 }
 

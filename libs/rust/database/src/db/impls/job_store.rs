@@ -177,6 +177,13 @@ impl JobStore for DieselStore {
         job::list_jobs_for_package(self, package_name, include_deleted).await
     }
 
+    async fn list_package_ccache_stats(
+        &self,
+        package_name: &str,
+    ) -> anyhow::Result<Vec<PackageTargetCcacheStats>> {
+        job::list_package_ccache_stats(self, package_name).await
+    }
+
     async fn list_jobs_for_sync(
         &self,
         sync_operation_id: Uuid,

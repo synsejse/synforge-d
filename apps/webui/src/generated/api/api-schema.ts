@@ -1342,6 +1342,7 @@ export interface components {
         };
         PackageBuildHistoryResponse: {
             builds: components["schemas"]["PackageBuildInventoryEntry"][];
+            ccache_stats_by_target: components["schemas"]["PackageTargetCcacheStats"][];
             package_name: string;
             page: components["schemas"]["PageInfo"];
         };
@@ -1397,6 +1398,12 @@ export interface components {
             limit?: number | null;
             offset?: number | null;
             status?: null | components["schemas"]["SyncStatus"];
+        };
+        PackageTargetCcacheStats: {
+            /** Format: int64 */
+            build_count: number;
+            mock_chroot: string;
+            stats: components["schemas"]["BuildCcacheStats"];
         };
         PackageTargetRuntimeState: {
             /** Format: uuid */

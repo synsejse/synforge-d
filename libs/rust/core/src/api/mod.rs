@@ -18,7 +18,7 @@ pub use self::jobs::{
     BuildJobListResponse, BuildJobResponse, JobArtifactListResponse, JobArtifactMetaResponse,
     JobListQuery, JobListScope, JobResourceUsageListResponse, JobResourceUsageResponse,
     JobResourceUsageSample, PackageBuildHistoryResponse, PackageBuildInventoryEntry,
-    PruneJobsResponse,
+    PackageTargetCcacheStats, PruneJobsResponse,
 };
 pub use self::logs::{LogManifestResponse, LogSource, LogSourceType};
 pub use self::packages::{

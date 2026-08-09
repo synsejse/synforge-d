@@ -69,9 +69,17 @@ pub struct PackageBuildInventoryEntry {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct PackageTargetCcacheStats {
+    pub mock_chroot: String,
+    pub build_count: u64,
+    pub stats: BuildCcacheStats,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct PackageBuildHistoryResponse {
     pub package_name: String,
     pub builds: Vec<PackageBuildInventoryEntry>,
+    pub ccache_stats_by_target: Vec<PackageTargetCcacheStats>,
     pub page: super::PageInfo,
 }
 

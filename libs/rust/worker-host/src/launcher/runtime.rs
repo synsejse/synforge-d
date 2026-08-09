@@ -5,7 +5,7 @@ use futures_util::StreamExt;
 use synforge_core::{
     config::DaemonConfig,
     constants::DEFAULT_WORKER_WAIT_GRACE_SECONDS,
-    model::{WorkerJobPayload, WorkerResult},
+    model::{WorkerAction, WorkerJobPayload, WorkerResult},
 };
 use tracing::{info, warn};
 use uuid::Uuid;
@@ -97,20 +97,26 @@ impl DockerWorkerLauncher {
             )
             .await
             .with_context(|| format!("failed to start worker container {}", container_id))?;
-        let marked_running = match self
-            .lifecycle
-            .mark_job_running(payload.job_id, &container_id)
-            .await
-        {
-            Ok(marked_running) => marked_running,
-            Err(error) => {
+        // Build rows are reserved before launch and use a compare-and-set
+        // transition here. Parse workers belong to source-sync operations,
+        // not build_jobs, so applying build lifecycle tracking to them would
+        // reject every source inspection as an unknown build.
+        if matches!(&payload.action, WorkerAction::Build(_)) {
+            let marked_running = match self
+                .lifecycle
+                .mark_job_running(payload.job_id, &container_id)
+                .await
+            {
+                Ok(marked_running) => marked_running,
+                Err(error) => {
+                    self.force_remove_container(&container_id).await;
+                    return Err(error);
+                }
+            };
+            if !marked_running {
                 self.force_remove_container(&container_id).await;
-                return Err(error);
+                anyhow::bail!("job {} is no longer pending", payload.job_id);
             }
-        };
-        if !marked_running {
-            self.force_remove_container(&container_id).await;
-            anyhow::bail!("job {} is no longer pending", payload.job_id);
         }
         info!(
             job_id = %payload.job_id,

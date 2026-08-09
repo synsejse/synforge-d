@@ -91,9 +91,7 @@ export type ExportRepoSigningKeyResponse =
 export type ExportRepoSigningPublicKeyResponse =
   ApiSchema["ExportRepoSigningPublicKeyResponse"];
 
-export type UpdateRuntimeSettingsRequest = {
-  settings: Record<string, string | number | boolean>;
-};
+export type UpdateRuntimeSettingsRequest = ApiSchema["UpdateRuntimeSettingsRequest"];
 
 export type ApiError = ApiSchema["ApiError"];
 

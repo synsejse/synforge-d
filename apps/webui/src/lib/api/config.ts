@@ -11,6 +11,7 @@ import type {
   RepoSigningStatusResponse,
   SessionLoginRequest,
   SessionResponse,
+  SetupStatusResponse,
   TestRepoSigningResponse,
   UpdateRepoSigningConfigRequest,
   UpdateRuntimeSettingsRequest,
@@ -21,11 +22,13 @@ export function getSession(): Promise<SessionResponse> {
   return request("GET", "/api/v1/session");
 }
 
-export function getSetupStatus(): Promise<{ initialized: boolean }> {
+export function getSetupStatus(): Promise<SetupStatusResponse> {
   return request("GET", "/api/v1/setup/status");
 }
 
-export function initializeSetup(req: SetupInitializeRequest): Promise<void> {
+export function initializeSetup(
+  req: SetupInitializeRequest,
+): Promise<EffectiveConfigResponse> {
   return request("POST", "/api/v1/setup/initialize", req);
 }
 

@@ -13,6 +13,7 @@ import { GroupedLogView, VirtualizedAnsiLines } from "./log-lines-view";
 
 interface Props {
   jobId: string;
+  owner?: "job" | "sync";
 }
 
 type StreamStatus = "connecting" | "live" | "reconnecting" | "complete";
@@ -30,7 +31,7 @@ const DESKTOP_LOG_VIEWPORT_HEIGHT = 600;
  * keep reconnects idempotent (no duplicated content). On `complete` we close
  * the EventSource for good and never reconnect.
  */
-function useJobLogStream(jobId: string) {
+function useJobLogStream(jobId: string, owner: "job" | "sync") {
   const [buffers, setBuffers] = useState<Record<string, string>>({});
   const [sources, setSources] = useState<string[]>([]);
   const [status, setStatus] = useState<StreamStatus>("connecting");
@@ -43,7 +44,11 @@ function useJobLogStream(jobId: string) {
     setSources([]);
     setStatus("connecting");
 
-    const url = `${API_BASE}/api/v1/jobs/${encodeURIComponent(jobId)}/logs/stream`;
+    const resource =
+      owner === "sync"
+        ? `/api/v1/sync/operations/${encodeURIComponent(jobId)}`
+        : `/api/v1/jobs/${encodeURIComponent(jobId)}`;
+    const url = `${API_BASE}${resource}/logs/stream`;
     const es = new EventSource(url);
     let completed = false;
 
@@ -108,13 +113,13 @@ function useJobLogStream(jobId: string) {
     return () => {
       es.close();
     };
-  }, [jobId]);
+  }, [jobId, owner]);
 
   return { buffers, sources, status, resetToken };
 }
 
-export default function TabbedLogViewer({ jobId }: Props) {
-  const { buffers, sources, status, resetToken } = useJobLogStream(jobId);
+export default function TabbedLogViewer({ jobId, owner = "job" }: Props) {
+  const { buffers, sources, status, resetToken } = useJobLogStream(jobId, owner);
   const [activeSource, setActiveSource] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 150);

@@ -23,6 +23,9 @@ import { Route as AuthedPackagesIndexRouteImport } from './routes/_authed/packag
 import { Route as AuthedPackagesViewRouteImport } from './routes/_authed/packages/view'
 import { Route as AuthedRepositoryIndexRouteImport } from './routes/_authed/repository/index'
 import { Route as AuthedRepositoryUseRouteImport } from './routes/_authed/repository/use'
+import { Route as AuthedSyncsIndexRouteImport } from './routes/_authed/syncs/index'
+import { Route as AuthedSyncsBatchRouteImport } from './routes/_authed/syncs/batch'
+import { Route as AuthedSyncsViewRouteImport } from './routes/_authed/syncs/view'
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
@@ -93,6 +96,21 @@ const AuthedRepositoryUseRoute = AuthedRepositoryUseRouteImport.update({
   path: '/repository/use',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedSyncsIndexRoute = AuthedSyncsIndexRouteImport.update({
+  id: '/syncs/',
+  path: '/syncs/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedSyncsBatchRoute = AuthedSyncsBatchRouteImport.update({
+  id: '/syncs/batch',
+  path: '/syncs/batch',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedSyncsViewRoute = AuthedSyncsViewRouteImport.update({
+  id: '/syncs/view',
+  path: '/syncs/view',
+  getParentRoute: () => AuthedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
@@ -105,9 +123,12 @@ export interface FileRoutesByFullPath {
   '/jobs/view': typeof AuthedJobsViewRoute
   '/packages/view': typeof AuthedPackagesViewRoute
   '/repository/use': typeof AuthedRepositoryUseRoute
+  '/syncs/batch': typeof AuthedSyncsBatchRoute
+  '/syncs/view': typeof AuthedSyncsViewRoute
   '/jobs/': typeof AuthedJobsIndexRoute
   '/packages/': typeof AuthedPackagesIndexRoute
   '/repository/': typeof AuthedRepositoryIndexRoute
+  '/syncs/': typeof AuthedSyncsIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -120,9 +141,12 @@ export interface FileRoutesByTo {
   '/jobs/view': typeof AuthedJobsViewRoute
   '/packages/view': typeof AuthedPackagesViewRoute
   '/repository/use': typeof AuthedRepositoryUseRoute
+  '/syncs/batch': typeof AuthedSyncsBatchRoute
+  '/syncs/view': typeof AuthedSyncsViewRoute
   '/jobs': typeof AuthedJobsIndexRoute
   '/packages': typeof AuthedPackagesIndexRoute
   '/repository': typeof AuthedRepositoryIndexRoute
+  '/syncs': typeof AuthedSyncsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -137,9 +161,12 @@ export interface FileRoutesById {
   '/_authed/jobs/view': typeof AuthedJobsViewRoute
   '/_authed/packages/view': typeof AuthedPackagesViewRoute
   '/_authed/repository/use': typeof AuthedRepositoryUseRoute
+  '/_authed/syncs/batch': typeof AuthedSyncsBatchRoute
+  '/_authed/syncs/view': typeof AuthedSyncsViewRoute
   '/_authed/jobs/': typeof AuthedJobsIndexRoute
   '/_authed/packages/': typeof AuthedPackagesIndexRoute
   '/_authed/repository/': typeof AuthedRepositoryIndexRoute
+  '/_authed/syncs/': typeof AuthedSyncsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -154,9 +181,12 @@ export interface FileRouteTypes {
     | '/jobs/view'
     | '/packages/view'
     | '/repository/use'
+    | '/syncs/batch'
+    | '/syncs/view'
     | '/jobs/'
     | '/packages/'
     | '/repository/'
+    | '/syncs/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -169,9 +199,12 @@ export interface FileRouteTypes {
     | '/jobs/view'
     | '/packages/view'
     | '/repository/use'
+    | '/syncs/batch'
+    | '/syncs/view'
     | '/jobs'
     | '/packages'
     | '/repository'
+    | '/syncs'
   id:
     | '__root__'
     | '/_authed'
@@ -185,9 +218,12 @@ export interface FileRouteTypes {
     | '/_authed/jobs/view'
     | '/_authed/packages/view'
     | '/_authed/repository/use'
+    | '/_authed/syncs/batch'
+    | '/_authed/syncs/view'
     | '/_authed/jobs/'
     | '/_authed/packages/'
     | '/_authed/repository/'
+    | '/_authed/syncs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -296,6 +332,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRepositoryUseRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/syncs/': {
+      id: '/_authed/syncs/'
+      path: '/syncs'
+      fullPath: '/syncs/'
+      preLoaderRoute: typeof AuthedSyncsIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/syncs/batch': {
+      id: '/_authed/syncs/batch'
+      path: '/syncs/batch'
+      fullPath: '/syncs/batch'
+      preLoaderRoute: typeof AuthedSyncsBatchRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/syncs/view': {
+      id: '/_authed/syncs/view'
+      path: '/syncs/view'
+      fullPath: '/syncs/view'
+      preLoaderRoute: typeof AuthedSyncsViewRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
@@ -308,9 +365,12 @@ interface AuthedRouteChildren {
   AuthedJobsViewRoute: typeof AuthedJobsViewRoute
   AuthedPackagesViewRoute: typeof AuthedPackagesViewRoute
   AuthedRepositoryUseRoute: typeof AuthedRepositoryUseRoute
+  AuthedSyncsBatchRoute: typeof AuthedSyncsBatchRoute
+  AuthedSyncsViewRoute: typeof AuthedSyncsViewRoute
   AuthedJobsIndexRoute: typeof AuthedJobsIndexRoute
   AuthedPackagesIndexRoute: typeof AuthedPackagesIndexRoute
   AuthedRepositoryIndexRoute: typeof AuthedRepositoryIndexRoute
+  AuthedSyncsIndexRoute: typeof AuthedSyncsIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
@@ -322,9 +382,12 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedJobsViewRoute: AuthedJobsViewRoute,
   AuthedPackagesViewRoute: AuthedPackagesViewRoute,
   AuthedRepositoryUseRoute: AuthedRepositoryUseRoute,
+  AuthedSyncsBatchRoute: AuthedSyncsBatchRoute,
+  AuthedSyncsViewRoute: AuthedSyncsViewRoute,
   AuthedJobsIndexRoute: AuthedJobsIndexRoute,
   AuthedPackagesIndexRoute: AuthedPackagesIndexRoute,
   AuthedRepositoryIndexRoute: AuthedRepositoryIndexRoute,
+  AuthedSyncsIndexRoute: AuthedSyncsIndexRoute,
 }
 
 const AuthedRouteWithChildren =

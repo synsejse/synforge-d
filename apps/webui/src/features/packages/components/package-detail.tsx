@@ -130,10 +130,15 @@ export default function PackageDetail({ packageName }: Props) {
         ? api.rebuildPackage(packageName)
         : api.refreshPackage(packageName),
     onSuccess: (response, variables) => {
-      toast.success(
-        variables.action === "rebuild" ? "Rebuild queued" : "Refresh queued",
-        summarizeSyncEnqueue(response),
-      );
+      toast.toast({
+        title: variables.action === "rebuild" ? "Rebuild queued" : "Refresh queued",
+        message: summarizeSyncEnqueue(response),
+        variant: "success",
+        action: {
+          label: "Open sync",
+          href: `/syncs/view?id=${encodeURIComponent(response.operation.id)}`,
+        },
+      });
       void invalidatePackage();
     },
     onError: (err, variables) =>
@@ -152,10 +157,15 @@ export default function PackageDetail({ packageName }: Props) {
         ? api.rebuildPackageTarget(packageName, mockChroot)
         : api.refreshPackageTarget(packageName, mockChroot),
     onSuccess: (response, variables) => {
-      toast.success(
-        variables.action === "rebuild" ? "Rebuild queued" : "Refresh queued",
-        summarizeSyncEnqueue(response),
-      );
+      toast.toast({
+        title: variables.action === "rebuild" ? "Rebuild queued" : "Refresh queued",
+        message: summarizeSyncEnqueue(response),
+        variant: "success",
+        action: {
+          label: "Open sync",
+          href: `/syncs/view?id=${encodeURIComponent(response.operation.id)}`,
+        },
+      });
       void invalidatePackage();
     },
     onError: (err, variables) =>

@@ -7,7 +7,7 @@ import ErrorMessage from "../../../components/common/error-message";
 import LoadingBlock from "../../../components/ui/loading-block";
 import PaginationControls from "../../../components/common/pagination-controls";
 import SegmentedControl from "../../../components/ui/segmented-control";
-import SyncOpCard from "./sync-op-card";
+import SyncRunCard from "../../syncs/components/sync-run-card";
 
 interface SyncHistoryTableProps {
   packageName: string;
@@ -77,7 +77,7 @@ export default function SyncHistoryTable({ packageName }: SyncHistoryTableProps)
       ) : (
         <div className="space-y-3">
           {operations.map((op) => (
-            <SyncOpCard key={op.id} op={op} />
+            <SyncRunCard key={op.id} operation={op} />
           ))}
         </div>
       )}

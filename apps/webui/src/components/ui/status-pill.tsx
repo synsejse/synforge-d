@@ -5,19 +5,25 @@ interface Props {
 export default function StatusPill({ status }: Props) {
   const classes: Record<string, string> = {
     pending: "border-accent-orange bg-black text-accent-orange",
+    queued: "border-accent-orange bg-black text-accent-orange",
     running: "border-accent-lime bg-black text-accent-lime",
     succeeded: "border-success bg-black text-success",
     failed: "border-error bg-black text-error",
     timed_out: "border-error bg-black text-error",
+    cancelled: "border-edge-strong bg-black text-soft",
+    interrupted: "border-error bg-black text-error",
     enabled: "border-success bg-black text-success",
     disabled: "border-edge-strong bg-black text-muted",
   };
   const dots: Record<string, string> = {
     pending: "bg-accent-orange",
+    queued: "bg-accent-orange",
     running: "bg-accent-lime",
     succeeded: "bg-success",
     failed: "bg-error",
     timed_out: "bg-error",
+    cancelled: "bg-soft",
+    interrupted: "bg-error",
     enabled: "bg-success",
     disabled: "bg-soft",
   };

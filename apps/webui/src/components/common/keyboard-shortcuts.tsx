@@ -12,6 +12,7 @@ interface ShortcutGroup {
  * Global keyboard shortcuts:
  *   g d        Dashboard
  *   g j        Jobs
+ *   g x        Syncs
  *   g p        Packages
  *   g r        Repository
  *   g s        Settings
@@ -24,6 +25,7 @@ interface ShortcutGroup {
 const NAV_KEYS: Record<string, { to: string; label: string }> = {
   d: { to: "/", label: "Dashboard" },
   j: { to: "/jobs", label: "Jobs" },
+  x: { to: "/syncs", label: "Syncs" },
   p: { to: "/packages", label: "Packages" },
   r: { to: "/repository", label: "Repository" },
   s: { to: "/settings", label: "Settings" },
@@ -136,6 +138,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     rows: [
       { keys: <Chord parts={["g", "d"]} />, description: "Dashboard" },
       { keys: <Chord parts={["g", "j"]} />, description: "Jobs" },
+      { keys: <Chord parts={["g", "x"]} />, description: "Syncs" },
       { keys: <Chord parts={["g", "p"]} />, description: "Packages" },
       { keys: <Chord parts={["g", "r"]} />, description: "Repository" },
       { keys: <Chord parts={["g", "t"]} />, description: "Statistics" },

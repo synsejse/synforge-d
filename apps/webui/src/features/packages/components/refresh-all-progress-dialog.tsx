@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import ProgressOverlayDialog from "../../../components/ui/progress-overlay-dialog";
 import type { RefreshAllPackagesProgressView } from "../../../lib/types";
 
@@ -125,6 +126,15 @@ export default function RefreshAllProgressDialog({
     >
       {operation && operation.total_packages > 0 ? (
         <RefreshAllStats operation={operation} />
+      ) : null}
+      {operation ? (
+        <Link
+          to="/syncs/batch"
+          search={{ id: operation.operation_id }}
+          className="mt-4 inline-flex border border-edge-strong px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-white transition hover:border-accent-cyan hover:text-accent-cyan"
+        >
+          Open batch details
+        </Link>
       ) : null}
       {message ? (
         <p

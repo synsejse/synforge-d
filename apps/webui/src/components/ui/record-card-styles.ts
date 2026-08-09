@@ -9,4 +9,7 @@ export const STATUS_RAIL: Record<string, string> = {
   timed_out: "var(--theme-error-red)",
   running: "var(--theme-accent-lime)",
   pending: "var(--theme-accent-orange)",
+  queued: "var(--theme-accent-orange)",
+  cancelled: "var(--theme-text-soft)",
+  interrupted: "var(--theme-error-red)",
 };

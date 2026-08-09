@@ -1,6 +1,6 @@
 import { Suspense, lazy, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import api from "../../../lib/api";
 import { jobsQueries } from "../../../lib/queries";
 import { formatDateTime, formatJobDuration } from "../../../lib/datetime";
@@ -252,6 +252,17 @@ export default function JobDetail({ jobId }: Props) {
               <MetaPair label="Revision">
                 <span className="break-all text-strong">{job.revision}</span>
               </MetaPair>
+              {job.sync_operation_id ? (
+                <MetaPair label="Source sync">
+                  <Link
+                    to="/syncs/view"
+                    search={{ id: job.sync_operation_id }}
+                    className="break-all text-accent-cyan underline-offset-2 hover:underline"
+                  >
+                    {job.sync_operation_id}
+                  </Link>
+                </MetaPair>
+              ) : null}
               <MetaPair label="Job">
                 <span className="break-all text-soft">{job.id}</span>
               </MetaPair>

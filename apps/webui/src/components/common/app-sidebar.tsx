@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import {
   faAnglesLeft,
   faAnglesRight,
+  faArrowsRotate,
   faBars,
   faBookOpen,
   faBoxesStacked,
@@ -40,6 +41,12 @@ function buildNavGroups(activeJobCount: number): NavGroup[] {
           description: "Runs and live traces",
           badge: activeJobCount > 0 ? activeJobCount : null,
           badgeTone: "lime",
+        },
+        {
+          href: "/syncs",
+          label: "Syncs",
+          icon: faArrowsRotate,
+          description: "Source runs and batches",
         },
         {
           href: "/statistics",

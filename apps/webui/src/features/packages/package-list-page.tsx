@@ -94,10 +94,15 @@ export default function PackageListPage() {
     mutationFn: ({ name, action }: { name: string; action: "refresh" | "rebuild" }) =>
       action === "refresh" ? api.refreshPackage(name) : api.rebuildPackage(name),
     onSuccess: (response, variables) => {
-      toast.success(
-        variables.action === "refresh" ? "Refresh queued" : "Rebuild queued",
-        summarizeSyncEnqueue(response),
-      );
+      toast.toast({
+        title: variables.action === "refresh" ? "Refresh queued" : "Rebuild queued",
+        message: summarizeSyncEnqueue(response),
+        variant: "success",
+        action: {
+          label: "Open sync",
+          href: `/syncs/view?id=${encodeURIComponent(response.operation.id)}`,
+        },
+      });
       void invalidatePackages();
     },
     onError: (error, variables) =>

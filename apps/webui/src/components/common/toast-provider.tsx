@@ -99,6 +99,14 @@ export default function ToastProvider({ children }: { children: ReactNode }) {
                       {entry.message}
                     </ToastPrimitive.Description>
                   ) : null}
+                  {entry.action ? (
+                    <a
+                      href={entry.action.href}
+                      className="mt-3 inline-flex border border-edge-strong px-2.5 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-white transition hover:border-accent-lime hover:text-accent-lime"
+                    >
+                      {entry.action.label}
+                    </a>
+                  ) : null}
                 </div>
                 <ToastPrimitive.Close
                   aria-label="Close"

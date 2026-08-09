@@ -7,6 +7,7 @@ export interface ToastOptions {
   message?: string;
   variant?: ToastVariant;
   duration?: number;
+  action?: { label: string; href: string };
 }
 
 export interface ToastContextValue {

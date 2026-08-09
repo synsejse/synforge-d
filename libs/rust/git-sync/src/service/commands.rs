@@ -366,11 +366,6 @@ where
             },
         )
         .await?;
-    if package.name != package_name {
-        return Err(anyhow::anyhow!(SynforgeError::BadRequest(
-            "updated package name must match existing package".to_string(),
-        )));
-    }
     deps.upsert_package_definition(&package).await?;
     deps.get_package(package_name).await
 }

@@ -247,9 +247,6 @@ where
             },
         )
         .await?;
-    if updated_package.name != package.name {
-        anyhow::bail!("spec Name changed; remove and re-add the package instead");
-    }
     deps.upsert_package_definition(&updated_package).await?;
 
     let now = now_utc();

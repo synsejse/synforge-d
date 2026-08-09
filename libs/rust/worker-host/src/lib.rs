@@ -32,7 +32,7 @@ pub use service::{
     ActiveTargetBuildReader, BuildJobReader, BuildJobWriter, BuildQueue, BuildService,
     ExistingSourceSyncer, LastSuccessfulRevisionReader, PackageDefinitionCatalog,
     PackageDefinitionReader, QueuedBuildRequest, RetryBuildCleaner, RetryJobResetter,
-    RetryPublishedFilesReader, TargetBuildBackoffReader, TrackedSourceInspector,
+    RetryPublishedFilesReader, SyncRunReporter, TargetBuildBackoffReader, TrackedSourceInspector,
 };
 pub use sessions::{ActiveWorkerSession, WorkerSession, WorkerSessionBroker};
 pub use worker_socket::start_worker_listener;

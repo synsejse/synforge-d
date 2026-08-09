@@ -108,12 +108,25 @@ impl RuntimeGitRegistryAdapter {
         source: &SpecSource,
         timeout_seconds: u64,
         trigger: SyncTriggerType,
+        operation_id: Option<uuid::Uuid>,
     ) -> anyhow::Result<RuntimeInspectedPackageSourceInner> {
-        let result = self
-            .inspect_source(package_name, source, timeout_seconds)
-            .await;
+        let result = match operation_id {
+            Some(operation_id) => {
+                self.package_store
+                    .inspect_source_for_job(operation_id, package_name, source, timeout_seconds)
+                    .await
+            }
+            None => {
+                self.inspect_source(package_name, source, timeout_seconds)
+                    .await
+            }
+        };
 
-        if let Some(sync_tracker) = self.sync_tracker.clone() {
+        // First-class runs own their lifecycle in the durable queue. Keep
+        // legacy post-hoc tracking only for callers without an operation ID.
+        if operation_id.is_none()
+            && let Some(sync_tracker) = self.sync_tracker.clone()
+        {
             let sync_result = match &result {
                 Ok(inspected) => SyncResult::Success {
                     revision: inspected.revision.comparison_key(),

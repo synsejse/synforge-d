@@ -4,6 +4,7 @@ use synforge_core::{
     model::BuildTrigger,
     package::{PackageDefinition, SpecSource},
 };
+use synforge_database::SyncStore;
 use synforge_git_sync::{
     InspectedPackageSource as GitSyncInspectedPackageSource,
     ManualRefreshScheduler as GitSyncManualRefreshScheduler,
@@ -14,8 +15,9 @@ use synforge_git_sync::{
     RepositoryBrowser as GitSyncRepositoryBrowser,
 };
 use synforge_worker_host::{
-    PackageDefinitionCatalog, PackageDefinitionReader, TrackedSourceInspector,
+    PackageDefinitionCatalog, PackageDefinitionReader, SyncRunReporter, TrackedSourceInspector,
 };
+use uuid::Uuid;
 
 use super::DaemonPackageDeps;
 
@@ -126,16 +128,31 @@ impl TrackedSourceInspector for DaemonPackageDeps {
         source: &SpecSource,
         timeout_seconds: u64,
         trigger: synforge_core::sync::SyncTriggerType,
+        operation_id: Option<Uuid>,
     ) -> anyhow::Result<GitSyncInspectedPackageSource> {
         let inspected = self
             .git
-            .inspect_source_tracked(package_name, source, timeout_seconds, trigger)
+            .inspect_source_tracked(package_name, source, timeout_seconds, trigger, operation_id)
             .await?;
         Ok(GitSyncInspectedPackageSource {
             package_name: inspected.package_name,
             description: inspected.description,
             revision: inspected.revision,
         })
+    }
+}
+
+#[async_trait]
+impl SyncRunReporter for DaemonPackageDeps {
+    async fn advance_sync_run(
+        &self,
+        operation_id: Uuid,
+        stage: synforge_core::sync::SyncStage,
+        message: &str,
+    ) -> anyhow::Result<bool> {
+        self.store
+            .advance_sync_run(operation_id, stage, message)
+            .await
     }
 }
 

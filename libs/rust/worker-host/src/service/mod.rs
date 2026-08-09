@@ -7,8 +7,8 @@ mod state;
 pub use commands::{
     ActiveTargetBuildReader, BuildJobReader, BuildJobWriter, BuildQueue, ExistingSourceSyncer,
     LastSuccessfulRevisionReader, PackageDefinitionCatalog, PackageDefinitionReader,
-    RetryBuildCleaner, RetryJobResetter, RetryPublishedFilesReader, TargetBuildBackoffReader,
-    TrackedSourceInspector,
+    RetryBuildCleaner, RetryJobResetter, RetryPublishedFilesReader, SyncRunReporter,
+    TargetBuildBackoffReader, TrackedSourceInspector,
 };
 pub use facade::BuildService;
 pub use state::QueuedBuildRequest;

@@ -5,7 +5,7 @@ use synforge_core::{
     api::BuildJobResponse,
     model::{BuildJob, BuildTrigger, PublishedRepoFile},
     package::{PackageDefinition, SpecRevision},
-    sync::SyncTriggerType,
+    sync::{SyncStage, SyncTriggerType},
 };
 use synforge_git_sync::InspectedPackageSource;
 use uuid::Uuid;
@@ -15,7 +15,10 @@ use super::state::QueuedBuildRequest;
 mod package_actions;
 mod retry;
 
-pub use package_actions::{trigger_package_action, trigger_target_action};
+pub use package_actions::{
+    trigger_package_action, trigger_package_action_for_sync, trigger_target_action,
+    trigger_target_action_for_sync,
+};
 pub use retry::retry_job;
 
 #[async_trait]
@@ -37,7 +40,20 @@ pub trait TrackedSourceInspector {
         source: &synforge_core::package::SpecSource,
         timeout_seconds: u64,
         trigger: SyncTriggerType,
+        operation_id: Option<Uuid>,
     ) -> anyhow::Result<InspectedPackageSource>;
+}
+
+#[async_trait]
+pub trait SyncRunReporter {
+    /// Returns false when the run was cancelled or finalized before this
+    /// stage transition.
+    async fn advance_sync_run(
+        &self,
+        operation_id: Uuid,
+        stage: SyncStage,
+        message: &str,
+    ) -> anyhow::Result<bool>;
 }
 
 #[async_trait]

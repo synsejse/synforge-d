@@ -1,8 +1,9 @@
 use synforge_core::{
-    api::{PackageActionDisposition, PackageActionResponse, PackageActionTargetResult},
+    api::{PackageActionDisposition, PackageActionTargetResult},
     error::SynforgeError,
     model::{BuildJob, BuildStatus, BuildTrigger, now_utc},
     package::{PackageDefinition, parse_mock_chroot},
+    sync::SyncStage,
     validation::{PackageDefinitionValidator, Validator},
 };
 use synforge_git_sync::{
@@ -12,8 +13,15 @@ use uuid::Uuid;
 
 use super::{
     ActiveTargetBuildReader, BuildJobWriter, BuildQueue, LastSuccessfulRevisionReader,
-    PackageDefinitionReader, QueuedBuildRequest, TargetBuildBackoffReader, TrackedSourceInspector,
+    QueuedBuildRequest, SyncRunReporter, TargetBuildBackoffReader, TrackedSourceInspector,
     sync_trigger_from_build_trigger,
+};
+
+mod entry;
+
+pub use entry::{
+    trigger_package_action, trigger_package_action_for_sync, trigger_target_action,
+    trigger_target_action_for_sync,
 };
 
 struct PackageActionPlan {
@@ -26,71 +34,6 @@ struct PackageActionPlan {
 struct PlannedBuild {
     job: BuildJob,
     queued: QueuedBuildRequest,
-}
-
-pub async fn trigger_package_action<D>(
-    deps: &D,
-    package_name: &str,
-    trigger: BuildTrigger,
-    force: bool,
-) -> anyhow::Result<PackageActionResponse>
-where
-    D: PackageDefinitionReader
-        + TrackedSourceInspector
-        + PackageDefinitionMaterializer
-        + PackageDefinitionWriter
-        + ActiveTargetBuildReader
-        + LastSuccessfulRevisionReader
-        + TargetBuildBackoffReader
-        + BuildJobWriter
-        + BuildQueue
-        + Send
-        + Sync,
-{
-    let package = deps.get_package_definition(package_name).await?;
-    let plan = prepare_package_action(deps, package, None, trigger, force).await?;
-    let plan = reserve_and_enqueue_builds(deps, plan).await?;
-
-    Ok(PackageActionResponse {
-        package_name: plan.package_name,
-        trigger: plan.trigger,
-        results: plan.results,
-    })
-}
-
-pub async fn trigger_target_action<D>(
-    deps: &D,
-    package_name: &str,
-    mock_chroot: &str,
-    trigger: BuildTrigger,
-    force: bool,
-) -> anyhow::Result<PackageActionTargetResult>
-where
-    D: PackageDefinitionReader
-        + TrackedSourceInspector
-        + PackageDefinitionMaterializer
-        + PackageDefinitionWriter
-        + ActiveTargetBuildReader
-        + LastSuccessfulRevisionReader
-        + TargetBuildBackoffReader
-        + BuildJobWriter
-        + BuildQueue
-        + Send
-        + Sync,
-{
-    let package = deps.get_package_definition(package_name).await?;
-    let plan = prepare_package_action(deps, package, Some(mock_chroot), trigger, force).await?;
-    let plan = reserve_and_enqueue_builds(deps, plan).await?;
-
-    plan.results
-        .into_iter()
-        .find(|result| result.mock_chroot == mock_chroot)
-        .ok_or_else(|| {
-            anyhow::anyhow!(SynforgeError::NotFound(format!(
-                "target {} for package {}",
-                mock_chroot, package_name
-            )))
-        })
 }
 
 async fn reserve_and_enqueue_builds<D>(
@@ -137,6 +80,7 @@ async fn prepare_package_action<D>(
     target_mock_chroot: Option<&str>,
     trigger: BuildTrigger,
     force: bool,
+    sync_operation_id: Option<Uuid>,
 ) -> anyhow::Result<PackageActionPlan>
 where
     D: TrackedSourceInspector
@@ -145,6 +89,7 @@ where
         + ActiveTargetBuildReader
         + LastSuccessfulRevisionReader
         + TargetBuildBackoffReader
+        + SyncRunReporter
         + Send
         + Sync,
 {
@@ -155,9 +100,18 @@ where
             &package.source,
             package.build_timeout_seconds,
             sync_trigger_from_build_trigger(trigger),
+            sync_operation_id,
         )
         .await?;
     let revision_key = inspected.revision.comparison_key();
+
+    report_stage(
+        deps,
+        sync_operation_id,
+        SyncStage::PlanningBuilds,
+        "Comparing source revision with build history",
+    )
+    .await?;
 
     let build_chroots = match target_mock_chroot {
         Some(mock_chroot) => {
@@ -247,6 +201,13 @@ where
             },
         )
         .await?;
+    report_stage(
+        deps,
+        sync_operation_id,
+        SyncStage::UpdatingPackage,
+        "Updating package metadata",
+    )
+    .await?;
     deps.upsert_package_definition(&updated_package).await?;
 
     let now = now_utc();
@@ -262,7 +223,7 @@ where
             revision: revision_key.clone(),
             trigger,
             status: BuildStatus::Pending,
-            sync_operation_id: None,
+            sync_operation_id,
             spec_file: updated_package.spec_file.clone(),
             worker_container_id: None,
             created_at: now,
@@ -289,6 +250,23 @@ where
         builds,
         results,
     })
+}
+
+async fn report_stage<D>(
+    deps: &D,
+    operation_id: Option<Uuid>,
+    stage: SyncStage,
+    message: &str,
+) -> anyhow::Result<()>
+where
+    D: SyncRunReporter + Send + Sync,
+{
+    if let Some(operation_id) = operation_id
+        && !deps.advance_sync_run(operation_id, stage, message).await?
+    {
+        anyhow::bail!("sync operation was cancelled or already finalized");
+    }
+    Ok(())
 }
 
 #[cfg(test)]

@@ -92,6 +92,19 @@ impl PackageSyncStore {
         source: &SpecSource,
         timeout_seconds: u64,
     ) -> anyhow::Result<InspectedPackageSource> {
+        self.inspect_source_for_job(uuid::Uuid::now_v7(), package_name, source, timeout_seconds)
+            .await
+    }
+
+    /// Run source inspection under a caller-owned operation ID so worker
+    /// logs and cancellation can be associated with that durable sync run.
+    pub async fn inspect_source_for_job(
+        &self,
+        job_id: uuid::Uuid,
+        package_name: &str,
+        source: &SpecSource,
+        timeout_seconds: u64,
+    ) -> anyhow::Result<InspectedPackageSource> {
         if let Err(error) = self.git_mirror_cache.ensure_mirror(&source.repo_url).await {
             tracing::warn!(
                 package_name,
@@ -100,7 +113,6 @@ impl PackageSyncStore {
                 "failed to warm git mirror cache before inspect; continuing with direct clone"
             );
         }
-        let job_id = uuid::Uuid::now_v7();
         let workspace_dir = Path::new(DEFAULT_WORKER_WORKSPACE_ROOT).join(job_id.to_string());
         let payload = WorkerJobPayload {
             job_id,

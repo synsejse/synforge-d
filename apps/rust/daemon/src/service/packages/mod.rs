@@ -6,17 +6,17 @@ use std::path::Path;
 use synforge_core::api::{
     BrowseRepositoryRequest, BrowseRepositoryResponse, CreatePackageRequest,
     MockChrootListResponse, PackageBuildHistoryResponse, PackageListResponse, PackageResponse,
-    RefreshAllPackagesProgressResponse, RefreshAllPackagesResponse, UpdatePackageRequest,
-    build_page_info, normalize_pagination,
+    RefreshAllPackagesProgressResponse, RefreshAllPackagesProgressView, RefreshAllPackagesResponse,
+    RefreshAllPackagesState, SyncBatchDetailResponse, UpdatePackageRequest, build_page_info,
+    normalize_pagination,
 };
+use synforge_core::sync::SyncBatchStatus;
 use synforge_core::validated::PackageName;
 use synforge_database::PackageStore;
 use synforge_git_sync::{
     browse_repository as browse_git_repository, create_package as create_git_package,
     delete_package as delete_git_package, get_package as get_git_package,
     get_package_build_history as get_git_package_build_history,
-    get_refresh_all_packages_progress as get_git_refresh_all_packages_progress,
-    trigger_refresh_all_packages as trigger_git_refresh_all_packages,
     update_package as update_git_package,
 };
 use synforge_worker_host::MockChrootService;
@@ -70,11 +70,20 @@ impl SynforgeService {
     pub async fn get_refresh_all_packages_progress(
         &self,
     ) -> anyhow::Result<RefreshAllPackagesProgressResponse> {
-        get_git_refresh_all_packages_progress(&self.package_deps()).await
+        Ok(RefreshAllPackagesProgressResponse {
+            operation: self
+                .get_latest_sync_batch_detail()
+                .await?
+                .map(refresh_all_progress_view)
+                .transpose()?,
+        })
     }
 
     pub async fn trigger_refresh_all_packages(&self) -> anyhow::Result<RefreshAllPackagesResponse> {
-        trigger_git_refresh_all_packages(&self.package_deps()).await
+        let detail = self.enqueue_refresh_all_batch().await?;
+        Ok(RefreshAllPackagesResponse {
+            operation: refresh_all_progress_view(detail)?,
+        })
     }
 
     pub async fn get_package_build_history(
@@ -146,6 +155,51 @@ impl SynforgeService {
             remove_package_cache_subtree(&root, package_name, domain).await;
         }
     }
+}
+
+fn refresh_all_progress_view(
+    detail: SyncBatchDetailResponse,
+) -> anyhow::Result<RefreshAllPackagesProgressView> {
+    let batch = detail.batch;
+    let state = match batch.status {
+        SyncBatchStatus::Queued | SyncBatchStatus::Running => RefreshAllPackagesState::Running,
+        SyncBatchStatus::Succeeded | SyncBatchStatus::Cancelled => {
+            RefreshAllPackagesState::Completed
+        }
+        SyncBatchStatus::Failed | SyncBatchStatus::Interrupted => RefreshAllPackagesState::Failed,
+    };
+    let queued_targets = detail
+        .operations
+        .iter()
+        .map(|operation| operation.queued_targets)
+        .sum();
+    let skipped_targets = detail
+        .operations
+        .iter()
+        .map(|operation| operation.skipped_targets)
+        .sum();
+    let blocked_targets = detail
+        .operations
+        .iter()
+        .map(|operation| operation.blocked_targets)
+        .sum();
+    Ok(RefreshAllPackagesProgressView {
+        operation_id: uuid::Uuid::parse_str(&batch.id)?,
+        state,
+        total_packages: batch.total_packages,
+        processed_packages: batch.completed_packages,
+        queued_packages: batch
+            .total_packages
+            .saturating_sub(batch.deduplicated_packages)
+            .saturating_sub(batch.enqueue_failed_packages),
+        skipped_packages: batch.deduplicated_packages,
+        blocked_packages: 0,
+        failed_packages: batch.failed_packages,
+        queued_targets,
+        skipped_targets,
+        blocked_targets,
+        message: batch.error_message,
+    })
 }
 
 async fn remove_package_cache_subtree(root: &Path, package_name: &str, domain: &'static str) {

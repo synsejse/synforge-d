@@ -2,9 +2,10 @@ use std::collections::HashMap;
 
 use synforge_core::{
     api::{
-        SyncMetricsResponse, SyncOperationDetailResponse, SyncOperationListResponse,
-        SyncScheduleEntry, SyncScheduleResponse, TimeSeriesPoint, TimeSeriesResponse,
-        build_page_info, resolve_time_range,
+        SyncBatchDetailResponse, SyncBatchListResponse, SyncMetricsResponse,
+        SyncOperationDetailResponse, SyncOperationListResponse, SyncScheduleEntry,
+        SyncScheduleResponse, TimeSeriesPoint, TimeSeriesResponse, build_page_info,
+        resolve_time_range,
     },
     error::SynforgeError,
     model::format_timestamp,
@@ -16,6 +17,47 @@ use super::SynforgeService;
 use synforge_database::{JobStore, PackageStore, SyncStore};
 
 impl SynforgeService {
+    pub async fn get_sync_batch_detail(
+        &self,
+        id: uuid::Uuid,
+    ) -> anyhow::Result<SyncBatchDetailResponse> {
+        let batch = self
+            .store
+            .refresh_sync_batch(id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(id.to_string())))?;
+        let operations = self.store.list_sync_operations_for_batch(id).await?;
+        Ok(SyncBatchDetailResponse { batch, operations })
+    }
+
+    pub async fn get_latest_sync_batch_detail(
+        &self,
+    ) -> anyhow::Result<Option<SyncBatchDetailResponse>> {
+        let Some(batch) = self.store.get_latest_sync_batch().await? else {
+            return Ok(None);
+        };
+        self.get_sync_batch_detail(uuid::Uuid::parse_str(&batch.id)?)
+            .await
+            .map(Some)
+    }
+
+    pub async fn list_sync_batches(
+        &self,
+        limit: Option<usize>,
+        offset: Option<usize>,
+    ) -> anyhow::Result<SyncBatchListResponse> {
+        self.store.refresh_active_sync_batches().await?;
+        let limit = limit.unwrap_or(25).clamp(1, 100);
+        let offset = offset.unwrap_or(0);
+        let total = self.store.count_sync_batches().await?;
+        let batches = self.store.list_sync_batches(limit, offset).await?;
+        let returned = batches.len();
+        Ok(SyncBatchListResponse {
+            batches,
+            page: build_page_info(limit, offset, total, returned),
+        })
+    }
+
     pub async fn get_sync_operation_detail(
         &self,
         id: uuid::Uuid,

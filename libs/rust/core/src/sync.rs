@@ -144,6 +144,8 @@ pub struct SyncBatch {
     pub succeeded_packages: u64,
     pub failed_packages: u64,
     pub cancelled_packages: u64,
+    pub deduplicated_packages: u64,
+    pub enqueue_failed_packages: u64,
     pub created_at: String,
     pub updated_at: String,
     pub started_at: Option<String>,

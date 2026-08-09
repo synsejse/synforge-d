@@ -10,9 +10,7 @@ use synforge_core::config::DaemonConfig;
 use synforge_core::sync::SyncTriggerType;
 use synforge_database::{DieselStore, SyncStore};
 use synforge_git_sync::RuntimeGitRegistryAdapter;
-use synforge_state::{
-    MockChrootCache, RefreshAllPackagesProgressState, RuntimeCache, SigningReconcileProgressState,
-};
+use synforge_state::{MockChrootCache, RuntimeCache, SigningReconcileProgressState};
 use synforge_worker_host::{
     BuildRunner, BuildService, DockerWorkerLauncher, JobLifecycle, LogBroadcaster, QueuedBuild,
     WorkerSessionBroker,
@@ -39,7 +37,6 @@ pub struct SynforgeService {
     pub(super) shutdown_tx: watch::Sender<bool>,
     pub(super) runtime_cache: RuntimeCache,
     pub(super) mock_chroot_cache: MockChrootCache,
-    pub(super) refresh_all_packages_progress: RefreshAllPackagesProgressState,
     pub(super) signing_reconcile_progress: SigningReconcileProgressState,
     pub(super) health_cache: HealthProbeCache,
 }

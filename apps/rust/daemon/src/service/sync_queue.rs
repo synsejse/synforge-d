@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use synforge_core::{
-    api::{PackageActionDisposition, PackageActionTargetResult, SyncEnqueueResponse},
+    api::{
+        PackageActionDisposition, PackageActionTargetResult, SyncBatchDetailResponse,
+        SyncEnqueueResponse,
+    },
     error::SynforgeError,
     model::BuildTrigger,
     sync::{SyncOperation, SyncStatus, SyncTriggerType},
@@ -16,6 +19,51 @@ use super::SynforgeService;
 const MAX_CONCURRENT_SYNCS: usize = 2;
 
 impl SynforgeService {
+    pub async fn enqueue_refresh_all_batch(&self) -> anyhow::Result<SyncBatchDetailResponse> {
+        let mut package_names: Vec<String> = self
+            .registry
+            .list_definitions()
+            .await?
+            .into_iter()
+            .filter(|package| package.enabled)
+            .map(|package| package.name)
+            .collect();
+        package_names.sort();
+        let batch = self
+            .store
+            .create_sync_batch(SyncTriggerType::ManualRefresh, package_names.len() as u64)
+            .await?;
+        let batch_id = Uuid::parse_str(&batch.id)?;
+        let mut deduplicated = 0_u64;
+        for package_name in package_names {
+            match self
+                .enqueue_package_sync(
+                    &package_name,
+                    SyncTriggerType::ManualRefresh,
+                    None,
+                    Some(batch_id),
+                    None,
+                )
+                .await
+            {
+                Ok(response) if !response.created => deduplicated += 1,
+                Ok(_) => {}
+                Err(error) => {
+                    warn!(%package_name, %error, "failed to enqueue refresh-all package");
+                    self.store
+                        .record_sync_batch_enqueue_failure(batch_id, &error.to_string())
+                        .await?;
+                }
+            }
+        }
+        if deduplicated > 0 {
+            self.store
+                .record_sync_batch_deduplication(batch_id, deduplicated)
+                .await?;
+        }
+        self.get_sync_batch_detail(batch_id).await
+    }
+
     pub async fn enqueue_package_sync(
         &self,
         package_name: &str,
@@ -91,6 +139,13 @@ impl SynforgeService {
         if operation.status == SyncStatus::Running && operation.cancellation_requested {
             self.worker_launcher
                 .kill_job(id, None, "source sync cancelled")
+                .await?;
+        }
+        if operation.status == SyncStatus::Cancelled
+            && let Some(batch_id) = operation.batch_id.as_deref()
+        {
+            self.store
+                .refresh_sync_batch(Uuid::parse_str(batch_id)?)
                 .await?;
         }
         Ok(operation)
@@ -209,6 +264,11 @@ impl SynforgeService {
         };
         let status = completion.status;
         self.store.finish_sync_run(id, completion).await?;
+        if let Some(batch_id) = operation.batch_id.as_deref() {
+            self.store
+                .refresh_sync_batch(Uuid::parse_str(batch_id)?)
+                .await?;
+        }
         // Parse workers close their socket before the enclosing sync row is
         // finalized. Publish again after the terminal DB transition to close
         // subscribers that connected inside that narrow race window.

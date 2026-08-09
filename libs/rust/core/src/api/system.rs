@@ -3,7 +3,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     api::BuildJobResponse,
-    sync::{SyncOperation, SyncOperationEvent, SyncStatus},
+    sync::{SyncBatch, SyncOperation, SyncOperationEvent, SyncStatus},
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, IntoParams, ToSchema)]
@@ -48,6 +48,18 @@ pub struct SyncOperationDetailResponse {
     pub events: Vec<SyncOperationEvent>,
     /// Builds planned by this sync run. Empty is a normal no-change result.
     pub builds: Vec<BuildJobResponse>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct SyncBatchDetailResponse {
+    pub batch: SyncBatch,
+    pub operations: Vec<SyncOperation>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub struct SyncBatchListResponse {
+    pub batches: Vec<SyncBatch>,
+    pub page: super::PageInfo,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]

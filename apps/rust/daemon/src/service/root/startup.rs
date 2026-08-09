@@ -19,9 +19,7 @@ use synforge_git_sync::{
     PackageSyncStore, RuntimeGitRegistryAdapter, SyncStatusTracker, WorkerParseRunner,
 };
 use synforge_publish::FileRepoManager;
-use synforge_state::{
-    MockChrootCache, RefreshAllPackagesProgressState, RuntimeCache, SigningReconcileProgressState,
-};
+use synforge_state::{MockChrootCache, RuntimeCache, SigningReconcileProgressState};
 use synforge_worker_host::{
     BuildRunner, BuildService, DockerWorkerLauncher, JobLifecycle, LogBroadcaster,
     WorkerSessionBroker, start_worker_listener,
@@ -172,6 +170,7 @@ impl SynforgeService {
         if interrupted_syncs > 0 {
             warn!(interrupted_syncs, "marked unfinished sync runs interrupted");
         }
+        store.refresh_active_sync_batches().await?;
         // Marking unfinished DB rows Failed isn't enough: worker containers
         // outlive a daemon crash and their names are deterministic, so a
         // retry of the same job would collide on create_container. Reap any
@@ -215,7 +214,6 @@ impl SynforgeService {
             shutdown_tx,
             runtime_cache,
             mock_chroot_cache: MockChrootCache::default(),
-            refresh_all_packages_progress: RefreshAllPackagesProgressState::default(),
             signing_reconcile_progress: SigningReconcileProgressState::default(),
             health_cache: Default::default(),
         });

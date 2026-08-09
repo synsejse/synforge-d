@@ -7,8 +7,8 @@ use synforge_core::{
 };
 use synforge_database::JobStore;
 use synforge_git_sync::{
-    EnabledPackageCatalog, PackageBuildHistoryReader, PackageDefinitionWriter,
-    PackageDeletionJobReader, PackageDeletionRunner, PackageLookup,
+    PackageBuildHistoryReader, PackageDefinitionWriter, PackageDeletionJobReader,
+    PackageDeletionRunner, PackageLookup,
 };
 use synforge_worker_host::{
     ActiveTargetBuildReader, BuildJobWriter, BuildQueue, LastSuccessfulRevisionReader,
@@ -36,13 +36,6 @@ impl PackageDeletionRunner for DaemonPackageDeps {
             .await?
             .ok_or_else(|| anyhow::anyhow!(SynforgeError::NotFound(job_id.to_string())))?;
         Ok(())
-    }
-}
-
-#[async_trait]
-impl EnabledPackageCatalog for DaemonPackageDeps {
-    async fn list_all_enabled_package_names(&self) -> anyhow::Result<Vec<String>> {
-        self.load_enabled_package_names().await
     }
 }
 

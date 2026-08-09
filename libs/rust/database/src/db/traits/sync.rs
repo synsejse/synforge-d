@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use synforge_core::sync::{
-    SyncEventLevel, SyncOperation, SyncOperationEvent, SyncStage, SyncStatus, SyncTriggerType,
+    SyncBatch, SyncEventLevel, SyncOperation, SyncOperationEvent, SyncStage, SyncStatus,
+    SyncTriggerType,
 };
 use time::OffsetDateTime;
 use uuid::Uuid;
@@ -36,6 +37,34 @@ pub struct SyncRunCompletion {
 
 #[async_trait]
 pub trait SyncStore: Send + Sync {
+    async fn create_sync_batch(
+        &self,
+        trigger_type: SyncTriggerType,
+        total_packages: u64,
+    ) -> anyhow::Result<SyncBatch>;
+
+    async fn get_sync_batch(&self, id: Uuid) -> anyhow::Result<Option<SyncBatch>>;
+
+    async fn get_latest_sync_batch(&self) -> anyhow::Result<Option<SyncBatch>>;
+
+    async fn list_sync_batches(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> anyhow::Result<Vec<SyncBatch>>;
+
+    async fn count_sync_batches(&self) -> anyhow::Result<u64>;
+
+    async fn list_sync_operations_for_batch(&self, id: Uuid) -> anyhow::Result<Vec<SyncOperation>>;
+
+    async fn record_sync_batch_deduplication(&self, id: Uuid, count: u64) -> anyhow::Result<()>;
+
+    async fn record_sync_batch_enqueue_failure(&self, id: Uuid, error: &str) -> anyhow::Result<()>;
+
+    async fn refresh_sync_batch(&self, id: Uuid) -> anyhow::Result<Option<SyncBatch>>;
+
+    async fn refresh_active_sync_batches(&self) -> anyhow::Result<()>;
+
     async fn enqueue_sync_run(&self, request: NewSyncRun) -> anyhow::Result<EnqueuedSyncRun>;
 
     async fn get_sync_operation(&self, id: Uuid) -> anyhow::Result<Option<SyncOperation>>;

@@ -140,6 +140,8 @@ diesel::table! {
         succeeded_packages -> BigInt,
         failed_packages -> BigInt,
         cancelled_packages -> BigInt,
+        deduplicated_packages -> BigInt,
+        enqueue_failed_packages -> BigInt,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
         started_at -> Nullable<Timestamptz>,

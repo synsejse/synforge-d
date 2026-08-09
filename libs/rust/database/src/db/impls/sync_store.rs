@@ -2,6 +2,73 @@ use super::super::*;
 
 #[async_trait]
 impl SyncStore for DieselStore {
+    async fn create_sync_batch(
+        &self,
+        trigger_type: synforge_core::sync::SyncTriggerType,
+        total_packages: u64,
+    ) -> anyhow::Result<synforge_core::sync::SyncBatch> {
+        sync_batches::create_sync_batch(self, trigger_type, total_packages).await
+    }
+
+    async fn get_sync_batch(
+        &self,
+        id: uuid::Uuid,
+    ) -> anyhow::Result<Option<synforge_core::sync::SyncBatch>> {
+        sync_batches::get_sync_batch(self, id).await
+    }
+
+    async fn get_latest_sync_batch(
+        &self,
+    ) -> anyhow::Result<Option<synforge_core::sync::SyncBatch>> {
+        sync_batches::get_latest_sync_batch(self).await
+    }
+
+    async fn list_sync_batches(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> anyhow::Result<Vec<synforge_core::sync::SyncBatch>> {
+        sync_batches::list_sync_batches(self, limit, offset).await
+    }
+
+    async fn count_sync_batches(&self) -> anyhow::Result<u64> {
+        sync_batches::count_sync_batches(self).await
+    }
+
+    async fn list_sync_operations_for_batch(
+        &self,
+        id: uuid::Uuid,
+    ) -> anyhow::Result<Vec<synforge_core::sync::SyncOperation>> {
+        sync_batches::list_sync_operations_for_batch(self, id).await
+    }
+
+    async fn record_sync_batch_deduplication(
+        &self,
+        id: uuid::Uuid,
+        count: u64,
+    ) -> anyhow::Result<()> {
+        sync_batches::record_sync_batch_deduplication(self, id, count).await
+    }
+
+    async fn record_sync_batch_enqueue_failure(
+        &self,
+        id: uuid::Uuid,
+        error: &str,
+    ) -> anyhow::Result<()> {
+        sync_batches::record_sync_batch_enqueue_failure(self, id, error).await
+    }
+
+    async fn refresh_sync_batch(
+        &self,
+        id: uuid::Uuid,
+    ) -> anyhow::Result<Option<synforge_core::sync::SyncBatch>> {
+        sync_batches::refresh_sync_batch(self, id).await
+    }
+
+    async fn refresh_active_sync_batches(&self) -> anyhow::Result<()> {
+        sync_batches::refresh_active_sync_batches(self).await
+    }
+
     async fn enqueue_sync_run(
         &self,
         request: super::super::traits::NewSyncRun,

@@ -6,6 +6,7 @@ mod records;
 mod repo;
 mod support;
 mod sync;
+mod sync_batches;
 mod sync_events;
 mod sync_lifecycle;
 mod traits;

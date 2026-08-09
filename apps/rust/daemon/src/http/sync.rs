@@ -4,9 +4,10 @@ use axum::Router;
 use axum::extract::{Path, Query, State};
 use axum::routing::{get, post};
 use synforge_core::api::{
-    PackageSyncOperationListQuery, SyncEnqueueResponse, SyncMetricsResponse,
-    SyncOperationDetailResponse, SyncOperationListQuery, SyncOperationListResponse,
-    SyncScheduleQuery, SyncScheduleResponse, TimeSeriesQuery, TimeSeriesResponse,
+    PackageSyncOperationListQuery, PaginationQuery, SyncBatchDetailResponse, SyncBatchListResponse,
+    SyncEnqueueResponse, SyncMetricsResponse, SyncOperationDetailResponse, SyncOperationListQuery,
+    SyncOperationListResponse, SyncScheduleQuery, SyncScheduleResponse, TimeSeriesQuery,
+    TimeSeriesResponse,
 };
 use synforge_core::sync::SyncOperation;
 use uuid::Uuid;
@@ -14,6 +15,8 @@ use uuid::Uuid;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/sync/operations", get(list_sync_operations))
+        .route("/sync/batches", get(list_sync_batches))
+        .route("/sync/batches/{id}", get(get_sync_batch))
         .route("/sync/operations/{id}", get(get_sync_operation))
         .route("/sync/operations/{id}/retry", post(retry_sync_operation))
         .route("/sync/operations/{id}/cancel", post(cancel_sync_operation))
@@ -24,6 +27,48 @@ pub fn router() -> Router<AppState> {
             "/packages/{name}/sync/operations",
             get(list_package_sync_operations),
         )
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/sync/batches",
+    tag = "Sync",
+    params(PaginationQuery),
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "List refresh-all sync batches", body = SyncBatchListResponse),
+        (status = 401, body = synforge_core::api::ApiError)
+    )
+)]
+pub(super) async fn list_sync_batches(
+    State(state): State<AppState>,
+    Query(query): Query<PaginationQuery>,
+) -> Result<Json<SyncBatchListResponse>, AppError> {
+    Ok(Json(
+        state
+            .service
+            .list_sync_batches(query.limit, query.offset)
+            .await?,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/sync/batches/{id}",
+    tag = "Sync",
+    params(("id" = Uuid, Path, description = "Sync batch identifier")),
+    security(("session_auth" = [])),
+    responses(
+        (status = 200, description = "Get a refresh-all batch and its sync runs", body = SyncBatchDetailResponse),
+        (status = 401, body = synforge_core::api::ApiError),
+        (status = 404, body = synforge_core::api::ApiError)
+    )
+)]
+pub(super) async fn get_sync_batch(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<SyncBatchDetailResponse>, AppError> {
+    Ok(Json(state.service.get_sync_batch_detail(id).await?))
 }
 
 #[utoipa::path(

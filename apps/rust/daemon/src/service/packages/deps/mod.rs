@@ -3,20 +3,14 @@ mod git;
 
 use std::sync::Arc;
 
-use async_trait::async_trait;
 use synforge_core::{
-    api::{
-        BrowseRepositoryResponse, BuildJobResponse, PackageResponse, RefreshAllPackagesProgressView,
-    },
+    api::{BrowseRepositoryResponse, BuildJobResponse, PackageResponse},
     model::{BuildJob, PublishedRepoFile},
     package::PackageDefinition,
 };
 use synforge_database::{DieselStore, JobStore, PackageStore, RepoStore};
-use synforge_git_sync::{RefreshAllProgressStore, RuntimeGitRegistryAdapter};
-use synforge_state::RefreshAllPackagesProgressState;
-use synforge_worker_host::{
-    BuildQueue, BuildService, JobLifecycle, QueuedBuildRequest, WorkerBuildQueue,
-};
+use synforge_git_sync::RuntimeGitRegistryAdapter;
+use synforge_worker_host::{BuildQueue, JobLifecycle, QueuedBuildRequest, WorkerBuildQueue};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
@@ -27,32 +21,10 @@ pub(crate) struct DaemonPackageDeps {
     store: DieselStore,
     git: RuntimeGitRegistryAdapter,
     build_queue: WorkerBuildQueue,
-    build_service: BuildService,
     lifecycle: Arc<JobLifecycle>,
-    progress: RefreshAllPackagesProgressState,
 }
 
 impl DaemonPackageDeps {
-    /// Page through all enabled packages and collect their names.
-    /// Used by the refresh-all flow.
-    pub(super) async fn load_enabled_package_names(&self) -> anyhow::Result<Vec<String>> {
-        const PAGE_SIZE: usize = 200;
-        let mut names = Vec::new();
-        let mut offset = 0;
-        loop {
-            let page = self
-                .store
-                .list_packages(PAGE_SIZE, offset, None, Some(true))
-                .await?;
-            if page.is_empty() {
-                break;
-            }
-            offset += page.len();
-            names.extend(page.into_iter().map(|entry| entry.package.name));
-        }
-        Ok(names)
-    }
-
     pub(super) async fn load_published_repo_files_for_job(
         &self,
         job_id: Uuid,
@@ -217,26 +189,13 @@ impl DaemonPackageDeps {
     }
 }
 
-#[async_trait]
-impl RefreshAllProgressStore for DaemonPackageDeps {
-    async fn load_refresh_all_packages_progress(&self) -> Option<RefreshAllPackagesProgressView> {
-        self.progress.load().await
-    }
-
-    async fn save_refresh_all_packages_progress(&self, progress: RefreshAllPackagesProgressView) {
-        self.progress.save(progress).await;
-    }
-}
-
 impl SynforgeService {
     pub(crate) fn package_deps(&self) -> DaemonPackageDeps {
         DaemonPackageDeps {
             store: self.store.clone(),
             git: self.registry.clone(),
             build_queue: WorkerBuildQueue::new(self.queue_tx.clone()),
-            build_service: self.build_service.clone(),
             lifecycle: Arc::clone(&self.lifecycle),
-            progress: self.refresh_all_packages_progress.clone(),
         }
     }
 }

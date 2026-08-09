@@ -1,13 +1,11 @@
 use async_trait::async_trait;
 use synforge_core::{
-    api::{BrowseRepositoryResponse, PackageActionResponse, PackageResponse},
-    model::BuildTrigger,
+    api::{BrowseRepositoryResponse, PackageResponse},
     package::{PackageDefinition, SpecSource},
 };
 use synforge_database::SyncStore;
 use synforge_git_sync::{
     InspectedPackageSource as GitSyncInspectedPackageSource,
-    ManualRefreshScheduler as GitSyncManualRefreshScheduler,
     PackageDefinitionMaterializer as GitSyncPackageDefinitionMaterializer,
     PackageDeleter as GitSyncPackageDeleter, PackageDetailsReader as GitSyncPackageDetailsReader,
     PackageMaterializationOptions as GitSyncPackageMaterializationOptions,
@@ -18,18 +16,6 @@ use synforge_worker_host::{PackageDefinitionReader, SyncRunReporter, TrackedSour
 use uuid::Uuid;
 
 use super::DaemonPackageDeps;
-
-#[async_trait]
-impl GitSyncManualRefreshScheduler for DaemonPackageDeps {
-    async fn enqueue_manual_refresh(
-        &self,
-        package_name: &str,
-    ) -> anyhow::Result<PackageActionResponse> {
-        self.build_service
-            .trigger_package_action(self, package_name, BuildTrigger::ManualRefresh, false)
-            .await
-    }
-}
 
 #[async_trait]
 impl GitSyncRepositoryBrowser for DaemonPackageDeps {

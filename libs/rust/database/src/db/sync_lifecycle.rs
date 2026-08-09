@@ -29,6 +29,22 @@ struct QueuedSyncOperation<'a> {
     updated_at: time::OffsetDateTime,
 }
 
+#[derive(AsChangeset)]
+#[diesel(table_name = sync_operations, treat_none_as_null = true)]
+struct CompletedSyncOperation<'a> {
+    status: &'a str,
+    stage: &'a str,
+    revision: Option<&'a str>,
+    previous_revision: Option<&'a str>,
+    changed: Option<bool>,
+    queued_targets: i64,
+    skipped_targets: i64,
+    blocked_targets: i64,
+    error_message: Option<&'a str>,
+    updated_at: time::OffsetDateTime,
+    finished_at: Option<time::OffsetDateTime>,
+}
+
 pub(super) async fn enqueue_sync_run(
     store: &DieselStore,
     request: NewSyncRun,
@@ -178,6 +194,7 @@ pub(super) async fn finish_sync_run(
     }
     let now = now_utc();
     let status = completion.status.as_str().to_string();
+    let allow_requested_cancellation = completion.status == SyncStatus::Cancelled;
     let message = completion_message(&completion);
     let level = if completion.status == SyncStatus::Succeeded {
         SyncEventLevel::Info
@@ -189,27 +206,45 @@ pub(super) async fn finish_sync_run(
     let mut conn = store.get_connection().await?;
     Ok(conn
         .transaction::<bool, diesel::result::Error, _>(async |conn| {
-            let updated = diesel::update(
-                sync_operations::table.find(id).filter(
-                    sync_operations::status
-                        .eq_any([SyncStatus::Queued.as_str(), SyncStatus::Running.as_str()]),
-                ),
-            )
-            .set((
-                sync_operations::status.eq(&status),
-                sync_operations::stage.eq(SyncStage::Completed.as_str()),
-                sync_operations::revision.eq(completion.revision.as_deref()),
-                sync_operations::previous_revision.eq(completion.previous_revision.as_deref()),
-                sync_operations::changed.eq(completion.changed),
-                sync_operations::queued_targets.eq(to_i64(completion.queued_targets)),
-                sync_operations::skipped_targets.eq(to_i64(completion.skipped_targets)),
-                sync_operations::blocked_targets.eq(to_i64(completion.blocked_targets)),
-                sync_operations::error_message.eq(completion.error_message.as_deref()),
-                sync_operations::updated_at.eq(now),
-                sync_operations::finished_at.eq(Some(now)),
-            ))
-            .execute(conn)
-            .await?;
+            let changes = CompletedSyncOperation {
+                status: &status,
+                stage: SyncStage::Completed.as_str(),
+                revision: completion.revision.as_deref(),
+                previous_revision: completion.previous_revision.as_deref(),
+                changed: completion.changed,
+                queued_targets: to_i64(completion.queued_targets),
+                skipped_targets: to_i64(completion.skipped_targets),
+                blocked_targets: to_i64(completion.blocked_targets),
+                error_message: completion.error_message.as_deref(),
+                updated_at: now,
+                finished_at: Some(now),
+            };
+            let updated = if allow_requested_cancellation {
+                diesel::update(
+                    sync_operations::table.find(id).filter(
+                        sync_operations::status
+                            .eq_any([SyncStatus::Queued.as_str(), SyncStatus::Running.as_str()]),
+                    ),
+                )
+                .set(changes)
+                .execute(conn)
+                .await?
+            } else {
+                diesel::update(
+                    sync_operations::table
+                        .find(id)
+                        .filter(
+                            sync_operations::status.eq_any([
+                                SyncStatus::Queued.as_str(),
+                                SyncStatus::Running.as_str(),
+                            ]),
+                        )
+                        .filter(sync_operations::cancellation_requested.eq(false)),
+                )
+                .set(changes)
+                .execute(conn)
+                .await?
+            };
             if updated == 1 {
                 insert_event(conn, id, SyncStage::Completed, level, &message, now).await?;
             }
@@ -225,14 +260,15 @@ pub(super) async fn request_sync_cancellation(
     let now = now_utc();
     let mut conn = store.get_connection().await?;
     conn.transaction::<(), diesel::result::Error, _>(async |conn| {
-        let status = sync_operations::table
+        let operation_state = sync_operations::table
             .find(id)
-            .select(sync_operations::status)
-            .first::<String>(conn)
+            .for_update()
+            .select((sync_operations::status, sync_operations::stage))
+            .first::<(String, String)>(conn)
             .await
             .optional()?;
-        match status.as_deref() {
-            Some("queued") => {
+        match operation_state.as_ref() {
+            Some((status, _)) if status == SyncStatus::Queued.as_str() => {
                 diesel::update(sync_operations::table.find(id))
                     .set((
                         sync_operations::status.eq(SyncStatus::Cancelled.as_str()),
@@ -253,7 +289,7 @@ pub(super) async fn request_sync_cancellation(
                 )
                 .await?;
             }
-            Some("running") => {
+            Some((status, stage)) if status == SyncStatus::Running.as_str() => {
                 diesel::update(sync_operations::table.find(id))
                     .set((
                         sync_operations::cancellation_requested.eq(true),
@@ -264,7 +300,7 @@ pub(super) async fn request_sync_cancellation(
                 insert_event(
                     conn,
                     id,
-                    SyncStage::Completed,
+                    stage.parse().unwrap_or(SyncStage::InspectingSource),
                     SyncEventLevel::Warning,
                     "Cancellation requested",
                     now,

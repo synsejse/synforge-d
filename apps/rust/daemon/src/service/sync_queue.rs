@@ -262,8 +262,7 @@ impl SynforgeService {
             Err(_) if cancelled => cancelled_completion(),
             Err(error) => failed_completion(error.to_string()),
         };
-        let status = completion.status;
-        self.store.finish_sync_run(id, completion).await?;
+        let status = self.finalize_sync_run(id, completion).await?;
         if let Some(batch_id) = operation.batch_id.as_deref() {
             self.store
                 .refresh_sync_batch(Uuid::parse_str(batch_id)?)
@@ -275,6 +274,45 @@ impl SynforgeService {
         self.log_broadcaster.publish_complete(id);
         info!(sync_operation_id = %id, ?status, "sync run finished");
         Ok(())
+    }
+
+    async fn finalize_sync_run(
+        &self,
+        id: Uuid,
+        completion: SyncRunCompletion,
+    ) -> anyhow::Result<SyncStatus> {
+        let intended_status = completion.status;
+        if self.store.finish_sync_run(id, completion).await? {
+            return Ok(intended_status);
+        }
+
+        let current =
+            self.store.get_sync_operation(id).await?.ok_or_else(|| {
+                anyhow::anyhow!("sync operation {} disappeared while finishing", id)
+            })?;
+        if current.status.is_terminal() {
+            return Ok(current.status);
+        }
+        if !current.cancellation_requested {
+            anyhow::bail!("sync operation {} could not be finalized", id);
+        }
+
+        if self
+            .store
+            .finish_sync_run(id, cancelled_completion())
+            .await?
+        {
+            return Ok(SyncStatus::Cancelled);
+        }
+        let current =
+            self.store.get_sync_operation(id).await?.ok_or_else(|| {
+                anyhow::anyhow!("sync operation {} disappeared while cancelling", id)
+            })?;
+        if current.status.is_terminal() {
+            Ok(current.status)
+        } else {
+            anyhow::bail!("sync operation {} could not be cancelled", id)
+        }
     }
 }
 

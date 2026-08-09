@@ -1,4 +1,4 @@
-import { useEffect, useState, type SyntheticEvent } from "react";
+import { useEffect, useId, useState, type SyntheticEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   faRotateLeft,
@@ -20,6 +20,9 @@ function Settings() {
   const schemaQuery = useQuery(configQueries.schema());
 
   const [values, setValues] = useState<Record<string, string>>({});
+  const [pristineValues, setPristineValues] = useState<Record<string, string>>(
+    {},
+  );
   const [valuesInitialized, setValuesInitialized] = useState(false);
 
   useEffect(() => {
@@ -28,43 +31,63 @@ function Settings() {
       configQuery.data &&
       schemaQuery.data
     ) {
-      setValues(
-        buildFieldValues(
-          configQuery.data.config,
-          schemaQuery.data.fields,
-          configQuery.data.pending_restart_settings,
-        ),
+      const initialValues = buildFieldValues(
+        configQuery.data.config,
+        schemaQuery.data.fields,
+        configQuery.data.pending_restart_settings,
       );
+      setValues(initialValues);
+      setPristineValues(initialValues);
       setValuesInitialized(true);
     }
   }, [configQuery.data, schemaQuery.data, valuesInitialized]);
 
+  const runtimeFields = (schemaQuery.data?.fields ?? []).filter(
+    (field) => field.editable_in_runtime,
+  );
+  const isDirty = runtimeFields.some(
+    (field) => values[field.key] !== pristineValues[field.key],
+  );
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = true;
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [isDirty]);
+
   const saveMutation = useMutation({
     mutationFn: () => {
-      const runtimeFields = (schemaQuery.data?.fields ?? []).filter(
-        (field) => field.editable_in_runtime,
-      );
       return api.updateRuntimeSettings({
         settings: buildSettingsPayload(runtimeFields, values),
       });
     },
     onSuccess: (response) => {
       if (schemaQuery.data) {
-        setValues(
-          buildFieldValues(
-            response.config,
-            schemaQuery.data.fields,
-            response.pending_restart_settings,
-          ),
+        const savedValues = buildFieldValues(
+          response.config,
+          schemaQuery.data.fields,
+          response.pending_restart_settings,
         );
+        setValues(savedValues);
+        setPristineValues(savedValues);
       }
-      configQuery.refetch();
+      void configQuery.refetch();
     },
   });
 
   function handleSave(event: SyntheticEvent) {
     event.preventDefault();
+    if (!isDirty || saveMutation.isPending) return;
     saveMutation.mutate();
+  }
+
+  function discardChanges() {
+    setValues(pristineValues);
+    saveMutation.reset();
   }
 
   if (configQuery.isPending || schemaQuery.isPending) {
@@ -85,6 +108,11 @@ function Settings() {
     return (
       <ErrorMessage
         message={loadError instanceof Error ? loadError.message : "Failed to load"}
+        onRetry={() => {
+          void configQuery.refetch();
+          void schemaQuery.refetch();
+        }}
+        retrying={configQuery.isFetching || schemaQuery.isFetching}
       />
     );
   }
@@ -186,11 +214,38 @@ function Settings() {
           })}
         </DisclosureGroup>
 
-        <div className="flex justify-end">
-          <Button type="submit" variant="primary" size="md" disabled={saveMutation.isPending}>
-            <FaIcon icon={faSave} className="mr-2" />
-            {saveMutation.isPending ? "Saving…" : "Save Settings"}
-          </Button>
+        <div className="sticky bottom-0 z-20 flex flex-col gap-3 border border-edge-strong bg-black/95 p-4 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.14em]">
+            <span
+              aria-hidden="true"
+              className={`h-2 w-2 ${isDirty ? "animate-pulse bg-accent-violet" : "bg-success"}`}
+            />
+            <span className={isDirty ? "text-accent-violet" : "text-soft"}>
+              {isDirty ? "Unsaved changes" : "All changes saved"}
+            </span>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {isDirty ? (
+              <Button
+                variant="ghost"
+                size="md"
+                onClick={discardChanges}
+                disabled={saveMutation.isPending}
+              >
+                Discard
+              </Button>
+            ) : null}
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              disabled={!isDirty}
+              loading={saveMutation.isPending}
+            >
+              {saveMutation.isPending ? null : <FaIcon icon={faSave} />}
+              {saveMutation.isPending ? "Saving…" : "Save settings"}
+            </Button>
+          </div>
         </div>
       </form>
     </div>
@@ -208,20 +263,24 @@ function ConfigFieldInput({
   onChange: (next: string) => void;
   disabled?: boolean;
 }) {
+  const inputId = useId();
   const defaultStr =
     field.default_value != null ? String(field.default_value) : "";
   const isAtDefault = value.trim() === defaultStr.trim();
   const canReset = !disabled && defaultStr !== "" && !isAtDefault;
 
   return (
-    <label className="block">
+    <div className="block">
       {/* min-h matches the Reset button height (border-2 + py-0.5 +
           10px text) so rows with and without the button line up at the
           same input baseline when sitting side-by-side in a grid. */}
       <div className="mb-2 flex min-h-[1.5rem] items-center justify-between gap-2">
-        <span className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted">
+        <label
+          htmlFor={inputId}
+          className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-muted"
+        >
           {field.label}
-        </span>
+        </label>
         <span className="flex items-center gap-2">
           {field.restart_required ? (
             <span className="font-mono text-xs uppercase tracking-[0.15em] text-accent-cyan">
@@ -230,20 +289,22 @@ function ConfigFieldInput({
           ) : null}
           {canReset ? (
             <Tooltip content={`Reset to default: ${defaultStr}`} side="top">
-              <button
-                type="button"
+              <Button
+                variant="subtle"
+                size="xs"
                 onClick={() => onChange(defaultStr)}
                 aria-label={`Reset ${field.label} to default`}
-                className="inline-flex items-center gap-1 border border-edge bg-black px-2 py-0.5 font-mono text-xs uppercase tracking-[0.15em] text-soft transition hover:border-edge-strong hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-lime"
+                className="border-edge text-soft"
               >
                 <FaIcon icon={faRotateLeft} className="text-[0.85em]" />
                 Reset
-              </button>
+              </Button>
             </Tooltip>
           ) : null}
         </span>
       </div>
       <input
+        id={inputId}
         type={field.type === "number" ? "number" : "text"}
         min={field.min_value ?? undefined}
         value={value}
@@ -260,7 +321,7 @@ function ConfigFieldInput({
           </span>
         ) : null}
       </div>
-    </label>
+    </div>
   );
 }
 

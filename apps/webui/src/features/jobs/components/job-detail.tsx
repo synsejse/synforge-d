@@ -21,12 +21,7 @@ import { formatCompactId } from "../../../lib/identifiers";
 import ArtifactCard from "./artifact-card";
 import JobLiveUsage from "./job-live-usage";
 import CcacheStatsCard from "../../cache/ccache-stats-card";
-import {
-  faArrowLeft,
-  faRotate,
-  faStop,
-  faTrash,
-} from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faRotate, faStop, faTrash } from "@fortawesome/free-solid-svg-icons";
 
 interface Props {
   jobId: string;

@@ -149,6 +149,7 @@ fn is_active_target_conflict(error: &diesel::result::Error) -> bool {
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(in crate::db) async fn finish_job(
     store: &DieselStore,
     job_id: Uuid,

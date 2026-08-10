@@ -73,6 +73,7 @@ pub trait JobStore: Send + Sync {
     /// performed the finalization, `false` if the job had already been
     /// finalized by a racing writer (kill vs. in-flight run completion),
     /// in which case nothing was written.
+    #[allow(clippy::too_many_arguments)]
     async fn finish_job(
         &self,
         job_id: Uuid,

@@ -42,6 +42,7 @@ pub(super) async fn build_source_rpm(
         .ok_or_else(|| anyhow::anyhow!("source RPM was not produced"))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) async fn run_mock_build(
     package: &PackageDefinition,
     mock_chroot: &str,

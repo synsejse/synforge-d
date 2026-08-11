@@ -192,7 +192,7 @@ impl SynforgeService {
         let sync_tracker = Some(SyncStatusTracker::new(store.clone()));
         let registry = RuntimeGitRegistryAdapter::new(store.clone(), package_store, sync_tracker);
         let runner = BuildRunner::new(config.clone(), worker_launcher.clone(), lifecycle.clone());
-        let build_service = BuildService::default();
+        let build_service = BuildService;
 
         let (queue_tx, queue_rx) = mpsc::channel(config.queue_buffer_size);
         let (sync_queue_tx, sync_queue_rx) = mpsc::channel(config.queue_buffer_size);
